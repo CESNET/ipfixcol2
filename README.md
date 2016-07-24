@@ -1,3 +1,11 @@
 # IPFIXcol - new desing
 
-*initial commit*
+## Building
+
+```
+$ mkdir build && cd build
+$ cmake ..
+$ make
+# make install
+```
+
