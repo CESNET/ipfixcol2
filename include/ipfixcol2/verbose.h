@@ -43,7 +43,7 @@
 #ifndef VERBOSE_H_
 #define VERBOSE_H_
 
-#include "api.h"
+#include <ipfixcol2/api.h>
 
 /**
  * \defgroup ipxVerboseAPI Status messages
@@ -51,7 +51,7 @@
  * \brief Public functions for printing status messages
  *
  * By default, verbosity-level is set to report only errors
- * i.e. #IPX_VERBOSITY_ERROR and reporting to the system logger (syslog) is 
+ * i.e. #IPX_VERBOSITY_ERROR and reporting to the system logger (syslog) is
  * disabled.
  *
  * @{
@@ -174,9 +174,9 @@ API void ipx_verbosity_syslog_disable();
  *
  * \param[in] level  Verbosity level of the message (for syslog severity)
  * \param[in] format Format string (see manual page for "printf" family)
- * \param[in] ..     Variable number of arguments for the format string
+ * \param[in] ...    Variable number of arguments for the format string
  */
-API void ipx_verbosity_print(enum IPX_VERBOSITY_LEVEL level, 
+API void ipx_verbosity_print(enum IPX_VERBOSITY_LEVEL level,
 		const char *format, ...);
 
 /**@}*/
