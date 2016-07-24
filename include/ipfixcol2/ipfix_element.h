@@ -71,7 +71,7 @@
  *
  * \remark Based on RFC 7012, Section 3.1 and RFC 6313, Section 11.1
  */
-enum IPX_ELEMENT_DATA {
+enum IPX_ELEMENT_TYPE {
 	/**
 	 * The type represents a finite-length string of octets.
 	 */
@@ -328,7 +328,7 @@ struct ipx_element {
 	 * taken by the element.
 	 * \warning Do NOT represent a size of the record!
 	 */
-	enum IPX_ELEMENT_DATA     data_type;
+	enum IPX_ELEMENT_TYPE     data_type;
 	/** Data semantic                                                      */
 	enum IPX_ELEMENT_SEMANTIC data_semantic;
 	/** Data unit                                                          */
