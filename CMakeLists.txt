@@ -32,7 +32,7 @@ set(CMAKE_C_FLAGS_RELEASE   "-O3 -DNDEBUG")
 set(CMAKE_C_FLAGS_DEBUG     "-g -O0 -Wall -Wextra -pedantic")
 set(CMAKE_CXX_FLAGS         "${CMAKE_CXX_FLAGS} -Wall -fvisibility=hidden")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
-set(CMAKE_CXX_FLAGS_DEBUG   "-g -O0 -Wall -Wextra -pedantic")
+set(CMAKE_CXX_FLAGS_DEBUG   "-g -O0 -Wextra -pedantic")
 
 # Configure a header file to pass some of the CMake setting to the source code
 configure_file(

@@ -71,7 +71,7 @@
  * introduced to the public API. It MAY include minor and patch level changes.
  * Patch and minor version MUST be reset to 0 when major version is incremented.
  */
-#define IPX_API_MAJOR_VERSION (${${PROJECT_NAME}_VERSION_MAJOR}U)
+#define IPX_API_MAJOR_VERSION (${IPFIXCOL_VERSION_MAJOR}U)
 
 /**
  * \def   IPX_API_MINOR_VERSION
@@ -82,7 +82,7 @@
  * functionality is marked as deprecated. Patch version MUST be reset to 0 when
  * minor version is incremented.
  */
-#define IPX_API_MINOR_VERSION (${${PROJECT_NAME}_VERSION_MINOR}U)
+#define IPX_API_MINOR_VERSION (${IPFIXCOL_VERSION_MINOR}U)
 
 /**
  * \def   IPX_API_PATCH_VERSION
@@ -92,7 +92,7 @@
  * introduced. A bug fix is defined as an internal change that fixes incorrect
  * behavior.
  */
-#define IPX_API_PATCH_VERSION (${${PROJECT_NAME}_VERSION_PATCH}U)
+#define IPX_API_PATCH_VERSION (${IPFIXCOL_VERSION_PATCH}U)
 
 /**
  * \def   IPX_API_VERSION
