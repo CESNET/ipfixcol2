@@ -69,7 +69,7 @@
 #error Unsupported endianness type of the machine.
 #endif
 
-// Check the size of double and float
+// Check the size of double and float, this MUST be here!!!
 static_assert(sizeof(double) == sizeof(uint64_t), "Double is not 8 bytes long");
 static_assert(sizeof(float)  == sizeof(uint32_t), "Float is not 4 bytes long");
 
@@ -98,7 +98,7 @@ static_assert(sizeof(float)  == sizeof(uint32_t), "Float is not 4 bytes long");
  * \def IPX_CONVERT_EPOCHS_DIFF
  * \brief Time difference between NTP and UNIX epoch in seconds
  *
- * NTP epoch (1 January 1900, 00:00h) vs. UNIX epoch (1 January 1970 00:00h) 
+ * NTP epoch (1 January 1900, 00:00h) vs. UNIX epoch (1 January 1970 00:00h)
  * i.e. ((70 years * 365 days) + 17 leap-years) * 86400 seconds per day
  */
 #define IPX_CONVERT_EPOCHS_DIFF (2208988800ULL)
@@ -173,7 +173,7 @@ static inline int ipx_set_uint(void *field, size_t size, uint64_t value)
 		return IPX_CONVERT_ERR_TRUNC;
 	}
 
-	value = htobe64(value);	
+	value = htobe64(value);
 	memcpy(field, &(((uint8_t *) &value)[8U - size]), size);
 	return 0;
 }
@@ -203,7 +203,7 @@ static inline int ipx_set_int(void *field, size_t size, int64_t value)
 			*((int32_t *) field) = (int32_t) htonl(INT32_MAX);
 			return IPX_CONVERT_ERR_TRUNC;
 		}
-		
+
 		if (value < INT32_MIN) {
 			*((int32_t *) field) = (int32_t) htonl(INT32_MIN);
 			return IPX_CONVERT_ERR_TRUNC;
@@ -231,7 +231,7 @@ static inline int ipx_set_int(void *field, size_t size, int64_t value)
 			*((int8_t *) field) = INT8_MAX;
 			return IPX_CONVERT_ERR_TRUNC;
 		}
-	
+
 		if (value < INT8_MIN) {
 			*((int8_t *) field) = INT8_MIN;
 			return IPX_CONVERT_ERR_TRUNC;
@@ -281,7 +281,7 @@ static inline int ipx_set_bool(void *field, size_t size, bool value)
 	if (size != 1) {
 		return IPX_CONVERT_ERR_ARG;
 	}
-	
+
 	if (value) {
 		// True
 		*(uint8_t *) field = 1;
@@ -289,7 +289,7 @@ static inline int ipx_set_bool(void *field, size_t size, bool value)
 		// False (according to the RFC 7011, section 6.1.5. is "false" == 2)
 		*(uint8_t *) field = 2;
 	}
-	
+
 	return 0;
 }
 
@@ -310,28 +310,37 @@ static inline int ipx_set_bool(void *field, size_t size, bool value)
 static inline int ipx_set_float(void *field, size_t size, double value)
 {
 	if (size == sizeof(uint64_t)) {
-		// 64 bits
-		*(uint64_t *) field = htobe64(*((uint64_t *) &value));
+		// 64 bits, we have static assert for sizeof(double) == sizeof(uint64_t)
+		union {
+			uint64_t u64;
+			double   dbl;
+		} cast_helper;
+
+		cast_helper.dbl = value;
+		*(uint64_t *) field = htobe64(cast_helper.u64);
 		return 0;
-		
+
 	} else if (size == sizeof(uint32_t)) {
-		// 32 bits
-		float new_value;
+		// 32 bits, we have static assert for sizeof(float) == sizeof(uint32_t)
+		union {
+			uint32_t u32;
+			float    flt;
+		} cast_helper;
 		bool over = false;
-		
+
 		if (value < FLT_MIN) {
-			new_value = FLT_MIN;
+			cast_helper.flt = FLT_MIN;
 			over = true;
 		} else if (value > FLT_MAX) {
-			new_value = FLT_MAX;
+			cast_helper.flt = FLT_MAX;
 			over = true;
 		} else {
-			new_value = value;
+			cast_helper.flt = value;
 		}
-		
-		*(uint32_t *) field = htonl(*((uint32_t *) &new_value));
+
+		*(uint32_t *) field = htonl(cast_helper.u32);
 		return over ? IPX_CONVERT_ERR_TRUNC : 0;
-		
+
 	} else {
 		return IPX_CONVERT_ERR_ARG;
 	}
@@ -356,13 +365,13 @@ static inline int ipx_set_float(void *field, size_t size, double value)
  *   field) returns #IPX_CONVERT_ERR_ARG and an original value of the \p field
  *   is unchanged.
  */
-static inline int ipx_set_date_lp(void *field, size_t size, 
+static inline int ipx_set_date_lp(void *field, size_t size,
 	enum IPX_ELEMENT_TYPE type, uint64_t value)
 {
 	// One second to milliseconds
 	const uint64_t S1E3 = 1000ULL;
-	
-	if (size != sizeof(uint64_t) 
+
+	if (size != sizeof(uint64_t)
 			&& (size != sizeof(uint32_t) || type != IPX_ET_DATE_TIME_SECONDS)) {
 		return IPX_CONVERT_ERR_ARG;
 	}
@@ -371,19 +380,19 @@ static inline int ipx_set_date_lp(void *field, size_t size,
 	case IPX_ET_DATE_TIME_SECONDS:
 		*(uint32_t *) field = htonl(value / S1E3); // To seconds
 		return 0;
-		
+
 	case IPX_ET_DATE_TIME_MILLISECONDS:
 		*(uint64_t *) field = htobe64(value);
 		return 0;
-	
+
 	case IPX_ET_DATE_TIME_MICROSECONDS:
 	case IPX_ET_DATE_TIME_NANOSECONDS: {
 		// Conversion from UNIX timestamp to NTP 64bit timestamp
 		uint32_t (*part)[2] = field;
-		
+
 		// Seconds
 		(*part)[0] = htonl((value / S1E3) + IPX_CONVERT_EPOCHS_DIFF);
-		
+
 		/*
 		 * Fraction of second (1 / 2^32)
 		 * The "value" uses 1/1000 sec as unit of subsecond fractions and NTP
@@ -395,7 +404,7 @@ static inline int ipx_set_date_lp(void *field, size_t size,
 		if (type == IPX_ET_DATE_TIME_MICROSECONDS) {
 			fraction &= 0xFFFFF800; // Make sure that last 11 bits are zeros
 		}
-		
+
 		(*part)[1] = htonl(fraction);
 		}
 
@@ -414,7 +423,7 @@ static inline int ipx_set_date_lp(void *field, size_t size,
  * \param[in]  type   Type of the timestamp (see ipx_set_date_lr())
  * \param[in]  ts     Number of seconds and nanoseconds (see time.h)
  * \warning Wraparound for dates after 8 February 2036 is not implemented.
- * \warning The value of the nanoseconds field MUST be in the range 0 
+ * \warning The value of the nanoseconds field MUST be in the range 0
  *   to 999999999.
  * \return On success returns 0. Otherwise (usually incorrect \p size of the
  *   field) returns #IPX_CONVERT_ERR_ARG and an original value of the \p field
@@ -430,7 +439,7 @@ static inline int ipx_set_date_hp(void *field, size_t size,
 	if ((uint64_t) ts.tv_nsec >= S1E9) {
 		return IPX_CONVERT_ERR_ARG;
 	}
-	
+
 	if (size != sizeof(uint64_t)
 			&& (size != sizeof(uint32_t) || type != IPX_ET_DATE_TIME_SECONDS)) {
 		return IPX_CONVERT_ERR_ARG;
@@ -440,19 +449,19 @@ static inline int ipx_set_date_hp(void *field, size_t size,
 	case IPX_ET_DATE_TIME_SECONDS:
 		*(uint32_t *) field = htonl(ts.tv_sec); // To seconds
 		return 0;
-		
+
 	case IPX_ET_DATE_TIME_MILLISECONDS:
 		*(uint64_t *) field = htobe64((ts.tv_sec * S1E3) + (ts.tv_nsec / S1E6));
 		return 0;
-	
+
 	case IPX_ET_DATE_TIME_MICROSECONDS:
 	case IPX_ET_DATE_TIME_NANOSECONDS: {
 		// Conversion from UNIX timestamp to NTP 64bit timestamp
 		uint32_t (*parts)[2] = field;
-		
+
 		// Seconds
 		(*parts)[0] = htonl((uint32_t) ts.tv_sec + IPX_CONVERT_EPOCHS_DIFF);
-		
+
 		/*
 		 * Fraction of second (1 / 2^32)
 		 * The "ts" uses 1/1e9 sec as unit of subsecond fractions and NTP
@@ -464,7 +473,7 @@ static inline int ipx_set_date_hp(void *field, size_t size,
 		if (type == IPX_ET_DATE_TIME_MICROSECONDS) {
 			fraction &= 0xFFFFF800; // Make sure that last 11 bits are zeros
 		}
-		
+
 		(*parts)[1] = htonl(fraction);
 		}
 
@@ -587,10 +596,10 @@ static inline int ipx_get_uint(const void *field, size_t size, uint64_t *value)
 	if (size == 0 || size > 8) {
 		return IPX_CONVERT_ERR_ARG;
 	}
-	
+
 	uint64_t new_value = 0;
 	memcpy(&(((uint8_t *) &new_value)[8U - size]), field, size);
-	
+
 	*value = be64toh(new_value);
 	return 0;
 }
@@ -634,7 +643,7 @@ static inline int ipx_get_int(const void *field, size_t size, int64_t *value)
 	if (size == 0 || size > 8) {
 		return IPX_CONVERT_ERR_ARG;
 	}
-	
+
 	/*
 	 * Sign extension
 	 * The value is in network-byte-order therefore first bit determines
@@ -656,7 +665,7 @@ static inline int ipx_get_int(const void *field, size_t size, int64_t *value)
  * \remark A size of the field is always consider as 1 byte.
  * \return On success returns 0 and fills the \p value. Otherwise (usually
  *   invalid boolean value - see the definition of the boolean for IPFIX,
- *   RFC 7011, Section 6.1.5.) returns #IPX_CONVERT_ERR_ARG and 
+ *   RFC 7011, Section 6.1.5.) returns #IPX_CONVERT_ERR_ARG and
  *   the \p value is not filled.
  */
 static inline int ipx_get_bool(const void *field, size_t size, bool *value)
@@ -664,7 +673,7 @@ static inline int ipx_get_bool(const void *field, size_t size, bool *value)
 	if (size != 1) {
 		return IPX_CONVERT_ERR_ARG;
 	}
-	
+
 	switch (*(const uint8_t *) field) {
 	case 1: // True
 		*value = true;
@@ -674,7 +683,7 @@ static inline int ipx_get_bool(const void *field, size_t size, bool *value)
 		return 0;
 	default:
 		return IPX_CONVERT_ERR_ARG;
-	}	
+	}
 }
 
 /**
@@ -692,17 +701,27 @@ static inline int ipx_get_bool(const void *field, size_t size, bool *value)
 static inline int ipx_get_float(const void *field, size_t size, double *value)
 {
 	if (size == sizeof(uint64_t)) {
-		// 64bit
-		*(uint64_t *) value = be64toh(*(const uint64_t *) field);
+		// 64bit, we have static assert for sizeof(double) == sizeof(uint64_t)
+		union {
+			uint64_t u64;
+			double   dbl;
+		} cast_helper;
+
+		cast_helper.u64 = be64toh(*(const uint64_t *) field);
+		*value = cast_helper.dbl;
 		return 0;
 
 	} else if (size == sizeof(uint32_t)) {
-		// 32bit
-		float new_value;
-		*((uint32_t *) &new_value) = ntohl(*(const uint32_t *) field);
-		*value = new_value;
+		// 32bit, we have static assert for sizeof(float) == sizeof(uint32_t)
+		union {
+			uint32_t u32;
+			float    flt;
+		} cast_helper;
+
+		cast_helper.u32 = ntohl(*(const uint32_t *) field);
+		*value = cast_helper.flt;
 		return 0;
-		
+
 	} else {
 		return IPX_CONVERT_ERR_ARG;
 	}
@@ -734,18 +753,18 @@ inline int ipx_get_date_lp(const void *field, size_t size,
 	enum IPX_ELEMENT_TYPE type, uint64_t *value)
 {
 	// One second to milliseconds
-	const uint64_t S1E3 = 1000ULL;	
+	const uint64_t S1E3 = 1000ULL;
 
-	if (size != sizeof(uint64_t) 
+	if (size != sizeof(uint64_t)
 			&& (size != sizeof(uint32_t) || type != IPX_ET_DATE_TIME_SECONDS)) {
 		return IPX_CONVERT_ERR_ARG;
 	}
-	
+
 	switch (type) {
 	case IPX_ET_DATE_TIME_SECONDS:
 		*value = ntohl(*(const uint32_t *) field) * S1E3;
 		return 0;
-		
+
 	case IPX_ET_DATE_TIME_MILLISECONDS:
 		*value = be64toh(*(const uint64_t *) field);
 		return 0;
@@ -755,10 +774,10 @@ inline int ipx_get_date_lp(const void *field, size_t size,
 		// Conversion from NTP 64bit timestamp to UNIX timestamp
 		const uint32_t (*parts)[2] = (void *) field; // Ugly :(
 		uint64_t result;
-		
+
 		// Seconds
 		result = (ntohl((*parts)[0]) - IPX_CONVERT_EPOCHS_DIFF) * S1E3;
-		
+
 		/*
 		 * Fraction of second (1 / 2^32)
 		 * The "value" uses 1/1000 sec as unit of subsecond fractions and NTP
@@ -770,11 +789,11 @@ inline int ipx_get_date_lp(const void *field, size_t size,
 		if (type == IPX_ET_DATE_TIME_MICROSECONDS) {
 			fraction &= 0xFFFFF800; // Make sure that last 11 bits are zeros
 		}
-		
+
 		result += (fraction * S1E3) >> 32;
 		*value = result;
 		}
-		
+
 		return 0;
 	default:
 		return IPX_CONVERT_ERR_ARG;
@@ -803,7 +822,7 @@ inline int ipx_get_date_hp(const void *field, size_t size,
 	const uint64_t S1E6 = 1000000ULL;    // One second to microseconds
 	const uint64_t S1E9 = 1000000000ULL; // One second to nanoseconds
 
-	if (size != sizeof(uint64_t) 
+	if (size != sizeof(uint64_t)
 			&& (size != sizeof(uint32_t) || type != IPX_ET_DATE_TIME_SECONDS)) {
 		return IPX_CONVERT_ERR_ARG;
 	}
@@ -813,23 +832,23 @@ inline int ipx_get_date_hp(const void *field, size_t size,
 		ts->tv_sec = ntohl(*(const uint32_t *) field);
 		ts->tv_nsec = 0;
 		return 0;
-	
+
 	case IPX_ET_DATE_TIME_MILLISECONDS: {
 		const uint64_t new_value = be64toh(*(const uint64_t *) field);
 		ts->tv_sec =  new_value / S1E3;
 		ts->tv_nsec = (new_value % S1E3) * S1E6;
 		}
-		
+
 		return 0;
-		
+
 	case IPX_ET_DATE_TIME_MICROSECONDS:
 	case IPX_ET_DATE_TIME_NANOSECONDS: {
 		// Conversion from NTP 64bit timestamp to UNIX timestamp
 		const uint32_t (*parts)[2] = (void *) field; // Ugly :(
-		
+
 		// Seconds
 		ts->tv_sec = ntohl((*parts)[0]) - IPX_CONVERT_EPOCHS_DIFF;
-		
+
 		/*
 		 * Fraction of second (1 / 2^32)
 		 * The "ts" uses 1/1e9 sec as unit of subsecond fractions and NTP
@@ -841,10 +860,10 @@ inline int ipx_get_date_hp(const void *field, size_t size,
 		if (type == IPX_ET_DATE_TIME_MICROSECONDS) {
 			fraction &= 0xFFFFF800; // Make sure that last 11 bits are zeros
 		}
-		
+
 		ts->tv_nsec = (fraction * S1E9) >> 32;
 		}
-	
+
 		return 0;
 	default:
 		return IPX_CONVERT_ERR_ARG;
