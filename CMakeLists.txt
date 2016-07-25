@@ -22,37 +22,80 @@ if (NOT UNIX)
 	message(FATAL_ERROR "Only Unix like systems are supported.")
 endif()
 
+# Include modules
+include(GNUInstallDirs)
+
 # Set default build type if not specified by user
 if (NOT CMAKE_BUILD_TYPE)
 	set (CMAKE_BUILD_TYPE Release)
 endif()
 
-set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wall -fvisibility=hidden")
+set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wall -fvisibility=hidden -std=gnu11")
 set(CMAKE_C_FLAGS_RELEASE   "-O3 -DNDEBUG")
 set(CMAKE_C_FLAGS_DEBUG     "-g -O0 -Wall -Wextra -pedantic")
-set(CMAKE_CXX_FLAGS         "${CMAKE_CXX_FLAGS} -Wall -fvisibility=hidden")
+set(CMAKE_CXX_FLAGS         "${CMAKE_CXX_FLAGS} -Wall -fvisibility=hidden" -std=gnu++11)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG   "-g -O0 -Wextra -pedantic")
 
-# Configure a header file to pass some of the CMake setting to the source code
+
+
+# TODO: add compile options here
+
+
+
+
+# Configure a header file to pass API version to the source code
 configure_file(
-	"${PROJECT_SOURCE_DIR}/include/ipfixcol2/api.h.in"
+	"${PROJECT_SOURCE_DIR}/src/api.h.in"
 	"${PROJECT_BINARY_DIR}/include/ipfixcol2/api.h"
+	)
+
+# Configure a header file to pass some CMake variables
+configure_file(
+	"${PROJECT_SOURCE_DIR}/src/build_config.h.in"
+	"${PROJECT_BINARY_DIR}/src/build_config.h"
 	)
 
 # Local header files are placed in the include directory.
 include_directories(
 	"${PROJECT_SOURCE_DIR}/include/"
 	"${PROJECT_BINARY_DIR}/include/"  # for api.h
+	"${PROJECT_BINARY_DIR}/src/"      # for build_config.h
 	)
 
+# List of header files
+set(PUBLIC_HEADERS
+	include/ipfixcol2.h
+	include/ipfixcol2/convertors.h
+	include/ipfixcol2/ipfix_element.h
+	include/ipfixcol2/ipfix_structures.h
+	include/ipfixcol2/verbose.h
+	"${PROJECT_BINARY_DIR}/include/ipfixcol2/api.h"
+	)
 
-# List of source code files
+#set(PRIVATE_HEADERS
+#	)
+
+# List of source files
 set(SOURCES
 	src/verbose.c
 	src/ipfixcol.c
 	)
 
 # Add the executable
-add_executable(${PROJECT_NAME} ${SOURCES})
+add_executable(ipfixcol2 ${SOURCES} ${PUBLIC_HEADERS})
+
+# Install IPFIXcol and header files
+install(
+	TARGETS ipfixcol2
+	DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
+	)
+install(
+	DIRECTORY include/
+	DESTINATION ${CMAKE_INSTALL_FULL_INCLUDEDIR}
+	)
+install(
+	FILES "${PROJECT_BINARY_DIR}/include/ipfixcol2/api.h"
+	DESTINATION ${CMAKE_INSTALL_FULL_INCLUDEDIR}/ipfixcol2/
+	)
 
