@@ -56,6 +56,7 @@
 
 /**
  * \defgroup ipx_convertors Data conversion
+ * \ingroup publicAPIs
  * \brief Conversion "from" and "to" data types used in IPFIX messages
  * \remark Based on RFC 7011, Section 6.
  * (see https://tools.ietf.org/html/rfc7011#section-6)

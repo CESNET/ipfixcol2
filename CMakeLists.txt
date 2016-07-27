@@ -37,12 +37,11 @@ set(CMAKE_CXX_FLAGS         "${CMAKE_CXX_FLAGS} -Wall -fvisibility=hidden" -std=
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG   "-g -O0 -Wextra -pedantic")
 
-
-
 # TODO: add compile options here
+option(documentation_enable "Enable documentation building" ON)
 
 
-
+# ----------------------------------------------------------------------
 
 # Configure a header file to pass API version to the source code
 configure_file(
@@ -84,6 +83,32 @@ set(SOURCES
 
 # Add the executable
 add_executable(ipfixcol2 ${SOURCES} ${PUBLIC_HEADERS})
+
+# Build documentation
+if (documentation_enable)
+	find_package(Doxygen)
+	if (NOT DOXYGEN_FOUND)
+		message(FATAL_ERROR "Doxygen is not available.")
+	endif()
+
+	configure_file(
+		"${PROJECT_SOURCE_DIR}/doc/doxygen/Doxyfile.in"
+		"${PROJECT_BINARY_DIR}/doc/doxygen/Doxyfile"
+		@ONLY
+	)
+
+	set(DOXYGEN_DIRECTORY
+		"${PROJECT_BINARY_DIR}/doc/doxygen/"
+	)
+
+	add_custom_target(
+		doc ALL
+		COMMAND ${DOXYGEN_EXECUTABLE} "${DOXYGEN_DIRECTORY}/Doxyfile"
+		WORKING_DIRECTORY "${DOXYGEN_DIRECTORY}"
+		COMMENT "Generating API documentation with Doxygen to ${DOXYGEN_DIRECTORY}"
+		VERBATIM
+    )
+endif(documentation_enable)
 
 # Install IPFIXcol and header files
 install(
