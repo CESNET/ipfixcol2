@@ -44,6 +44,8 @@
 #include <stdarg.h>
 #include <syslog.h>
 
+#include "build_config.h"
+
 // Default is to print errors only
 static enum IPX_VERBOSITY_LEVEL verbose = IPX_VERBOSITY_ERROR;
 // Do not use syslog unless specified otherwise
@@ -61,7 +63,7 @@ void ipx_verbosity_set_level(enum IPX_VERBOSITY_LEVEL new_level)
 	if (new_level < IPX_VERBOSITY_ERROR || new_level > IPX_VERBOSITY_DEBUG) {
 		new_level = IPX_VERBOSITY_ERROR;
 	}
-	
+
 	verbose = new_level;
 }
 
@@ -72,9 +74,8 @@ void ipx_verbosity_syslog_enable()
 		// Already enabled
 		return;
 	}
-	
-	// TODO: name from the configuration
-	openlog("IPFIXcol2", LOG_PID, LOG_DAEMON);
+
+	openlog(IPX_APP_NAME, LOG_PID, LOG_DAEMON);
 	use_syslog = 1;
 }
 
@@ -85,7 +86,7 @@ void ipx_verbosity_syslog_disable()
 		// Already disabled
 		return;
 	}
-	
+
 	closelog();
 	use_syslog = 0;
 }

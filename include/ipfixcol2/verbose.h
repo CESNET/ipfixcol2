@@ -67,7 +67,7 @@ enum IPX_VERBOSITY_LEVEL {
 	IPX_VERBOSITY_ERROR = 0,   /**< Error message (default)        */
 	IPX_VERBOSITY_WARNING,     /**< Warning message                */
 	IPX_VERBOSITY_INFO,        /**< Informational message          */
-	IPX_VERBOSITY_DEBUG,       /**< Debug message                  */
+	IPX_VERBOSITY_DEBUG        /**< Debug message                  */
 };
 
 /**

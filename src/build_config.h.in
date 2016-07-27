@@ -42,8 +42,6 @@
 #ifndef _BUILD_CONFIG_
 #define _BUILD_CONFIG_
 
-#include <stdint.h>
-
 /**
  * \defgroup ipxInternalBuildConfig Build configuration
  * \ingroup internalAPIs
@@ -52,12 +50,15 @@
  * @{
  */
 
+/** \brief IPFIXcol name           */
+#define IPX_APP_NAME "IPFIXcol2"
+
 /** \brief IPFIXcol major version  */
-#define IPX_MAJOR_VERSION (@IPFIXCOL_VERSION_MAJOR@U)
+#define IPX_VERSION_MAJOR (@IPFIXCOL_VERSION_MAJOR@U)
 /** \brief IPFIXcol minor version  */
-#define IPX_MINOR_VERSION (@IPFIXCOL_VERSION_MINOR@U)
+#define IPX_VERSION_MINOR (@IPFIXCOL_VERSION_MINOR@U)
 /** \brief IPFIXcol patch version  */
-#define IPX_PATCH_VERSION (@IPFIXCOL_VERSION_PATCH@U)
+#define IPX_VERSION_PATCH (@IPFIXCOL_VERSION_PATCH@U)
 
 /** \brief Path to default (if not specified) user configuration file */
 #define IPX_DEFAULT_STARTUP_CONFIG \

@@ -54,7 +54,7 @@
  */
 
 /**
- * \enum IPX_ELEMENT_DATA
+ * \enum IPX_ELEMENT_TYPE
  * \brief IPFIX Element data type
  *
  * This enumeration describes the set of valid abstract data types of the
