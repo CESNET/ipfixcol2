@@ -107,15 +107,18 @@
 	#define IPX_BUILD_ARCH "ARM64"
 #elif defined(__arm) || defined(__arm__)
 	#define IPX_BUILD_ARCH "ARM"
-#elif defined(__i386) || defined (__i386__) || defined(__i686) || defined(__i686__)
+#elif defined(__i386) || defined (__i386__) || defined(__i686) \
+		|| defined(__i686__)
 	#define IPX_BUILD_ARCH "x86"
-#elif defined(__x86_64) || defined (__x86_64__) || defined(__amd64) || defined(__amd64__)
+#elif defined(__x86_64) || defined (__x86_64__) || defined(__amd64) \
+		|| defined(__amd64__)
 	#define IPX_BUILD_ARCH "x86-64"
 #elif defined(__ia64) || defined(__ia64__)
 	#define IPX_BUILD_ARCH "Intel Itanium"
 #elif defined(__mips) || defined(__mips__)
 	#define IPX_BUILD_ARCH "MIPS"
-#elif defined(__powerpc) || defined(__powerpc__) || defined(__ppc) || defined(__ppc__)
+#elif defined(__powerpc) || defined(__powerpc__) || defined(__ppc) \
+		|| defined(__ppc__)
 	#define IPX_BUILD_ARCH "PowerPC"
 #else
 	#define IPX_BUILD_ARCH "unknown"
