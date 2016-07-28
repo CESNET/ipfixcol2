@@ -75,7 +75,7 @@ void ipx_verbosity_syslog_enable()
 		return;
 	}
 
-	openlog(IPX_APP_NAME, LOG_PID, LOG_DAEMON);
+	openlog(IPX_BUILD_APP_NAME, LOG_PID, LOG_DAEMON);
 	use_syslog = 1;
 }
 

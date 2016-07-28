@@ -42,6 +42,8 @@
 #ifndef _BUILD_CONFIG_
 #define _BUILD_CONFIG_
 
+#include <endian.h>
+
 /**
  * \defgroup ipxInternalBuildConfig Build configuration
  * \ingroup internalAPIs
@@ -50,25 +52,74 @@
  * @{
  */
 
-/** \brief IPFIXcol name           */
-#define IPX_APP_NAME "IPFIXcol2"
+/** \brief IPFIXcol name                                           */
+#define IPX_BUILD_APP_NAME "IPFIXcol2"
 
-/** \brief IPFIXcol major version  */
-#define IPX_VERSION_MAJOR (@IPFIXCOL_VERSION_MAJOR@U)
-/** \brief IPFIXcol minor version  */
-#define IPX_VERSION_MINOR (@IPFIXCOL_VERSION_MINOR@U)
-/** \brief IPFIXcol patch version  */
-#define IPX_VERSION_PATCH (@IPFIXCOL_VERSION_PATCH@U)
+/** IPFIXcol major version                                         */
+#define IPX_BUILD_VERSION_MAJOR (@IPFIXCOL_VERSION_MAJOR@U)
+/** IPFIXcol minor version                                         */
+#define IPX_BUILD_VERSION_MINOR (@IPFIXCOL_VERSION_MINOR@U)
+/** IPFIXcol patch version                                         */
+#define IPX_BUILD_VERSION_PATCH (@IPFIXCOL_VERSION_PATCH@U)
+/** IPFIXcol version in string representation                      */
+#define IPX_BUILD_VERSION_FULL_STR \
+	"@IPFIXCOL_VERSION_MAJOR@.@IPFIXCOL_VERSION_MINOR@.@IPFIXCOL_VERSION_PATCH@"
 
-/** \brief Path to default (if not specified) user configuration file */
+/** Path to default (if not specified) user configuration file     */
 #define IPX_DEFAULT_STARTUP_CONFIG \
 	"@CMAKE_INSTALL_FULL_SYSCONFDIR@/ipfixcol2/startup.xml"
-/** \brief Path to default ipfix-elements specification file          */
-#define IPX_DEFAULT_IPFIX_ELEMENTS \
-	"@CMAKE_INSTALL_FULL_SYSCONFDIR@/ipfixcol2/ipfix-elements.xml"
-/** \brief Path to the directory with plugins                         */
+/** Path to default ipfix-elements specification files             */
+#define IPX_DEFAULT_ELEMENTS_DIR \
+	"@CMAKE_INSTALL_FULL_SYSCONFDIR@/ipfixcol2/elements/"
+/** Path to the directory with plugins                             */
 #define IPX_DEFAULT_PLUGINS_DIR \
 	"@CMAKE_INSTALL_FULL_LIBDIR@/ipfixcol2/"
+
+/** Compiler name and version                                      */
+#define IPX_BUILD_COMPILER \
+	"@CMAKE_C_COMPILER_ID@ @CMAKE_C_COMPILER_VERSION@"
+/** Build type                                                     */
+#define IPX_BUILD_TYPE "@CMAKE_BUILD_TYPE@"
+/** GIT Hash of the last commit                                    */
+#define IPX_BUILD_GIT_HASH "@GIT_REVISION@"
+
+/**
+ * \def IPX_BUILD_BYTE_ORDER
+ * \brief Determined target machine endianness
+ */
+#ifdef  __BYTE_ORDER
+	#if __BYTE_ORDER == __LITTLE_ENDIAN
+		#define IPX_BUILD_BYTE_ORDER "little endian"
+	#elif __BYTE_ORDER == __BIG_ENDIAN
+		#define IPX_BUILD_BYTE_ORDER "big endian"
+	#else
+		#define IPX_BUILD_BYTE_ORDER "unknown endian"
+	#endif
+#else
+	#define IPX_BUILD_BYTE_ORDER "unknown endian"
+#endif
+
+/**
+ * \def IPX_BUILD_ARCH
+ * \brief Determined target CPU architecture
+ */
+#if defined(__arm64) || defined(__arm64__)
+	#define IPX_BUILD_ARCH "ARM64"
+#elif defined(__arm) || defined(__arm__)
+	#define IPX_BUILD_ARCH "ARM"
+#elif defined(__i386) || defined (__i386__) || defined(__i686) || defined(__i686__)
+	#define IPX_BUILD_ARCH "x86"
+#elif defined(__x86_64) || defined (__x86_64__) || defined(__amd64) || defined(__amd64__)
+	#define IPX_BUILD_ARCH "x86-64"
+#elif defined(__ia64) || defined(__ia64__)
+	#define IPX_BUILD_ARCH "Intel Itanium"
+#elif defined(__mips) || defined(__mips__)
+	#define IPX_BUILD_ARCH "MIPS"
+#elif defined(__powerpc) || defined(__powerpc__) || defined(__ppc) || defined(__ppc__)
+	#define IPX_BUILD_ARCH "PowerPC"
+#else
+	#define IPX_BUILD_ARCH "unknown"
+#endif
 
 /**@}*/
 
