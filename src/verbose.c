@@ -61,7 +61,7 @@ enum IPX_VERBOSITY_LEVEL ipx_verbosity_get_level()
 void ipx_verbosity_set_level(enum IPX_VERBOSITY_LEVEL new_level)
 {
 	if (new_level < IPX_VERBOSITY_ERROR || new_level > IPX_VERBOSITY_DEBUG) {
-		new_level = IPX_VERBOSITY_ERROR;
+		return;
 	}
 
 	verbose = new_level;

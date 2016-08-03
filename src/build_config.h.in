@@ -45,42 +45,43 @@
 #include <endian.h>
 
 /**
+ * \internal
  * \defgroup ipxInternalBuildConfig Build configuration
  * \ingroup internalAPIs
- * \brief These definitions represent configuration options for build.
+ * \brief These definitions represent build configuration.
  *
  * @{
  */
 
-/** \brief IPFIXcol name                                           */
+/** \brief IPFIXcol name                                                  */
 #define IPX_BUILD_APP_NAME "IPFIXcol2"
 
-/** IPFIXcol major version                                         */
+/** \brief IPFIXcol major version                                         */
 #define IPX_BUILD_VERSION_MAJOR (@IPFIXCOL_VERSION_MAJOR@U)
-/** IPFIXcol minor version                                         */
+/** \brief IPFIXcol minor version                                         */
 #define IPX_BUILD_VERSION_MINOR (@IPFIXCOL_VERSION_MINOR@U)
-/** IPFIXcol patch version                                         */
+/** \brief IPFIXcol patch version                                         */
 #define IPX_BUILD_VERSION_PATCH (@IPFIXCOL_VERSION_PATCH@U)
-/** IPFIXcol version in string representation                      */
+/** \brief IPFIXcol version in string representation                      */
 #define IPX_BUILD_VERSION_FULL_STR \
 	"@IPFIXCOL_VERSION_MAJOR@.@IPFIXCOL_VERSION_MINOR@.@IPFIXCOL_VERSION_PATCH@"
 
-/** Path to default (if not specified) user configuration file     */
+/** \brief Path to default (if not specified) user configuration file     */
 #define IPX_DEFAULT_STARTUP_CONFIG \
 	"@CMAKE_INSTALL_FULL_SYSCONFDIR@/ipfixcol2/startup.xml"
-/** Path to default ipfix-elements specification files             */
+/** \brief Path to default ipfix-elements specification files             */
 #define IPX_DEFAULT_ELEMENTS_DIR \
 	"@CMAKE_INSTALL_FULL_SYSCONFDIR@/ipfixcol2/elements/"
-/** Path to the directory with plugins                             */
+/** \brief Path to the directory with plugins                             */
 #define IPX_DEFAULT_PLUGINS_DIR \
 	"@CMAKE_INSTALL_FULL_LIBDIR@/ipfixcol2/"
 
-/** Compiler name and version                                      */
+/** \brief Compiler name and version                                      */
 #define IPX_BUILD_COMPILER \
 	"@CMAKE_C_COMPILER_ID@ @CMAKE_C_COMPILER_VERSION@"
-/** Build type                                                     */
+/** \brief Build type                                                     */
 #define IPX_BUILD_TYPE "@CMAKE_BUILD_TYPE@"
-/** GIT Hash of the last commit                                    */
+/** \brief GIT Hash of the last commit                                    */
 #define IPX_BUILD_GIT_HASH "@GIT_REVISION@"
 
 /**

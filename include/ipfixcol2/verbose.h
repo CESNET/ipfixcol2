@@ -152,8 +152,8 @@ API enum IPX_VERBOSITY_LEVEL ipx_verbosity_get_level();
 /**
  * \brief Set verbosity level of the collector
  *
- * When invalid value is used as \p new_level, default value (i.e. only errors)
- * will be set.
+ * When invalid value is used as \p new_level, the verbosity level will stay
+ * unchaned.
  * \param[in] new_level New verbosity-level
  */
 API void ipx_verbosity_set_level(enum IPX_VERBOSITY_LEVEL new_level);

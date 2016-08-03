@@ -287,9 +287,10 @@ struct __attribute__((__packed__)) ipfix_template_record {
 	/**
 	 * \brief Number of fields in this Template Record.
 	 *
-	 * If the number is 0, then this template is called Template Withdrawal,
-	 * revokes a previously defined template and consists only from members
-	 * template_id and count. For more details see RFC 7011, Section 8.1.
+	 * The number of fields MUST be greater than 0. Otherwise (equal to 0)
+	 * this is not Template Record, but it is Template Withdrawal  Record
+	 * (see the structure ipfix_withdrawal_template_record). These types of
+	 * records MUST not be mixed in the same set.
 	 */
 	uint16_t count;
 
@@ -359,10 +360,10 @@ struct __attribute__((__packed__)) ipfix_options_template_record {
 	 * \brief Number of all fields in this Options Template Record, including
 	 *   the Scope Fields.
 	 *
-	 * If the number is 0, then this template is called Options Template
-	 * Withdrawal, revokes a previously defined template and consists only
-	 * from members template_id and count. For more details see RFC 7011,
-	 * Section 8.1.
+	 * The number of fields MUST be greater than 0. Otherwise (equal to 0)
+	 * this is not Options Template Record, but it is Template Withdrawal
+	 * Record (see the structure ipfix_withdrawal_template_record).
+	 * These types of records MUST not be mixed in the same set.
 	 */
 	uint16_t count;
 
@@ -402,6 +403,63 @@ struct __attribute__((__packed__)) ipfix_options_template_set {
 	 */
 	struct ipfix_options_template_record first_record;
 };
+
+
+/**
+ * \struct ipfix_withdrawal_template_record
+ * \brief Structure of the IPFIX Template Withdrawal record
+ * \remark Based on RFC 7011, Section 8.1.
+ */
+struct __attribute__((__packed__)) ipfix_withdrawal_template_record {
+	/**
+	 * \brief Template Identification Number
+	 *
+	 * Identification of the Template(s) to withdraw local to the Trasport
+	 * Session and Observation Domain that generated the Template ID.
+	 * If a unique Template ID is in the ragne 256 (#IPFIX_SET_MIN_DATA_SET_ID)
+	 * to 65535, only the given template is withdrawn. If the reserverd values
+	 * 2 (#IPFIX_SET_TEMPLATE) or 3 (#IPFIX_SET_OPTIONS_TEMPLATE) are used,
+	 * all templates of specified kind (i.e. normal or options) are withdrawn.
+	 *
+	 * \remark
+	 * The flowset ID of the parent Set MUST contain the value 2
+	 * (#IPFIX_SET_TEMPLATE) for Template Set Withdrawal or the value 3
+	 * (#IPFIX_SET_OPTIONS_TEMPLATE) for Options Template Set Withdrawal.
+	 */
+	uint16_t template_id;
+
+	/**
+	 * \brief Number of fields.
+	 * \warning This field MUST be always 0. Otherwise it is NOT a template
+	 *   withdrawal record.
+	 */
+	uint16_t count;
+};
+
+/**
+ * \struct ipfix_withdrawal_template_set
+ * \brief IPFIX (Options) Template Set Withdrawal structure
+ *
+ * Consists of the common Set header and the first Template Withdrawal record.
+ */
+struct __attribute__((__packed__)) ipfix_withdrawal_template_set {
+	/**
+	 * Common IPFIX Set header.
+	 * Identification of the flowset MUST be 2 (#IPFIX_SET_TEMPLATE) for
+	 * (Normal) Templates or 3 (#IPFIX_SET_OPTIONS_TEMPLATE) for Options
+	 * Templates.
+	 */
+	struct ipfix_set_header header;
+
+	/**
+	 * The first of withdrawal records in this Withdrawal Set.
+	 * Only template withdrawals corresponding to the type of the Set header
+	 * can be here i.e. no combinations of withdrawals of normal and options
+	 * templates.
+	 */
+	struct ipfix_withdrawal_template_record first_record;
+};
+
 
 /**
  * \struct ipfix_data_set

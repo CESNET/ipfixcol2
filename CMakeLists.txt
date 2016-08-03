@@ -43,8 +43,7 @@ set(CMAKE_CXX_FLAGS_DEBUG   "-g -O0 -Wextra -pedantic")
 # ------------------------------------------------------------------------------
 # Build options
 # TODO: add compile options here
-option(documentation_enable "Enable documentation building" ON)
-
+option(DOC_ENABLED "Enable documentation building" ON)
 
 # ------------------------------------------------------------------------------
 
@@ -106,14 +105,14 @@ set(PUBLIC_HEADERS
 set(SOURCES
 	src/verbose.c
 	src/ipfixcol.c
-	#src/message.h
+	"${PROJECT_BINARY_DIR}/src/build_config.h"
 	)
 
 # Add the executable
 add_executable(ipfixcol2 ${SOURCES} ${PUBLIC_HEADERS})
 
 # Build documentation
-if (documentation_enable)
+if (DOC_ENABLED)
 	find_package(Doxygen)
 	if (NOT DOXYGEN_FOUND)
 		message(FATAL_ERROR "Doxygen is not available.")
@@ -136,7 +135,7 @@ if (documentation_enable)
 		COMMENT "Generating API documentation with Doxygen to ${DOXYGEN_DIRECTORY}"
 		VERBATIM
     )
-endif(documentation_enable)
+endif(DOC_ENABLED)
 
 # ------------------------------------------------------------------------------
 # Install IPFIXcol and header files
