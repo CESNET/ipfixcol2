@@ -389,7 +389,7 @@ static inline int ipx_set_date_lp(void *field, size_t size,
 	case IPX_ET_DATE_TIME_MICROSECONDS:
 	case IPX_ET_DATE_TIME_NANOSECONDS: {
 		// Conversion from UNIX timestamp to NTP 64bit timestamp
-		uint32_t (*part)[2] = field;
+		uint32_t (*part)[2] = (uint32_t (*)[2]) field;
 
 		// Seconds
 		(*part)[0] = htonl((value / S1E3) + IPX_CONVERT_EPOCHS_DIFF);
@@ -458,7 +458,7 @@ static inline int ipx_set_date_hp(void *field, size_t size,
 	case IPX_ET_DATE_TIME_MICROSECONDS:
 	case IPX_ET_DATE_TIME_NANOSECONDS: {
 		// Conversion from UNIX timestamp to NTP 64bit timestamp
-		uint32_t (*parts)[2] = field;
+		uint32_t (*parts)[2] = (uint32_t (*)[2]) field;
 
 		// Seconds
 		(*parts)[0] = htonl((uint32_t) ts.tv_sec + IPX_CONVERT_EPOCHS_DIFF);
@@ -773,7 +773,7 @@ inline int ipx_get_date_lp(const void *field, size_t size,
 	case IPX_ET_DATE_TIME_MICROSECONDS:
 	case IPX_ET_DATE_TIME_NANOSECONDS: {
 		// Conversion from NTP 64bit timestamp to UNIX timestamp
-		const uint32_t (*parts)[2] = (void *) field; // Ugly :(
+		const uint32_t (*parts)[2] = (const uint32_t (*)[2]) field;
 		uint64_t result;
 
 		// Seconds
@@ -845,7 +845,7 @@ inline int ipx_get_date_hp(const void *field, size_t size,
 	case IPX_ET_DATE_TIME_MICROSECONDS:
 	case IPX_ET_DATE_TIME_NANOSECONDS: {
 		// Conversion from NTP 64bit timestamp to UNIX timestamp
-		const uint32_t (*parts)[2] = (void *) field; // Ugly :(
+		const uint32_t (*parts)[2] = (const uint32_t (*)[2]) field;
 
 		// Seconds
 		ts->tv_sec = ntohl((*parts)[0]) - IPX_CONVERT_EPOCHS_DIFF;
