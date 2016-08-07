@@ -25,11 +25,6 @@ include(CheckCCompilerFlag)
 include(GNUInstallDirs)
 #include(CheckCXXCompilerFlag)
 
-# Set default build type if not specified by user
-if (NOT CMAKE_BUILD_TYPE)
-	set (CMAKE_BUILD_TYPE Release)
-endif()
-
 CHECK_C_COMPILER_FLAG(-std=gnu11 COMPILER_SUPPORT_GNU11)
 if (NOT COMPILER_SUPPORT_GNU11)
 	message(FATAL_ERROR "Compiler does NOT support C11 with GNU extension")
@@ -40,21 +35,27 @@ endif()
 #	message(FATAL_ERROR "Compiler does NOT support C++11 with GNU extension")
 #endif()
 
+# ------------------------------------------------------------------------------
+# Build options
+# Set default build type if not specified by user
+if (NOT CMAKE_BUILD_TYPE)
+	set (CMAKE_BUILD_TYPE Release)
+endif()
+
+option(ENABLE_DOC            "Enable documentation building"    ON)
+option(ENABLE_TESTS          "Build Unit tests (make test)"     OFF)
+option(ENABLE_TESTS_VALGRIND "Build Unit tests with Valgrind Memcheck"       OFF)
+option(ENABLE_TESTS_COVERAGE "Add support for code coverage (make coverage)" OFF)
+
 ## -----------------------------------------------------------------------------
 # Hard coded definitions
 
-set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wall -fvisibility=hidden -std=gnu11")
+set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wall -fvisibility=hidden -std=gnu11" )
 set(CMAKE_C_FLAGS_RELEASE   "-O3 -DNDEBUG")
-set(CMAKE_C_FLAGS_DEBUG     "-g -O0 -Wall -Wextra -pedantic")
+set(CMAKE_C_FLAGS_DEBUG     "-g -O0 -Wextra -pedantic")
 set(CMAKE_CXX_FLAGS         "${CMAKE_CXX_FLAGS} -Wall -fvisibility=hidden -std=gnu++11")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG   "-g -O0 -Wextra -pedantic")
-
-# ------------------------------------------------------------------------------
-# Build options
-option(ENABLE_DOC            "Enable documentation building"  ON)
-option(ENABLE_UNIT_TESTS     "Build Unit tests"               OFF)
-option(ENABLE_VALGRIND_TESTS "Build Unit tests with valgrind" OFF)
 
 # ------------------------------------------------------------------------------
 
@@ -155,7 +156,7 @@ if (ENABLE_DOC)
     )
 endif(ENABLE_DOC)
 
-if (ENABLE_UNIT_TESTS)
+if (ENABLE_TESTS)
 	enable_testing()
 	add_subdirectory(tests/unit_tests)
 endif()
