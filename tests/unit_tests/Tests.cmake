@@ -36,9 +36,9 @@ target_include_directories(libgtest INTERFACE
 
 # ------------------------------------------------------------------------------
 # Valgrind
-find_program(VALGRIND_PATH NAMES valgrind)
+find_program(PATH_VALGRIND NAMES valgrind)
 if (ENABLE_VALGRIND_TESTS)
-	if (NOT VALGRIND_PATH)
+	if (NOT PATH_VALGRIND)
 		message(FATAL_ERROR "Valgrind executable not found!")
 	endif()
 
@@ -73,7 +73,7 @@ function(ipx_add_test_file _file)
 		set_target_properties(${CASE_NAME}
 			PROPERTIES COMPILE_FLAGS "-g -O0 --coverage -fprofile-arcs -ftest-coverage")
 		set_target_properties(${CASE_NAME}
-			PROPERTIES LINK_FLAGS "-g -O0 -fprofile-arcs")
+			PROPERTIES LINK_FLAGS    "-g -O0 --coverage -fprofile-arcs -ftest-coverage")
 	endif()
 
 	# Add the test
@@ -82,7 +82,7 @@ function(ipx_add_test_file _file)
 	if (ENABLE_TESTS_VALGRIND)
 		add_test(
 			NAME ${CASE_NAME}_valgrind
-			COMMAND ${VALGRIND_PATH} ${VALGRIND_FLAGS} "$<TARGET_FILE:${CASE_NAME}>"
+			COMMAND ${PATH_VALGRIND} ${VALGRIND_FLAGS} "$<TARGET_FILE:${CASE_NAME}>"
 			)
 	endif()
 
@@ -95,19 +95,19 @@ endfunction()
 # Code coverage
 function(ipx_register_coverage)
 	# Find requried programs
-	find_program(GCOV_PATH    NAMES gcov)
-	find_program(LCOV_PATH    NAMES lcov)
-	find_program(GENHTML_PATH NAMES genhtml)
+	find_program(PATH_GCOV    NAMES gcov)
+	find_program(PATH_LCOV    NAMES lcov)
+	find_program(PATH_GENHTML NAMES genhtml)
 
-	if (NOT GCOV_PATH)
+	if (NOT PATH_GCOV)
 		message(FATAL_ERROR "gcov executable not found!")
 	endif()
 
-	if (NOT LCOV_PATH)
+	if (NOT PATH_LCOV)
 		message(FATAL_ERROR "lcov executable not found!")
 	endif()
 
-	if (NOT GENHTML_PATH)
+	if (NOT PATH_GENHTML)
 		message(FATAL_ERROR "genhtml executable not found!")
 	endif()
 
@@ -127,25 +127,25 @@ function(ipx_register_coverage)
 		COMMENT "Generating code coverage..."
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
 		# Cleanup code counters
-		COMMAND "${LCOV_PATH}" --directory . --zerocounters --quiet
+		COMMAND "${PATH_LCOV}" --directory . --zerocounters --quiet
 
 		# Run tests
 		DEPENDS ${UNIT_TESTS_TARGETS}
-		COMMAND ctest --quiet
+		COMMAND "${CMAKE_CTEST_COMMAND}" --quiet
 
 		# Capture the counters
-		COMMAND "${LCOV_PATH}"
+		COMMAND "${PATH_LCOV}"
 			--directory .
 			--rc lcov_branch_coverage=1
 			--capture --quiet
 			--output-file "${COVERAGE_FILE_RAW}"
 		# Remove coverage of Google Test files, system headers, etc.
-		COMMAND "${LCOV_PATH}"
+		COMMAND "${PATH_LCOV}"
 			--remove "${COVERAGE_FILE_RAW}" 'gtest/*' 'tests/*' '/usr/*'
 			--rc lcov_branch_coverage=1
 			--quiet --output-file "${COVERAGE_FILE_CLEAN}"
 		# Generate HTML report
-		COMMAND "${GENHTML_PATH}"
+		COMMAND "${PATH_GENHTML}"
 			--branch-coverage --function-coverage --quiet --title "IPFIXcol2"
 			--legend --show-details --output-directory "${COVERAGE_DIR}"
 			"${COVERAGE_FILE_CLEAN}"
@@ -153,6 +153,13 @@ function(ipx_register_coverage)
 		COMMAND "${CMAKE_COMMAND}" -E remove
 			${COVERAGE_FILE_RAW} ${COVERAGE_FILE_CLEAN}
 		)
+
+	add_custom_command(TARGET coverage POST_BUILD
+		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+		COMMENT "To see the coverage report, open ${COVERAGE_DIR}index.html"
+		COMMAND ;
+		)
+
 endfunction()
 
 function(ipx_code_coverage)
