@@ -39,7 +39,8 @@ endif()
 # Build options
 # Set default build type if not specified by user
 if (NOT CMAKE_BUILD_TYPE)
-	set (CMAKE_BUILD_TYPE Release)
+	set (CMAKE_BUILD_TYPE Release
+		CACHE STRING "Choise type of build (Release/Debug)." FORCE)
 endif()
 
 option(ENABLE_DOC            "Enable documentation building"    ON)
