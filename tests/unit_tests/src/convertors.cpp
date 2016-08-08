@@ -4,6 +4,12 @@ extern "C" {
 	#include <ipfixcol2.h>
 }
 
+int main(int argc, char **argv)
+{
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
+
 // Test setting maximum possible value for 1,2,4,8 bytes values
 TEST(Convertors, setUintMax) {
 	// SetUp

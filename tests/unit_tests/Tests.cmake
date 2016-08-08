@@ -21,23 +21,21 @@ ExternalProject_Add(
 	LOG_BUILD       ON
 )
 
-ExternalProject_Get_Property(gtest source_dir binary_dir)
-
 # Create a libtest target to be used as a dependency by test programs
-add_library(libgtest INTERFACE)
+add_library(libgtest STATIC IMPORTED GLOBAL)
 add_dependencies(libgtest gtest)
-target_link_libraries(libgtest INTERFACE
-	Threads::Threads
-	"${binary_dir}/libgtest.a"
-	"${binary_dir}/libgtest_main.a"
+
+ExternalProject_Get_Property(gtest source_dir binary_dir)
+set_target_properties(libgtest PROPERTIES
+	IMPORTED_LOCATION "${binary_dir}/libgtest.a"
+	IMPORTED_LINK_INTERFACE_LIBRARIES "${CMAKE_THREAD_LIBS_INIT}"
 	)
-target_include_directories(libgtest INTERFACE
-	"${source_dir}/include")
+include_directories("${source_dir}/include")
 
 # ------------------------------------------------------------------------------
 # Valgrind
-find_program(PATH_VALGRIND NAMES valgrind)
-if (ENABLE_VALGRIND_TESTS)
+if (ENABLE_TESTS_VALGRIND)
+	find_program(PATH_VALGRIND NAMES valgrind)
 	if (NOT PATH_VALGRIND)
 		message(FATAL_ERROR "Valgrind executable not found!")
 	endif()
@@ -130,7 +128,7 @@ function(ipx_register_coverage)
 		COMMAND "${PATH_LCOV}" --directory . --zerocounters --quiet
 
 		# Run tests
-		DEPENDS ${UNIT_TESTS_TARGETS}
+		#DEPENDS ${UNIT_TESTS_TARGETS}
 		COMMAND "${CMAKE_CTEST_COMMAND}" --quiet
 
 		# Capture the counters
