@@ -1,5 +1,5 @@
 /**
- * \file ipfixcol2/ipfix_structures.h
+ * \file include/ipfixcol2/ipfix_structures.h
  * \author Radek Krejci <rkrejci@cesnet.cz>
  * \author Lukas Hutak <xhutak01@cesnet.cz>
  * \brief Structures and macros definition for IPFIX processing

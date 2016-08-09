@@ -181,6 +181,3 @@ API void ipx_verbosity_print(enum IPX_VERBOSITY_LEVEL level,
 
 /**@}*/
 #endif /* VERBOSE_H_ */
-
-
-

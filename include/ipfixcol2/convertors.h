@@ -1,5 +1,5 @@
 /**
- * \file convertors.h
+ * \file include/ipfixcol2/convertors.h
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief Conversion functions for IPFIX data types
  * \date 2016

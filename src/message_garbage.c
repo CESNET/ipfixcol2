@@ -1,11 +1,11 @@
-/*
- * \file ipfixcol.h
+/**
+ * \file src/message_garbage.c
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
- * \brief The main devel header for IPFIX Collector
- *
- * Copyright (C) 2016 CESNET, z.s.p.o.
- *
- * LICENSE TERMS
+ * \brief Garbage message (source file)
+ * \date 2016
+ */
+
+/* Copyright (C) 2016 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,28 +39,62 @@
  *
  */
 
-#ifndef IPFIXCOL2_H_
-#define IPFIXCOL2_H_
+#include <stddef.h>
+#include <stdlib.h>
+
+#include <ipfixcol2.h>
+#include "message_internal.h"
+
+static const char *msg_module = "Core (message)";
 
 /**
- * \mainpage IPFIX Collector Developer's Documentation
- *
- * This documents provides documentation of IPFIX Collector (IPFIXcol). We
- * provides public API of the collector's plugins.
+ * \brief Structure of a garbage message
  */
+struct ipx_garbage_msg {
+	/**
+	 * Identification of this message. This MUST be always first in this
+	 * structure and the "type" MUST be #IPX_MSG_GARBAGE.
+	 */
+	struct ipx_msg msg_header;
 
-/**
- * \defgroup publicAPIs Public ipfixcol's APIs
- * \brief APIs for connecting plugins into the ipfixcol.
- */
+	/** Object to be destroyed     */
+	void *object_ptr;
+	/** Object destruction function */
+	ipx_garbage_msg_cb object_destructor;
+};
 
-#include <ipfixcol2/api.h>
-#include <ipfixcol2/convertors.h>
-#include <ipfixcol2/ipfix_element.h>
-#include <ipfixcol2/ipfix_structures.h>
-#include <ipfixcol2/message.h>
-#include <ipfixcol2/message_garbage.h>
-#include <ipfixcol2/template.h>
-#include <ipfixcol2/verbose.h>
+// Create a garbage message
+API ipx_garbage_msg_t *
+ipx_garbage_msg_create(void *object, ipx_garbage_msg_cb callback)
+{
+	if (object == NULL || callback == NULL) {
+		return NULL;
+	}
 
-#endif /* IPFIXCOL2_H_ */
+	struct ipx_garbage_msg *msg;
+	msg = calloc(1, sizeof(*msg));
+	if (!msg) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
+				  __FILE__, __LINE__);
+		return NULL;
+	}
+
+	if (ipx_msg_header_init(&msg->msg_header, IPX_MSG_GARBAGE) != 0) {
+		MSG_ERROR(msg_module, "Unable to initialize a header of a new garbage"
+				"message", NULL);
+		free(msg);
+		return NULL;
+	}
+
+	msg->object_ptr = object;
+	msg->object_destructor = callback;
+	return msg;
+}
+
+// Destroy a garbage message
+void
+ipx_garbage_msg_destroy(ipx_garbage_msg_t *message)
+{
+	message->object_destructor(message->object_ptr);
+	free(message);
+}

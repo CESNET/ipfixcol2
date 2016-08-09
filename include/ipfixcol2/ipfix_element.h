@@ -315,6 +315,10 @@ enum IPX_ELEMENT_UNIT {
 
 /**
  * \brief IPFIX Element definition
+ *
+ * Description of the IPFIX element from an user defined configuration or
+ * directly from a flow exporter. Determine a name of the field, data types,
+ * etc.
  */
 struct ipx_element {
 	/** Element ID                                                         */

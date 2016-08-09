@@ -43,8 +43,6 @@
 #ifndef API_H
 #define	API_H
 
-#include <stdint.h>
-
 /**
  * \defgroup ipxAPIDefinition API defintions
  * \ingroup publicAPIs

@@ -1,11 +1,12 @@
-/*
- * \file ipfixcol.h
+/**
+ * \file src/message.c
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
- * \brief The main devel header for IPFIX Collector
- *
- * Copyright (C) 2016 CESNET, z.s.p.o.
- *
- * LICENSE TERMS
+ * \brief Common specification of messages for the IPFIXcol pipeline
+ *   (source file)
+ * \date 2016
+ */
+
+/* Copyright (C) 2016 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,28 +40,31 @@
  *
  */
 
-#ifndef IPFIXCOL2_H_
-#define IPFIXCOL2_H_
-
-/**
- * \mainpage IPFIX Collector Developer's Documentation
- *
- * This documents provides documentation of IPFIX Collector (IPFIXcol). We
- * provides public API of the collector's plugins.
- */
-
-/**
- * \defgroup publicAPIs Public ipfixcol's APIs
- * \brief APIs for connecting plugins into the ipfixcol.
- */
-
-#include <ipfixcol2/api.h>
-#include <ipfixcol2/convertors.h>
-#include <ipfixcol2/ipfix_element.h>
-#include <ipfixcol2/ipfix_structures.h>
-#include <ipfixcol2/message.h>
+#include <ipfixcol2.h>
 #include <ipfixcol2/message_garbage.h>
-#include <ipfixcol2/template.h>
-#include <ipfixcol2/verbose.h>
+#include "message_internal.h"
 
-#endif /* IPFIXCOL2_H_ */
+// Get the type of a message for the collector pipeline
+enum IPX_MSG_TYPE
+ipx_msg_get_type(ipx_msg_t *message)
+{
+	return message->type;
+}
+
+// Destroy a message for the collector pipeline
+void
+ipx_msg_destroy(ipx_msg_t *message)
+{
+	switch (message->type) {
+	case IPX_MSG_IPFIX:
+		// TODO
+		break;
+	case IPX_MSG_CONN_STATUS:
+		// TODO
+		break;
+	case IPX_MSG_GARBAGE:
+		// Destroy a garbage message
+		ipx_garbage_msg_destroy((ipx_garbage_msg_t *) message);
+		break;
+	}
+}
