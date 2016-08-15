@@ -60,6 +60,8 @@
 #include <ipfixcol2/ipfix_structures.h>
 #include <ipfixcol2/message.h>
 #include <ipfixcol2/message_garbage.h>
+#include <ipfixcol2/message_session.h>
+#include <ipfixcol2/source.h>
 #include <ipfixcol2/template.h>
 #include <ipfixcol2/verbose.h>
 

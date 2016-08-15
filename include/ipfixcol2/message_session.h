@@ -1,7 +1,7 @@
 /**
- * \file include/ipfixcol2/message_garbage.h
+ * \file include/ipfixcol2/message_session.h
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
- * \brief Garbage message (header file)
+ * \brief Source session status messages (header file)
  * \date 2016
  */
 
@@ -39,73 +39,82 @@
  *
  */
 
-#ifndef IPFIXCOL_MESSAGE_GARBAGE_H
-#define IPFIXCOL_MESSAGE_GARBAGE_H
+#ifndef IPFIXCOL_MESSAGE_SESSION_H
+#define IPFIXCOL_MESSAGE_SESSION_H
 
 /**
- * \defgroup ipxGarbageMessage Garbage message
+ * \defgroup ipxSourceSessionMessage Source session status message
  * \ingroup ipxGeneralMessage
  *
- * \brief Garbage message interface
+ * \brief Source session status message interface
  *
- * A message for destruction of objects that are intended to be destroyed, but
- * can be referenced by other still existing objects farther down in
- * the collector's pipeline.
+ * A message with a notification about an Exporting Process connection or
+ * disconnection. The notification is related to a Source Session and can be
+ * useful for preparing or cleaning up internal structures of plugins.
  *
- * For example, a withdrawn template that can be referenced by still existing
- * packets >>farther down<< in the pipeline. This message will call a callback
- * to destroy the object before the destruction of this message. It ensures
- * that there are no objects >>farther down<< in the pipeline with references
- * to this object, because that objects have been already destroyed.
- *
- * \warning Already destroyed objects MUST never be used again.
- * \remark Identification type of this message is #IPX_MSG_GARBAGE.
+ * \remark Identification type of this message is #IPX_MSG_SESSION.
  *
  * @{
  */
 
-/** \brief The type of garbage message                                      */
-typedef struct ipx_garbage_msg ipx_garbage_msg_t;
+/** \brief The type of source session message                                */
+typedef struct ipx_session_msg ipx_session_msg_t;
 
 #include <ipfixcol2/message.h>
+#include <ipfixcol2/source.h>
 
 /**
- * \typedef ipx_garbage_msg_cb
- * \brief Object destruction callback for a garbage message type
- * \param[in,out] object Object to be destroyed
+ * \brief Type of a session event of a flow source
  */
-typedef void (*ipx_garbage_msg_cb)(void *object);
+enum IPX_SESSION_EVENT {
+	IPX_SESSION_EVENT_NEW,   /**< New source connected (new Source Session)  */
+	IPX_SESSION_EVENT_CLOSED /**< Source disconnected or connection timeout  */
+};
 
 /**
- * \brief Create a garbage message
- *
- * An \p object and a callback \p cb must be defined.
- * \param[in,out] object   Pointer to the object to be destroyed
- * \param[in]     callback Object destruction function
+ * \brief Create a new status message about a Source Session
+ * \param[in] status  Type of a session event
+ * \param[in] session Pointer to the session
  * \return On success returns a pointer to the message. Otherwise returns NULL.
  */
-API ipx_garbage_msg_t *
-ipx_garbage_msg_create(void *object, ipx_garbage_msg_cb callback);
+API ipx_session_msg_t *
+ipx_session_msg_create(enum IPX_SESSION_EVENT event, const ipx_session_t *session);
 
 /**
- * \brief Destroy a garbage message
+ * \brief Destroy a status message
  *
- * First, call the destructor of an internal object and than destroy itself.
- * \param[in,out] message Pointer to the message
+ * Only destroy the message. A Source Session is not freed.
+ * \param[in] message Pointer to the message
  */
 API void
-ipx_garbage_msg_destroy(ipx_garbage_msg_t *message);
+ipx_session_msg_destroy(ipx_session_msg_t *message);
 
 /**
- * \brief Cast from a garbage message to a general message
- * \param[in] message Pointer to the garbage message
+ * \brief Get the event type of a Source Session
+ * \param[in] message Pointer to the message
+ * \return Event type
+ */
+API enum IPX_SESSION_EVENT
+ipx_session_msg_get_event(const ipx_session_msg_t *message);
+
+/**
+ * \brief Get the Source Session referenced in a message
+ * \param[in] message Pointer to the message
+ * \return Source Session
+ */
+API const ipx_session_t *
+ipx_session_msg_get_session(const ipx_session_msg_t *message);
+
+/**
+ * \brief Cast from a source session message to a general message
+ * \param[in] message Pointer to the session message
  * \return Pointer to the general message.
  */
 static inline ipx_msg_t *
-ipx_garbage_msg_cast2general(ipx_garbage_msg_t *message)
+ipx_session_msg_cast2general(ipx_session_msg_t *message)
 {
 	return (ipx_msg_t *) message;
 }
 
 /**@}*/
-#endif //IPFIXCOL_MESSAGE_DESTRUCTIVE_H
+#endif //IPFIXCOL_MESSAGE_SESSION_H

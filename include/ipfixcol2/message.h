@@ -64,11 +64,11 @@
  */
 enum IPX_MSG_TYPE {
 	/** A message with a parsed IPFIX packet from a source of flows         */
-	IPX_MSG_IPFIX,
-	/** A connection status i.e. information about source (dis)connections  */
-	IPX_MSG_CONN_STATUS,
+	IPX_MSG_IPFIX   = (1 << 0),
+	/** A transport session status i.e. information about (dis)connections  */
+	IPX_MSG_SESSION = (1 << 1),
 	/** An generic object destructor (usually only for internal usage)      */
-	IPX_MSG_GARBAGE
+	IPX_MSG_GARBAGE = (1 << 2)
 };
 
 /** The datatype of the general message                                     */
@@ -93,6 +93,21 @@ API void
 ipx_msg_destroy(ipx_msg_t *message);
 
 #include <ipfixcol2/message_garbage.h>
+#include <ipfixcol2/message_session.h>
+
+/**
+ * \brief Try to cast from a general message to a session message
+ * \param[in] message Pointer to the general message
+ * \return If the general \p message can be cast to the session message,
+ *   returns a valid pointer to the session message. Otherwise returns NULL.
+ */
+static inline ipx_session_msg_t *
+ipx_msg_cast2session(ipx_msg_t *message)
+{
+	return (ipx_msg_get_type(message) == IPX_MSG_SESSION)
+		   ? ((ipx_session_msg_t *) message)
+		   : NULL;
+}
 
 /**
  * \brief Try to cast from a general message to a garbage message
@@ -107,6 +122,7 @@ ipx_msg_cast2garbage(ipx_msg_t *message)
 		? ((ipx_garbage_msg_t *) message)
 		: NULL;
 }
+
 
 /**@}*/
 

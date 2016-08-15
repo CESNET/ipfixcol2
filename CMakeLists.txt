@@ -105,6 +105,8 @@ ipx_files_add(PUBLIC_HEADERS
 	include/ipfixcol2/ipfix_structures.h
 	include/ipfixcol2/message.h
 	include/ipfixcol2/message_garbage.h
+	include/ipfixcol2/message_session.h
+	include/ipfixcol2/source.h
 	include/ipfixcol2/template.h
 	include/ipfixcol2/verbose.h
 	"${PROJECT_BINARY_DIR}/include/ipfixcol2/api.h"
@@ -123,6 +125,8 @@ ipx_files_add(MAIN
 	src/message.c
 	src/message_internal.h
 	src/message_garbage.c
+	src/message_session.c
+	src/source.c
 	)
 
 # Get files

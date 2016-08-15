@@ -46,6 +46,10 @@
 #include <stdbool.h>
 #include <ipfixcol2/api.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * \defgroup ipxTemplatesAPI Templates
  * \ingroup publicAPIs
@@ -137,10 +141,10 @@ ipx_template_create(const void *rec, uint16_t max_size, enum IPFIX_SET_ID type);
 
 /**
  * \brief Destroy a template
- * \param[in] template Pointer to the template to be destroyed
+ * \param[in] tmplt Pointer to the template to be destroyed
  */
 API void
-ipx_template_destroy(ipx_template_t *template);
+ipx_template_destroy(ipx_template_t *tmplt);
 
 /**
  * \brief Update detailed descriptions of parsed fields
@@ -151,85 +155,89 @@ ipx_template_destroy(ipx_template_t *template);
  * the description of that fields is NOT updated, but fields with missing
  * description will be updated.
  *
- * \param[in,out] template Pointer to the template
+ * \param[in,out] tmplt Pointer to the template
  */
 API void
-ipx_template_update_descriptions(ipx_template_t *template /* TODO */);
+ipx_template_update_descriptions(ipx_template_t *tmplt /* TODO */);
 
 /**
  * \brief Get the type of a template
- * \param[in] template Pointer to the template
+ * \param[in] tmplt Pointer to the template
  * \return The type
  */
 API enum IPX_TEMPLATE_TYPE
-ipx_template_get_type(const ipx_template_t *template);
+ipx_template_get_type(const ipx_template_t *tmplt);
 
 /**
  * \brief Get the options type (only for Options Template) of a template
  *
  * If the template is not Options Template returns #IPX_OPTS_NO_OPTIONS.
  * Otherwise, if known, returns the type.
- * \param[in] template Pointer to the template
+ * \param[in] tmplt Pointer to the template
  * \return The options type
  */
 API enum IPX_OPTS_TEMPLATE_TYPE
-ipx_template_get_opts_type(const ipx_template_t *template);
+ipx_template_get_opts_type(const ipx_template_t *tmplt);
 
 /**
  * \brief Get the Template ID of a template
- * \param[in] template Pointer to the template
+ * \param[in] tmplt Pointer to the template
  * \return The Template ID
  */
 API uint16_t
-ipx_template_get_id(const ipx_template_t *template);
+ipx_template_get_id(const ipx_template_t *tmplt);
 
 /**
  * \brief Get the total number of all fields in a template
  *
  * Returns count of scope and non-scope fields in the template
- * \param[in] template Pointer to the template
+ * \param[in] tmplt Pointer to the template
  * \return Count
  */
 API uint16_t
-ipx_template_get_fields_count(const ipx_template_t *template);
+ipx_template_get_fields_count(const ipx_template_t *tmplt);
 
 /**
  * \brief Get the number of scope fields only in a template
- * \param[in] template Pointer to the template
+ * \param[in] tmplt Pointer to the template
  * \return Count
  */
 API uint16_t
-ipx_template_get_scope_fields_count(const ipx_template_t *template);
+ipx_template_get_scope_fields_count(const ipx_template_t *tmplt);
 
 /**
  * \brief Get the pointer to the array of all template fields
- * \param[in] template Pointer to the template
- * \param[out] size    Number of the fields in the array (can be NULL)
+ * \param[in] tmplt  Pointer to the template
+ * \param[out] size  Number of the fields in the array (can be NULL)
  * \return Pointer to the array of templates
  */
 const struct ipx_template_field *
-ipx_template_get_all_fields(const ipx_template_t *template, size_t *size);
+ipx_template_get_all_fields(const ipx_template_t *tmplt, size_t *size);
 
 /**
  * \brief Get the description of a field with a given index in a template
- * \param[in] template Pointer to the template
- * \param[in] idx      Index of the field (indexed from 0)
+ * \param[in] tmplt  Pointer to the template
+ * \param[in] idx    Index of the field (indexed from 0)
  * \return
  */
 const struct ipx_template_field *
-ipx_template_get_field(const ipx_template_t *template, uint16_t idx);
+ipx_template_get_field(const ipx_template_t *tmplt, uint16_t idx);
 
 /**
  * \brief Get the number of fields with given Enterprise Number and Information
  *   Element ID in a template
- * \param[in] template Pointer to the template
- * \param[in] en       Enterprise Number
- * \param[in] id       Information Element ID
+ * \param[in] tmplt Pointer to the template
+ * \param[in] en    Enterprise Number
+ * \param[in] id    Information Element ID
  * \return Number of fields
  */
 API uint16_t
-ipx_template_field_present(const ipx_template_t *template, uint32_t en,
-	uint16_t id);
+ipx_template_field_present(const ipx_template_t *tmplt, uint32_t en,
+		uint16_t id);
 
 /**@}*/
+#ifdef __cplusplus
+}
+#endif
+
 #endif //IPFIXCOL_TEMPLATE_H

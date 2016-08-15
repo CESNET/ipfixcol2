@@ -1,7 +1,7 @@
 /**
- * \file src/message_garbage.c
+ * \file src/message_session.c
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
- * \brief Garbage message (source file)
+ * \brief Source session status messages (source file)
  * \date 2016
  */
 
@@ -39,70 +39,20 @@
  *
  */
 
-#include <stddef.h>
-#include <stdlib.h>
-
 #include <ipfixcol2.h>
 #include "message_internal.h"
 
-static const char *msg_module = "Core (message)";
-
 /**
- * \internal
- * \addtogroup ipxGarbageMessage
- * @{
+ * \brief Structure of a session message
  */
-
-/**
- * \brief Structure of a garbage message
- */
-struct ipx_garbage_msg {
+struct ipx_session_msg {
 	/**
-	 * Identification of this message. This MUST be always first in this
-	 * structure and the "type" MUST be #IPX_MSG_GARBAGE.
-	 */
+ 	 * Identification of this message. This MUST be always first in this
+	 * structure and the "type" MUST be #IPX_MSG_SESSION.
+ 	 */
 	struct ipx_msg msg_header;
 
-	/** Object to be destroyed     */
-	void *object_ptr;
-	/** Object destruction function */
-	ipx_garbage_msg_cb object_destructor;
+	// TODO
+	//enum {IPX_SRC_STATUS_CONNECTED, IPX_SRC_STATUS_CLOSED, ?RECONNECT?} src_status;
+	// const ipx_src_t *src_info; // pointer to the source
 };
-
-// Create a garbage message
-API ipx_garbage_msg_t *
-ipx_garbage_msg_create(void *object, ipx_garbage_msg_cb callback)
-{
-	if (object == NULL || callback == NULL) {
-		return NULL;
-	}
-
-	struct ipx_garbage_msg *msg;
-	msg = calloc(1, sizeof(*msg));
-	if (!msg) {
-		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
-				  __FILE__, __LINE__);
-		return NULL;
-	}
-
-	if (ipx_msg_header_init(&msg->msg_header, IPX_MSG_GARBAGE) != 0) {
-		MSG_ERROR(msg_module, "Unable to initialize a header of a new garbage"
-				"message", NULL);
-		free(msg);
-		return NULL;
-	}
-
-	msg->object_ptr = object;
-	msg->object_destructor = callback;
-	return msg;
-}
-
-// Destroy a garbage message
-void
-ipx_garbage_msg_destroy(ipx_garbage_msg_t *message)
-{
-	message->object_destructor(message->object_ptr);
-	free(message);
-}
-
-/**@}*/

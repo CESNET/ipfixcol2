@@ -39,6 +39,7 @@
  *
  */
 
+#include <stdint.h>
 #include <ipfixcol2.h>
 
 /** Size of the Top-level table with pointers to the second-level table      */
@@ -131,7 +132,7 @@ struct ipx_template {
 	 * First index (i.e. occurence) of IPFIX element in the template's fields
 	 * for fast lookup.
 	 *
-	 * Idea: Table with first indexes for each Information Element ID (ignores
+	 * Idea: Table with first index of each Information Element ID (ignores
 	 * Enterprise Number specification -> safe memory usage but can cause
 	 * index mapping collisions).
 	 *

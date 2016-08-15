@@ -59,8 +59,9 @@ ipx_msg_destroy(ipx_msg_t *message)
 	case IPX_MSG_IPFIX:
 		// TODO
 		break;
-	case IPX_MSG_CONN_STATUS:
+	case IPX_MSG_SESSION:
 		// TODO
+		//ipx_session_msg_destroy((ipx_session_msg_t *) message);
 		break;
 	case IPX_MSG_GARBAGE:
 		// Destroy a garbage message
