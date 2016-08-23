@@ -322,9 +322,9 @@ enum IPX_ELEMENT_UNIT {
  */
 struct ipx_element {
 	/** Element ID                                                         */
-	uint16_t id;
+	uint16_t element_id;
 	/** Enterprise ID                                                      */
-	uint32_t en;
+	uint32_t enterprise_id;
 	/** Name of the element                                                */
 	char    *name;
 	/**

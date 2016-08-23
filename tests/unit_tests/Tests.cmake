@@ -98,15 +98,15 @@ function(ipx_register_coverage)
 	find_program(PATH_GENHTML NAMES genhtml)
 
 	if (NOT PATH_GCOV)
-		message(FATAL_ERROR "gcov executable not found!")
+		message(FATAL_ERROR "'gcov' executable not found! Install it or disable code coverage.")
 	endif()
 
 	if (NOT PATH_LCOV)
-		message(FATAL_ERROR "lcov executable not found!")
+		message(FATAL_ERROR "'lcov' executable not found! Install it or disable code coverage.")
 	endif()
 
 	if (NOT PATH_GENHTML)
-		message(FATAL_ERROR "genhtml executable not found!")
+		message(FATAL_ERROR "'genhtml' executable not found! Install it or disable code coverage.")
 	endif()
 
 	if (NOT CMAKE_COMPILER_IS_GNUCXX)

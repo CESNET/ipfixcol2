@@ -44,6 +44,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <ipfixcol2/api.h>
 
 #ifdef __cplusplus
@@ -108,12 +109,12 @@ struct ipx_template_field {
 	 */
 	uint16_t offset;
 	/**
-	 * The last of identical Elements with the same combination of Information
-	 * Element ID and Enterpise Number, i.e. if equals to "false", then there
-	 * is at least one more elements with the same combination and higher index
-	 * in the template.
+	 * The last of identical Elements with the same combination of an
+	 * Information Element ID and an Enterpise Number, i.e. if equals to
+	 * "false", then there is at least one more element with the same
+	 * combination and a higher index in the template.
 	 */
-	bool last_of_identical_fields;
+	bool last_identical;
 
 	/**
 	 * Detailed definition of the element (data/sementic/unit type).

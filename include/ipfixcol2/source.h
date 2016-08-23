@@ -44,6 +44,7 @@
 
 #include <stdint.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <ipfixcol2/api.h>
 
 /**
