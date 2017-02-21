@@ -138,7 +138,7 @@ ipx_set_uint(void *field, size_t size, uint64_t value)
 			return IPX_CONVERT_ERR_TRUNC;
 		}
 
-		*((uint32_t *) field) = htonl(value);
+		*((uint32_t *) field) = htonl((uint32_t) value);
 		return 0;
 
 	case 2:
@@ -147,7 +147,7 @@ ipx_set_uint(void *field, size_t size, uint64_t value)
 			return IPX_CONVERT_ERR_TRUNC;
 		}
 
-		*((uint16_t *) field) = htons(value);
+		*((uint16_t *) field) = htons((uint16_t) value);
 		return 0;
 
 	case 1:
@@ -156,7 +156,7 @@ ipx_set_uint(void *field, size_t size, uint64_t value)
 			return IPX_CONVERT_ERR_TRUNC;
 		}
 
-		*((uint8_t *) field) = value;
+		*((uint8_t *) field) = (uint8_t) value;
 		return 0;
 
 	default:

@@ -54,6 +54,15 @@ extern "C" {
 	#include <ipfixcol2/convertors.h>
 }
 
+#define BYTES_1 (1U)
+#define BYTES_2 (2U)
+#define BYTES_3 (3U)
+#define BYTES_4 (4U)
+#define BYTES_5 (5U)
+#define BYTES_6 (6U)
+#define BYTES_7 (7U)
+#define BYTES_8 (8U)
+
 // Auxiliary definitions of maximal values for UINT_XX for 3, 5, 6 and 7 bytes
 const uint32_t IPX_UINT24_MAX = 0xFFFFFFUL;
 const uint64_t IPX_UINT40_MAX = 0xFFFFFFFFFFULL;
@@ -69,7 +78,7 @@ int main(int argc, char **argv)
 /**
  * \brief Test fixture for SetUint tests
  */
-class SetUint : public ::testing::Test {
+class ConverterUint : public ::testing::Test {
 protected:
 	/*
 	 * We want to have all variables dynamically allocated so Valgrind can check
@@ -118,66 +127,66 @@ public:
  * Insert the maximum possible value i.e. "UINT64_MAX" and the minimum possible
  * value i.e. "0" into 1 - 8 byte variables.
  */
-TEST_F(SetUint, maxMin) {
+TEST_F(ConverterUint, SetUintMaxMin) {
 	// SetUp
 	const uint64_t max_val = UINT64_MAX;
 	const uint64_t min_val = 0U;
 
 	// Execute
 	// 1 byte
-	EXPECT_EQ(ipx_set_uint(u8, 1,  max_val), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(ipx_set_uint(u8, BYTES_1,  max_val), IPX_CONVERT_ERR_TRUNC);
 	EXPECT_EQ(*u8,  UINT8_MAX);
-	EXPECT_EQ(ipx_set_uint(u8, 1,  min_val), 0);
+	EXPECT_EQ(ipx_set_uint(u8, BYTES_1,  min_val), 0);
 	EXPECT_EQ(*u8,  0U);
 
 	// 2 bytes
-	EXPECT_EQ(ipx_set_uint(u16, 2, max_val), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(ipx_set_uint(u16, BYTES_2, max_val), IPX_CONVERT_ERR_TRUNC);
 	EXPECT_EQ(*u16, UINT16_MAX);
-	EXPECT_EQ(ipx_set_uint(u16, 2, min_val), 0);
+	EXPECT_EQ(ipx_set_uint(u16, BYTES_2, min_val), 0);
 	EXPECT_EQ(*u16, 0U);
 
 	// 4 bytes
-	EXPECT_EQ(ipx_set_uint(u32, 4, max_val), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(ipx_set_uint(u32, BYTES_4, max_val), IPX_CONVERT_ERR_TRUNC);
 	EXPECT_EQ(*u32, UINT32_MAX);
-	EXPECT_EQ(ipx_set_uint(u32, 4, min_val), 0);
+	EXPECT_EQ(ipx_set_uint(u32, BYTES_4, min_val), 0);
 	EXPECT_EQ(*u32, 0U);
 
 	// 8 bytes
-	EXPECT_EQ(ipx_set_uint(u64, 8, max_val), 0);
+	EXPECT_EQ(ipx_set_uint(u64, BYTES_8, max_val), 0);
 	EXPECT_EQ(*u64, UINT64_MAX);
-	EXPECT_EQ(ipx_set_uint(u64, 8, min_val), 0);
+	EXPECT_EQ(ipx_set_uint(u64, BYTES_8, min_val), 0);
 	EXPECT_EQ(*u64, 0U);
 
 	// Other (unusual situations i.e. 3, 5, 6 and 7 bytes)
 	// 3 bytes
-	EXPECT_EQ(ipx_set_uint(u24, 3, max_val), IPX_CONVERT_ERR_TRUNC);
-	EXPECT_EQ(memcmp(u24, &max_val, 3), 0);
-	EXPECT_EQ(ipx_set_uint(u24, 3, min_val), 0);
-	EXPECT_EQ(memcmp(u24, &min_val, 3), 0);
+	EXPECT_EQ(ipx_set_uint(u24, BYTES_3, max_val), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(memcmp(u24, &max_val, BYTES_3), 0);
+	EXPECT_EQ(ipx_set_uint(u24, BYTES_3, min_val), 0);
+	EXPECT_EQ(memcmp(u24, &min_val, BYTES_3), 0);
 
 	// 5 bytes
-	EXPECT_EQ(ipx_set_uint(u40, 5, max_val), IPX_CONVERT_ERR_TRUNC);
-	EXPECT_EQ(memcmp(u40, &max_val, 5), 0);
-	EXPECT_EQ(ipx_set_uint(u40, 5, min_val), 0);
-	EXPECT_EQ(memcmp(u40, &min_val, 5), 0);
+	EXPECT_EQ(ipx_set_uint(u40, BYTES_5, max_val), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(memcmp(u40, &max_val, BYTES_5), 0);
+	EXPECT_EQ(ipx_set_uint(u40, BYTES_5, min_val), 0);
+	EXPECT_EQ(memcmp(u40, &min_val, BYTES_5), 0);
 
 	// 6 bytes
-	EXPECT_EQ(ipx_set_uint(u48, 6, max_val), IPX_CONVERT_ERR_TRUNC);
-	EXPECT_EQ(memcmp(u48, &max_val, 6), 0);
-	EXPECT_EQ(ipx_set_uint(u48, 6, min_val), 0);
-	EXPECT_EQ(memcmp(u48, &min_val, 6), 0);
+	EXPECT_EQ(ipx_set_uint(u48, BYTES_6, max_val), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(memcmp(u48, &max_val, BYTES_6), 0);
+	EXPECT_EQ(ipx_set_uint(u48, BYTES_6, min_val), 0);
+	EXPECT_EQ(memcmp(u48, &min_val, BYTES_6), 0);
 
 	// 7 bytes
-	EXPECT_EQ(ipx_set_uint(u56, 7, max_val), IPX_CONVERT_ERR_TRUNC);
-	EXPECT_EQ(memcmp(u56, &max_val, 7), 0);
-	EXPECT_EQ(ipx_set_uint(u56, 7, min_val), 0);
-	EXPECT_EQ(memcmp(u56, &min_val, 7), 0);
+	EXPECT_EQ(ipx_set_uint(u56, BYTES_7, max_val), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(memcmp(u56, &max_val, BYTES_7), 0);
+	EXPECT_EQ(ipx_set_uint(u56, BYTES_7, min_val), 0);
+	EXPECT_EQ(memcmp(u56, &min_val, BYTES_7), 0);
 }
 
 /*
  * Insert max + 1/max/max - 1 values into 1 - 8 byte variables.
  */
-TEST_F(SetUint, aboveBelow)
+TEST_F(ConverterUint, SetUintAboveBelow)
 {
 	// SetUp
 	const uint16_t u8_above =  ((uint16_t) UINT8_MAX) + 1;
@@ -199,33 +208,33 @@ TEST_F(SetUint, aboveBelow)
 
 	// Execute
 	// 1 byte
-	EXPECT_EQ(ipx_set_uint(u8, 1, u8_above), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(ipx_set_uint(u8, BYTES_1, u8_above), IPX_CONVERT_ERR_TRUNC);
 	EXPECT_EQ(*u8, UINT8_MAX);  // No endian conversion needed
-	EXPECT_EQ(ipx_set_uint(u8, 1, UINT8_MAX), 0);
+	EXPECT_EQ(ipx_set_uint(u8, BYTES_1, UINT8_MAX), 0);
 	EXPECT_EQ(*u8, UINT8_MAX);  // No endian conversion needed
-	EXPECT_EQ(ipx_set_uint(u8, 1, u8_below), 0);
+	EXPECT_EQ(ipx_set_uint(u8, BYTES_1, u8_below), 0);
 	EXPECT_EQ(*u8, u8_below);   // No endian conversion needed (only 1 byte)
 
 	// 2 bytes
-	EXPECT_EQ(ipx_set_uint(u16, 2, u16_above), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(ipx_set_uint(u16, BYTES_2, u16_above), IPX_CONVERT_ERR_TRUNC);
 	EXPECT_EQ(*u16, UINT16_MAX); // No endian conversion needed
-	EXPECT_EQ(ipx_set_uint(u16, 2, UINT16_MAX), 0);
+	EXPECT_EQ(ipx_set_uint(u16, BYTES_2, UINT16_MAX), 0);
 	EXPECT_EQ(*u16, UINT16_MAX);  // No endian conversion needed
-	EXPECT_EQ(ipx_set_uint(u16, 2, u16_below), 0);
+	EXPECT_EQ(ipx_set_uint(u16, BYTES_2, u16_below), 0);
 	EXPECT_EQ(*u16, htons(u16_below));
 
 	// 4 bytes
-	EXPECT_EQ(ipx_set_uint(u32, 4, u32_above), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(ipx_set_uint(u32, BYTES_4, u32_above), IPX_CONVERT_ERR_TRUNC);
 	EXPECT_EQ(*u32, UINT32_MAX); // No endian conversion needed
-	EXPECT_EQ(ipx_set_uint(u32, 4, UINT32_MAX), 0);
+	EXPECT_EQ(ipx_set_uint(u32, BYTES_4, UINT32_MAX), 0);
 	EXPECT_EQ(*u32, UINT32_MAX);  // No endian conversion needed
-	EXPECT_EQ(ipx_set_uint(u32, 4, u32_below), 0);
+	EXPECT_EQ(ipx_set_uint(u32, BYTES_4, u32_below), 0);
 	EXPECT_EQ(*u32, htonl(u32_below));
 
 	// 8 bytes (only the value below MAX and MAX)
-	EXPECT_EQ(ipx_set_uint(u64, 8, UINT64_MAX), 0);
+	EXPECT_EQ(ipx_set_uint(u64, BYTES_8, UINT64_MAX), 0);
 	EXPECT_EQ(*u64, UINT64_MAX);  // No endian conversion needed
-	EXPECT_EQ(ipx_set_uint(u64, 8, u64_below), 0);
+	EXPECT_EQ(ipx_set_uint(u64, BYTES_8, u64_below), 0);
 	EXPECT_EQ(*u64, htobe64(u64_below));
 
 	// Other (unusual situations i.e. 3, 5, 6 and 7 bytes)
@@ -234,157 +243,157 @@ TEST_F(SetUint, aboveBelow)
 	uint8_t temp64[8];
 
 	// 3 bytes
-	EXPECT_EQ(ipx_set_uint(u24, 3, u24_above), IPX_CONVERT_ERR_TRUNC);
-	EXPECT_EQ(memcmp(u24, &temp_max, 3), 0);
-	EXPECT_EQ(ipx_set_uint(u24, 3, IPX_UINT24_MAX), 0);
-	EXPECT_EQ(memcmp(u24, &temp_max, 3), 0);
-	EXPECT_EQ(ipx_set_uint(u24, 3, u24_below), 0);
+	EXPECT_EQ(ipx_set_uint(u24, BYTES_3, u24_above), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(memcmp(u24, &temp_max, BYTES_3), 0);
+	EXPECT_EQ(ipx_set_uint(u24, BYTES_3, IPX_UINT24_MAX), 0);
+	EXPECT_EQ(memcmp(u24, &temp_max, BYTES_3), 0);
+	EXPECT_EQ(ipx_set_uint(u24, BYTES_3, u24_below), 0);
 	*((uint32_t *) temp32) = htonl(u24_below);
-	EXPECT_EQ(memcmp(u24, &temp32[1], 3), 0);
+	EXPECT_EQ(memcmp(u24, &temp32[1], BYTES_3), 0);
 
 	// 5 bytes
-	EXPECT_EQ(ipx_set_uint(u40, 5, u40_above), IPX_CONVERT_ERR_TRUNC);
-	EXPECT_EQ(memcmp(u40, &temp_max, 5), 0);
-	EXPECT_EQ(ipx_set_uint(u40, 5, IPX_UINT40_MAX), 0);
-	EXPECT_EQ(memcmp(u40, &temp_max, 5), 0);
-	EXPECT_EQ(ipx_set_uint(u40, 5, u40_below), 0);
+	EXPECT_EQ(ipx_set_uint(u40, BYTES_5, u40_above), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(memcmp(u40, &temp_max, BYTES_5), 0);
+	EXPECT_EQ(ipx_set_uint(u40, BYTES_5, IPX_UINT40_MAX), 0);
+	EXPECT_EQ(memcmp(u40, &temp_max, BYTES_5), 0);
+	EXPECT_EQ(ipx_set_uint(u40, BYTES_5, u40_below), 0);
 	*((uint64_t *) temp64) = htobe64(u40_below);
-	EXPECT_EQ(memcmp(u40, &temp64[3], 5), 0);
+	EXPECT_EQ(memcmp(u40, &temp64[3], BYTES_5), 0);
 
 	// 6 bytes
-	EXPECT_EQ(ipx_set_uint(u48, 6, u48_above), IPX_CONVERT_ERR_TRUNC);
-	EXPECT_EQ(memcmp(u48, &temp_max, 6), 0);
-	EXPECT_EQ(ipx_set_uint(u48, 6, IPX_UINT48_MAX), 0);
-	EXPECT_EQ(memcmp(u48, &temp_max, 6), 0);
-	EXPECT_EQ(ipx_set_uint(u48, 6, u48_below), 0);
+	EXPECT_EQ(ipx_set_uint(u48, BYTES_6, u48_above), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(memcmp(u48, &temp_max, BYTES_6), 0);
+	EXPECT_EQ(ipx_set_uint(u48, BYTES_6, IPX_UINT48_MAX), 0);
+	EXPECT_EQ(memcmp(u48, &temp_max, BYTES_6), 0);
+	EXPECT_EQ(ipx_set_uint(u48, BYTES_6, u48_below), 0);
 	*((uint64_t *) temp64) = htobe64(u48_below);
-	EXPECT_EQ(memcmp(u48, &temp64[2], 6), 0);
+	EXPECT_EQ(memcmp(u48, &temp64[2], BYTES_6), 0);
 
 	// 7 bytes
-	EXPECT_EQ(ipx_set_uint(u56, 7, u56_above), IPX_CONVERT_ERR_TRUNC);
-	EXPECT_EQ(memcmp(u56, &temp_max, 7), 0);
-	EXPECT_EQ(ipx_set_uint(u56, 7, IPX_UINT56_MAX), 0);
-	EXPECT_EQ(memcmp(u56, &temp_max, 7), 0);
-	EXPECT_EQ(ipx_set_uint(u56, 7, u56_below), 0);
+	EXPECT_EQ(ipx_set_uint(u56, BYTES_7, u56_above), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(memcmp(u56, &temp_max, BYTES_7), 0);
+	EXPECT_EQ(ipx_set_uint(u56, BYTES_7, IPX_UINT56_MAX), 0);
+	EXPECT_EQ(memcmp(u56, &temp_max, BYTES_7), 0);
+	EXPECT_EQ(ipx_set_uint(u56, BYTES_7, u56_below), 0);
 	*((uint64_t *) temp64) = htobe64(u56_below);
-	EXPECT_EQ(memcmp(u56, &temp64[1], 7), 0);
+	EXPECT_EQ(memcmp(u56, &temp64[1], BYTES_7), 0);
 }
 
 /*
  * "Random" values in the valid interval for 1 - 8 bytes unsigned values
  */
-TEST_F(SetUint, inInterval)
+TEST_F(ConverterUint, SetUintInRandom)
 {
 	// 1 byte
 	const uint8_t u8_rand1 =  12U;
 	const uint8_t u8_rand2 =  93U;
 	const uint8_t u8_rand3 = 112U;
-	EXPECT_EQ(ipx_set_uint(u8, 1, u8_rand1), 0);
+	EXPECT_EQ(ipx_set_uint(u8, BYTES_1, u8_rand1), 0);
 	EXPECT_EQ(*u8, u8_rand1);
-	EXPECT_EQ(ipx_set_uint(u8, 1, u8_rand2), 0);
+	EXPECT_EQ(ipx_set_uint(u8, BYTES_1, u8_rand2), 0);
 	EXPECT_EQ(*u8, u8_rand2);
-	EXPECT_EQ(ipx_set_uint(u8, 1, u8_rand3), 0);
+	EXPECT_EQ(ipx_set_uint(u8, BYTES_1, u8_rand3), 0);
 	EXPECT_EQ(*u8, u8_rand3);
 
 	// 2 bytes
 	const uint16_t u16_rand1 =  1342U;
 	const uint16_t u16_rand2 = 25432U;
 	const uint16_t u16_rand3 = 45391U;
-	EXPECT_EQ(ipx_set_uint(u16, 2, u16_rand1), 0);
+	EXPECT_EQ(ipx_set_uint(u16, BYTES_2, u16_rand1), 0);
 	EXPECT_EQ(*u16, htons(u16_rand1));
-	EXPECT_EQ(ipx_set_uint(u16, 2, u16_rand2), 0);
+	EXPECT_EQ(ipx_set_uint(u16, BYTES_2, u16_rand2), 0);
 	EXPECT_EQ(*u16, htons(u16_rand2));
-	EXPECT_EQ(ipx_set_uint(u16, 2, u16_rand3), 0);
+	EXPECT_EQ(ipx_set_uint(u16, BYTES_2, u16_rand3), 0);
 	EXPECT_EQ(*u16, htons(u16_rand3));
 
 	// 4 bytes
 	const uint32_t u32_rand1 =      50832UL;
 	const uint32_t u32_rand2 =   11370824UL;
 	const uint32_t u32_rand3 = 3793805425UL;
-	EXPECT_EQ(ipx_set_uint(u32, 4, u32_rand1), 0);
+	EXPECT_EQ(ipx_set_uint(u32, BYTES_4, u32_rand1), 0);
 	EXPECT_EQ(*u32, htonl(u32_rand1));
-	EXPECT_EQ(ipx_set_uint(u32, 4, u32_rand2), 0);
+	EXPECT_EQ(ipx_set_uint(u32, BYTES_4, u32_rand2), 0);
 	EXPECT_EQ(*u32, htonl(u32_rand2));
-	EXPECT_EQ(ipx_set_uint(u32, 4, u32_rand3), 0);
+	EXPECT_EQ(ipx_set_uint(u32, BYTES_4, u32_rand3), 0);
 	EXPECT_EQ(*u32, htonl(u32_rand3));
 
 	// 8 bytes
 	const uint64_t u64_rand1 =         428760872517ULL;
 	const uint64_t u64_rand2 =     8275792237734210ULL;
 	const uint64_t u64_rand3 = 17326724161708531625ULL;
-	EXPECT_EQ(ipx_set_uint(u64, 8, u64_rand1), 0);
+	EXPECT_EQ(ipx_set_uint(u64, BYTES_8, u64_rand1), 0);
 	EXPECT_EQ(*u64, htobe64(u64_rand1));
-	EXPECT_EQ(ipx_set_uint(u64, 8, u64_rand2), 0);
+	EXPECT_EQ(ipx_set_uint(u64, BYTES_8, u64_rand2), 0);
 	EXPECT_EQ(*u64, htobe64(u64_rand2));
-	EXPECT_EQ(ipx_set_uint(u64, 8, u64_rand3), 0);
+	EXPECT_EQ(ipx_set_uint(u64, BYTES_8, u64_rand3), 0);
 	EXPECT_EQ(*u64, htobe64(u64_rand3));
 
 	// Other (unusual situations i.e. 3, 5, 6 and 7 bytes)
-	// 3 bytes
 	uint8_t temp32[4];
 	uint8_t temp64[8];
 
+	// 3 bytes
 	const uint32_t u24_rand1 =    22311UL;
 	const uint32_t u24_rand2 =   861354UL;
 	const uint32_t u24_rand3 = 14075499UL;
-	EXPECT_EQ(ipx_set_uint(u24, 3, u24_rand1), 0);  // Rand 1
+	EXPECT_EQ(ipx_set_uint(u24, BYTES_3, u24_rand1), 0);  // Rand 1
 	*((uint32_t *) temp32) = htonl(u24_rand1);
-	EXPECT_EQ(memcmp(u24, &temp32[1], 3), 0);
-	EXPECT_EQ(ipx_set_uint(u24, 3, u24_rand2), 0);  // Rand 2
+	EXPECT_EQ(memcmp(u24, &temp32[1], BYTES_3), 0);
+	EXPECT_EQ(ipx_set_uint(u24, BYTES_3, u24_rand2), 0);  // Rand 2
 	*((uint32_t *) temp32) = htonl(u24_rand2);
-	EXPECT_EQ(memcmp(u24, &temp32[1], 3), 0);
-	EXPECT_EQ(ipx_set_uint(u24, 3, u24_rand3), 0);  // Rand 3
+	EXPECT_EQ(memcmp(u24, &temp32[1], BYTES_3), 0);
+	EXPECT_EQ(ipx_set_uint(u24, BYTES_3, u24_rand3), 0);  // Rand 3
 	*((uint32_t *) temp32) = htonl(u24_rand3);
-	EXPECT_EQ(memcmp(u24, &temp32[1], 3), 0);
+	EXPECT_EQ(memcmp(u24, &temp32[1], BYTES_3), 0);
 
 	// 5 bytes
 	const uint64_t u40_rand1 =       360214ULL;
 	const uint64_t u40_rand2 =    240285687ULL;
 	const uint64_t u40_rand3 = 796219095503ULL;
-	EXPECT_EQ(ipx_set_uint(u40, 5, u40_rand1), 0); // Rand 1
+	EXPECT_EQ(ipx_set_uint(u40, BYTES_5, u40_rand1), 0); // Rand 1
 	*((uint64_t *) temp64) = htobe64(u40_rand1);
-	EXPECT_EQ(memcmp(u40, &temp64[3], 5), 0);
-	EXPECT_EQ(ipx_set_uint(u40, 5, u40_rand2), 0); // Rand 2
+	EXPECT_EQ(memcmp(u40, &temp64[3], BYTES_5), 0);
+	EXPECT_EQ(ipx_set_uint(u40, BYTES_5, u40_rand2), 0); // Rand 2
 	*((uint64_t *) temp64) = htobe64(u40_rand2);
-	EXPECT_EQ(memcmp(u40, &temp64[3], 5), 0);
-	EXPECT_EQ(ipx_set_uint(u40, 5, u40_rand3), 0); // Rand 3
+	EXPECT_EQ(memcmp(u40, &temp64[3], BYTES_5), 0);
+	EXPECT_EQ(ipx_set_uint(u40, BYTES_5, u40_rand3), 0); // Rand 3
 	*((uint64_t *) temp64) = htobe64(u40_rand3);
-	EXPECT_EQ(memcmp(u40, &temp64[3], 5), 0);
+	EXPECT_EQ(memcmp(u40, &temp64[3], BYTES_5), 0);
 
 	// 6 bytes
 	const uint64_t u48_rand1 =       696468180ULL;
 	const uint64_t u48_rand2 =    671963163167ULL;
 	const uint64_t u48_rand3 = 209841476899288ULL;
-	EXPECT_EQ(ipx_set_uint(u48, 6, u48_rand1), 0); // Rand 1
+	EXPECT_EQ(ipx_set_uint(u48, BYTES_6, u48_rand1), 0); // Rand 1
 	*((uint64_t *) temp64) = htobe64(u48_rand1);
-	EXPECT_EQ(memcmp(u48, &temp64[2], 6), 0);
-	EXPECT_EQ(ipx_set_uint(u48, 6, u48_rand2), 0); // Rand 2
+	EXPECT_EQ(memcmp(u48, &temp64[2], BYTES_6), 0);
+	EXPECT_EQ(ipx_set_uint(u48, BYTES_6, u48_rand2), 0); // Rand 2
 	*((uint64_t *) temp64) = htobe64(u48_rand2);
-	EXPECT_EQ(memcmp(u48, &temp64[2], 6), 0);
-	EXPECT_EQ(ipx_set_uint(u48, 6, u48_rand3), 0); // Rand 3
+	EXPECT_EQ(memcmp(u48, &temp64[2], BYTES_6), 0);
+	EXPECT_EQ(ipx_set_uint(u48, BYTES_6, u48_rand3), 0); // Rand 3
 	*((uint64_t *) temp64) = htobe64(u48_rand3);
-	EXPECT_EQ(memcmp(u48, &temp64[2], 6), 0);
+	EXPECT_EQ(memcmp(u48, &temp64[2], BYTES_6), 0);
 
 	// 7 bytes
 	const uint64_t u56_rand1 =      194728764120ULL;
 	const uint64_t u56_rand2 =   128273048983421ULL;
 	const uint64_t u56_rand3 = 66086893994497342ULL;
-	EXPECT_EQ(ipx_set_uint(u56, 7, u56_rand1), 0); // Rand 1
+	EXPECT_EQ(ipx_set_uint(u56, BYTES_7, u56_rand1), 0); // Rand 1
 	*((uint64_t *) temp64) = htobe64(u56_rand1);
-	EXPECT_EQ(memcmp(u56, &temp64[1], 7), 0);
-	EXPECT_EQ(ipx_set_uint(u56, 7, u56_rand2), 0); // Rand 2
+	EXPECT_EQ(memcmp(u56, &temp64[1], BYTES_7), 0);
+	EXPECT_EQ(ipx_set_uint(u56, BYTES_7, u56_rand2), 0); // Rand 2
 	*((uint64_t *) temp64) = htobe64(u56_rand2);
-	EXPECT_EQ(memcmp(u56, &temp64[1], 7), 0);
-	EXPECT_EQ(ipx_set_uint(u56, 7, u56_rand3), 0); // Rand 3
+	EXPECT_EQ(memcmp(u56, &temp64[1], BYTES_7), 0);
+	EXPECT_EQ(ipx_set_uint(u56, BYTES_7, u56_rand3), 0); // Rand 3
 	*((uint64_t *) temp64) = htobe64(u56_rand3);
-	EXPECT_EQ(memcmp(u56, &temp64[1], 7), 0);
+	EXPECT_EQ(memcmp(u56, &temp64[1], BYTES_7), 0);
 }
 
 
 /*
  * Test unsupported size of data fields
  */
-TEST_F(SetUint, setUintOutOfRange)
+TEST_F(ConverterUint, SetUintOutOfRange)
 {
 	const uint64_t value = 123456ULL; // Just random number
 
@@ -409,7 +418,232 @@ TEST_F(SetUint, setUintOutOfRange)
 	EXPECT_EQ(ipx_set_uint(temp256, temp256_size, value), IPX_CONVERT_ERR_ARG);
 }
 
+/*
+ * Test getter for maximum and minimum value
+ */
+TEST_F(ConverterUint, GetUintMaxMin)
+{
+	uint64_t conv_res;
 
+	// 1 byte
+	EXPECT_EQ(ipx_set_uint(u8, BYTES_1, UINT8_MAX), 0); // Max
+	EXPECT_EQ(ipx_get_uint(u8, BYTES_1, &conv_res), 0);
+	EXPECT_EQ(conv_res, (uint8_t) UINT8_MAX);
+
+	EXPECT_EQ(ipx_set_uint(u8, BYTES_1, 0), 0); // Min
+	EXPECT_EQ(ipx_get_uint(u8, BYTES_1, &conv_res), 0);
+	EXPECT_EQ(conv_res, 0U);
+
+	// 2 bytes
+	EXPECT_EQ(ipx_set_uint(u16, BYTES_2, UINT16_MAX), 0); // Max
+	EXPECT_EQ(ipx_get_uint(u16, BYTES_2, &conv_res), 0);
+	EXPECT_EQ(conv_res, (uint16_t) UINT16_MAX);
+
+	EXPECT_EQ(ipx_set_uint(u16, BYTES_2, 0), 0); // Min
+	EXPECT_EQ(ipx_get_uint(u16, BYTES_2, &conv_res), 0);
+	EXPECT_EQ(conv_res, 0U);
+
+	// 4 bytes
+	EXPECT_EQ(ipx_set_uint(u32, BYTES_4, UINT32_MAX), 0); // Max
+	EXPECT_EQ(ipx_get_uint(u32, BYTES_4, &conv_res), 0);
+	EXPECT_EQ(conv_res, (uint32_t) UINT32_MAX);
+
+	EXPECT_EQ(ipx_set_uint(u32, BYTES_4, 0), 0); // Min
+	EXPECT_EQ(ipx_get_uint(u32, BYTES_4, &conv_res), 0);
+	EXPECT_EQ(conv_res, 0U);
+
+	// 8 bytes
+	EXPECT_EQ(ipx_set_uint(u64, BYTES_8, UINT64_MAX), 0); // Max
+	EXPECT_EQ(ipx_get_uint(u64, BYTES_8, &conv_res), 0);
+	EXPECT_EQ(conv_res, (uint64_t) UINT64_MAX);
+
+	EXPECT_EQ(ipx_set_uint(u64, BYTES_8, 0), 0); // Min
+	EXPECT_EQ(ipx_get_uint(u64, BYTES_8, &conv_res), 0);
+	EXPECT_EQ(conv_res, 0U);
+
+	// Other (unusual situations i.e. 3, 5, 6 and 7 bytes)
+	// 3 bytes
+	EXPECT_EQ(ipx_set_uint(u24, BYTES_3, IPX_UINT24_MAX), 0); // Max
+	EXPECT_EQ(ipx_get_uint(u24, BYTES_3, &conv_res), 0);
+	EXPECT_EQ(conv_res, IPX_UINT24_MAX);
+
+	EXPECT_EQ(ipx_set_uint(u24, BYTES_3, 0), 0); // Min
+	EXPECT_EQ(ipx_get_uint(u24, BYTES_3, &conv_res), 0);
+	EXPECT_EQ(conv_res, 0U);
+
+	// 5 bytes
+	EXPECT_EQ(ipx_set_uint(u40, BYTES_5, IPX_UINT40_MAX), 0); // Max
+	EXPECT_EQ(ipx_get_uint(u40, BYTES_5, &conv_res), 0);
+	EXPECT_EQ(conv_res, IPX_UINT40_MAX);
+
+	EXPECT_EQ(ipx_set_uint(u40, BYTES_5, 0), 0); // Min
+	EXPECT_EQ(ipx_get_uint(u40, BYTES_5, &conv_res), 0);
+	EXPECT_EQ(conv_res, 0U);
+
+	// 6 bytes
+	EXPECT_EQ(ipx_set_uint(u48, BYTES_6, IPX_UINT48_MAX), 0); // Max
+	EXPECT_EQ(ipx_get_uint(u48, BYTES_6, &conv_res), 0);
+	EXPECT_EQ(conv_res, IPX_UINT48_MAX);
+
+	EXPECT_EQ(ipx_set_uint(u48, BYTES_6, 0), 0); // Min
+	EXPECT_EQ(ipx_get_uint(u48, BYTES_6, &conv_res), 0);
+	EXPECT_EQ(conv_res, 0U);
+
+	// 7 bytes
+	EXPECT_EQ(ipx_set_uint(u56, BYTES_7, IPX_UINT56_MAX), 0); // Max
+	EXPECT_EQ(ipx_get_uint(u56, BYTES_7, &conv_res), 0);
+	EXPECT_EQ(conv_res, IPX_UINT56_MAX);
+
+	EXPECT_EQ(ipx_set_uint(u56, BYTES_7, 0), 0); // Min
+	EXPECT_EQ(ipx_get_uint(u56, BYTES_7, &conv_res), 0);
+	EXPECT_EQ(conv_res, 0U);
+}
+
+TEST_F(ConverterUint, GetUintRandom)
+{
+	uint64_t conv_res;
+
+	// 1 byte
+	const uint8_t u8_rand1 =  53U;
+	const uint8_t u8_rand2 =  67U;
+	const uint8_t u8_rand3 = 123U;
+	EXPECT_EQ(ipx_set_uint(u8, BYTES_1, u8_rand1), 0); // Rand 1
+	EXPECT_EQ(ipx_get_uint(u8, BYTES_1, &conv_res), 0);
+	EXPECT_EQ(conv_res, u8_rand1);
+	EXPECT_EQ(ipx_set_uint(u8, BYTES_1, u8_rand2), 0); // Rand 2
+	EXPECT_EQ(ipx_get_uint(u8, BYTES_1, &conv_res), 0);
+	EXPECT_EQ(conv_res, u8_rand2);
+	EXPECT_EQ(ipx_set_uint(u8, BYTES_1, u8_rand3), 0); // Rand 3
+	EXPECT_EQ(ipx_get_uint(u8, BYTES_1, &conv_res), 0);
+	EXPECT_EQ(conv_res, u8_rand3);
+
+	// 2 bytes
+	const uint16_t u16_rand1 =   421U;
+	const uint16_t u16_rand2 =  2471U;
+	const uint16_t u16_rand3 = 37245U;
+	EXPECT_EQ(ipx_set_uint(u16, BYTES_2, u16_rand1), 0); // Rand 1
+	EXPECT_EQ(ipx_get_uint(u16, BYTES_2, &conv_res), 0);
+	EXPECT_EQ(conv_res, u16_rand1);
+	EXPECT_EQ(ipx_set_uint(u16, BYTES_2, u16_rand2), 0); // Rand 2
+	EXPECT_EQ(ipx_get_uint(u16, BYTES_2, &conv_res), 0);
+	EXPECT_EQ(conv_res, u16_rand2);
+	EXPECT_EQ(ipx_set_uint(u16, BYTES_2, u16_rand3), 0); // Rand 3
+	EXPECT_EQ(ipx_get_uint(u16, BYTES_2, &conv_res), 0);
+	EXPECT_EQ(conv_res, u16_rand3);
+
+	// 4 bytes
+	const uint32_t u32_rand1 =     109127UL;
+	const uint32_t u32_rand2 =   28947291UL;
+	const uint32_t u32_rand3 = 1975298731UL;
+	EXPECT_EQ(ipx_set_uint(u32, BYTES_4, u32_rand1), 0); // Rand 1
+	EXPECT_EQ(ipx_get_uint(u32, BYTES_4, &conv_res), 0);
+	EXPECT_EQ(conv_res, u32_rand1);
+	EXPECT_EQ(ipx_set_uint(u32, BYTES_4, u32_rand2), 0); // Rand 2
+	EXPECT_EQ(ipx_get_uint(u32, BYTES_4, &conv_res), 0);
+	EXPECT_EQ(conv_res, u32_rand2);
+	EXPECT_EQ(ipx_set_uint(u32, BYTES_4, u32_rand3), 0); // Rand 3
+	EXPECT_EQ(ipx_get_uint(u32, BYTES_4, &conv_res), 0);
+	EXPECT_EQ(conv_res, u32_rand3);
+
+	// 8 bytes
+	const uint64_t u64_rand1 =         147984727321ULL;
+	const uint64_t u64_rand2 =     2876987613687162ULL;
+	const uint64_t u64_rand3 = 11298373761876598719ULL;
+	EXPECT_EQ(ipx_set_uint(u64, BYTES_8, u64_rand1), 0); // Rand 1
+	EXPECT_EQ(ipx_get_uint(u64, BYTES_8, &conv_res), 0);
+	EXPECT_EQ(conv_res, u64_rand1);
+	EXPECT_EQ(ipx_set_uint(u64, BYTES_8, u64_rand2), 0); // Rand 2
+	EXPECT_EQ(ipx_get_uint(u64, BYTES_8, &conv_res), 0);
+	EXPECT_EQ(conv_res, u64_rand2);
+	EXPECT_EQ(ipx_set_uint(u64, BYTES_8, u64_rand3), 0); // Rand 3
+	EXPECT_EQ(ipx_get_uint(u64, BYTES_8, &conv_res), 0);
+	EXPECT_EQ(conv_res, u64_rand3);
+
+	// Other (unusual situations i.e. 3, 5, 6 and 7 bytes)
+	// 3 bytes
+	const uint32_t u24_rand1 =    38276UL;
+	const uint32_t u24_rand2 =   763547UL;
+	const uint32_t u24_rand3 = 11287321UL;
+	EXPECT_EQ(ipx_set_uint(u24, BYTES_3, u24_rand1), 0); // Rand 1
+	EXPECT_EQ(ipx_get_uint(u24, BYTES_3, &conv_res), 0);
+	EXPECT_EQ(conv_res, u24_rand1);
+	EXPECT_EQ(ipx_set_uint(u24, BYTES_3, u24_rand2), 0); // Rand 2
+	EXPECT_EQ(ipx_get_uint(u24, BYTES_3, &conv_res), 0);
+	EXPECT_EQ(conv_res, u24_rand2);
+	EXPECT_EQ(ipx_set_uint(u24, BYTES_3, u24_rand3), 0); // Rand 3
+	EXPECT_EQ(ipx_get_uint(u24, BYTES_3, &conv_res), 0);
+	EXPECT_EQ(conv_res, u24_rand3);
+
+	// 5 bytes
+	const uint64_t u40_rand1 =       278632ULL;
+	const uint64_t u40_rand2 =    287638124ULL;
+	const uint64_t u40_rand3 = 527836261240ULL;
+	EXPECT_EQ(ipx_set_uint(u40, BYTES_5, u40_rand1), 0); // Rand 1
+	EXPECT_EQ(ipx_get_uint(u40, BYTES_5, &conv_res), 0);
+	EXPECT_EQ(conv_res, u40_rand1);
+	EXPECT_EQ(ipx_set_uint(u40, BYTES_5, u40_rand2), 0); // Rand 2
+	EXPECT_EQ(ipx_get_uint(u40, BYTES_5, &conv_res), 0);
+	EXPECT_EQ(conv_res, u40_rand2);
+	EXPECT_EQ(ipx_set_uint(u40, BYTES_5, u40_rand3), 0); // Rand 3
+	EXPECT_EQ(ipx_get_uint(u40, BYTES_5, &conv_res), 0);
+	EXPECT_EQ(conv_res, u40_rand3);
+
+	// 6 bytes
+	const uint64_t u48_rand1 =       287468172ULL;
+	const uint64_t u48_rand2 =    897287628371ULL;
+	const uint64_t u48_rand3 = 219879286827632ULL;
+	EXPECT_EQ(ipx_set_uint(u48, BYTES_6, u48_rand1), 0); // Rand 1
+	EXPECT_EQ(ipx_get_uint(u48, BYTES_6, &conv_res), 0);
+	EXPECT_EQ(conv_res, u48_rand1);
+	EXPECT_EQ(ipx_set_uint(u48, BYTES_6, u48_rand2), 0); // Rand 2
+	EXPECT_EQ(ipx_get_uint(u48, BYTES_6, &conv_res), 0);
+	EXPECT_EQ(conv_res, u48_rand2);
+	EXPECT_EQ(ipx_set_uint(u48, BYTES_6, u48_rand3), 0); // Rand 3
+	EXPECT_EQ(ipx_get_uint(u48, BYTES_6, &conv_res), 0);
+	EXPECT_EQ(conv_res, u48_rand3);
+
+	// 7 bytes
+	const uint64_t u56_rand1 =      387648182713ULL;
+	const uint64_t u56_rand2 =   258628761274610ULL;
+	const uint64_t u56_rand3 = 58762617654765176ULL;
+	EXPECT_EQ(ipx_set_uint(u56, BYTES_7, u56_rand1), 0); // Rand 1
+	EXPECT_EQ(ipx_get_uint(u56, BYTES_7, &conv_res), 0);
+	EXPECT_EQ(conv_res, u56_rand1);
+	EXPECT_EQ(ipx_set_uint(u56, BYTES_7, u56_rand2), 0); // Rand 2
+	EXPECT_EQ(ipx_get_uint(u56, BYTES_7, &conv_res), 0);
+	EXPECT_EQ(conv_res, u56_rand2);
+	EXPECT_EQ(ipx_set_uint(u56, BYTES_7, u56_rand3), 0); // Rand 3
+	EXPECT_EQ(ipx_get_uint(u56, BYTES_7, &conv_res), 0);
+	EXPECT_EQ(conv_res, u56_rand3);
+}
+
+/*
+ * Test unsupported size of data fields
+ */
+TEST_F(ConverterUint, GetUintOutOfRange)
+{
+	uint64_t value = 123456ULL; // Just random number
+
+	// Just random sizes of arrays
+	const size_t temp72_size =   9;
+	const size_t temp88_size =  11;
+	const size_t temp128_size = 16;
+	const size_t temp192_size = 24;
+	const size_t temp256_size = 32;
+
+	uint8_t temp72[temp72_size];
+	uint8_t temp88[temp88_size];
+	uint8_t temp128[temp128_size];
+	uint8_t temp192[temp192_size];
+	uint8_t temp256[temp256_size];
+
+	EXPECT_EQ(ipx_get_uint(temp72, 0U, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(ipx_get_uint(temp72, temp72_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(ipx_get_uint(temp88, temp88_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(ipx_get_uint(temp128, temp128_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(ipx_get_uint(temp192, temp192_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(ipx_get_uint(temp256, temp256_size, &value), IPX_CONVERT_ERR_ARG);
+}
 
 
 /**
