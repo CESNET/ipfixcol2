@@ -48,6 +48,7 @@
 
 #include <gtest/gtest.h>
 #include <cstring>
+#include <endian.h>
 
 extern "C" {
 	#include <ipfixcol2/convertors.h>
@@ -65,24 +66,62 @@ int main(int argc, char **argv)
     return RUN_ALL_TESTS();
 }
 
+/**
+ * \brief Test fixture for SetUint tests
+ */
+class SetUint : public ::testing::Test {
+protected:
+	/*
+	 * We want to have all variables dynamically allocated so Valgrind can check
+	 * access out of bounds, etc.
+     */
+	uint8_t  *u8;
+	uint16_t *u16;
+	uint32_t *u32;
+	uint64_t *u64;
+
+	uint8_t *u24;
+	uint8_t *u40;
+	uint8_t *u48;
+	uint8_t *u56;
+
+public:
+	/** Create variables for tests */
+	virtual void SetUp() {
+		u8  = new uint8_t;
+		u16 = new uint16_t;
+		u32 = new uint32_t;
+		u64 = new uint64_t;
+
+		u24 = new uint8_t[3];
+		u40 = new uint8_t[5];
+		u48 = new uint8_t[6];
+		u56 = new uint8_t[7];
+	}
+
+	/** Destroy variables for the tests */
+	virtual void TearDown() {
+		delete u8;
+		delete u16;
+		delete u32;
+		delete u64;
+
+		delete[] u24;
+		delete[] u40;
+		delete[] u48;
+		delete[] u56;
+	}
+};
+
+
 /*
  * Insert the maximum possible value i.e. "UINT64_MAX" and the minimum possible
  * value i.e. "0" into 1 - 8 byte variables.
  */
-TEST(Convertors, setUintMaxMin) {
+TEST_F(SetUint, maxMin) {
 	// SetUp
 	const uint64_t max_val = UINT64_MAX;
 	const uint64_t min_val = 0U;
-
-	uint8_t  *u8  = new uint8_t;
-	uint16_t *u16 = new uint16_t;
-	uint32_t *u32 = new uint32_t;
-	uint64_t *u64 = new uint64_t;
-
-	uint8_t *u24 = new uint8_t[3];
-	uint8_t *u40 = new uint8_t[5];
-	uint8_t *u48 = new uint8_t[6];
-	uint8_t *u56 = new uint8_t[7];
 
 	// Execute
 	// 1 byte
@@ -133,30 +172,14 @@ TEST(Convertors, setUintMaxMin) {
 	EXPECT_EQ(memcmp(u56, &max_val, 7), 0);
 	EXPECT_EQ(ipx_set_uint(u56, 7, min_val), 0);
 	EXPECT_EQ(memcmp(u56, &min_val, 7), 0);
-
-	// Tear Down
-	delete u8;
-	delete u16;
-	delete u32;
-	delete u64;
-
-	delete[] u24;
-	delete[] u40;
-	delete[] u48;
-	delete[] u56;
 }
 
 /*
  * Insert max + 1/max/max - 1 values into 1 - 8 byte variables.
  */
-TEST(Convertors, setUintAboveBelow)
+TEST_F(SetUint, aboveBelow)
 {
 	// SetUp
-	uint8_t  *u8  = new uint8_t;
-	uint16_t *u16 = new uint16_t;
-	uint32_t *u32 = new uint32_t;
-	uint64_t *u64 = new uint64_t;
-
 	const uint16_t u8_above =  ((uint16_t) UINT8_MAX) + 1;
 	const uint8_t  u8_below =  UINT8_MAX - 1;
 	const uint32_t u16_above = ((uint32_t) UINT16_MAX) + 1;
@@ -164,11 +187,6 @@ TEST(Convertors, setUintAboveBelow)
 	const uint64_t u32_above = ((uint64_t) UINT32_MAX) + 1;
 	const uint32_t u32_below = UINT32_MAX - 1;
 	const uint64_t u64_below = UINT64_MAX - 1;
-
-	uint8_t *u24 = new uint8_t[3];
-	uint8_t *u40 = new uint8_t[5];
-	uint8_t *u48 = new uint8_t[6];
-	uint8_t *u56 = new uint8_t[7];
 
 	const uint32_t u24_above = IPX_UINT24_MAX + 1;
 	const uint32_t u24_below = IPX_UINT24_MAX - 1;
@@ -250,34 +268,147 @@ TEST(Convertors, setUintAboveBelow)
 	EXPECT_EQ(ipx_set_uint(u56, 7, u56_below), 0);
 	*((uint64_t *) temp64) = htobe64(u56_below);
 	EXPECT_EQ(memcmp(u56, &temp64[1], 7), 0);
-
-	// Tear Down
-	delete u8;
-	delete u16;
-	delete u32;
-	delete u64;
-
-	delete[] u24;
-	delete[] u40;
-	delete[] u48;
-	delete[] u56;
 }
 
-// "Random" values in the valid interval for 1 - 8 bytes unsigned values
-/*TEST(Convertors, setUintInInterval)
-{
-
-
-}
-*/
-
-// Test unsupported fields
 /*
-TEST(Convertors, setUintOutOfRange)
+ * "Random" values in the valid interval for 1 - 8 bytes unsigned values
+ */
+TEST_F(SetUint, inInterval)
 {
+	// 1 byte
+	const uint8_t u8_rand1 =  12U;
+	const uint8_t u8_rand2 =  93U;
+	const uint8_t u8_rand3 = 112U;
+	EXPECT_EQ(ipx_set_uint(u8, 1, u8_rand1), 0);
+	EXPECT_EQ(*u8, u8_rand1);
+	EXPECT_EQ(ipx_set_uint(u8, 1, u8_rand2), 0);
+	EXPECT_EQ(*u8, u8_rand2);
+	EXPECT_EQ(ipx_set_uint(u8, 1, u8_rand3), 0);
+	EXPECT_EQ(*u8, u8_rand3);
 
+	// 2 bytes
+	const uint16_t u16_rand1 =  1342U;
+	const uint16_t u16_rand2 = 25432U;
+	const uint16_t u16_rand3 = 45391U;
+	EXPECT_EQ(ipx_set_uint(u16, 2, u16_rand1), 0);
+	EXPECT_EQ(*u16, htons(u16_rand1));
+	EXPECT_EQ(ipx_set_uint(u16, 2, u16_rand2), 0);
+	EXPECT_EQ(*u16, htons(u16_rand2));
+	EXPECT_EQ(ipx_set_uint(u16, 2, u16_rand3), 0);
+	EXPECT_EQ(*u16, htons(u16_rand3));
+
+	// 4 bytes
+	const uint32_t u32_rand1 =      50832UL;
+	const uint32_t u32_rand2 =   11370824UL;
+	const uint32_t u32_rand3 = 3793805425UL;
+	EXPECT_EQ(ipx_set_uint(u32, 4, u32_rand1), 0);
+	EXPECT_EQ(*u32, htonl(u32_rand1));
+	EXPECT_EQ(ipx_set_uint(u32, 4, u32_rand2), 0);
+	EXPECT_EQ(*u32, htonl(u32_rand2));
+	EXPECT_EQ(ipx_set_uint(u32, 4, u32_rand3), 0);
+	EXPECT_EQ(*u32, htonl(u32_rand3));
+
+	// 8 bytes
+	const uint64_t u64_rand1 =         428760872517ULL;
+	const uint64_t u64_rand2 =     8275792237734210ULL;
+	const uint64_t u64_rand3 = 17326724161708531625ULL;
+	EXPECT_EQ(ipx_set_uint(u64, 8, u64_rand1), 0);
+	EXPECT_EQ(*u64, htobe64(u64_rand1));
+	EXPECT_EQ(ipx_set_uint(u64, 8, u64_rand2), 0);
+	EXPECT_EQ(*u64, htobe64(u64_rand2));
+	EXPECT_EQ(ipx_set_uint(u64, 8, u64_rand3), 0);
+	EXPECT_EQ(*u64, htobe64(u64_rand3));
+
+	// Other (unusual situations i.e. 3, 5, 6 and 7 bytes)
+	// 3 bytes
+	uint8_t temp32[4];
+	uint8_t temp64[8];
+
+	const uint32_t u24_rand1 =    22311UL;
+	const uint32_t u24_rand2 =   861354UL;
+	const uint32_t u24_rand3 = 14075499UL;
+	EXPECT_EQ(ipx_set_uint(u24, 3, u24_rand1), 0);  // Rand 1
+	*((uint32_t *) temp32) = htonl(u24_rand1);
+	EXPECT_EQ(memcmp(u24, &temp32[1], 3), 0);
+	EXPECT_EQ(ipx_set_uint(u24, 3, u24_rand2), 0);  // Rand 2
+	*((uint32_t *) temp32) = htonl(u24_rand2);
+	EXPECT_EQ(memcmp(u24, &temp32[1], 3), 0);
+	EXPECT_EQ(ipx_set_uint(u24, 3, u24_rand3), 0);  // Rand 3
+	*((uint32_t *) temp32) = htonl(u24_rand3);
+	EXPECT_EQ(memcmp(u24, &temp32[1], 3), 0);
+
+	// 5 bytes
+	const uint64_t u40_rand1 =       360214ULL;
+	const uint64_t u40_rand2 =    240285687ULL;
+	const uint64_t u40_rand3 = 796219095503ULL;
+	EXPECT_EQ(ipx_set_uint(u40, 5, u40_rand1), 0); // Rand 1
+	*((uint64_t *) temp64) = htobe64(u40_rand1);
+	EXPECT_EQ(memcmp(u40, &temp64[3], 5), 0);
+	EXPECT_EQ(ipx_set_uint(u40, 5, u40_rand2), 0); // Rand 2
+	*((uint64_t *) temp64) = htobe64(u40_rand2);
+	EXPECT_EQ(memcmp(u40, &temp64[3], 5), 0);
+	EXPECT_EQ(ipx_set_uint(u40, 5, u40_rand3), 0); // Rand 3
+	*((uint64_t *) temp64) = htobe64(u40_rand3);
+	EXPECT_EQ(memcmp(u40, &temp64[3], 5), 0);
+
+	// 6 bytes
+	const uint64_t u48_rand1 =       696468180ULL;
+	const uint64_t u48_rand2 =    671963163167ULL;
+	const uint64_t u48_rand3 = 209841476899288ULL;
+	EXPECT_EQ(ipx_set_uint(u48, 6, u48_rand1), 0); // Rand 1
+	*((uint64_t *) temp64) = htobe64(u48_rand1);
+	EXPECT_EQ(memcmp(u48, &temp64[2], 6), 0);
+	EXPECT_EQ(ipx_set_uint(u48, 6, u48_rand2), 0); // Rand 2
+	*((uint64_t *) temp64) = htobe64(u48_rand2);
+	EXPECT_EQ(memcmp(u48, &temp64[2], 6), 0);
+	EXPECT_EQ(ipx_set_uint(u48, 6, u48_rand3), 0); // Rand 3
+	*((uint64_t *) temp64) = htobe64(u48_rand3);
+	EXPECT_EQ(memcmp(u48, &temp64[2], 6), 0);
+
+	// 7 bytes
+	const uint64_t u56_rand1 =      194728764120ULL;
+	const uint64_t u56_rand2 =   128273048983421ULL;
+	const uint64_t u56_rand3 = 66086893994497342ULL;
+	EXPECT_EQ(ipx_set_uint(u56, 7, u56_rand1), 0); // Rand 1
+	*((uint64_t *) temp64) = htobe64(u56_rand1);
+	EXPECT_EQ(memcmp(u56, &temp64[1], 7), 0);
+	EXPECT_EQ(ipx_set_uint(u56, 7, u56_rand2), 0); // Rand 2
+	*((uint64_t *) temp64) = htobe64(u56_rand2);
+	EXPECT_EQ(memcmp(u56, &temp64[1], 7), 0);
+	EXPECT_EQ(ipx_set_uint(u56, 7, u56_rand3), 0); // Rand 3
+	*((uint64_t *) temp64) = htobe64(u56_rand3);
+	EXPECT_EQ(memcmp(u56, &temp64[1], 7), 0);
 }
-*/
+
+
+/*
+ * Test unsupported size of data fields
+ */
+TEST_F(SetUint, setUintOutOfRange)
+{
+	const uint64_t value = 123456ULL; // Just random number
+
+	// Just random sizes of arrays
+	const size_t temp72_size =   9;
+	const size_t temp88_size =  11;
+	const size_t temp128_size = 16;
+	const size_t temp192_size = 24;
+	const size_t temp256_size = 32;
+
+	uint8_t temp72[temp72_size];
+	uint8_t temp88[temp88_size];
+	uint8_t temp128[temp128_size];
+	uint8_t temp192[temp192_size];
+	uint8_t temp256[temp256_size];
+
+	EXPECT_EQ(ipx_set_uint(temp72, 0, value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(ipx_set_uint(temp72, temp72_size, value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(ipx_set_uint(temp88, temp88_size, value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(ipx_set_uint(temp128, temp128_size, value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(ipx_set_uint(temp192, temp192_size, value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(ipx_set_uint(temp256, temp256_size, value), IPX_CONVERT_ERR_ARG);
+}
+
 
 
 

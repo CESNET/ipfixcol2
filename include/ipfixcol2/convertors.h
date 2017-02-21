@@ -5,7 +5,7 @@
  * \date 2016
  */
 /*
- * Copyright (C) 2016 CESNET, z.s.p.o.
+ * Copyright (C) 2016-2017 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -124,7 +124,8 @@ static_assert(sizeof(float)  == sizeof(uint32_t), "Float is not 4 bytes long");
  *   #IPX_CONVERT_ERR_TRUNC. When the \p size is out of range, a value of
  *   the \p field is unchanged and returns #IPX_CONVERT_ERR_ARG.
  */
-static inline int ipx_set_uint(void *field, size_t size, uint64_t value)
+static inline int
+ipx_set_uint(void *field, size_t size, uint64_t value)
 {
 	switch (size) {
 	case 8:
@@ -192,7 +193,8 @@ static inline int ipx_set_uint(void *field, size_t size, uint64_t value)
  *   #IPX_CONVERT_ERR_TRUNC. When the \p size is out of range, a value of
  *   the \p field is unchanged and returns #IPX_CONVERT_ERR_ARG.
  */
-static inline int ipx_set_int(void *field, size_t size, int64_t value)
+static inline int
+ipx_set_int(void *field, size_t size, int64_t value)
 {
 	switch (size) {
 	case 8:
@@ -277,20 +279,15 @@ static inline int ipx_set_int(void *field, size_t size, int64_t value)
  *   field) returns #IPX_CONVERT_ERR_ARG and an original value of the \p field
  *   is unchanged.
  */
-static inline int ipx_set_bool(void *field, size_t size, bool value)
+static inline int
+ipx_set_bool(void *field, size_t size, bool value)
 {
 	if (size != 1) {
 		return IPX_CONVERT_ERR_ARG;
 	}
 
-	if (value) {
-		// True
-		*(uint8_t *) field = 1;
-	} else {
-		// False (according to the RFC 7011, section 6.1.5. is "false" == 2)
-		*(uint8_t *) field = 2;
-	}
-
+	//According to the RFC 7011, section 6.1.5. "true" == 1 and "false" == 2
+	*(uint8_t *) field = value ? 1 : 2;
 	return 0;
 }
 
@@ -308,7 +305,8 @@ static inline int ipx_set_bool(void *field, size_t size, bool value)
  *   returns #IPX_CONVERT_ERR_ARG and an original value of the \p field is
  *   unchanged.
  */
-static inline int ipx_set_float(void *field, size_t size, double value)
+static inline int
+ipx_set_float(void *field, size_t size, double value)
 {
 	if (size == sizeof(uint64_t)) {
 		// 64 bits, we have static assert for sizeof(double) == sizeof(uint64_t)
@@ -366,8 +364,9 @@ static inline int ipx_set_float(void *field, size_t size, double value)
  *   field) returns #IPX_CONVERT_ERR_ARG and an original value of the \p field
  *   is unchanged.
  */
-static inline int ipx_set_date_lp(void *field, size_t size,
-	enum IPX_ELEMENT_TYPE type, uint64_t value)
+static inline int
+ipx_set_date_lp(void *field, size_t size, enum IPX_ELEMENT_TYPE type,
+	uint64_t value)
 {
 	// One second to milliseconds
 	const uint64_t S1E3 = 1000ULL;
@@ -430,8 +429,9 @@ static inline int ipx_set_date_lp(void *field, size_t size,
  *   field) returns #IPX_CONVERT_ERR_ARG and an original value of the \p field
  *   is unchanged.
  */
-static inline int ipx_set_date_hp(void *field, size_t size,
-	enum IPX_ELEMENT_TYPE type, struct timespec ts)
+static inline int
+ipx_set_date_hp(void *field, size_t size, enum IPX_ELEMENT_TYPE type,
+	struct timespec ts)
 {
 	const uint64_t S1E3 = 1000ULL;       // One second to milliseconds
 	const uint64_t S1E6 = 1000000ULL;    // One second to microseconds
@@ -496,7 +496,8 @@ static inline int ipx_set_date_hp(void *field, size_t size,
  *   field) returns #IPX_CONVERT_ERR_ARG and an original value of the \p field
  *   is unchanged.
  */
-inline int ipx_set_ip(void *field, size_t size, const void *value)
+static inline int
+ipx_set_ip(void *field, size_t size, const void *value)
 {
 	// todo
 }
@@ -512,7 +513,8 @@ inline int ipx_set_ip(void *field, size_t size, const void *value)
  *   field) returns #IPX_CONVERT_ERR_ARG and an original value of the \p field
  *   is unchanged.
  */
-inline int ipx_set_mac(void *field, size_t size, const void *value)
+static inline int
+ipx_set_mac(void *field, size_t size, const void *value)
 {
 	// todo
 }
@@ -528,7 +530,8 @@ inline int ipx_set_mac(void *field, size_t size, const void *value)
  * \warning The \p value MUST be at least \p size bytes long.
  * \return On sucess returns 0. Otherwise returns #IPX_CONVERT_ERR_ARG.
  */
-inline int ipx_set_octet_array(void *field, size_t size, const void *value)
+static inline int
+ipx_set_octet_array(void *field, size_t size, const void *value)
 {
 	// todo
 }
@@ -543,7 +546,8 @@ inline int ipx_set_octet_array(void *field, size_t size, const void *value)
  * \warning The \p value MUST be at least \p size bytes long.
  * \return On sucess returns 0. Otherwise returns #IPX_CONVERT_ERR_ARG.
  */
-inline int ipx_set_string(void *field, size_t size, const char *value)
+static inline int
+ipx_set_string(void *field, size_t size, const char *value)
 {
 	// todo
 }
@@ -570,7 +574,8 @@ inline int ipx_set_string(void *field, size_t size, const char *value)
  *   the incorrect \p size of the field) returns #IPX_CONVERT_ERR_ARG
  *   and the \p value is not filled.
  */
-static inline int ipx_get_uint(const void *field, size_t size, uint64_t *value)
+static inline int
+ipx_get_uint(const void *field, size_t size, uint64_t *value)
 {
 	switch (size) {
 	case 8:
@@ -617,7 +622,8 @@ static inline int ipx_get_uint(const void *field, size_t size, uint64_t *value)
  *   the incorrect \p size of the field) returns #IPX_CONVERT_ERR_ARG
  *   and the \p value is not filled.
  */
-static inline int ipx_get_int(const void *field, size_t size, int64_t *value)
+static inline int
+ipx_get_int(const void *field, size_t size, int64_t *value)
 {
 	switch (size) {
 	case 8:
@@ -669,7 +675,8 @@ static inline int ipx_get_int(const void *field, size_t size, int64_t *value)
  *   RFC 7011, Section 6.1.5.) returns #IPX_CONVERT_ERR_ARG and
  *   the \p value is not filled.
  */
-static inline int ipx_get_bool(const void *field, size_t size, bool *value)
+static inline int
+ipx_get_bool(const void *field, size_t size, bool *value)
 {
 	if (size != 1) {
 		return IPX_CONVERT_ERR_ARG;
@@ -699,7 +706,8 @@ static inline int ipx_get_bool(const void *field, size_t size, bool *value)
  *   the incorrect \p size of the field) returns #IPX_CONVERT_ERR_ARG and the
  *   \p value is not filled.
  */
-static inline int ipx_get_float(const void *field, size_t size, double *value)
+static inline int
+ipx_get_float(const void *field, size_t size, double *value)
 {
 	if (size == sizeof(uint64_t)) {
 		// 64bit, we have static assert for sizeof(double) == sizeof(uint64_t)
@@ -750,8 +758,9 @@ static inline int ipx_get_float(const void *field, size_t size, double *value)
  *   the incorrect \p size of the field) returns #IPX_CONVERT_ERR_ARG and the
  *   \p value is not filled.
  */
-inline int ipx_get_date_lp(const void *field, size_t size,
-	enum IPX_ELEMENT_TYPE type, uint64_t *value)
+static inline int
+ipx_get_date_lp(const void *field, size_t size, enum IPX_ELEMENT_TYPE type,
+	uint64_t *value)
 {
 	// One second to milliseconds
 	const uint64_t S1E3 = 1000ULL;
@@ -816,8 +825,9 @@ inline int ipx_get_date_lp(const void *field, size_t size,
  *   the incorrect \p size of the field) returns #IPX_CONVERT_ERR_ARG and the
  *   \p value is not filled.
  */
-inline int ipx_get_date_hp(const void *field, size_t size,
-	enum IPX_ELEMENT_TYPE type, struct timespec *ts)
+static inline int
+ipx_get_date_hp(const void *field, size_t size, enum IPX_ELEMENT_TYPE type,
+	struct timespec *ts)
 {
 	const uint64_t S1E3 = 1000ULL;       // One second to milliseconds
 	const uint64_t S1E6 = 1000000ULL;    // One second to microseconds
@@ -883,7 +893,8 @@ inline int ipx_get_date_hp(const void *field, size_t size,
  *   the incorrect \p size of the field) returns #IPX_CONVERT_ERR_ARG and the
  *   \p value is not filled.
  */
-inline int ipx_get_ip(const void *field, size_t size, void *value)
+static inline int
+ipx_get_ip(const void *field, size_t size, void *value)
 {
 	// todo
 }
@@ -900,7 +911,8 @@ inline int ipx_get_ip(const void *field, size_t size, void *value)
  *   the incorrect \p size of the field) returns #IPX_CONVERT_ERR_ARG and the
  *   \p value is not filled.
  */
-inline int ipx_get_mac(const void *field, size_t size, void *value)
+static inline int
+ipx_get_mac(const void *field, size_t size, void *value)
 {
 	// todo
 }
@@ -915,7 +927,8 @@ inline int ipx_get_mac(const void *field, size_t size, void *value)
  * \warning The \p value MUST be at least \p size bytes long.
  * \return On success returns 0. Otherwise returns #IPX_CONVERT_ERR_ARG.
  */
-inline int ipx_get_octet_array(const void *field, size_t size, void *value)
+static inline int
+ipx_get_octet_array(const void *field, size_t size, void *value)
 {
 	// todo
 }
@@ -930,7 +943,8 @@ inline int ipx_get_octet_array(const void *field, size_t size, void *value)
  * \warning The \p value MUST be at least \p size bytes long.
  * \return On success returns 0. Otherwise returns #IPX_CONVERT_ERR_ARG.
  */
-inline int ipx_get_string(const void *field, size_t size, char *value)
+static inline int
+ipx_get_string(const void *field, size_t size, char *value)
 {
 	// todo
 }
@@ -984,8 +998,8 @@ inline int ipx_get_string(const void *field, size_t size, char *value)
  *   then returns #IPX_CONVERT_ERR_BUFFER and the content written to
  *   the buffer \p str is undefined. Otherwise returns #IPX_CONVERT_ERR_ARG.
  */
-inline int ipx_uint2str(const void *field, size_t size, char *str,
-	size_t str_size)
+static inline int
+ipx_uint2str(const void *field, size_t size, char *str, size_t str_size)
 {
 	// todo
 }
@@ -1001,8 +1015,8 @@ inline int ipx_uint2str(const void *field, size_t size, char *str,
  * \param[in]  str_size  Size of the buffer (in bytes)
  * \return Same as a return value of ipx_uint2str().
  */
-inline int ipx_int2str(const void *field, size_t size, char *str,
-	size_t str_size)
+static inline int
+ipx_int2str(const void *field, size_t size, char *str, size_t str_size)
 {
 	// todo
 }
@@ -1019,8 +1033,8 @@ inline int ipx_int2str(const void *field, size_t size, char *str,
  * \remark The value is rounded to 3 decimal places.
  * \return Same as a return value of ipx_uint2str().
  */
-inline int ipx_float2str(const void *field, size_t size, char *str,
-	size_t str_size)
+static inline int
+ipx_float2str(const void *field, size_t size, char *str, size_t str_size)
 {
 	// todo
 }
@@ -1036,7 +1050,8 @@ inline int ipx_float2str(const void *field, size_t size, char *str,
  *   will also return #IPX_CONVERT_ERR_ARG.
  * \return Same as a return value of ipx_uint2str().
  */
-inline int ipx_bool2str(const void *field, char *str, size_t str_size)
+static inline int
+ipx_bool2str(const void *field, char *str, size_t str_size)
 {
 	// todo
 }
@@ -1060,8 +1075,9 @@ inline int ipx_bool2str(const void *field, char *str, size_t str_size)
  * \warning Wraparound for dates after 8 February 2036 is not implemented.
  * \return Same as a return value of ipx_uint2str().
  */
-inline int ipx_date_lp2str(const void *field, size_t size,
-	enum IPX_ELEMENT_TYPE type, char *str, size_t str_size)
+static inline int
+ipx_date_lp2str(const void *field, size_t size, enum IPX_ELEMENT_TYPE type,
+	char *str, size_t str_size)
 {
 	// todo
 }
@@ -1085,8 +1101,9 @@ inline int ipx_date_lp2str(const void *field, size_t size,
  * \warning Wraparound for dates after 8 February 2036 is not implemented.
  * \return Same as a return value of ipx_uint2str().
  */
-inline int ipx_date_hp2str(const void *field, size_t size,
-	enum IPX_ELEMENT_TYPE type, char *str, size_t str_size)
+static inline int
+ipx_date_hp2str(const void *field, size_t size, enum IPX_ELEMENT_TYPE type,
+	char *str, size_t str_size)
 {
 	// todo
 }
@@ -1103,7 +1120,8 @@ inline int ipx_date_hp2str(const void *field, size_t size,
  *   #IPX_CONVERT_STRLEN_MAC bytes to guarantee enought size for conversion.
  * \return Same as a return value of ipx_uint2str().
  */
-inline int ipx_mac2str(const void *field, char *str, size_t str_size)
+static inline int
+ipx_mac2str(const void *field, char *str, size_t str_size)
 {
 	// todo
 }
@@ -1118,8 +1136,8 @@ inline int ipx_mac2str(const void *field, char *str, size_t str_size)
  *   #IPX_CONVERT_STRLEN_IP bytes to guarantee enought size for conversion.
  * \return Same as a return value of ipx_uint2str().
  */
-inline int ipx_ip2str(const void *field, size_t size, char *str,
-	size_t str_size)
+static inline int
+ipx_ip2str(const void *field, size_t size, char *str, size_t str_size)
 {
 	// todo
 }
@@ -1136,8 +1154,8 @@ inline int ipx_ip2str(const void *field, size_t size, char *str,
  *   (2 * \p size) + 3 ('0' + 'x' + '\0') bytes.
  * \return Same as a return value of ipx_uint2str().
  */
-inline int ipx_octet_array2str(const void *field, size_t size, char *str,
-	size_t str_size)
+static inline int
+ipx_octet_array2str(const void *field, size_t size, char *str, size_t str_size)
 {
 	// todo
 }
@@ -1156,8 +1174,8 @@ inline int ipx_octet_array2str(const void *field, size_t size, char *str,
  *   "hh" is a hexadecimal value).
  * \return Same as a return value of ipx_uint2str().
  */
-inline int ipx_string2str(const void *field, size_t size, char *str,
-	size_t str_size)
+static inline int
+ipx_string2str(const void *field, size_t size, char *str, size_t str_size)
 {
 	// todo
 }
