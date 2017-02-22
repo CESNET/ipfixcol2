@@ -65,9 +65,19 @@ extern "C" {
 
 // Auxiliary definitions of maximal values for UINT_XX for 3, 5, 6 and 7 bytes
 const uint32_t IPX_UINT24_MAX = 0xFFFFFFUL;
-const uint64_t IPX_UINT40_MAX = 0xFFFFFFFFFFULL;
-const uint64_t IPX_UINT48_MAX = 0xFFFFFFFFFFFFULL;
-const uint64_t IPX_UINT56_MAX = 0xFFFFFFFFFFFFFFULL;
+const uint64_t IPX_UINT40_MAX = 0x000000FFFFFFFFFFULL;
+const uint64_t IPX_UINT48_MAX = 0x0000FFFFFFFFFFFFULL;
+const uint64_t IPX_UINT56_MAX = 0x00FFFFFFFFFFFFFFULL;
+
+const int32_t IPX_INT24_MAX = 0x007FFFFFL;
+const int64_t IPX_INT40_MAX = 0x0000007FFFFFFFFFLL;
+const int64_t IPX_INT48_MAX = 0x00007FFFFFFFFFFFLL;
+const int64_t IPX_INT56_MAX = 0x007FFFFFFFFFFFFFLL;
+
+const int32_t IPX_INT24_MIN = 0xFF800000L;
+const int64_t IPX_INT40_MIN = 0xFFFFFF8000000000LL;
+const int64_t IPX_INT48_MIN = 0xFFFF800000000000LL;
+const int64_t IPX_INT56_MIN = 0xFF80000000000000LL;
 
 int main(int argc, char **argv)
 {
@@ -121,7 +131,6 @@ public:
 		delete[] u56;
 	}
 };
-
 
 /*
  * Insert the maximum possible value i.e. "UINT64_MAX" and the minimum possible
@@ -645,6 +654,312 @@ TEST_F(ConverterUint, GetUintOutOfRange)
 	EXPECT_EQ(ipx_get_uint(temp256, temp256_size, &value), IPX_CONVERT_ERR_ARG);
 }
 
+/**
+ * \brief Test fixture for SetUint tests
+ */
+class ConverterInt : public ::testing::Test {
+protected:
+	/*
+	 * We want to have all variables dynamically allocated so Valgrind can check
+	 * access out of bounds, etc.
+     */
+	int8_t  *i8;
+	int16_t *i16;
+	int32_t *i32;
+	int64_t *i64;
+
+	int8_t *i24;
+	int8_t *i40;
+	int8_t *i48;
+	int8_t *i56;
+
+public:
+	/** Create variables for tests */
+	virtual void SetUp() {
+		i8  = new int8_t;
+		i16 = new int16_t;
+		i32 = new int32_t;
+		i64 = new int64_t;
+
+		i24 = new int8_t[3];
+		i40 = new int8_t[5];
+		i48 = new int8_t[6];
+		i56 = new int8_t[7];
+	}
+
+	/** Destroy variables for the tests */
+	virtual void TearDown() {
+		delete i8;
+		delete i16;
+		delete i32;
+		delete i64;
+
+		delete[] i24;
+		delete[] i40;
+		delete[] i48;
+		delete[] i56;
+	}
+};
+
+/*
+ * Insert the maximum possible value i.e. "INT64_MAX" and the minimum possible
+ * value i.e. "INT64_MIN" into 1 - 8 byte variables. The test expects
+ * truncation of values.
+ */
+TEST_F(ConverterInt, SetIntMaxMin) {
+	// SetUp
+	const int64_t max_val = INT64_MAX;
+	const int64_t min_val = INT64_MIN;
+
+	// Execute
+	// 1 byte
+	EXPECT_EQ(ipx_set_int(i8, BYTES_1, max_val), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(*i8, INT8_MAX);
+	EXPECT_EQ(ipx_set_int(i8, BYTES_1, min_val), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(*i8, INT8_MIN);
+
+	// 2 bytes
+	EXPECT_EQ(ipx_set_int(i16, BYTES_2, max_val), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(*i16, (int16_t) htons(INT16_MAX));
+	EXPECT_EQ(ipx_set_int(i16, BYTES_2, min_val), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(*i16, (int16_t) htons(INT16_MIN));
+
+	// 4 bytes
+	EXPECT_EQ(ipx_set_int(i32, BYTES_4, max_val), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(*i32, (int32_t) htonl(INT32_MAX));
+	EXPECT_EQ(ipx_set_int(i32, BYTES_4, min_val), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(*i32, (int32_t) htonl(INT32_MIN));
+
+	// 8 bytes
+	EXPECT_EQ(ipx_set_int(i64, BYTES_8, max_val), 0);
+	EXPECT_EQ(*i64, (int64_t) htobe64(INT64_MAX));
+	EXPECT_EQ(ipx_set_int(i64, BYTES_8, min_val), 0);
+	EXPECT_EQ(*i64, (int64_t) htobe64(INT64_MIN));
+
+	// Other (unusual situations i.e. 3, 5, 6 and 7 bytes)
+	int8_t temp32[4];
+	int8_t temp64[8];
+
+	// 3 bytes
+	EXPECT_EQ(ipx_set_int(i24, BYTES_3, max_val), IPX_CONVERT_ERR_TRUNC);
+	*((uint32_t *) temp32) = htonl(IPX_INT24_MAX);
+	EXPECT_EQ(memcmp(i24, &temp32[1], BYTES_3), 0);
+	EXPECT_EQ(ipx_set_int(i24, BYTES_3, min_val), IPX_CONVERT_ERR_TRUNC);
+	*((uint32_t *) temp32) = htonl(IPX_INT24_MIN);
+	EXPECT_EQ(memcmp(i24, &temp32[1], BYTES_3), 0);
+
+	// 5 bytes
+	EXPECT_EQ(ipx_set_int(i40, BYTES_5, max_val), IPX_CONVERT_ERR_TRUNC);
+	*((uint64_t *) temp64) = htobe64(IPX_INT40_MAX);
+	EXPECT_EQ(memcmp(i40, &temp64[3], BYTES_5), 0);
+	EXPECT_EQ(ipx_set_int(i40, BYTES_5, min_val), IPX_CONVERT_ERR_TRUNC);
+	*((uint64_t *) temp64) = htobe64(IPX_INT40_MIN);
+	EXPECT_EQ(memcmp(i40, &temp64[3], BYTES_5), 0);
+
+	// 6 bytes
+	EXPECT_EQ(ipx_set_int(i48, BYTES_6, max_val), IPX_CONVERT_ERR_TRUNC);
+	*((uint64_t *) temp64) = htobe64(IPX_INT48_MAX);
+	EXPECT_EQ(memcmp(i48, &temp64[2], BYTES_6), 0);
+	EXPECT_EQ(ipx_set_int(i48, BYTES_6, min_val), IPX_CONVERT_ERR_TRUNC);
+	*((uint64_t *) temp64) = htobe64(IPX_INT48_MIN);
+	EXPECT_EQ(memcmp(i48, &temp64[2], BYTES_6), 0);
+
+	// 7 bytes
+	EXPECT_EQ(ipx_set_int(i56, BYTES_7, max_val), IPX_CONVERT_ERR_TRUNC);
+	*((uint64_t *) temp64) = htobe64(IPX_INT56_MAX);
+	EXPECT_EQ(memcmp(i56, &temp64[1], BYTES_7), 0);
+	EXPECT_EQ(ipx_set_int(i56, BYTES_7, min_val), IPX_CONVERT_ERR_TRUNC);
+	*((uint64_t *) temp64) = htobe64(IPX_INT56_MIN);
+	EXPECT_EQ(memcmp(i56, &temp64[1], BYTES_7), 0);
+}
+
+/*
+ * Insert max + 1/max/max - 1 and min - 1/min/min + 1 values into 1 - 8 byte
+ * variables.
+ */
+TEST_F(ConverterInt, SetIntAboveBelow)
+{
+	// SetUp
+	const int16_t i8_max_above  = ((int16_t) INT8_MAX) + 1;
+	const int8_t  i8_max_below  = INT8_MAX - 1;
+	const int32_t i16_max_above = ((int32_t) INT16_MAX) + 1;
+	const int16_t i16_max_below = INT16_MAX - 1;
+	const int64_t i32_max_above = ((int64_t) INT32_MAX) + 1;
+	const int32_t i32_max_below = INT32_MAX - 1;
+	const int64_t i64_max_below = INT64_MAX - 1;
+
+	const int32_t i24_max_above = IPX_INT24_MAX + 1;
+	const int32_t i24_max_below = IPX_INT24_MAX - 1;
+	const int64_t i40_max_above = IPX_INT40_MAX + 1;
+	const int64_t i40_max_below = IPX_INT40_MAX - 1;
+	const int64_t i48_max_above = IPX_INT48_MAX + 1;
+	const int64_t i48_max_below = IPX_INT48_MAX - 1;
+	const int64_t i56_max_above = IPX_INT56_MAX + 1;
+	const int64_t i56_max_below = IPX_INT56_MAX - 1;
+
+	const int8_t  i8_min_above  = INT8_MIN + 1;
+	const int16_t i8_min_below  = ((int16_t) INT8_MIN) - 1;
+	const int16_t i16_min_above = INT16_MIN + 1;
+	const int32_t i16_min_below = ((int32_t) INT16_MIN) - 1;
+	const int32_t i32_min_above = INT32_MIN + 1;
+	const int64_t i32_min_below = ((int64_t) INT32_MIN) - 1;
+	const int64_t i64_min_above = INT64_MIN + 1;
+
+	const int32_t i24_min_above = IPX_INT24_MIN + 1;
+	const int32_t i24_min_below = IPX_INT24_MIN - 1;
+	const int64_t i40_min_above = IPX_INT40_MIN + 1;
+	const int64_t i40_min_below = IPX_INT40_MIN - 1;
+	const int64_t i48_min_above = IPX_INT48_MIN + 1;
+	const int64_t i48_min_below = IPX_INT48_MIN - 1;
+	const int64_t i56_min_above = IPX_INT56_MIN + 1;
+	const int64_t i56_min_below = IPX_INT56_MIN - 1;
+
+	// Execute
+	// 1 byte
+	EXPECT_EQ(ipx_set_int(i8, BYTES_1, i8_max_above), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(*i8, INT8_MAX);
+	EXPECT_EQ(ipx_set_int(i8, BYTES_1, INT8_MAX), 0);
+	EXPECT_EQ(*i8, INT8_MAX);
+	EXPECT_EQ(ipx_set_int(i8, BYTES_1, i8_max_below), 0);
+	EXPECT_EQ(*i8, i8_max_below);
+
+	EXPECT_EQ(ipx_set_int(i8, BYTES_1, i8_min_above), 0);
+	EXPECT_EQ(*i8, i8_min_above);
+	EXPECT_EQ(ipx_set_int(i8, BYTES_1, INT8_MIN), 0);
+	EXPECT_EQ(*i8, INT8_MIN);
+	EXPECT_EQ(ipx_set_int(i8, BYTES_1, i8_min_below), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(*i8, INT8_MIN);
+
+	// 2 bytes
+	EXPECT_EQ(ipx_set_int(i16, BYTES_2, i16_max_above), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(*i16, (int16_t) htons(INT16_MAX));
+	EXPECT_EQ(ipx_set_int(i16, BYTES_2, INT16_MAX), 0);
+	EXPECT_EQ(*i16, (int16_t) htons(INT16_MAX));
+	EXPECT_EQ(ipx_set_int(i16, BYTES_2, i16_max_below), 0);
+	EXPECT_EQ(*i16, (int16_t) htons(i16_max_below));
+
+	EXPECT_EQ(ipx_set_int(i16, BYTES_2, i16_min_above), 0);
+	EXPECT_EQ(*i16, (int16_t) htons(i16_min_above));
+	EXPECT_EQ(ipx_set_int(i16, BYTES_2, INT16_MIN), 0);
+	EXPECT_EQ(*i16, (int16_t) htons(INT16_MIN));
+	EXPECT_EQ(ipx_set_int(i16, BYTES_2, i16_min_below), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(*i16, (int16_t) htons(INT16_MIN));
+
+	// 4 bytes
+	EXPECT_EQ(ipx_set_int(i32, BYTES_4, i32_max_above), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(*i32, (int32_t) htonl(INT32_MAX));
+	EXPECT_EQ(ipx_set_int(i32, BYTES_4, INT32_MAX), 0);
+	EXPECT_EQ(*i32, (int32_t) htonl(INT32_MAX));
+	EXPECT_EQ(ipx_set_int(i32, BYTES_4, i32_max_below), 0);
+	EXPECT_EQ(*i32, (int32_t) htonl(i32_max_below));
+
+	EXPECT_EQ(ipx_set_int(i32, BYTES_4, i32_min_above), 0);
+	EXPECT_EQ(*i32, (int32_t) htonl(i32_min_above));
+	EXPECT_EQ(ipx_set_int(i32, BYTES_4, INT32_MIN), 0);
+	EXPECT_EQ(*i32, (int32_t) htonl(INT32_MIN));
+	EXPECT_EQ(ipx_set_int(i32, BYTES_4, i32_min_below), IPX_CONVERT_ERR_TRUNC);
+	EXPECT_EQ(*i32, (int32_t) htonl(INT32_MIN));
+
+	// 4 bytes
+	EXPECT_EQ(ipx_set_int(i64, BYTES_8, INT64_MAX), 0);
+	EXPECT_EQ(*i64, (int64_t) htobe64(INT64_MAX));
+	EXPECT_EQ(ipx_set_int(i64, BYTES_8, i64_max_below), 0);
+	EXPECT_EQ(*i64, (int64_t) htobe64(i64_max_below));
+
+	EXPECT_EQ(ipx_set_int(i64, BYTES_8, i64_min_above), 0);
+	EXPECT_EQ(*i64, (int64_t) htobe64(i64_min_above));
+	EXPECT_EQ(ipx_set_int(i64, BYTES_8, INT64_MIN), 0);
+	EXPECT_EQ(*i64, (int64_t) htobe64(INT64_MIN));
+
+	// Other (unusual situations i.e. 3, 5, 6 and 7 bytes)
+	int8_t temp32[4];
+	int8_t temp64[8];
+
+	// 3 bytes
+	EXPECT_EQ(ipx_set_int(i24, BYTES_3, i24_max_above), IPX_CONVERT_ERR_TRUNC);
+	*((uint32_t *) temp32) = htonl(IPX_INT24_MAX);
+	EXPECT_EQ(memcmp(i24, &temp32[1], BYTES_3), 0);
+	EXPECT_EQ(ipx_set_int(i24, BYTES_3, IPX_INT24_MAX), 0);
+	*((uint32_t *) temp32) = htonl(IPX_INT24_MAX);
+	EXPECT_EQ(memcmp(i24, &temp32[1], BYTES_3), 0);
+	EXPECT_EQ(ipx_set_int(i24, BYTES_3, i24_max_below), 0);
+	*((uint32_t *) temp32) = htonl(i24_max_below);
+	EXPECT_EQ(memcmp(i24, &temp32[1], BYTES_3), 0);
+
+	EXPECT_EQ(ipx_set_int(i24, BYTES_3, i24_min_above), 0);
+	*((uint32_t *) temp32) = htonl(i24_min_above);
+	EXPECT_EQ(memcmp(i24, &temp32[1], BYTES_3), 0);
+	EXPECT_EQ(ipx_set_int(i24, BYTES_3, IPX_INT24_MIN), 0);
+	*((uint32_t *) temp32) = htonl(IPX_INT24_MIN);
+	EXPECT_EQ(memcmp(i24, &temp32[1], BYTES_3), 0);
+	EXPECT_EQ(ipx_set_int(i24, BYTES_3, i24_min_below), IPX_CONVERT_ERR_TRUNC);
+	*((uint32_t *) temp32) = htonl(IPX_INT24_MIN);
+	EXPECT_EQ(memcmp(i24, &temp32[1], BYTES_3), 0);
+
+	// 5 bytes
+	EXPECT_EQ(ipx_set_int(i40, BYTES_5, i40_max_above), IPX_CONVERT_ERR_TRUNC);
+	*((uint64_t *) temp64) = htobe64(IPX_INT40_MAX);
+	EXPECT_EQ(memcmp(i40, &temp64[3], BYTES_5), 0);
+	EXPECT_EQ(ipx_set_int(i40, BYTES_5, IPX_INT40_MAX), 0);
+	*((uint64_t *) temp64) = htobe64(IPX_INT40_MAX);
+	EXPECT_EQ(memcmp(i40, &temp64[3], BYTES_5), 0);
+	EXPECT_EQ(ipx_set_int(i40, BYTES_5, i40_max_below), 0);
+	*((uint64_t *) temp64) = htobe64(i40_max_below);
+	EXPECT_EQ(memcmp(i40, &temp64[3], BYTES_5), 0);
+
+	EXPECT_EQ(ipx_set_int(i40, BYTES_5, i40_min_above), 0);
+	*((uint64_t *) temp64) = htobe64(i40_min_above);
+	EXPECT_EQ(memcmp(i40, &temp64[3], BYTES_5), 0);
+	EXPECT_EQ(ipx_set_int(i40, BYTES_5, IPX_INT40_MIN), 0);
+	*((uint64_t *) temp64) = htobe64(IPX_INT40_MIN);
+	EXPECT_EQ(memcmp(i40, &temp64[3], BYTES_5), 0);
+	EXPECT_EQ(ipx_set_int(i40, BYTES_5, i40_min_below), IPX_CONVERT_ERR_TRUNC);
+	*((uint64_t *) temp64) = htobe64(IPX_INT40_MIN);
+	EXPECT_EQ(memcmp(i40, &temp64[3], BYTES_5), 0);
+
+	// 6 bytes
+	EXPECT_EQ(ipx_set_int(i48, BYTES_6, i48_max_above), IPX_CONVERT_ERR_TRUNC);
+	*((uint64_t *) temp64) = htobe64(IPX_INT48_MAX);
+	EXPECT_EQ(memcmp(i48, &temp64[2], BYTES_6), 0);
+	EXPECT_EQ(ipx_set_int(i48, BYTES_6, IPX_INT48_MAX), 0);
+	*((uint64_t *) temp64) = htobe64(IPX_INT48_MAX);
+	EXPECT_EQ(memcmp(i48, &temp64[2], BYTES_6), 0);
+	EXPECT_EQ(ipx_set_int(i48, BYTES_6, i48_max_below), 0);
+	*((uint64_t *) temp64) = htobe64(i48_max_below);
+	EXPECT_EQ(memcmp(i48, &temp64[2], BYTES_6), 0);
+
+	EXPECT_EQ(ipx_set_int(i48, BYTES_6, i48_min_above), 0);
+	*((uint64_t *) temp64) = htobe64(i48_min_above);
+	EXPECT_EQ(memcmp(i48, &temp64[2], BYTES_6), 0);
+	EXPECT_EQ(ipx_set_int(i48, BYTES_6, IPX_INT48_MIN), 0);
+	*((uint64_t *) temp64) = htobe64(IPX_INT48_MIN);
+	EXPECT_EQ(memcmp(i48, &temp64[2], BYTES_6), 0);
+	EXPECT_EQ(ipx_set_int(i48, BYTES_6, i48_min_below), IPX_CONVERT_ERR_TRUNC);
+	*((uint64_t *) temp64) = htobe64(IPX_INT48_MIN);
+	EXPECT_EQ(memcmp(i48, &temp64[2], BYTES_6), 0);
+
+	// 7 bytes
+	EXPECT_EQ(ipx_set_int(i56, BYTES_7, i56_max_above), IPX_CONVERT_ERR_TRUNC);
+	*((uint64_t *) temp64) = htobe64(IPX_INT56_MAX);
+	EXPECT_EQ(memcmp(i56, &temp64[1], BYTES_7), 0);
+	EXPECT_EQ(ipx_set_int(i56, BYTES_7, IPX_INT56_MAX), 0);
+	*((uint64_t *) temp64) = htobe64(IPX_INT56_MAX);
+	EXPECT_EQ(memcmp(i56, &temp64[1], BYTES_7), 0);
+	EXPECT_EQ(ipx_set_int(i56, BYTES_7, i56_max_below), 0);
+	*((uint64_t *) temp64) = htobe64(i56_max_below);
+	EXPECT_EQ(memcmp(i56, &temp64[1], BYTES_7), 0);
+
+	EXPECT_EQ(ipx_set_int(i56, BYTES_7, i56_min_above), 0);
+	*((uint64_t *) temp64) = htobe64(i56_min_above);
+	EXPECT_EQ(memcmp(i56, &temp64[1], BYTES_7), 0);
+	EXPECT_EQ(ipx_set_int(i56, BYTES_7, IPX_INT56_MIN), 0);
+	*((uint64_t *) temp64) = htobe64(IPX_INT56_MIN);
+	EXPECT_EQ(memcmp(i56, &temp64[1], BYTES_7), 0);
+	EXPECT_EQ(ipx_set_int(i56, BYTES_7, i56_min_below), IPX_CONVERT_ERR_TRUNC);
+	*((uint64_t *) temp64) = htobe64(IPX_INT56_MIN);
+	EXPECT_EQ(memcmp(i56, &temp64[1], BYTES_7), 0);
+
+}
 
 /**
  * @}
