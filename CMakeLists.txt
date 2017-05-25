@@ -100,7 +100,7 @@ include_directories(
 # List of public header
 ipx_files_add(PUBLIC_HEADERS
 	include/ipfixcol2.h
-	include/ipfixcol2/convertors.h
+	include/ipfixcol2/converters.h
 	include/ipfixcol2/data_record.h
 	include/ipfixcol2/ipfix_element.h
 	include/ipfixcol2/ipfix_structures.h
@@ -124,6 +124,7 @@ ipx_files_add(SOURCES
 # IPFIXcol main
 ipx_files_add(MAIN
 	src/ipfixcol.c
+	src/converters.c
 	src/template.c
 	src/message.c
 	src/message_garbage.c

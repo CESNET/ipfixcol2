@@ -51,7 +51,7 @@
 #include <endian.h>
 
 extern "C" {
-	#include <ipfixcol2/convertors.h>
+	#include <ipfixcol2/converters.h>
 }
 
 #define BYTES_1 (1U)
