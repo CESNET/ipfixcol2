@@ -53,7 +53,7 @@
  *
  * General type for all messages in the collector pipeline. It is guaranteed
  * that all messages for the pipeline can be cast to this general type and
- * than be transfered throw the pipeline and converted back to the original
+ * than be transferred throw the pipeline and converted back to the original
  * type.
  *
  * @{
@@ -105,8 +105,8 @@ static inline ipx_session_msg_t *
 ipx_msg_cast2session(ipx_msg_t *message)
 {
 	return (ipx_msg_get_type(message) == IPX_MSG_SESSION)
-		   ? ((ipx_session_msg_t *) message)
-		   : NULL;
+		? ((ipx_session_msg_t *) message)
+		: NULL;
 }
 
 /**

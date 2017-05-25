@@ -69,16 +69,16 @@ struct ipx_drec_field {
 	 * octet prefix with real-length).
 	 */
 	uint8_t     *data;
-/** Real length of the field                                             */
-unsigned int real_length;
-/** Pointer to the field description (IDs, data types, etc.)             */
-struct ipx_template_field *info;
+	/** Real length of the field                                             */
+	unsigned int real_length;
+	/** Pointer to the field description (IDs, data types, etc.)             */
+	struct ipx_template_field *info;
 };
 
 /**
  * \brief Get a field in a data record
  *
- * Try to find the first occurence of the field defined by an Enterprise Number
+ * Try to find the first occurrence of the field defined by an Enterprise Number
  * and an Information Element ID in a data record.
  * \param[in] rec     Pointer to the data set
  * \param[in] en      Enterprise Number
@@ -106,13 +106,13 @@ struct ipx_drec_iter {
 };
 
 /**
- * \brief Initialize an interator to data fields in a data record
+ * \brief Initialize an iterator to data fields in a data record
  * \warning
  *   After initialization the iterator only has initialized internal structures,
  *   but public part is still undefined i.e. does NOT point to the first field
  *   in the record. To get the first field and for code example,
  *   see ipx_drec_iter_next().
- * \param[out] iter    Pointer to the iterator to intialize
+ * \param[out] iter    Pointer to the iterator to initialize
  * \param[in]  record  Pointer to data record
  */
 API void

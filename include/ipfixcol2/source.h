@@ -251,7 +251,7 @@ ipx_session_get_addrs(const ipx_session_t *session);
  * \return On success returns 0. Otherwise (non-UDP session, memory allocation
  *   error, etc.) returns non-zero value.
  */
-int
+API int
 ipx_session_set_tmplt_cfg(ipx_session_t *session,
 	const struct ipx_session_tmplt_timeouts *config);
 
@@ -261,7 +261,7 @@ ipx_session_set_tmplt_cfg(ipx_session_t *session,
  * \return If the configuration is not set, returns NULL. Otherwise returns
  *   a pointer to the configuration,
  */
-const struct ipx_session_tmplt_timeouts *
+API const struct ipx_session_tmplt_timeouts *
 ipx_session_get_tmplt_cfg(const ipx_session_t *session);
 
 /**
@@ -276,12 +276,13 @@ ipx_session_get_tmplt_cfg(const ipx_session_t *session);
  * \return If the Stream is in the Session, returns pointer to it.
  *   Otherwise (not present) returns NULL.
  */
-ipx_stream_t *
+API ipx_stream_t *
 ipx_session_find_stream(ipx_session_t *session, uint32_t odid, uint16_t stream);
 
 /**
- * \brief Add a new Source Stream to a Source Session
+ * \brief Get a new Source Stream to a Source Session
  *
+ *  TODO: find & get
  * Add the Stream that is defined by an Observation Domain ID (ODID)
  * and a Stream Number to the Source Session. If the Stream is already present,
  * just returns a pointer to it. For non-SCTP protocols, the
@@ -291,8 +292,8 @@ ipx_session_find_stream(ipx_session_t *session, uint32_t odid, uint16_t stream);
  * \param[in]     stream  Stream number
  * \return On success returns pointer to the (new) Source Stream.
  */
-ipx_stream_t *
-ipx_session_add_stream(ipx_session_t *session, uint32_t odid, uint16_t stream);
+API ipx_stream_t *
+ipx_session_get_stream(ipx_session_t *session, uint32_t odid, uint16_t stream);
 
 
 /**

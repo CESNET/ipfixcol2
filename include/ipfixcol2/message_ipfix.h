@@ -44,6 +44,8 @@
 
 #include <ipfixcol2/template.h>
 #include <stddef.h>
+#include <ipfixcol2.h>
+#include "source.h"
 
 /**
  * \endinternal
@@ -57,10 +59,8 @@
 /** Type of IPFIX message sets */
 enum IPX_SET_TYPE {
 	IPX_SET_DATA,              /**< Data set                                */
-	IPX_SET_TEMPLATE_DEF,      /**< Template set (defintions)               */
-	IPX_SET_TEMPLATE_WD,       /**< Template set (withdrawals)              */
-	IPX_SET_OPT_TEMPLATE_DEF,  /**< Options template set (definitions)      */
-	IPX_SET_OPT_TEMPLATE_WD    /**< Options template set (withdrawals)      */
+	IPX_SET_TEMPLATE,          /**< Template set (definitions)              */
+	IPX_SET_OPT_TEMPLATE       /**< Options template set                    */
 };
 
 /**
@@ -74,7 +74,11 @@ struct ipx_ipfix_set {
 	/** Type of the set                                                      */
 	enum IPX_SET_TYPE type;
 
-	/** Pointer to a raw IPFIX set (starts with a header)                    */
+	/**
+	 * Pointer to a raw IPFIX set (starts with a header)
+	 * To get real length of the set, you can read value from its header.
+	 * i.e. \code{.c} uint16_t real_len = ntohs(raw_set->length); \endcode
+	 */
 	struct ipfix_set_header *raw_set;
 	/** Number of (data or template) records in the set                      */
 	unsigned int rec_cnt;
@@ -88,68 +92,87 @@ struct ipx_ipfix_set {
 		const ipx_template_t *template;
 
 		/**
-		 * Order of the first data record of this set in the list of all
+		 * Index of the first data record of this Set in the list of all
 		 * data records (among all data sets) of the IPFIX message.
+		 * For example to access first function
 		 */
-		unsigned int first_rec_order;
+		unsigned int first_rec_idx;
 	} data_set;
 };
 
-/**
- * \brief IPFIX message type
- */
+/** \brief Datatype for IPFIX message wrapper                                */
 typedef struct ipx_ipfix_msg ipx_ipfix_msg_t;
 
 /**
- * \brief Destroy a message with a parsed IPFIX packet
+ * \brief Destroy a message wrapper with a parsed IPFIX packet
  * \param[out] msg Pointer to the message
  */
 void
 ipx_ipfix_msg_destroy(ipx_ipfix_msg_t *msg);
 
+/**
+ * \brief Get pointer to the raw message
+ *
+ * \warning
+ * This function allow to directly access and modify the wrapped massage.
+ * It is recommended to use the raw packet only read-only, because inappropriate
+ * modifications (e.g. removing/adding sets/records/fields) can cause undefined
+ * behavior of API functions.
+ *
+ * \note Size of the message is stored directly in the header (network byte
+ *   order) i.e. \code{.c} uint16_t real_len = ntohs(header->length); \endcode
+ * \param[in] msg Pointer to the message wrapper
+ * \return
+ */
+struct ipfix_header *
+ipx_ipfix_msg_raw(ipx_ipfix_msg_t *msg);
 
-// TODO:
-// get_odid(), is_source_new(), is_source_closed(),
-// get_export_time(), get_seq_number()
-
-
+/**)
+ * \brief Get the Source Stream of an IPFIX packet
+ *
+ * This all you to get information about the Source Stream and Source Session
+ * that uniquely describes Exporting Process.
+ * \param[in] msg Pointer to the message wrapper
+ * \return Pointer to the Source Stream
+ */
+API const ipx_stream_t *
+ipx_ipfix_msg_stream(const ipx_ipfix_msg_t *msg);
 
 /**
- * \brief Get a number of IPFIX sets in the message
- * \param[in] msg Pointer to the message
+ * \brief Get a number of IPFIX Sets in the message
+ * \param[in] msg Pointer to the message wrapper
  * \return Count
  */
-size_t
-ipx_msg_ipfix_get_set_count(const ipx_ipfix_msg_t *msg);
+API size_t
+ipx_msg_ipfix_set_count(const ipx_ipfix_msg_t *msg);
 
 /**
- * \brief Get a pointer to the set (specified by an index) in the packet
- * \param[in] packet Packet message with sets
- * \param[in] idx    Index of the set
+ * \brief Get a pointer to the Set (specified by an index) in a message
+ * \param[in] packet Pointer to the message wrapper with the requrired set
+ * \param[in] idx    Index of the set (index starts at 0)
  * \return On success returns the pointer. Otherwise (usually the index is
  *   out-of-range) returns NULL.
  */
-struct ipx_ipfix_set *
-ipx_ipfix_msg_get_set(ipx_ipfix_msg_t *msg, unsigned int idx);
-
+API struct ipx_ipfix_set *
+ipx_ipfix_msg_set_get(ipx_ipfix_msg_t *msg, unsigned int idx);
 
 /**
  * \brief Get a number of IPFIX Data records in the message
  * \param[in] msg Pointer to the message
  * \return Count
  */
-size_t
-ipx_ipfix_msg_data_rec_count(const ipx_ipfix_msg_t *msg);
+API size_t
+ipx_ipfix_msg_drec_count(const ipx_ipfix_msg_t *msg);
 
 /**
  * \brief Get a pointer to the data record (specified by an index) in the packet
  * \param[in] packet Packet message with records
- * \param[in] idx    Index of the record
+ * \param[in] idx    Index of the record (index starts at 0)
  * \return On success returns the pointer. Otherwise (usually the index is
  *   out-of-range) returns NULL.
  */
-struct ipx_ipfix_data_rec *
-ipx_ipfix_msg_data_rec_get(ipx_ipfix_msg_t *msg, size_t idx);
+API struct ipx_drec *
+ipx_ipfix_msg_drec_get(ipx_ipfix_msg_t *msg, size_t idx);
 
 /**@}*/
 #endif //IPFIXCOL_MSG_IPFIX_H

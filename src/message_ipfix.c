@@ -103,7 +103,7 @@ ipx_ipfix_msg_set_count(const ipx_ipfix_msg_t *msg)
 
 // Get a pointer to the set (specified by an index) in the packet
 struct ipx_ipfix_set *
-ipx_ipfix_msg_set_get(ipx_ipfix_msg_t *msg, size_t idx)
+ipx_ipfix_msg_set_get(ipx_ipfix_msg_t *msg, unsigned int idx)
 {
 	if (msg->sets.cnt <= idx) {
 		return NULL;
@@ -124,7 +124,7 @@ ipx_ipfix_msg_data_rec_count(const ipx_ipfix_msg_t *msg)
 }
 
 // Get a pointer to the record (specified by an index) in the packet
-struct ipx_ipfix_data_rec *
+struct ipx_drec *
 ipx_ipfix_msg_data_rec_get(ipx_ipfix_msg_t *msg, size_t idx)
 {
 	if (msg->records.record_cnt <= idx) {
@@ -133,7 +133,7 @@ ipx_ipfix_msg_data_rec_get(ipx_ipfix_msg_t *msg, size_t idx)
 
 	size_t offset = msg->records.size_per_record * idx;
 	uint8_t *rec_start = ((uint8_t *) msg->rec_data) + offset;
-	return (struct ipx_ipfix_data_rec *) rec_start;
+	return (struct ipx_drec *) rec_start;
 }
 
 
