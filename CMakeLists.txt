@@ -20,6 +20,7 @@ set(IPFIXCOL_VERSION
 	${IPFIXCOL_VERSION_MAJOR}.${IPFIXCOL_VERSION_MINOR}.${IPFIXCOL_VERSION_PATCH})
 
 # Include modules
+include(CMakeModules/git_revision.cmake) # Sets variable GIT_REVISION
 include(CMakeModules/ipx_files.cmake)
 include(CheckCCompilerFlag)
 include(GNUInstallDirs)
@@ -53,30 +54,12 @@ option(ENABLE_TESTS_COVERAGE "Add support for code coverage (make coverage)" OFF
 
 set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wall -fvisibility=hidden -std=gnu11" )
 set(CMAKE_C_FLAGS_RELEASE   "-O3 -DNDEBUG")
-set(CMAKE_C_FLAGS_DEBUG     "-g -O0 -Wextra -pedantic")
+set(CMAKE_C_FLAGS_DEBUG     "-g -O0 -Wall -Wextra -pedantic")
 set(CMAKE_CXX_FLAGS         "${CMAKE_CXX_FLAGS} -Wall -fvisibility=hidden -std=gnu++11")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
-set(CMAKE_CXX_FLAGS_DEBUG   "-g -O0 -Wextra -pedantic")
+set(CMAKE_CXX_FLAGS_DEBUG   "-g -O0 -Wall -Wextra -pedantic")
 
 # ------------------------------------------------------------------------------
-
-# Add GIT revision (if available)
-set(GIT_REVISION "unknown")
-find_package(Git QUIET)
-if (GIT_FOUND)
-	execute_process(
-		COMMAND ${GIT_EXECUTABLE} "log" "-1" "--format=%h"
-		WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-		RESULT_VARIABLE TMP_GIT_RET_CODE
-		OUTPUT_VARIABLE TMP_GIT_REVISION
-		ERROR_QUIET
-		OUTPUT_STRIP_TRAILING_WHITESPACE
-	)
-
-	if (TMP_GIT_RET_CODE EQUAL 0)
-		set(GIT_REVISION ${TMP_GIT_REVISION})
-	endif()
-endif(GIT_FOUND)
 
 # Configure a header file to pass API version to the source code
 configure_file(
