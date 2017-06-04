@@ -8,8 +8,7 @@ ipx_add_test_file("src/verbose.cpp")
 
 # Enable code coverage target (i.e. make coverage) when appropriate build
 # type is chosen.
-string(TOUPPER ${CMAKE_BUILD_TYPE} BUILD_TYPE_UPPER)
-if (BUILD_TYPE_UPPER STREQUAL "COVERAGE")
+if (${BUILD_TYPE_UPPER} STREQUAL "COVERAGE")
 	coverage_add_target()
 endif()
 

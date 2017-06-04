@@ -45,7 +45,12 @@ if (NOT CMAKE_BUILD_TYPE)
 	set (CMAKE_BUILD_TYPE Release
 		CACHE STRING "Choose type of build (Release/Debug/Coverage)." FORCE)
 endif()
+
 string(TOUPPER ${CMAKE_BUILD_TYPE} BUILD_TYPE_UPPER)
+# Enable unit tests, by default, for coverage builds
+if (${BUILD_TYPE_UPPER} STREQUAL "COVERAGE")
+	set(TESTS_DEFAULT ON)
+endif()
 
 option(ENABLE_DOC            "Enable documentation building"    ON)
 option(ENABLE_TESTS          "Build Unit tests (make test)"     ${TESTS_DEFAULT})
