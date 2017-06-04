@@ -68,74 +68,9 @@ set(CMAKE_CXX_FLAGS_DEBUG    "-g -O0 -Wall -Wextra -pedantic")
 set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_DEBUG} --coverage -fprofile-arcs -ftest-coverage")
 
 # ------------------------------------------------------------------------------
-# Configure a header file to pass API version to the source code
-configure_file(
-	"${PROJECT_SOURCE_DIR}/src/api.h.in"
-	"${PROJECT_BINARY_DIR}/include/ipfixcol2/api.h"
-	)
-
-# Configure a header file to pass some CMake variables
-configure_file(
-	"${PROJECT_SOURCE_DIR}/src/build_config.h.in"
-	"${PROJECT_BINARY_DIR}/src/build_config.h"
-	)
-
-# Local header files are placed in the include directory.
-include_directories(
-	"${PROJECT_SOURCE_DIR}/include/"
-	"${PROJECT_BINARY_DIR}/include/"  # for api.h
-	"${PROJECT_BINARY_DIR}/src/"      # for build_config.h
-	)
-
-# List of public header
-ipx_files_add(PUBLIC_HEADERS
-	include/ipfixcol2.h
-	include/ipfixcol2/converters.h
-	include/ipfixcol2/data_record.h
-	include/ipfixcol2/ipfix_element.h
-	include/ipfixcol2/ipfix_structures.h
-	include/ipfixcol2/message.h
-	include/ipfixcol2/message_garbage.h
-	include/ipfixcol2/message_ipfix.h
-	include/ipfixcol2/message_session.h
-	include/ipfixcol2/processor.h
-	include/ipfixcol2/source.h
-	include/ipfixcol2/template.h
-	include/ipfixcol2/verbose.h
-	"${PROJECT_BINARY_DIR}/include/ipfixcol2/api.h"
-	)
-
-# List of source files
-ipx_files_add(SOURCES
-	src/verbose.c
-	"${PROJECT_BINARY_DIR}/src/build_config.h"
-	)
-
-# IPFIXcol main
-ipx_files_add(MAIN
-	src/ipfixcol.c
-	src/converters.c
-	src/template.c
-	src/message.c
-	src/message_garbage.c
-	src/message_internal.h
-	src/message_ipfix.c
-	src/message_session.c
-	src/source.c
-	)
-
-# Get files
-ipx_files_get(IPFIXCOL_PUBLIC_HEADERS PUBLIC_HEADERS)
-ipx_files_get(IPFIXCOL_SOURCES SOURCES)
-ipx_files_get(IPFIXCOL_MAIN MAIN)
-
-# Add the executable
-add_executable(
-	ipfixcol2
-	${IPFIXCOL_MAIN}
-	${IPFIXCOL_SOURCES}
-	${IPFIXCOL_PUBLIC_HEADERS}
-	)
+# Project components
+add_subdirectory(include)
+add_subdirectory(src)
 
 # Build documentation
 if (ENABLE_DOC)
@@ -167,21 +102,6 @@ if (ENABLE_TESTS)
 	enable_testing()
 	add_subdirectory(tests/unit_tests)
 endif()
-
-# ------------------------------------------------------------------------------
-# Install IPFIXcol and header files
-install(
-	TARGETS ipfixcol2
-	DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
-	)
-install(
-	DIRECTORY include/
-	DESTINATION ${CMAKE_INSTALL_FULL_INCLUDEDIR}
-	)
-install(
-	FILES "${PROJECT_BINARY_DIR}/include/ipfixcol2/api.h"
-	DESTINATION "${CMAKE_INSTALL_FULL_INCLUDEDIR}/ipfixcol2/"
-	)
 
 # ------------------------------------------------------------------------------
 # Status messages

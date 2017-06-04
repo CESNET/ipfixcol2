@@ -59,13 +59,9 @@ function(ipx_add_test_file _file)
 	get_filename_component(CASE_NAME "${_file}" NAME_WE)
 	set(CASE_NAME test_${CASE_NAME})
 
-	# Get source files
-	ipx_files_get(HEADERS PUBLIC_HEADERS)
-	ipx_files_get(SRCS SOURCES)
-
 	# Add executable
-	add_executable(${CASE_NAME} ${_file} ${SRCS} ${HEADERS})
-	target_link_libraries(${CASE_NAME} PUBLIC libgtest)
+	add_executable(${CASE_NAME} ${_file})
+	target_link_libraries(${CASE_NAME} PUBLIC libgtest ipfixcol2base)
 
 	# Add the test
 	add_test(NAME ${CASE_NAME} COMMAND "$<TARGET_FILE:${CASE_NAME}>")
