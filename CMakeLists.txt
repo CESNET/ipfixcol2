@@ -38,29 +38,31 @@ endif()
 
 # ------------------------------------------------------------------------------
 # Build options
+set(TESTS_DEFAULT    OFF)
+
 # Set default build type if not specified by user
 if (NOT CMAKE_BUILD_TYPE)
 	set (CMAKE_BUILD_TYPE Release
-		CACHE STRING "Choose type of build (Release/Debug)." FORCE)
+		CACHE STRING "Choose type of build (Release/Debug/Coverage)." FORCE)
 endif()
+string(TOUPPER ${CMAKE_BUILD_TYPE} BUILD_TYPE_UPPER)
 
 option(ENABLE_DOC            "Enable documentation building"    ON)
-option(ENABLE_TESTS          "Build Unit tests (make test)"     OFF)
+option(ENABLE_TESTS          "Build Unit tests (make test)"     ${TESTS_DEFAULT})
 option(ENABLE_TESTS_VALGRIND "Build Unit tests with Valgrind Memcheck"       OFF)
-option(ENABLE_TESTS_COVERAGE "Add support for code coverage (make coverage)" OFF)
 
 ## -----------------------------------------------------------------------------
 # Hard coded definitions
-
-set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wall -fvisibility=hidden -std=gnu11" )
-set(CMAKE_C_FLAGS_RELEASE   "-O3 -DNDEBUG")
-set(CMAKE_C_FLAGS_DEBUG     "-g -O0 -Wall -Wextra -pedantic")
-set(CMAKE_CXX_FLAGS         "${CMAKE_CXX_FLAGS} -Wall -fvisibility=hidden -std=gnu++11")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
-set(CMAKE_CXX_FLAGS_DEBUG   "-g -O0 -Wall -Wextra -pedantic")
+set(CMAKE_C_FLAGS            "${CMAKE_C_FLAGS} -fvisibility=hidden -std=gnu11")
+set(CMAKE_C_FLAGS_RELEASE    "-O3 -DNDEBUG")
+set(CMAKE_C_FLAGS_DEBUG      "-g -O0 -Wall -Wextra -pedantic")
+set(CMAKE_C_FLAGS_COVERAGE   "${CMAKE_C_FLAGS_DEBUG} --coverage -fprofile-arcs -ftest-coverage")
+set(CMAKE_CXX_FLAGS          "${CMAKE_CXX_FLAGS} -fvisibility=hidden -std=gnu++11")
+set(CMAKE_CXX_FLAGS_RELEASE  "-O3 -DNDEBUG")
+set(CMAKE_CXX_FLAGS_DEBUG    "-g -O0 -Wall -Wextra -pedantic")
+set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_DEBUG} --coverage -fprofile-arcs -ftest-coverage")
 
 # ------------------------------------------------------------------------------
-
 # Configure a header file to pass API version to the source code
 configure_file(
 	"${PROJECT_SOURCE_DIR}/src/api.h.in"
@@ -182,8 +184,10 @@ MESSAGE(STATUS
 	"\n\n"
 	"IPFIXcol2 version:   ${IPFIXCOL_VERSION}\n"
 	"Install prefix...:   ${CMAKE_INSTALL_PREFIX}\n"
-	"Build type.......:   ${CMAKE_BUILD_TYPE}\n"
+	"Build type.......:   ${BUILD_TYPE_UPPER}\n"
 	"C Compiler.......:   ${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}\n"
+	"C Flags..........:   ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${BUILD_TYPE_UPPER}}\n"
 	"C++ Compiler.....:   ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}\n"
+	"C++ Flags........:   ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${BUILD_TYPE_UPPER}}\n"
 	"Doxygen..........:   ${DOXYGEN_FOUND}\n"
 	)
