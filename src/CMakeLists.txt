@@ -4,7 +4,7 @@ configure_file(
 	"${PROJECT_BINARY_DIR}/src/build_config.h"
 )
 
-# Local header files are placed in the include directory.
+# Header files for source code building
 include_directories(
 	"${PROJECT_SOURCE_DIR}/include/"
 	"${PROJECT_BINARY_DIR}/include/"  # for api.h
@@ -32,8 +32,10 @@ add_library(
 	${CORE_SOURCE}
 )
 
+# Build IPFIXCOL2 exacutable with all symbols from the base library
+set(BASE_LIB -Wl,--whole-archive ipfixcol2base -Wl,--no-whole-archive)
 add_executable(ipfixcol2 main.c)
-target_link_libraries(ipfixcol2 PUBLIC ipfixcol2base)
+target_link_libraries(ipfixcol2 ${BASE_LIB})
 
 # Installation targets
 install(
