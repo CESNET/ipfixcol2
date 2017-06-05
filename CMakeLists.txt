@@ -24,17 +24,17 @@ include(CMakeModules/git_revision.cmake) # Sets variable GIT_REVISION
 include(CMakeModules/ipx_files.cmake)
 include(CheckCCompilerFlag)
 include(GNUInstallDirs)
-#include(CheckCXXCompilerFlag)
+include(CheckCXXCompilerFlag)
 
 CHECK_C_COMPILER_FLAG(-std=gnu11 COMPILER_SUPPORT_GNU11)
 if (NOT COMPILER_SUPPORT_GNU11)
 	message(FATAL_ERROR "Compiler does NOT support C11 with GNU extension")
 endif()
 
-#CHECK_CXX_COMPILER_FLAG(-std=gnu++11 COMPILER_SUPPORT_GNUXX11)
-#if (NOT COMPILER_SUPPORT_GNUXX11)
-#	message(FATAL_ERROR "Compiler does NOT support C++11 with GNU extension")
-#endif()
+CHECK_CXX_COMPILER_FLAG(-std=gnu++11 COMPILER_SUPPORT_GNUXX11)
+if (NOT COMPILER_SUPPORT_GNUXX11)
+	message(FATAL_ERROR "Compiler does NOT support C++11 with GNU extension")
+endif()
 
 # ------------------------------------------------------------------------------
 # Build options
@@ -71,32 +71,7 @@ set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_DEBUG} --coverage -fprofile-arcs
 # Project components
 add_subdirectory(include)
 add_subdirectory(src)
-
-# Build documentation
-if (ENABLE_DOC)
-	find_package(Doxygen)
-	if (NOT DOXYGEN_FOUND)
-		message(FATAL_ERROR "Doxygen is not available.")
-	endif()
-
-	configure_file(
-		"${PROJECT_SOURCE_DIR}/doc/doxygen/Doxyfile.in"
-		"${PROJECT_BINARY_DIR}/doc/doxygen/Doxyfile"
-		@ONLY
-	)
-
-	set(DOXYGEN_DIRECTORY
-		"${PROJECT_BINARY_DIR}/doc/doxygen/"
-	)
-
-	add_custom_target(
-		doc ALL
-		COMMAND ${DOXYGEN_EXECUTABLE} "${DOXYGEN_DIRECTORY}/Doxyfile"
-		WORKING_DIRECTORY "${DOXYGEN_DIRECTORY}"
-		COMMENT "Generating API documentation with Doxygen to ${DOXYGEN_DIRECTORY}"
-		VERBATIM
-    )
-endif(ENABLE_DOC)
+add_subdirectory(doc)
 
 if (ENABLE_TESTS)
 	enable_testing()
