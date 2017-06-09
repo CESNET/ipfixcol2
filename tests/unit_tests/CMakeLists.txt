@@ -1,4 +1,3 @@
-cmake_minimum_required(VERSION 2.8.8)
 include(${CMAKE_SOURCE_DIR}/CMakeModules/unit_tests.cmake)
 
 # Include public headers
@@ -8,9 +7,9 @@ include_directories(
 )
 
 # List of tests
-ipx_add_test_file("src/convertors.cpp")
-ipx_add_test_file("src/verbose.cpp")
-# >> Add your new tests HERE <<
+unit_tests_register_test("core/converters.cpp")
+unit_tests_register_test("core/verbose.cpp")
+# >> Add your new tests or test subdirectories HERE <<
 
 # Enable code coverage target (i.e. make coverage) when appropriate build
 # type is chosen.

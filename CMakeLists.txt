@@ -21,10 +21,9 @@ set(IPFIXCOL_VERSION
 
 # Include modules
 include(CMakeModules/git_info.cmake)
-include(CMakeModules/ipx_files.cmake) # TODO: smazat
 include(CheckCCompilerFlag)
-include(GNUInstallDirs)               # TODO: smazat
 include(CheckCXXCompilerFlag)
+include(GNUInstallDirs)
 
 CHECK_C_COMPILER_FLAG(-std=gnu11 COMPILER_SUPPORT_GNU11)
 if (NOT COMPILER_SUPPORT_GNU11)

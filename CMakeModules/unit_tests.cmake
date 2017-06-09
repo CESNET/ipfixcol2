@@ -53,12 +53,15 @@ if (ENABLE_TESTS_VALGRIND)
 endif()
 
 # ------------------------------------------------------------------------------
-# Register test cases
-function(ipx_add_test_file _file)
+# Register standalone unit test (no extra libraries required)
+# Note: The fuction will add linkage to "libgtest and "ipfixcol2base".
+#       If extra libraries are required, create your own custom target and
+#       register it using unit_tests_register_target() function.
 # Param: _file   File with a test case
+function(unit_tests_register_test _file)
 	# Get a test name
 	get_filename_component(CASE_NAME "${_file}" NAME_WE)
-	set(CASE_NAME test_${CASE_NAME})
+	set(CASE_NAME "test_${CASE_NAME}")
 
 	# Add executable
 	add_executable(${CASE_NAME} ${_file})
@@ -75,6 +78,25 @@ function(ipx_add_test_file _file)
 	endif()
 endfunction()
 
+# Register unit test target (when extra library is required)
+# Note: This function will add linkage to "libgtest", but linkage to
+#       "ipfixcol2base" must be done manually, if required.
+# Param: _target   CMake target (i.e. executable name)
+function(unit_tests_register_target _target)
+	# Get a test name
+	set(CASE_NAME "test_${_target}")
+	target_link_libraries(${_target} PUBLIC libgtest)
+
+	# Add test(s)
+	add_test(NAME ${CASE_NAME} COMMAND "$<TARGET_FILE:${_target}>")
+
+	if (ENABLE_TESTS_VALGRIND)
+		add_test(
+			NAME ${CASE_NAME}_valgrind
+			COMMAND ${PATH_VALGRIND} ${VALGRIND_FLAGS} "$<TARGET_FILE:${_target}>"
+		)
+	endif()
+endfunction()
 
 # ------------------------------------------------------------------------------
 # Code coverage
