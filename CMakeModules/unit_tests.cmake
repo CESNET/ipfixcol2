@@ -39,6 +39,7 @@ if (ENABLE_TESTS_VALGRIND)
 	if (NOT PATH_VALGRIND)
 		message(FATAL_ERROR "Valgrind executable not found!")
 	endif()
+	mark_as_advanced(PATH_VALGRIND)
 
 	set(VALGRIND_FLAGS
 		"--trace-children=yes"
@@ -82,6 +83,7 @@ function(coverage_add_target)
 	find_program(PATH_GCOV    NAMES gcov)
 	find_program(PATH_LCOV    NAMES lcov)
 	find_program(PATH_GENHTML NAMES genhtml)
+	mark_as_advanced(PATH_GCOV PATH_LCOV PATH_GENHTML) # hide variables
 
 	if (NOT PATH_GCOV)
 		message(FATAL_ERROR "'gcov' executable not found! Install it or disable code coverage.")

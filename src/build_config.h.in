@@ -81,8 +81,8 @@
 	"@CMAKE_C_COMPILER_ID@ @CMAKE_C_COMPILER_VERSION@"
 /** \brief Build type                                                     */
 #define IPX_BUILD_TYPE "@CMAKE_BUILD_TYPE@"
-/** \brief GIT Hash of the last commit                                    */
-#define IPX_BUILD_GIT_HASH "@GIT_REVISION@"
+/** \brief GIT Hash of the latest commit                                  */
+#define IPX_BUILD_GIT_HASH "@GIT_HASH@"
 
 /**
  * \def IPX_BUILD_BYTE_ORDER

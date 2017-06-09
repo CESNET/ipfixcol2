@@ -40,5 +40,5 @@ target_link_libraries(ipfixcol2 ${BASE_LIB})
 # Installation targets
 install(
 	TARGETS ipfixcol2
-	DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
+	DESTINATION bin
 )

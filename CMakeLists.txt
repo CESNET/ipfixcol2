@@ -20,10 +20,10 @@ set(IPFIXCOL_VERSION
 	${IPFIXCOL_VERSION_MAJOR}.${IPFIXCOL_VERSION_MINOR}.${IPFIXCOL_VERSION_PATCH})
 
 # Include modules
-include(CMakeModules/git_revision.cmake) # Sets variable GIT_REVISION
-include(CMakeModules/ipx_files.cmake)
+include(CMakeModules/git_info.cmake)
+include(CMakeModules/ipx_files.cmake) # TODO: smazat
 include(CheckCCompilerFlag)
-include(GNUInstallDirs)
+include(GNUInstallDirs)               # TODO: smazat
 include(CheckCXXCompilerFlag)
 
 CHECK_C_COMPILER_FLAG(-std=gnu11 COMPILER_SUPPORT_GNU11)
@@ -52,9 +52,13 @@ if (${BUILD_TYPE_UPPER} STREQUAL "COVERAGE")
 	set(TESTS_DEFAULT ON)
 endif()
 
-option(ENABLE_DOC            "Enable documentation building"    ON)
+option(ENABLE_DOC            "Enable documentation building"            ON)
 option(ENABLE_TESTS          "Build Unit tests (make test)"     ${TESTS_DEFAULT})
-option(ENABLE_TESTS_VALGRIND "Build Unit tests with Valgrind Memcheck"       OFF)
+option(ENABLE_TESTS_VALGRIND "Build Unit tests with Valgrind Memcheck"  OFF)
+option(PACKAGE_BUILDER_RPM   "Enable RPM package builder (make rpm)"    OFF)
+option(PACKAGE_BUILDER_DEB   "Enable DEB package builder (make deb)"    OFF)
+
+# TODO: add -mtune=native option for better performance (only for non-package build)
 
 ## -----------------------------------------------------------------------------
 # Hard coded definitions
@@ -72,6 +76,7 @@ set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_DEBUG} --coverage -fprofile-arcs
 add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(doc)
+add_subdirectory(pkg)
 
 if (ENABLE_TESTS)
 	enable_testing()

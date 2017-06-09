@@ -28,10 +28,10 @@ set(SUB_HEADERS
 # Installation targets
 install(
 	FILES ${TOP_HEADERS}
-	DESTINATION "${CMAKE_INSTALL_FULL_INCLUDEDIR}"
+	DESTINATION include
 )
 
 install(
 	FILES ${SUB_HEADERS}
-	DESTINATION "${CMAKE_INSTALL_FULL_INCLUDEDIR}/ipfixcol2/"
+	DESTINATION include/ipfixcol2/
 )
