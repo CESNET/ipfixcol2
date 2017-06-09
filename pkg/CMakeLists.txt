@@ -8,10 +8,10 @@ set(CPACK_PACKAGE_CONTACT  "")
 # Short package description
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY  "IPFIX Collector Toolset")
 # Long package description
-set(CPACK_PACKAGE_DESCRIPTION
-	"IPFIXcol is a flexible IPFIX (RFC 7011) flow data collector designed to "
-	"be extensible by plugins."
-)
+set(CPACK_PACKAGE_DESCRIPTION "\
+IPFIXcol is a flexible IPFIX (RFC 7011) flow data collector designed to \
+be extensible by plugins.\
+")
 
 # Create a top level directory in an archive with the same name as the archive
 set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY 1)
@@ -56,11 +56,11 @@ message(STATUS "Maintainer contact for packages: " ${CPACK_PACKAGE_CONTACT})
 add_subdirectory(tgz)
 
 # Package builders
-#if (PACKAGE_BUILDER_RPM)
-#	add_subdirectory(RPM)
-#endif()
+if (PACKAGE_BUILDER_RPM)
+	add_subdirectory(rpm)
+endif()
 
 #if (PACKAGE_BUILDER_DEB)
-#	add_subdirectory(DEB)
+#	add_subdirectory(deb)
 #endif
 
