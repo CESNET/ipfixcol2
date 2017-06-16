@@ -1,11 +1,11 @@
 Name:           @CPACK_PACKAGE_NAME@
 Version:        @CPACK_PACKAGE_VERSION@
-#Release:        @CPACK_PACKAGE_RELEASE@%{?dist}
-Release:        @CPACK_PACKAGE_RELEASE@
+Release:        @CPACK_PACKAGE_RELEASE@%{?dist}
+#Release:        @CPACK_PACKAGE_RELEASE@
 Summary:        @CPACK_PACKAGE_DESCRIPTION_SUMMARY@
 
 License:        BSD
-#URL:            http://www.liberouter.org/
+URL:            http://www.liberouter.org/
 Source0:        %{name}-%{version}.tar.gz
 Group:          Liberouter
 Vendor:         @CPACK_PACKAGE_VENDOR@
@@ -18,32 +18,32 @@ BuildRequires:  gcc, gcc-c++, cmake >= 2.8.8, make, doxygen
 %description
 @CPACK_PACKAGE_DESCRIPTION@
 
-%package devel
-Summary: IPFIX Collector development package
-Group: Liberouter
-Requires: ipfixcol = %{version}-%{release}
+# Create also devel package with header files (for plugins building)
+%package        devel
+Summary:        IPFIX Collector development package
+Group:          Liberouter
+Requires:       ipfixcol = %{version}-%{release}
 
 %description devel
-This package contains header files needed for development of plugins for IPFIX Collector (ipfixcol).
+This package contains header files needed for development of plugins for 
+IPFIX Collector (ipfixcol).
 
-
-
+# Unzip files from tar archive
 %prep
 %autosetup
 
+# Build source code
 %build
 %cmake .
 make %{?_smp_mflags}
 
-
+# Perform installation into build directory
 %install
-rm -rf $RPM_BUILD_ROOT
 make install DESTDIR=%{buildroot}
 
-
+# Temporarily disabled
 # TODO: %check
 #ctest -V %{?_smp_mflags}
-
 
 %files
 # %license add-license-file-here
