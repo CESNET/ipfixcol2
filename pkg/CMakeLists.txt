@@ -2,8 +2,10 @@
 set(CPACK_PACKAGE_NAME     ${CMAKE_PROJECT_NAME})
 set(CPACK_PACKAGE_VERSION  ${IPFIXCOL_VERSION})
 set(CPACK_PACKAGE_RELEASE  1)
+
 set(CPACK_PACKAGE_VENDOR   "CESNET z.s.p.o.")
-set(CPACK_PACKAGE_CONTACT  "")
+# Uncomment for the permanent value
+#set(CPACK_PACKAGE_CONTACT  "name surname <email@domain.com>")
 
 # Short package description
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY  "IPFIX Collector Toolset")

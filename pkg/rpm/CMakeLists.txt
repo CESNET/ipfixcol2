@@ -6,18 +6,21 @@ if (NOT PATH_RPMBUILD)
 endif()
 mark_as_advanced(PATH_RPMBUILD)
 
-# Create auxiliary build directories
+# RPM build directory
+set(RPM_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/rpmbuild")
+
+# Create auxiliary build directories in the RPM build directory
 file(MAKE_DIRECTORY
-	"${CMAKE_CURRENT_BINARY_DIR}/rpmbuild/BUILD"
-	"${CMAKE_CURRENT_BINARY_DIR}/rpmbuild/RPMS"
-	"${CMAKE_CURRENT_BINARY_DIR}/rpmbuild/SOURCES"
-	"${CMAKE_CURRENT_BINARY_DIR}/rpmbuild/SPECS"
-	"${CMAKE_CURRENT_BINARY_DIR}/rpmbuild/SRPMS"
+	"${RPM_BUILD_DIR}/BUILD"
+	"${RPM_BUILD_DIR}/RPMS"
+	"${RPM_BUILD_DIR}/SOURCES"
+	"${RPM_BUILD_DIR}/SPECS"
+	"${RPM_BUILD_DIR}/SRPMS"
 )
 
 # Create a configuration for CPack
 set(FILE_SPEC_IN  "${CMAKE_CURRENT_SOURCE_DIR}/ipfixcol.spec.in")
-set(FILE_SPEC_OUT "${CMAKE_CURRENT_BINARY_DIR}/rpmbuild/SPECS/ipfixcol.spec")
+set(FILE_SPEC_OUT "${RPM_BUILD_DIR}/SPECS/ipfixcol.spec")
 
 configure_file(
 	"${FILE_SPEC_IN}"
@@ -27,18 +30,29 @@ configure_file(
 
 set(SRC_ARCHIVE
 	"${CPACK_OUTPUT_FILE_PREFIX}/${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}.tar.gz"
-
 )
+
 # New target that will pack all source codes into a RPM source package
 add_custom_target(rpm
 	COMMENT "Generating RPM packages..."
-	WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/rpmbuild"
+	WORKING_DIRECTORY "${RPM_BUILD_DIR}"
 
 	# Copy a source code archive
 	COMMAND "${CMAKE_COMMAND}" "-E" "copy" "${SRC_ARCHIVE}" "SOURCES/"
 
 	# Call RPM builder
-	COMMAND "${PATH_RPMBUILD}" "-ba" ${FILE_SPEC_OUT} "--define" "_topdir ${CMAKE_CURRENT_BINARY_DIR}/rpmbuild/"
+	COMMAND "${PATH_RPMBUILD}" "-ba" ${FILE_SPEC_OUT} "--define" "_topdir ${RPM_BUILD_DIR}/"
+)
 
+# RPM target must call tgz builder first
+add_dependencies(rpm
+	tgz
+)
+
+# Post build (show a message where RPM files are located)
+add_custom_command(TARGET rpm POST_BUILD
+	WORKING_DIRECTORY "${RPM_BUILD_DIR}"
+	COMMENT "SRPM and RPM files are located in ${RPM_BUILD_DIR}/"
+	COMMAND ;
 )
 # TODO: add target rpm

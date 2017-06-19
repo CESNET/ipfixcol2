@@ -22,7 +22,7 @@ BuildRequires:  gcc, gcc-c++, cmake >= 2.8.8, make, doxygen
 %package        devel
 Summary:        IPFIX Collector development package
 Group:          Liberouter
-Requires:       ipfixcol = %{version}-%{release}
+Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description devel
 This package contains header files needed for development of plugins for 
@@ -31,6 +31,12 @@ IPFIX Collector (ipfixcol).
 # Unzip files from tar archive
 %prep
 %autosetup
+
+#%post
+#/sbin/ldconfig
+
+#%postun
+#/sbin/ldconfig
 
 # Build source code
 %build

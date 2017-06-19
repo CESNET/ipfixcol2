@@ -29,7 +29,7 @@ ExternalProject_Get_Property(gtest source_dir binary_dir)
 set_target_properties(libgtest PROPERTIES
 	IMPORTED_LOCATION "${binary_dir}/libgtest.a"
 	IMPORTED_LINK_INTERFACE_LIBRARIES "${CMAKE_THREAD_LIBS_INIT}"
-	)
+)
 include_directories("${source_dir}/include")
 
 # ------------------------------------------------------------------------------
@@ -49,7 +49,7 @@ if (ENABLE_TESTS_VALGRIND)
 		"--quiet"
 		"--error-exitcode=1"
 		"--num-callers=32"
-		)
+	)
 endif()
 
 # ------------------------------------------------------------------------------
@@ -74,7 +74,7 @@ function(unit_tests_register_test _file)
 		add_test(
 			NAME ${CASE_NAME}_valgrind
 			COMMAND ${PATH_VALGRIND} ${VALGRIND_FLAGS} "$<TARGET_FILE:${CASE_NAME}>"
-			)
+		)
 	endif()
 endfunction()
 
@@ -157,14 +157,13 @@ function(coverage_add_target)
 		# Delete the counters
 		COMMAND "${CMAKE_COMMAND}" -E remove
 			${COVERAGE_FILE_RAW} ${COVERAGE_FILE_CLEAN}
-		)
+	)
 
 	add_custom_command(TARGET coverage POST_BUILD
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
 		COMMENT "To see the coverage report, open ${COVERAGE_DIR}index.html"
 		COMMAND ;
-		)
-
+	)
 endfunction()
 
 
