@@ -19,8 +19,8 @@ if (PATH_CPACK)
 	)
 
 	# New target that will pack all source codes into a TAR.GZ archive
-	add_custom_target(tgz
-		COMMENT "Generating tar.gz archive..."
+	add_custom_target(tgz_package
+		COMMENT "Generating tar.gz package..."
 		COMMAND "${PATH_CPACK}" "--config" "${FILE_CFG_OUT}"
 	)
 endif()

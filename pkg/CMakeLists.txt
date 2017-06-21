@@ -1,7 +1,10 @@
 # Common parameters (based on CPack variables)
 set(CPACK_PACKAGE_NAME     ${CMAKE_PROJECT_NAME})
 set(CPACK_PACKAGE_VERSION  ${IPFIXCOL_VERSION})
-set(CPACK_PACKAGE_RELEASE  1)
+if (NOT CPACK_PACKAGE_RELEASE)
+	# User specified
+	set(CPACK_PACKAGE_RELEASE  1)
+endif()
 
 set(CPACK_PACKAGE_VENDOR   "CESNET z.s.p.o.")
 # Uncomment for the permanent value
@@ -62,7 +65,7 @@ if (PACKAGE_BUILDER_RPM)
 	add_subdirectory(rpm)
 endif()
 
-#if (PACKAGE_BUILDER_DEB)
-#	add_subdirectory(deb)
-#endif
+if (PACKAGE_BUILDER_DEB)
+	add_subdirectory(deb)
+endif()
 

@@ -6,6 +6,13 @@ if (NOT PATH_RPMBUILD)
 endif()
 mark_as_advanced(PATH_RPMBUILD)
 
+# Is a package maintainer specified?
+if (NOT CPACK_PACKAGE_CONTACT)
+	message(FATAL_ERROR "Package maintainer is not specified. Define it or "
+		"disable package builder(s). Hint: \n"
+		"-DCPACK_PACKAGE_CONTACT=\"Name Surname <email@example.com>\"")
+endif()
+
 # RPM build directory
 set(RPM_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/rpmbuild")
 
@@ -32,9 +39,9 @@ set(SRC_ARCHIVE
 	"${CPACK_OUTPUT_FILE_PREFIX}/${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}.tar.gz"
 )
 
-# New target that will pack all source codes into a RPM source package
-add_custom_target(rpm
-	COMMENT "Generating RPM packages..."
+# New target that will pack all source codes into a SRPM package and build RPM packages
+add_custom_target(rpm_package
+	COMMENT "Generating SRPM and RPM packages..."
 	WORKING_DIRECTORY "${RPM_BUILD_DIR}"
 
 	# Copy a source code archive
@@ -44,15 +51,15 @@ add_custom_target(rpm
 	COMMAND "${PATH_RPMBUILD}" "-ba" ${FILE_SPEC_OUT} "--define" "_topdir ${RPM_BUILD_DIR}/"
 )
 
-# RPM target must call tgz builder first
-add_dependencies(rpm
-	tgz
+# RPM target must call TGZ builder first
+add_dependencies(rpm_package
+	tgz_package
 )
 
 # Post build (show a message where RPM files are located)
-add_custom_command(TARGET rpm POST_BUILD
+add_custom_command(TARGET rpm_package POST_BUILD
 	WORKING_DIRECTORY "${RPM_BUILD_DIR}"
-	COMMENT "SRPM and RPM files are located in ${RPM_BUILD_DIR}/"
+	COMMENT "SRPM and RPM packages are located in ${RPM_BUILD_DIR}/"
 	COMMAND ;
 )
-# TODO: add target rpm
+

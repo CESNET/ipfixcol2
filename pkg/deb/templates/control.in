@@ -1,0 +1,13 @@
+Source:            @CPACK_PACKAGE_NAME@
+Maintainer:        @CPACK_PACKAGE_CONTACT@
+Homepage:          http://www.liberouter.org/
+Section:           net
+Priority:          optional
+Standards-Version: 3.9.8
+Build-Depends:     debhelper (>= 10), cmake (>= 2.8.8), doxygen
+
+Package:           @CPACK_PACKAGE_NAME@
+Architecture:      any
+Depends:           ${shlibs:Depends}, ${misc:Depends}
+Description: @CPACK_PACKAGE_DESCRIPTION_SUMMARY@
+ @CPACK_PACKAGE_DESCRIPTION@
