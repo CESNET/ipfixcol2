@@ -15,7 +15,8 @@ BuildRequires:  gcc, gcc-c++, cmake >= 2.8.8, make, doxygen
 #Requires:       
 
 %description
-@CPACK_PACKAGE_DESCRIPTION@
+IPFIXcol is a flexible IPFIX (RFC 7011) flow data collector designed to
+be extensible by plugins.
 
 # Create also devel package with header files (for plugins building)
 %package        devel
@@ -24,7 +25,10 @@ Group:          Liberouter
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 
 %description devel
-This package contains header files needed for development of plugins for 
+IPFIXcol is a flexible IPFIX (RFC 7011) flow data collector designed to
+be extensible by plugins.
+
+This package contains header files needed for development of plugins for
 IPFIX Collector (ipfixcol).
 
 # Unzip files from tar archive
@@ -51,7 +55,7 @@ make install DESTDIR=%{buildroot}
 #ctest -V %{?_smp_mflags}
 
 %files
-# %license add-license-file-here
+%license LICENSE
 # %doc add-docs-here
 %{_bindir}/ipfixcol2
 
