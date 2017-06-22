@@ -51,6 +51,8 @@ file(COPY
 	"templates/changelog"
 	"templates/rules"
 	"templates/compat"
+	"templates/ipfixcol.install"
+	"templates/ipfixcol-dev.install"
 	DESTINATION "${DEB_CFG_DIR}"
 )
 

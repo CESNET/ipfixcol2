@@ -9,5 +9,19 @@ Build-Depends:     debhelper (>= 10), cmake (>= 2.8.8), doxygen
 Package:           @CPACK_PACKAGE_NAME@
 Architecture:      any
 Depends:           ${shlibs:Depends}, ${misc:Depends}
-Description: @CPACK_PACKAGE_DESCRIPTION_SUMMARY@
- @CPACK_PACKAGE_DESCRIPTION@
+Description:       @CPACK_PACKAGE_DESCRIPTION_SUMMARY@
+ IPFIXcol is a flexible IPFIX (RFC 7011) flow data collector designed to
+ be extensible by plugins.
+
+Package:           @CPACK_PACKAGE_NAME@-dev
+Architecture:      any
+Section:           libdevel
+Priority:          extra
+Depends:           @CPACK_PACKAGE_NAME@ (= ${binary:Version}), ${misc:Depends}
+Description:       IPFIX Collector development package
+ IPFIXcol is a flexible IPFIX (RFC 7011) flow data collector designed to
+ be extensible by plugins.
+ .
+ This package contains header files needed for development of plugins for
+ IPFIX Collector (ipfixcol).
+
