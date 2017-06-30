@@ -86,12 +86,11 @@ endif()
 # Status messages
 MESSAGE(STATUS
 	"\n\n"
-	"IPFIXcol2 version:   ${IPFIXCOL_VERSION}\n"
+	"IPFIXcol version.:   ${IPFIXCOL_VERSION}\n"
 	"Install prefix...:   ${CMAKE_INSTALL_PREFIX}\n"
 	"Build type.......:   ${BUILD_TYPE_UPPER}\n"
 	"C Compiler.......:   ${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}\n"
 	"C Flags..........:   ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${BUILD_TYPE_UPPER}}\n"
 	"C++ Compiler.....:   ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}\n"
 	"C++ Flags........:   ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${BUILD_TYPE_UPPER}}\n"
-	"Doxygen..........:   ${DOXYGEN_FOUND}\n"
-	)
+)

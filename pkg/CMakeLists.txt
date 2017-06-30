@@ -51,7 +51,7 @@ if (NOT CPACK_PACKAGE_CONTACT OR CPACK_PACKAGE_CONTACT STREQUAL "")
 			"- using a name and email from the git configuration")
 		string(CONCAT CPACK_PACKAGE_CONTACT
 			${GIT_USER_NAME} " <" ${GIT_USER_EMAIL} ">")
-	elseif()
+	else()
 		message(WARNING "Maintainer contact for packages is not specified.")
 	endif()
 endif()
