@@ -114,6 +114,7 @@ static_assert(sizeof(float)  == sizeof(uint32_t), "Float is not 4 bytes long");
 
 /**
  * \defgroup ipx_setters Value setters
+ * \ingroup ipx_converters
  * \brief Convert and write a value to a field of an IPFIX record
  * @{
  */
@@ -133,7 +134,7 @@ static_assert(sizeof(float)  == sizeof(uint32_t), "Float is not 4 bytes long");
  *   #IPX_CONVERT_ERR_ARG.
  */
 static inline int
-ipx_set_uint(void *field, size_t size, uint64_t value)
+ipx_set_uint_be(void *field, size_t size, uint64_t value)
 {
 	switch (size) {
 	case 8:
@@ -203,7 +204,7 @@ ipx_set_uint(void *field, size_t size, uint64_t value)
  *   #IPX_CONVERT_ERR_ARG.
  */
 static inline int
-ipx_set_int(void *field, size_t size, int64_t value)
+ipx_set_int_be(void *field, size_t size, int64_t value)
 {
 	switch (size) {
 	case 8:
@@ -279,28 +280,6 @@ ipx_set_int(void *field, size_t size, int64_t value)
 }
 
 /**
- * \brief Set a value of a boolean
- * \param[out] field  A pointer to a data field
- * \param[in]  size   Size of the data field (MUST be always 1 byte)
- * \param[in]  value  New value
- * \remark A size of the field is always consider as 1 byte.
- * \return On success returns #IPX_CONVERT_OK. Otherwise (usually
- *   incorrect \p size of the field) returns #IPX_CONVERT_ERR_ARG and an
- *   original value of the \p field is unchanged.
- */
-static inline int
-ipx_set_bool(void *field, size_t size, bool value)
-{
-	if (size != 1U) {
-		return IPX_CONVERT_ERR_ARG;
-	}
-
-	//According to the RFC 7011, section 6.1.5. "true" == 1 and "false" == 2
-	*(uint8_t *) field = value ? 1U : 2U;
-	return IPX_CONVERT_OK;
-}
-
-/**
  * \brief Set a value of a float/double
  *
  * The \p value is converted from "host byte order" to "network by order" and
@@ -315,7 +294,7 @@ ipx_set_bool(void *field, size_t size, bool value)
  *   the \p field is unchanged.
  */
 static inline int
-ipx_set_float(void *field, size_t size, double value)
+ipx_set_float_be(void *field, size_t size, double value)
 {
 	if (size == sizeof(uint64_t)) {
 		// 64 bits, we have static assert for sizeof(double) == sizeof(uint64_t)
@@ -374,7 +353,7 @@ ipx_set_float(void *field, size_t size, double value)
  *   original value of the \p field is unchanged.
  */
 static inline int
-ipx_set_date_lp(void *field, size_t size, enum IPX_ELEMENT_TYPE type,
+ipx_set_date_lp_be(void *field, size_t size, enum IPX_ELEMENT_TYPE type,
 	uint64_t value)
 {
 	// One second to milliseconds
@@ -439,7 +418,7 @@ ipx_set_date_lp(void *field, size_t size, enum IPX_ELEMENT_TYPE type,
  *   original value of the \p field is unchanged.
  */
 static inline int
-ipx_set_date_hp(void *field, size_t size, enum IPX_ELEMENT_TYPE type,
+ipx_set_date_hp_be(void *field, size_t size, enum IPX_ELEMENT_TYPE type,
 	struct timespec ts)
 {
 	const uint64_t S1E3 = 1000ULL;       // One second to milliseconds
@@ -491,6 +470,28 @@ ipx_set_date_hp(void *field, size_t size, enum IPX_ELEMENT_TYPE type,
 	default:
 		return IPX_CONVERT_ERR_ARG;
 	}
+}
+
+/**
+ * \brief Set a value of a boolean
+ * \param[out] field  A pointer to a data field
+ * \param[in]  size   Size of the data field (MUST be always 1 byte)
+ * \param[in]  value  New value
+ * \remark A size of the field is always consider as 1 byte.
+ * \return On success returns #IPX_CONVERT_OK. Otherwise (usually
+ *   incorrect \p size of the field) returns #IPX_CONVERT_ERR_ARG and an
+ *   original value of the \p field is unchanged.
+ */
+static inline int
+ipx_set_bool(void *field, size_t size, bool value)
+{
+	if (size != 1U) {
+		return IPX_CONVERT_ERR_ARG;
+	}
+
+	//According to the RFC 7011, section 6.1.5. "true" == 1 and "false" == 2
+	*(uint8_t *) field = value ? 1U : 2U;
+	return IPX_CONVERT_OK;
 }
 
 /**
@@ -587,6 +588,7 @@ ipx_set_string(void *field, size_t size, const char *value)
  * @}
  *
  * \defgroup ipx_getters Value getters
+ * \ingroup ipx_converters
  * \brief Read and convert a value from a field of an IPFIX record
  * @{
  */
@@ -604,7 +606,7 @@ ipx_set_string(void *field, size_t size, const char *value)
  *   #IPX_CONVERT_ERR_ARG and the \p value is not filled.
  */
 static inline int
-ipx_get_uint(const void *field, size_t size, uint64_t *value)
+ipx_get_uint_be(const void *field, size_t size, uint64_t *value)
 {
 	switch (size) {
 	case 8:
@@ -652,7 +654,7 @@ ipx_get_uint(const void *field, size_t size, uint64_t *value)
  *   #IPX_CONVERT_ERR_ARG and the \p value is not filled.
  */
 static inline int
-ipx_get_int(const void *field, size_t size, int64_t *value)
+ipx_get_int_be(const void *field, size_t size, int64_t *value)
 {
 	switch (size) {
 	case 8:
@@ -694,36 +696,6 @@ ipx_get_int(const void *field, size_t size, int64_t *value)
 }
 
 /**
- * \brief Get a value of a boolean
- * \param[in]  field  Pointer to a data field
- * \param[in]  size   Size of the data field (MUST be always 1 byte)
- * \param[out] value  Pointer to a variable for the result
- * \remark A size of the field is always consider as 1 byte.
- * \return On success returns #IPX_CONVERT_OK and fills the \p value.
- *   Otherwise (usually invalid boolean value - see the definition of the
- *   boolean for IPFIX, RFC 7011, Section 6.1.5.) returns #IPX_CONVERT_ERR_ARG
- *   and the \p value is not filled.
- */
-static inline int
-ipx_get_bool(const void *field, size_t size, bool *value)
-{
-	if (size != 1U) {
-		return IPX_CONVERT_ERR_ARG;
-	}
-
-	switch (*(const uint8_t *) field) {
-	case 1U: // True
-		*value = true;
-		return IPX_CONVERT_OK;
-	case 2U: // False (according to the RFC 7011, section 6.1.5. "false" == 2)
-		*value = false;
-		return IPX_CONVERT_OK;
-	default:
-		return IPX_CONVERT_ERR_ARG;
-	}
-}
-
-/**
  * \brief Get a value of a float/double
  *
  * The \p value is read from a data \p field and converted from
@@ -736,7 +708,7 @@ ipx_get_bool(const void *field, size_t size, bool *value)
  *   and the \p value is not filled.
  */
 static inline int
-ipx_get_float(const void *field, size_t size, double *value)
+ipx_get_float_be(const void *field, size_t size, double *value)
 {
 	if (size == sizeof(uint64_t)) {
 		// 64bit, we have static assert for sizeof(double) == sizeof(uint64_t)
@@ -788,7 +760,7 @@ ipx_get_float(const void *field, size_t size, double *value)
  *   #IPX_CONVERT_ERR_ARG and the \p value is not filled.
  */
 static inline int
-ipx_get_date_lp(const void *field, size_t size, enum IPX_ELEMENT_TYPE type,
+ipx_get_date_lp_be(const void *field, size_t size, enum IPX_ELEMENT_TYPE type,
 	uint64_t *value)
 {
 	// One second to milliseconds
@@ -855,8 +827,8 @@ ipx_get_date_lp(const void *field, size_t size, enum IPX_ELEMENT_TYPE type,
  *   #IPX_CONVERT_ERR_ARG and the \p value is not filled.
  */
 static inline int
-ipx_get_date_hp(const void *field, size_t size, enum IPX_ELEMENT_TYPE type,
-	struct timespec *ts)
+ipx_get_date_hp_be(const void *field, size_t size, enum IPX_ELEMENT_TYPE type,
+		struct timespec *ts)
 {
 	const uint64_t S1E3 = 1000ULL;       // One second to milliseconds
 	const uint64_t S1E6 = 1000000ULL;    // One second to microseconds
@@ -904,6 +876,36 @@ ipx_get_date_hp(const void *field, size_t size, enum IPX_ELEMENT_TYPE type,
 		ts->tv_nsec = (fraction * S1E9) >> 32;
 		}
 
+		return IPX_CONVERT_OK;
+	default:
+		return IPX_CONVERT_ERR_ARG;
+	}
+}
+
+/**
+ * \brief Get a value of a boolean
+ * \param[in]  field  Pointer to a data field
+ * \param[in]  size   Size of the data field (MUST be always 1 byte)
+ * \param[out] value  Pointer to a variable for the result
+ * \remark A size of the field is always consider as 1 byte.
+ * \return On success returns #IPX_CONVERT_OK and fills the \p value.
+ *   Otherwise (usually invalid boolean value - see the definition of the
+ *   boolean for IPFIX, RFC 7011, Section 6.1.5.) returns #IPX_CONVERT_ERR_ARG
+ *   and the \p value is not filled.
+ */
+static inline int
+ipx_get_bool(const void *field, size_t size, bool *value)
+{
+	if (size != 1U) {
+		return IPX_CONVERT_ERR_ARG;
+	}
+
+	switch (*(const uint8_t *) field) {
+	case 1U: // True
+		*value = true;
+		return IPX_CONVERT_OK;
+	case 2U: // False (according to the RFC 7011, section 6.1.5. "false" == 2)
+		*value = false;
 		return IPX_CONVERT_OK;
 	default:
 		return IPX_CONVERT_ERR_ARG;
@@ -1099,7 +1101,7 @@ enum IPX_CONVERT_TIME_FMT {
  *   the buffer \p str is undefined. Otherwise returns #IPX_CONVERT_ERR_ARG.
  */
 API int
-ipx_uint2str(const void *field, size_t size, char *str, size_t str_size);
+ipx_uint2str_be(const void *field, size_t size, char *str, size_t str_size);
 
 /**
  * \brief Convert a value of a signed integer to a character string
@@ -1115,7 +1117,7 @@ ipx_uint2str(const void *field, size_t size, char *str, size_t str_size);
  * \return Same as a return value of ipx_uint2str().
  */
 API int
-ipx_int2str(const void *field, size_t size, char *str, size_t str_size);
+ipx_int2str_be(const void *field, size_t size, char *str, size_t str_size);
 
 /**
  * \brief Convert a value of a float/double to a character string
@@ -1129,21 +1131,7 @@ ipx_int2str(const void *field, size_t size, char *str, size_t str_size);
  * \return Same as a return value of ipx_uint2str().
  */
 API int
-ipx_float2str(const void *field, size_t size, char *str, size_t str_size);
-
-/**
- * \brief Convert a boolean value to a character string
- * \param[in]  field      Pointer to a data field
- * \param[out] str        Pointer to an output character buffer
- * \param[in]  str_size   Size of the output buffer (in bytes)
- * \remark Output strings are "true" and "false".
- * \remark A size of the \p field is always consider as 1 byte.
- * \remark If the content of the \p field is invalid value, the function
- *   will also return #IPX_CONVERT_ERR_ARG.
- * \return Same as a return value of ipx_uint2str().
- */
-API int
-ipx_bool2str(const void *field, char *str, size_t str_size);
+ipx_float2str_be(const void *field, size_t size, char *str, size_t str_size);
 
 /**
  * \brief Convert a value of a timestamp to a character string (in UTC)
@@ -1173,8 +1161,35 @@ ipx_bool2str(const void *field, char *str, size_t str_size);
  * \return Same as a return value of ipx_uint2str().
  */
 API int
-ipx_date2str(const void *field, size_t size, enum IPX_ELEMENT_TYPE type,
+ipx_date2str_be(const void *field, size_t size, enum IPX_ELEMENT_TYPE type,
 	char *str, size_t str_size, enum IPX_CONVERT_TIME_FMT fmt);
+
+/**
+ * \brief Convert a boolean value to a character string
+ * \param[in]  field      Pointer to a data field
+ * \param[out] str        Pointer to an output character buffer
+ * \param[in]  str_size   Size of the output buffer (in bytes)
+ * \remark Output strings are "true" and "false".
+ * \remark A size of the \p field is always consider as 1 byte.
+ * \remark If the content of the \p field is invalid value, the function
+ *   will also return #IPX_CONVERT_ERR_ARG.
+ * \return Same as a return value of ipx_uint2str().
+ */
+API int
+ipx_bool2str(const void *field, char *str, size_t str_size);
+
+/**
+ * \brief Convert a value of an IP address (IPv4/IPv6) to a character string
+ * \param[in]  field     Pointer to a data field
+ * \param[in]  size      Size of the data field (4 or 16 bytes)
+ * \param[out] str       Pointer to an output character buffer
+ * \param[in]  str_size  Size of the output buffer (in bytes)
+ * \remark The size of the output buffer (\p str_size) should be at least
+ *   #IPX_CONVERT_STRLEN_IP bytes to guarantee enought size for conversion.
+ * \return Same as a return value of ipx_uint2str().
+ */
+API int
+ipx_ip2str(const void *field, size_t size, char *str, size_t str_size);
 
 /**
  * \brief Convert a value of a MAC address to a character string
@@ -1190,19 +1205,6 @@ ipx_date2str(const void *field, size_t size, enum IPX_ELEMENT_TYPE type,
  */
 API int
 ipx_mac2str(const void *field, char *str, size_t str_size);
-
-/**
- * \brief Convert a value of an IP address (IPv4/IPv6) to a character string
- * \param[in]  field     Pointer to a data field
- * \param[in]  size      Size of the data field (4 or 16 bytes)
- * \param[out] str       Pointer to an output character buffer
- * \param[in]  str_size  Size of the output buffer (in bytes)
- * \remark The size of the output buffer (\p str_size) should be at least
- *   #IPX_CONVERT_STRLEN_IP bytes to guarantee enought size for conversion.
- * \return Same as a return value of ipx_uint2str().
- */
-API int
-ipx_ip2str(const void *field, size_t size, char *str, size_t str_size);
 
 /**
  * \brief Convert a value of an octet array to a character string

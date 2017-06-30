@@ -1,5 +1,5 @@
 /**
- * \file include/ipfixcol2/converters.c
+ * \file src/core/converters.c
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief Conversion functions for IPFIX data types (source code)
  * \date 2016-2017
@@ -44,11 +44,11 @@
 #include <stdio.h> // snprintf
 
 int
-ipx_uint2str(const void *field, size_t size, char *str, size_t str_size)
+ipx_uint2str_be(const void *field, size_t size, char *str, size_t str_size)
 {
 	// Get a value
 	uint64_t result;
-	if (ipx_get_uint(field, size, &result) != IPX_CONVERT_OK) {
+	if (ipx_get_uint_be(field, size, &result) != IPX_CONVERT_OK) {
 		return IPX_CONVERT_ERR_ARG;
 	}
 
@@ -62,11 +62,11 @@ ipx_uint2str(const void *field, size_t size, char *str, size_t str_size)
 }
 
 int
-ipx_int2str(const void *field, size_t size, char *str, size_t str_size)
+ipx_int2str_be(const void *field, size_t size, char *str, size_t str_size)
 {
 	// Get a value
 	int64_t result;
-	if (ipx_get_int(field, size, &result) != IPX_CONVERT_OK) {
+	if (ipx_get_int_be(field, size, &result) != IPX_CONVERT_OK) {
 		return IPX_CONVERT_ERR_ARG;
 	}
 
@@ -80,11 +80,11 @@ ipx_int2str(const void *field, size_t size, char *str, size_t str_size)
 }
 
 int
-ipx_float2str(const void *field, size_t size, char *str, size_t str_size)
+ipx_float2str_be(const void *field, size_t size, char *str, size_t str_size)
 {
 	// Get a value
 	double result;
-	if (ipx_get_float(field, size, &result) != IPX_CONVERT_OK) {
+	if (ipx_get_float_be(field, size, &result) != IPX_CONVERT_OK) {
 		return IPX_CONVERT_ERR_ARG;
 	}
 
@@ -129,11 +129,11 @@ ipx_bool2str(const void *field, char *str, size_t str_size)
 }
 
 int
-ipx_date2str(const void *field, size_t size, enum IPX_ELEMENT_TYPE type,
+ipx_date2str_be(const void *field, size_t size, enum IPX_ELEMENT_TYPE type,
 		char *str, size_t str_size, enum IPX_CONVERT_TIME_FMT fmt)
 {
 	struct timespec ts;
-	if (ipx_get_date_hp(field, size, type,  &ts) != IPX_CONVERT_OK) {
+	if (ipx_get_date_hp_be(field, size, type, &ts) != IPX_CONVERT_OK) {
 		return IPX_CONVERT_ERR_ARG;
 	}
 
