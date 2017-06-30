@@ -1,5 +1,5 @@
 /**
- * \file tests/unit_tests/src/convertors.cpp
+ * \file tests/unit_tests/core/converters/numbers_be.cpp
  * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
  * \brief Convertor tests
  */
@@ -74,7 +74,7 @@ const int64_t IPX_INT40_MAX = 0x0000007FFFFFFFFFLL;
 const int64_t IPX_INT48_MAX = 0x00007FFFFFFFFFFFLL;
 const int64_t IPX_INT56_MAX = 0x007FFFFFFFFFFFFFLL;
 
-const int32_t IPX_INT24_MIN = 0xFF800000L;
+const int32_t IPX_INT24_MIN = 0xFF800000;
 const int64_t IPX_INT40_MIN = 0xFFFFFF8000000000LL;
 const int64_t IPX_INT48_MIN = 0xFFFF800000000000LL;
 const int64_t IPX_INT56_MIN = 0xFF80000000000000LL;
