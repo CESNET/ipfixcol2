@@ -120,10 +120,11 @@ static_assert(sizeof(float)  == sizeof(uint32_t), "Float is not 4 bytes long");
  */
 
 /**
- * \brief Set a value of an unsigned integer
+ * \brief Set a value of an unsigned integer (in big endian order a.k.a.
+ *   network byte order)
  *
- * The \p value is converted from "host byte order" to "network byte order" and
- * stored to a data \p field.
+ * The \p value is converted from host byte order to the appropriate byte
+ * order and stored to a data \p field.
  * \param[out] field  Pointer to the data field
  * \param[in]  size   Size of the data field (min: 1 byte, max: 8 bytes)
  * \param[in]  value  New value
@@ -190,10 +191,11 @@ ipx_set_uint_be(void *field, size_t size, uint64_t value)
 }
 
 /**
- * \brief Set a value of a signed integer
+ * \brief Set a value of a signed integer (in big endian order a.k.a.
+ *   network byte order)
  *
- * The \p value is converted from "host byte order" to "network byte order" and
- * stored to a data \p field.
+ * The \p value is converted from host byte order to the appropriate byte
+ * order and stored to a data \p field.
  * \param[out] field  Pointer to the data field
  * \param[in]  size   Size of the data field (min: 1 byte, max: 8 bytes)
  * \param[in]  value  New value
@@ -280,10 +282,11 @@ ipx_set_int_be(void *field, size_t size, int64_t value)
 }
 
 /**
- * \brief Set a value of a float/double
+ * \brief Set a value of a float/double (in big endian order a.k.a.
+ *   network byte order)
  *
- * The \p value is converted from "host byte order" to "network by order" and
- * stored to a data \p field.
+ * The \p value is converted from host byte order to the appropriate byte
+ * order and stored to a data \p field.
  * \param[out] field  Pointer to the data field
  * \param[in]  size   Size of tha data field (4 or 8 bytes)
  * \param[in]  value  New value
@@ -334,9 +337,11 @@ ipx_set_float_be(void *field, size_t size, double value)
 }
 
 /**
- * \brief Set a value of a timestamp (low precision)
+ * \brief Set a value of a low precision timestamp (in big endian order a.k.a.
+ *   network byte order)
  *
- * The result stored to a \p field will be converted to "network by order".
+ * The result stored to a \p field will be converted to the appropriate byte
+ * order.
  * \param[out] field  Pointer to a data field
  * \param[in]  size   Size of the data field
  * \param[in]  type   Type of the timestamp (see the remark)
@@ -403,9 +408,11 @@ ipx_set_date_lp_be(void *field, size_t size, enum IPX_ELEMENT_TYPE type,
 }
 
 /**
- * \brief Set a value of a timestamp (high precision)
+ * \brief Set a value of a high precision timestamp (in big endian order a.k.a.
+ *   network byte order)
  *
- * The result stored to a \p field will be converted to "network by order".
+ * The result stored to a \p field will be converted to the appropriate byte
+ * order.
  * \param[out] field  Pointer to a data field
  * \param[in]  size   Size of the data field
  * \param[in]  type   Type of the timestamp (see ipx_set_date_lr())
@@ -477,6 +484,8 @@ ipx_set_date_hp_be(void *field, size_t size, enum IPX_ELEMENT_TYPE type,
  * \param[out] field  A pointer to a data field
  * \param[in]  size   Size of the data field (MUST be always 1 byte)
  * \param[in]  value  New value
+ * \note This function is byte order independent because it stores the value
+ *   only to one byte.
  * \remark A size of the field is always consider as 1 byte.
  * \return On success returns #IPX_CONVERT_OK. Otherwise (usually
  *   incorrect \p size of the field) returns #IPX_CONVERT_ERR_ARG and an
@@ -497,6 +506,10 @@ ipx_set_bool(void *field, size_t size, bool value)
 /**
  * \brief Set a value of an IP address (IPv4/IPv6)
  *
+ * \note This function should be byte order independent, because it assumes that
+ *   IP addresses are always stored in network byte order on all platforms as
+ *   usual on Linux operating systems. Therefore, the \p value should be also
+ *   in network byte order.
  * \param[out] field  Pointer to a data field
  * \param[in]  size   Size of the data field (MUST be 4 or 16 bytes!)
  * \param[in]  value  Pointer to a new value of the field
@@ -518,6 +531,11 @@ ipx_set_ip(void *field, size_t size, const void *value)
 
 /**
  * \brief Set a value of a MAC address
+ *
+ * \note This function should be byte order independent, because it assumes that
+ *   MAC addresses are always stored in network byte order on all platforms as
+ *   usual on Linux operating systems. Therefore, the \p value should be also
+ *   in network byte order.
  * \param[out] field  Pointer to a data field
  * \param[in]  size   Size of the data field (MUST be always 6 bytes!)
  * \param[in]  value  Pointer to a new value of the field
@@ -541,10 +559,14 @@ ipx_set_mac(void *field, size_t size, const void *value)
 /**
  * \brief Set a value of an octet array
  *
+ * \note This function should be independent of endianness of a host computer,
+ *   because it just copy a raw content of memory. Therefore, it is up to user
+ *   to make sure that value is in the appropriate order in the memory of the
+ *   the host computer.
  * \param[out] field  Pointer to a data field
  * \param[in]  size   Size of the data field
  * \param[in]  value  Pointer to a new value of the field
- * \remark Can be implemented as a wrapper over memcpy.
+ * \remark The function can be implemented as a wrapper over memcpy.
  * \warning The \p value is left in the original byte order
  * \warning The \p value MUST be at least \p size bytes long.
  * \return On success returns #IPX_CONVERT_OK. Otherwise returns
@@ -564,12 +586,14 @@ ipx_set_octet_array(void *field, size_t size, const void *value)
 /**
  * \brief Set a value of a string
  *
+ * \note This function should be independent of endianness of a host computer
+ *   because string is always stored as an array of individual bytes.
  * \param[out] field  Pointer to a data field
  * \param[in]  size   Size of the data field
  * \param[in]  value  Pointer to a new value of the field
- * \remark Can be implemented as a wrapper over memcpy.
+ * \remark The function can be implemented as a wrapper over memcpy.
  * \warning The \p value MUST be at least \p size bytes long.
- * \warning The \p value MUST be a valid UTF-8 string!
+ * \warning The \p value MUST be a valid UTF-8 string! You can use
  * \return On success returns #IPX_CONVERT_OK. Otherwise returns
  *   #IPX_CONVERT_ERR_ARG.
  */
@@ -594,10 +618,11 @@ ipx_set_string(void *field, size_t size, const char *value)
  */
 
 /**
- * \brief Get a value of an unsigned integer
+ * \brief Get a value of an unsigned integer (stored in big endian order a.k.a.
+ *   network byte order)
  *
  * The \p value is read from a data \p field and converted from
- * "network byte order" to "host byte order".
+ * the appropriate byte order to host byte order.
  * \param[in]  field  Pointer to the data field (in "network byte order")
  * \param[in]  size   Size of the data field (min: 1 byte, max: 8 bytes)
  * \param[out] value  Pointer to a variable for the result
@@ -642,10 +667,11 @@ ipx_get_uint_be(const void *field, size_t size, uint64_t *value)
 }
 
 /**
- * \brief Get a value of a signed integer
+ * \brief Get a value of a signed integer (stored in big endian order a.k.a.
+ *   network byte order)
  *
  * The \p value is read from a data \p field and converted from
- * "network byte order" to "host byte order".
+ * "network byte order" to host byte order.
  * \param[in]  field  Pointer to the data field (in "network byte order")
  * \param[in]  size   Size of the data field (min: 1 byte, max: 8 bytes)
  * \param[out] value  Pointer to a variable for the result
@@ -696,10 +722,11 @@ ipx_get_int_be(const void *field, size_t size, int64_t *value)
 }
 
 /**
- * \brief Get a value of a float/double
+ * \brief Get a value of a float/double (stored in big endian order a.k.a.
+ *   network byte order)
  *
  * The \p value is read from a data \p field and converted from
- * "network byte order" to "host byte order".
+ * "network byte order" to host byte order.
  * \param[in]  field  Pointer to the data field (in "network byte order")
  * \param[in]  size   Size of the data field (min: 1 byte, max: 8 bytes)
  * \param[out] value  Pointer to a variable for the result
@@ -738,10 +765,11 @@ ipx_get_float_be(const void *field, size_t size, double *value)
 }
 
 /**
- * \brief Get a value of a timestamp (low precision)
+ * \brief Get a value of a low precision timestamp (stored in big endian order
+ *   a.k.a. network byte order)
  *
  * The \p value is read from a data \p field, converted from
- * "network byte order" to "host byte order" and transformed to a corresponding
+ * "network byte order" to host byte order and transformed to a corresponding
  * data type.
  * \param[in]  field  Pointer to the data field (in "network byte order")
  * \param[in]  size   Size of the data field (in bytes)
@@ -812,10 +840,11 @@ ipx_get_date_lp_be(const void *field, size_t size, enum IPX_ELEMENT_TYPE type,
 }
 
 /**
- * \brief Get a value of a timestamp (high precision)
+ * \brief Get a value of a high precision timestamp (stored in big endian order
+ *   a.k.a. network byte order)
  *
  * The \p value is read from a data \p field, converted from
- * "network byte order" to "host byte order" and transformed to a corresponding
+ * "network byte order" to host byte order and transformed to a corresponding
  * data type.
  * \param[in]  field  Pointer to the data field (in "network byte order")
  * \param[in]  size   Size of the data field (in bytes)
@@ -884,9 +913,12 @@ ipx_get_date_hp_be(const void *field, size_t size, enum IPX_ELEMENT_TYPE type,
 
 /**
  * \brief Get a value of a boolean
+ *
  * \param[in]  field  Pointer to a data field
  * \param[in]  size   Size of the data field (MUST be always 1 byte)
  * \param[out] value  Pointer to a variable for the result
+ * \note This function is byte order independent because it assumes the value
+ *   is only one byte long.
  * \remark A size of the field is always consider as 1 byte.
  * \return On success returns #IPX_CONVERT_OK and fills the \p value.
  *   Otherwise (usually invalid boolean value - see the definition of the
@@ -915,6 +947,10 @@ ipx_get_bool(const void *field, size_t size, bool *value)
 /**
  * \brief Get a value of an IP address (IPv4 or IPv6)
  *
+ * \note This function should be byte order independent, because it assumes that
+ *   IP addresses are always stored in network byte order on all platforms as
+ *   usual on Linux operating systems. Therefore, the \p value should be also
+ *   in network byte order.
  * The \p value is left in the original byte order (i.e. network byte order)
  * \param[in]  field  Pointer to a data field
  * \param[in]  size   Size of the data field (MUST be 4 or 16 bytes!)
@@ -938,6 +974,10 @@ ipx_get_ip(const void *field, size_t size, void *value)
 /**
  * \brief Get a value of a MAC address (IPv4 or IPv6)
  *
+ * \note This function should be byte order independent, because it assumes that
+ *   MAC addresses are always stored in network byte order on all platforms as
+ *   usual on Linux operating systems. Therefore, the \p value should be also
+ *   in network byte order.
  * The \p value is left in the original byte order (i.e. network byte order)
  * \param[in]  field  Pointer to a data field
  * \param[in]  size   Size of the data field (MUST be always 6 bytes!)
@@ -961,6 +1001,10 @@ ipx_get_mac(const void *field, size_t size, void *value)
 /**
  * \brief Get a value of an octet array
  *
+ * \note This function should be independent of endianness of a host computer,
+ *   because it just copy a raw content of memory. Therefore, it is up to user
+ *   to make sure that value is in the appropriate order in the memory of the
+ *   the host computer.
  * \param[in]  field  Pointer to a data field
  * \param[in]  size   Size of the data field
  * \param[out] value  Pointer to the output buffer
@@ -983,6 +1027,8 @@ ipx_get_octet_array(const void *field, size_t size, void *value)
 /**
  * \brief Get a value of a string
  *
+ * \note This function should be independent of endianness of a host computer
+ *   because string is always stored as an array of individual bytes.
  * \param[in]  field  Pointer to a data field
  * \param[in]  size   Size of the data field
  * \param[out] value  Pointer to the output buffer
@@ -1073,20 +1119,22 @@ ipx_get_string(const void *field, size_t size, char *value)
 #define IPX_CONVERT_STR(s) #s
 
 /**
+ * \enum ipx_convert_time_fmt
  * \brief Time conversion output precision
  */
-enum IPX_CONVERT_TIME_FMT {
-	IPX_CONVERT_TF_SEC,   /** Seconds (i.e. no extra numbers)                */
-	IPX_CONVERT_TF_MSEC,  /** Milliseconds (i.e. ".mmm")                     */
-	IPX_CONVERT_TF_USEC,  /** Microseconds (i.e. ".uuuuuu")                  */
-	IPX_CONVERT_TF_NSEC,  /** Nanoseconds  (i.e. ".nnnnnnnnn")               */
+enum ipx_convert_time_fmt {
+	IPX_CONVERT_TF_SEC,   /**< Seconds (i.e. no extra numbers)               */
+	IPX_CONVERT_TF_MSEC,  /**< Milliseconds (i.e. ".mmm")                    */
+	IPX_CONVERT_TF_USEC,  /**< Microseconds (i.e. ".uuuuuu")                 */
+	IPX_CONVERT_TF_NSEC   /**< Nanoseconds  (i.e. ".nnnnnnnnn")              */
 };
 
 /**
- * \brief Convert a value of an unsigned integer to a character string
+ * \brief Convert a value of an unsigned integer (in big endian order a.k.a.
+ *   network byte order) to a character string
  *
  * The \p value is read from a data \p field and converted from
- * "network byte order" to "host byte order" and converted to string.
+ * the appropriate byte order to host byte order and converted to string.
  * Terminating null byte ('\0') is always added to the string.
  * \param[in]  field     Pointer to a data field (in "network byte order")
  * \param[in]  size      Size of the data field (in bytes)
@@ -1104,10 +1152,11 @@ API int
 ipx_uint2str_be(const void *field, size_t size, char *str, size_t str_size);
 
 /**
- * \brief Convert a value of a signed integer to a character string
+ * \brief Convert a value of a signed integer (in big endian order a.k.a.
+ *   network byte order) to a character string
  *
  * The \p value is read from a data \p field, converted from
- * "network byte order" to "host byte order" and converted to string.
+ * the appropriate byte order to host byte order and converted to string.
  * Terminating null byte ('\0') is always added to the string.
  * \param[in]  field     Pointer to a data field (in "network byte order")
  * \param[in]  size      Size of the data field (in bytes)
@@ -1120,10 +1169,11 @@ API int
 ipx_int2str_be(const void *field, size_t size, char *str, size_t str_size);
 
 /**
- * \brief Convert a value of a float/double to a character string
+ * \brief Convert a value of a float/double (in big endian order a.k.a.
+ *   network byte order) to a character string
  *
  * The \p value is read from a data \p field, converted from
- * "network byte order" to "host byte order" and converted to string.
+ * the appropriate byte order to host byte order and converted to string.
  * \param[in]  field     Pointer to the data field (in "network byte order")
  * \param[in]  size      Size of the data field (min: 1 byte, max: 8 bytes)
  * \param[out] str       Pointer to an output character buffer
@@ -1134,10 +1184,11 @@ API int
 ipx_float2str_be(const void *field, size_t size, char *str, size_t str_size);
 
 /**
- * \brief Convert a value of a timestamp to a character string (in UTC)
+ * \brief Convert a value of a timestamp (in big endian order a.k.a.
+ *   network byte order) to a character string (in UTC)
  *
  * The value wil be read from a data \p field, converted from
- * "network byte order" to "host byte order" and transformed to string.
+ * the appropriate byte order to host byte order and transformed to string.
  * For example output (in milliseconds) looks like "2016-06-22T08:15:23.123"
  * (without quotation marks)
  *
@@ -1146,7 +1197,7 @@ ipx_float2str_be(const void *field, size_t size, char *str, size_t str_size);
  * \param[in]  type      Type of the timestamp (see the remark)
  * \param[out] str       Pointer to an output character buffer
  * \param[in]  str_size  Size of the output buffer (in bytes)
- * \param[in]  fmt       Output format (see #IPX_CONVERT_TIME_FMT)
+ * \param[in]  fmt       Output format (see ::ipx_convert_time_fmt)
  * \remark For more details about the parameter \p type see the documentation
  *    of ipx_get_date_lp().
  * \remark Output format for: \n
@@ -1162,13 +1213,16 @@ ipx_float2str_be(const void *field, size_t size, char *str, size_t str_size);
  */
 API int
 ipx_date2str_be(const void *field, size_t size, enum IPX_ELEMENT_TYPE type,
-	char *str, size_t str_size, enum IPX_CONVERT_TIME_FMT fmt);
+	char *str, size_t str_size, enum ipx_convert_time_fmt fmt);
 
 /**
  * \brief Convert a boolean value to a character string
+ *
  * \param[in]  field      Pointer to a data field
  * \param[out] str        Pointer to an output character buffer
  * \param[in]  str_size   Size of the output buffer (in bytes)
+ * \note This function is byte order independent because it assumes the value
+ *   is only one byte long.
  * \remark Output strings are "true" and "false".
  * \remark A size of the \p field is always consider as 1 byte.
  * \remark If the content of the \p field is invalid value, the function
@@ -1180,6 +1234,11 @@ ipx_bool2str(const void *field, char *str, size_t str_size);
 
 /**
  * \brief Convert a value of an IP address (IPv4/IPv6) to a character string
+ *
+ * \note This function should be byte order independent, because it assumes that
+ *   IP addresses are always stored in network byte order on all platforms as
+ *   usual on Linux operating systems. Therefore, the \p field should be also
+ *   in network byte order.
  * \param[in]  field     Pointer to a data field
  * \param[in]  size      Size of the data field (4 or 16 bytes)
  * \param[out] str       Pointer to an output character buffer
@@ -1193,6 +1252,11 @@ ipx_ip2str(const void *field, size_t size, char *str, size_t str_size);
 
 /**
  * \brief Convert a value of a MAC address to a character string
+ *
+ * \note This function should be byte order independent, because it assumes that
+ *   MAC addresses are always stored in network byte order on all platforms as
+ *   usual on Linux operating systems. Therefore, the \p value should be also
+ *   in network byte order.
  * \param[in]  field     Pointer to a data field
  * \param[out] str       Pointer to an output character buffer
  * \param[in]  str_size  Size of the output buffer (in bytes)
@@ -1208,6 +1272,11 @@ ipx_mac2str(const void *field, char *str, size_t str_size);
 
 /**
  * \brief Convert a value of an octet array to a character string
+ *
+* \note This function should be independent of endianness of a host computer,
+ *   because it just read a raw content of memory. Therefore, it is up to user
+ *   to make sure that value is in the appropriate order in the memory of the
+ *   the host computer.
  * \param[in]  field     Pointer to a data field
  * \param[in]  size      Size of the data field
  * \param[out] str       Pointer to an output character buffer
@@ -1225,6 +1294,9 @@ ipx_octet_array2str(const void *field, size_t size, char *str, size_t str_size);
 
 /**
  * \brief Convert a value of an IPFIX string to an escaped UTF-8 string
+ *
+ * \note This function should be independent of endianness of a host computer
+ *   because string is always stored as an array of individual bytes.
  * \param[in]  field     Pointer to a data field
  * \param[in]  size      Size of the data field
  * \param[out] str       Pointer to an output buffer
@@ -1254,7 +1326,7 @@ ipx_string2str(const void *field, size_t size, char *str, size_t str_size);
  *   Otherwise returns #IPX_CONVERT_ERR_ARG.
  */
 API int
-ipx_string_check(const void *field, size_t size);
+ipx_string_utf8check(const void *field, size_t size);
 
 #endif /* _IPX_CONVERTERS_H_ */
 

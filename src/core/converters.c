@@ -130,7 +130,7 @@ ipx_bool2str(const void *field, char *str, size_t str_size)
 
 int
 ipx_date2str_be(const void *field, size_t size, enum IPX_ELEMENT_TYPE type,
-		char *str, size_t str_size, enum IPX_CONVERT_TIME_FMT fmt)
+		char *str, size_t str_size, enum ipx_convert_time_fmt fmt)
 {
 	struct timespec ts;
 	if (ipx_get_date_hp_be(field, size, type, &ts) != IPX_CONVERT_OK) {
@@ -457,7 +457,7 @@ ipx_string2str(const void *field, size_t size, char *str, size_t str_size)
 }
 
 int
-ipx_string_check(const void *field, size_t size)
+ipx_string_utf8check(const void *field, size_t size)
 {
 	int step;
 
