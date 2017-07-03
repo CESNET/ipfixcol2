@@ -38,7 +38,8 @@
  */
 
 /**
- * \defgroup ipx_converters_test Data conversion tests
+ * \defgroup ipx_converters_number_be_test Data conversion tests of big endian
+ *   numeric functions
  *
  * \note In many cases, test functions use dynamically allocated variables,
  *   because it is useful for valgrind memory check (accessing an array out
@@ -86,7 +87,7 @@ int main(int argc, char **argv)
 }
 
 /**
- * \brief Test fixture for SetUint tests
+ * \brief Test fixture for Unsigned Integer tests
  */
 class ConverterUint : public ::testing::Test {
 protected:
@@ -658,7 +659,7 @@ TEST_F(ConverterUint, GetUintOutOfRange)
 }
 
 /**
- * \brief Test fixture for SetUint tests
+ * \brief Test fixture for Signed Integer tests
  */
 class ConverterInt : public ::testing::Test {
 protected:
@@ -1464,6 +1465,211 @@ TEST_F(ConverterInt, GetIntOutOfRange)
 	EXPECT_EQ(ipx_get_int_be(temp128, temp128_size, &value), IPX_CONVERT_ERR_ARG);
 	EXPECT_EQ(ipx_get_int_be(temp192, temp192_size, &value), IPX_CONVERT_ERR_ARG);
 	EXPECT_EQ(ipx_get_int_be(temp256, temp256_size, &value), IPX_CONVERT_ERR_ARG);
+}
+
+/**
+ * \brief Test fixture for SetUint tests
+ */
+class ConverterFloat : public ::testing::Test {
+protected:
+	/*
+	 * We need cast helpers to check correctness of data
+	 */
+	union fcast_u {
+		float flt;
+		uint32_t uint;
+	};
+
+	union dcast_u {
+		double flt;
+		uint64_t uint;
+	};
+
+	/*
+	 * We want to have all variables dynamically allocated so Valgrind can check
+	 * access out of bounds, etc.
+     */
+	union fcast_u *cast32;
+	union dcast_u *cast64;
+
+	// The positive/negative maximum numbers
+	const double flt_max_plus = std::numeric_limits<float>::max();
+	const double flt_max_minus = std::numeric_limits<float>::lowest();
+	const double dbl_max_plus = std::numeric_limits<double>::max();
+	const double dbl_max_minus = std::numeric_limits<double>::lowest();
+
+	// The smallest magnitude number
+	const double flt_smallest_plus = std::numeric_limits<float>::min();
+	const double flt_smallest_minus = -std::numeric_limits<float>::min();
+	const double dbl_smallest_plus = std::numeric_limits<double>::min();
+	const double dbl_smallest_minus = -std::numeric_limits<double>::min();
+
+public:
+	/** Create variables for tests */
+	virtual void SetUp() {
+		cast32 = new union fcast_u;
+		cast64 = new union dcast_u;
+	}
+
+	/** Destroy variables for the tests */
+	virtual void TearDown() {
+		delete cast32;
+		delete cast64;
+	}
+};
+
+/*
+ * Test predicates
+ * If these tests are not passed, other floating-point tests are not reliable.
+ */
+TEST_F(ConverterFloat, Predicate)
+{
+	EXPECT_FLOAT_EQ(flt_smallest_plus + flt_smallest_minus, 0.0f);
+	EXPECT_FLOAT_EQ(flt_max_plus + flt_max_minus, 0.0f);
+
+	EXPECT_DOUBLE_EQ(dbl_smallest_plus + dbl_smallest_minus, 0.0);
+	EXPECT_DOUBLE_EQ(dbl_max_plus + dbl_max_minus, 0.0);
+
+	EXPECT_NE(flt_max_plus, 0.0f);
+	EXPECT_NE(flt_max_minus, 0.0f);
+	EXPECT_NE(dbl_max_plus, 0.0);
+	EXPECT_NE(dbl_max_minus, 0.0);
+}
+
+/*
+ * Insert the maximum possible value i.e. "float64 max", the minimum possible
+ * value i.e. "negative float64 max" and the smallest valid values.
+ */
+TEST_F(ConverterFloat, SetMaxMin)
+{
+	union fcast_u fcast;
+	union dcast_u dcast;
+
+	// 4 bytes float - positive/negative maximum value (out of range)
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, dbl_max_plus), IPX_CONVERT_ERR_TRUNC);
+	fcast.uint = ntohl(cast32->uint);
+	EXPECT_FLOAT_EQ(fcast.flt, flt_max_plus);
+
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, dbl_max_minus), IPX_CONVERT_ERR_TRUNC);
+	fcast.uint = ntohl(cast32->uint);
+	EXPECT_FLOAT_EQ(fcast.flt, flt_max_minus);
+
+	// 4 bytes float - positive/negative maximum value (inside range)
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_max_plus), IPX_CONVERT_OK);
+	fcast.uint = ntohl(cast32->uint);
+	EXPECT_FLOAT_EQ(fcast.flt, flt_max_plus);
+
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_max_minus), IPX_CONVERT_OK);
+	fcast.uint = ntohl(cast32->uint);
+	EXPECT_FLOAT_EQ(fcast.flt, flt_max_minus);
+
+	// 4 bytes float - the positive/negative smallest value
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_smallest_plus), IPX_CONVERT_OK);
+	fcast.uint = ntohl(cast32->uint);
+	EXPECT_FLOAT_EQ(fcast.flt, flt_smallest_plus);
+
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_smallest_minus), IPX_CONVERT_OK);
+	fcast.uint = ntohl(cast32->uint);
+	EXPECT_FLOAT_EQ(fcast.flt, flt_smallest_minus);
+
+	// 8 bytes float - positive/negative maximum value
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_max_plus), IPX_CONVERT_OK);
+	dcast.uint = be64toh(cast64->uint);
+	EXPECT_DOUBLE_EQ(dcast.flt, dbl_max_plus);
+
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_max_minus), IPX_CONVERT_OK);
+	dcast.uint = be64toh(cast64->uint);
+	EXPECT_DOUBLE_EQ(dcast.flt, dbl_max_minus);
+
+	// 8 bytes float - the positive/negative smallest value
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_smallest_plus), IPX_CONVERT_OK);
+	dcast.uint = be64toh(cast64->uint);
+	EXPECT_DOUBLE_EQ(dcast.flt, dbl_smallest_plus);
+
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_smallest_minus), IPX_CONVERT_OK);
+	dcast.uint = be64toh(cast64->uint);
+	EXPECT_DOUBLE_EQ(dcast.flt, dbl_smallest_minus);
+}
+
+/*
+ * Insert max + 1/max/max - 1 values into float and double variables. In this
+ * case the value "1" represents the smallest possible value
+ */
+TEST_F(ConverterFloat, SetAboveBelow)
+{
+	const double dbl_eps = std::numeric_limits<double>::epsilon();
+	const double dbl_below_max_plus = dbl_max_plus - (dbl_eps * dbl_max_plus);
+	const double dbl_above_max_minus = dbl_max_minus - (dbl_eps * dbl_max_minus);
+
+	const double flt_above_max_plus = flt_max_plus + (dbl_eps * flt_max_plus);
+	const double flt_above_max_minus = flt_max_minus - (dbl_eps * flt_max_minus);
+	const double flt_below_max_plus = flt_max_plus - (dbl_eps * flt_max_plus);
+	const double flt_below_max_minus = flt_max_minus + (dbl_eps * flt_max_minus);
+
+	union fcast_u fcast;
+	union dcast_u dcast;
+
+	// 4 bytes float
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_above_max_plus), IPX_CONVERT_ERR_TRUNC);
+	fcast.uint = ntohl(cast32->uint);
+	EXPECT_FLOAT_EQ(fcast.flt, flt_max_plus);
+
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_above_max_minus), IPX_CONVERT_OK);
+	fcast.uint = ntohl(cast32->uint);
+	EXPECT_FLOAT_EQ(fcast.flt, flt_above_max_minus);
+
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_below_max_plus), IPX_CONVERT_OK);
+	fcast.uint = ntohl(cast32->uint);
+	EXPECT_FLOAT_EQ(fcast.flt, flt_below_max_plus);
+
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_below_max_minus), IPX_CONVERT_ERR_TRUNC);
+	fcast.uint = ntohl(cast32->uint);
+	EXPECT_FLOAT_EQ(fcast.flt, flt_max_minus);
+
+	// 8 bytes float
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_below_max_plus), IPX_CONVERT_OK);
+	dcast.uint = be64toh(cast64->uint);
+	EXPECT_DOUBLE_EQ(dcast.flt, dbl_below_max_plus);
+
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_above_max_minus), IPX_CONVERT_OK);
+	dcast.uint = be64toh(cast64->uint);
+	EXPECT_DOUBLE_EQ(dcast.flt, dbl_above_max_minus);
+}
+
+TEST_F(ConverterFloat, SetRandom)
+{
+
+}
+
+TEST_F(ConverterFloat, SetOutOfRange)
+{
+
+}
+
+TEST_F(ConverterFloat, GetMaxMin)
+{
+
+}
+
+
+TEST_F(ConverterFloat, GetRandom)
+{
+
+}
+
+TEST_F(ConverterFloat, GetOutOfRange)
+{
+
+}
+
+TEST_F(ConverterFloat, SetAndGetInfinity)
+{
+
+}
+
+TEST_F(ConverterFloat, SetAndGetNan)
+{
+
 }
 
 /**

@@ -287,6 +287,8 @@ ipx_set_int_be(void *field, size_t size, int64_t value)
  *
  * The \p value is converted from host byte order to the appropriate byte
  * order and stored to a data \p field.
+ * \note Please, keep on mind that float (4 bytes) and double (8 bytes) have
+ *   different numeric precision.
  * \param[out] field  Pointer to the data field
  * \param[in]  size   Size of tha data field (4 or 8 bytes)
  * \param[in]  value  New value
@@ -318,8 +320,8 @@ ipx_set_float_be(void *field, size_t size, double value)
 		} cast_helper;
 		bool over = false;
 
-		if (value < FLT_MIN) {
-			cast_helper.flt = FLT_MIN;
+		if (value < -FLT_MAX) {
+			cast_helper.flt = -FLT_MAX;
 			over = true;
 		} else if (value > FLT_MAX) {
 			cast_helper.flt = FLT_MAX;
