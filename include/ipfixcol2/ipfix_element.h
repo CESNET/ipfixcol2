@@ -71,7 +71,7 @@
  *
  * \remark Based on RFC 7012, Section 3.1 and RFC 6313, Section 11.1
  */
-enum IPX_ELEMENT_TYPE {
+enum ipx_element_type {
 	/**
 	 * The type represents a finite-length string of octets.
 	 */
@@ -220,7 +220,7 @@ enum IPX_ELEMENT_TYPE {
  * future updates to this enumeration.
  * \remark Based on RFC 7012, Section 3.2 and RFC 6313, Section 11.2
  */
-enum IPX_ELEMENT_SEMANTIC {
+enum ipx_element_semantic {
 	/**
 	 * No semantics apply to the field. It cannot be manipulated by
 	 * a Collecting Process or File Reader that does not understand it a priori.
@@ -280,7 +280,7 @@ enum IPX_ELEMENT_SEMANTIC {
  * A description of the units of an IPFIX Information Element. Further data
  * units may be specified by future updates to this enumeration.
  */
-enum IPX_ELEMENT_UNIT {
+enum ipx_element_unit {
 	/** The type represents a unitless field.                                 */
 	IPX_EU_NONE = 0,
 	/** THe type represents a number of bits                                  */
@@ -332,11 +332,11 @@ struct ipx_element {
 	 * taken by the element.
 	 * \warning Do NOT represent a size of the record!
 	 */
-	enum IPX_ELEMENT_TYPE     data_type;
+	enum ipx_element_type     data_type;
 	/** Data semantic                                                      */
-	enum IPX_ELEMENT_SEMANTIC data_semantic;
+	enum ipx_element_semantic data_semantic;
 	/** Data unit                                                          */
-	enum IPX_ELEMENT_UNIT     data_unit;
+	enum ipx_element_unit     data_unit;
 };
 
 /**@}*/
