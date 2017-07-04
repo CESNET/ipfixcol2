@@ -1,7 +1,7 @@
 /**
  * \file tests/unit_tests/core/converters/numbers_be.cpp
  * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
- * \brief Convertor tests
+ * \brief Converters tests
  */
 /* Copyright (C) 2016-2017 CESNET, z.s.p.o.
  *
@@ -49,6 +49,7 @@
 
 #include <gtest/gtest.h>
 #include <cstring>
+#include <cmath>
 #include <endian.h>
 
 extern "C" {
@@ -635,7 +636,9 @@ TEST_F(ConverterUint, GetUintRandom)
  */
 TEST_F(ConverterUint, GetUintOutOfRange)
 {
-	uint64_t value = 123456ULL; // Just random number
+	const uint64_t c_value = 1234567890123456789ULL; // Just random number
+	uint64_t value = c_value;
+	void *ptr = NULL; // Invalid pointer
 
 	// Just random sizes of arrays
 	const size_t temp72_size =   9;
@@ -651,11 +654,30 @@ TEST_F(ConverterUint, GetUintOutOfRange)
 	uint8_t temp256[temp256_size];
 
 	EXPECT_EQ(ipx_get_uint_be(temp72, 0U, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
 	EXPECT_EQ(ipx_get_uint_be(temp72, temp72_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
 	EXPECT_EQ(ipx_get_uint_be(temp88, temp88_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
 	EXPECT_EQ(ipx_get_uint_be(temp128, temp128_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
 	EXPECT_EQ(ipx_get_uint_be(temp192, temp192_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
 	EXPECT_EQ(ipx_get_uint_be(temp256, temp256_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+
+	EXPECT_EQ(ipx_get_uint_be(ptr, 0U, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_uint_be(ptr, temp72_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_uint_be(ptr, temp88_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_uint_be(ptr, temp128_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_uint_be(ptr, temp192_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_uint_be(ptr, temp256_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
 }
 
 /**
@@ -1183,24 +1205,24 @@ TEST_F(ConverterInt, SetIntOutOfRange)
 	const int64_t value = -123456LL; // Just random number
 
 	// Just random sizes of arrays
-	const size_t temp72_size =   9;
-	const size_t temp88_size =  11;
 	const size_t temp128_size = 16;
-	const size_t temp192_size = 24;
-	const size_t temp256_size = 32;
+	const uint8_t c_temp128[temp128_size] =
+		{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+	uint8_t temp128[temp128_size];
+	std::memcpy(temp128, c_temp128, temp128_size);
 
-	int8_t temp72[temp72_size];
-	int8_t temp88[temp88_size];
-	int8_t temp128[temp128_size];
-	int8_t temp192[temp192_size];
-	int8_t temp256[temp256_size];
-
-	EXPECT_EQ(ipx_set_int_be(temp72, 0, value), IPX_CONVERT_ERR_ARG);
-	EXPECT_EQ(ipx_set_int_be(temp72, temp72_size, value), IPX_CONVERT_ERR_ARG);
-	EXPECT_EQ(ipx_set_int_be(temp88, temp88_size, value), IPX_CONVERT_ERR_ARG);
-	EXPECT_EQ(ipx_set_int_be(temp128, temp128_size, value), IPX_CONVERT_ERR_ARG);
-	EXPECT_EQ(ipx_set_int_be(temp192, temp192_size, value), IPX_CONVERT_ERR_ARG);
-	EXPECT_EQ(ipx_set_int_be(temp256, temp256_size, value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(ipx_set_int_be(temp128, 0, value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(memcmp(temp128, c_temp128, temp128_size), 0);
+	EXPECT_EQ(ipx_set_int_be(temp128, 9, value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(memcmp(temp128, c_temp128, temp128_size), 0);
+	EXPECT_EQ(ipx_set_int_be(temp128, 11, value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(memcmp(temp128, c_temp128, temp128_size), 0);
+	EXPECT_EQ(ipx_set_int_be(temp128, 16, value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(memcmp(temp128, c_temp128, temp128_size), 0);
+	EXPECT_EQ(ipx_set_int_be(temp128, 24, value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(memcmp(temp128, c_temp128, temp128_size), 0);
+	EXPECT_EQ(ipx_set_int_be(temp128, 32, value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(memcmp(temp128, c_temp128, temp128_size), 0);
 }
 
 /*
@@ -1442,7 +1464,9 @@ TEST_F(ConverterInt, GetIntRandom)
  */
 TEST_F(ConverterInt, GetIntOutOfRange)
 {
-	int64_t value = 123456ULL; // Just random number
+	const int64_t c_value = 1234567890123456789LL; // Just random number
+	int64_t value = c_value;
+	void *ptr = NULL; // Invalid pointer
 
 	// Just random sizes of arrays
 	const size_t temp72_size =   9;
@@ -1457,14 +1481,32 @@ TEST_F(ConverterInt, GetIntOutOfRange)
 	int8_t temp192[temp192_size];
 	int8_t temp256[temp256_size];
 
-	// Valgrind will possibly report an error when the initialized array is
-	// accessed.
+	// Valgrind will possibly report an error when the arrays are accessed.
 	EXPECT_EQ(ipx_get_int_be(temp72, 0U, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
 	EXPECT_EQ(ipx_get_int_be(temp72, temp72_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
 	EXPECT_EQ(ipx_get_int_be(temp88, temp88_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
 	EXPECT_EQ(ipx_get_int_be(temp128, temp128_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
 	EXPECT_EQ(ipx_get_int_be(temp192, temp192_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
 	EXPECT_EQ(ipx_get_int_be(temp256, temp256_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+
+	EXPECT_EQ(ipx_get_int_be(ptr, 0U, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_int_be(ptr, temp72_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_int_be(ptr, temp88_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_int_be(ptr, temp128_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_int_be(ptr, temp192_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_int_be(ptr, temp256_size, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
 }
 
 /**
@@ -1534,6 +1576,11 @@ TEST_F(ConverterFloat, Predicate)
 	EXPECT_NE(flt_max_minus, 0.0f);
 	EXPECT_NE(dbl_max_plus, 0.0);
 	EXPECT_NE(dbl_max_minus, 0.0);
+
+	EXPECT_NE(flt_smallest_plus, 0.0f);
+	EXPECT_NE(flt_smallest_minus, 0.0f);
+	EXPECT_NE(dbl_smallest_plus, 0.0);
+	EXPECT_NE(dbl_smallest_plus, 0.0);
 }
 
 /*
@@ -1563,6 +1610,35 @@ TEST_F(ConverterFloat, SetMaxMin)
 	fcast.uint = ntohl(cast32->uint);
 	EXPECT_FLOAT_EQ(fcast.flt, flt_max_minus);
 
+	// 8 bytes float - positive/negative maximum value
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_max_plus), IPX_CONVERT_OK);
+	dcast.uint = be64toh(cast64->uint);
+	EXPECT_DOUBLE_EQ(dcast.flt, dbl_max_plus);
+
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_max_minus), IPX_CONVERT_OK);
+	dcast.uint = be64toh(cast64->uint);
+	EXPECT_DOUBLE_EQ(dcast.flt, dbl_max_minus);
+}
+
+/*
+ * Insert the positive/negative smallest value and the positive and negative zero.
+ */
+TEST_F(ConverterFloat, SetZeroAndSmallest)
+{
+	union fcast_u fcast;
+	union dcast_u dcast;
+
+	// 4 bytes float - positive/negative zero
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, 0.0), IPX_CONVERT_OK);
+	fcast.uint = ntohl(cast32->uint);
+	EXPECT_FLOAT_EQ(fcast.flt, 0.0f);
+	EXPECT_FALSE(std::signbit(fcast.flt));
+
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, -0.0), IPX_CONVERT_OK);
+	fcast.uint = ntohl(cast32->uint);
+	EXPECT_FLOAT_EQ(fcast.flt, -0.0f);
+	EXPECT_TRUE(std::signbit(fcast.flt));
+
 	// 4 bytes float - the positive/negative smallest value
 	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_smallest_plus), IPX_CONVERT_OK);
 	fcast.uint = ntohl(cast32->uint);
@@ -1572,14 +1648,16 @@ TEST_F(ConverterFloat, SetMaxMin)
 	fcast.uint = ntohl(cast32->uint);
 	EXPECT_FLOAT_EQ(fcast.flt, flt_smallest_minus);
 
-	// 8 bytes float - positive/negative maximum value
-	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_max_plus), IPX_CONVERT_OK);
+	// 8 bytes float - positive/negative zero
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, 0.0), IPX_CONVERT_OK);
 	dcast.uint = be64toh(cast64->uint);
-	EXPECT_DOUBLE_EQ(dcast.flt, dbl_max_plus);
+	EXPECT_DOUBLE_EQ(dcast.flt, 0.0);
+	EXPECT_FALSE(std::signbit(dcast.flt));
 
-	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_max_minus), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, -0.0), IPX_CONVERT_OK);
 	dcast.uint = be64toh(cast64->uint);
-	EXPECT_DOUBLE_EQ(dcast.flt, dbl_max_minus);
+	EXPECT_DOUBLE_EQ(dcast.flt, -0.0);
+	EXPECT_TRUE(std::signbit(dcast.flt));
 
 	// 8 bytes float - the positive/negative smallest value
 	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_smallest_plus), IPX_CONVERT_OK);
@@ -1636,40 +1714,315 @@ TEST_F(ConverterFloat, SetAboveBelow)
 	EXPECT_DOUBLE_EQ(dcast.flt, dbl_above_max_minus);
 }
 
+/*
+ * "Random: value in the valid interval for 4/8 bytes float
+ */
 TEST_F(ConverterFloat, SetRandom)
 {
+	union fcast_u fcast;
+	union dcast_u dcast;
 
+	// 4 bytes
+	const float flt_rand1 = 6.897151e+13f;
+	const float flt_rand2 = 2.358792e-24f;
+	const float flt_rand3 = -8.128795e+12f;
+	const float flt_rand4 = -1.897987e-33f;
+
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_rand1), IPX_CONVERT_OK);
+	fcast.uint = ntohl(cast32->uint);
+	EXPECT_FLOAT_EQ(fcast.flt, flt_rand1);
+
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_rand2), IPX_CONVERT_OK);
+	fcast.uint = ntohl(cast32->uint);
+	EXPECT_FLOAT_EQ(fcast.flt, flt_rand2);
+
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_rand3), IPX_CONVERT_OK);
+	fcast.uint = ntohl(cast32->uint);
+	EXPECT_FLOAT_EQ(fcast.flt, flt_rand3);
+
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_rand4), IPX_CONVERT_OK);
+	fcast.uint = ntohl(cast32->uint);
+	EXPECT_FLOAT_EQ(fcast.flt, flt_rand4);
+
+	// 8 bytes
+	const double dbl_rand1 = 2.5496842132000588e+101;
+	const double dbl_rand2 = 9.4684001478787714e-258;
+	const double dbl_rand3 = -1.9999999997898005e+55;
+	const double dbl_rand4 = -8.5465460047004713e-146;
+
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_rand1), IPX_CONVERT_OK);
+	dcast.uint = be64toh(cast64->uint);
+	EXPECT_DOUBLE_EQ(dcast.flt, dbl_rand1);
+
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_rand2), IPX_CONVERT_OK);
+	dcast.uint = be64toh(cast64->uint);
+	EXPECT_DOUBLE_EQ(dcast.flt, dbl_rand2);
+
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_rand3), IPX_CONVERT_OK);
+	dcast.uint = be64toh(cast64->uint);
+	EXPECT_DOUBLE_EQ(dcast.flt, dbl_rand3);
+
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_rand4), IPX_CONVERT_OK);
+	dcast.uint = be64toh(cast64->uint);
+	EXPECT_DOUBLE_EQ(dcast.flt, dbl_rand4);
 }
 
+/*
+ * Test unsupported size of data fields
+ */
 TEST_F(ConverterFloat, SetOutOfRange)
 {
+	const double value = 1.65468e+15;
+	const size_t temp128_size = 16;
 
+	const uint8_t c_temp128[temp128_size] =
+		{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+	uint8_t temp128[temp128_size];
+	std::memcpy(temp128, c_temp128, temp128_size);
+
+	EXPECT_EQ(ipx_set_float_be(temp128, 0, value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(memcmp(temp128, c_temp128, temp128_size), 0);
+	EXPECT_EQ(ipx_set_float_be(temp128, 1, value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(memcmp(temp128, c_temp128, temp128_size), 0);
+	EXPECT_EQ(ipx_set_float_be(temp128, 2, value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(memcmp(temp128, c_temp128, temp128_size), 0);
+	EXPECT_EQ(ipx_set_float_be(temp128, 3, value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(memcmp(temp128, c_temp128, temp128_size), 0);
+	EXPECT_EQ(ipx_set_float_be(temp128, 5, value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(memcmp(temp128, c_temp128, temp128_size), 0);
+	EXPECT_EQ(ipx_set_float_be(temp128, 6, value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(memcmp(temp128, c_temp128, temp128_size), 0);
+	EXPECT_EQ(ipx_set_float_be(temp128, 7, value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(memcmp(temp128, c_temp128, temp128_size), 0);
+	EXPECT_EQ(ipx_set_float_be(temp128, 9, value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(memcmp(temp128, c_temp128, temp128_size), 0);
+	EXPECT_EQ(ipx_set_float_be(temp128, 16, value), IPX_CONVERT_ERR_ARG);
+	EXPECT_EQ(memcmp(temp128, c_temp128, temp128_size), 0);
 }
 
+/*
+ * Test getter for maximum and minimum values
+ */
 TEST_F(ConverterFloat, GetMaxMin)
 {
+	double conv_res;
 
+	// 4 bytes float
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_max_plus), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast32->flt, BYTES_4, &conv_res), IPX_CONVERT_OK);
+	EXPECT_FLOAT_EQ(conv_res, flt_max_plus);
+
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_max_minus), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast32->flt, BYTES_4, &conv_res), IPX_CONVERT_OK);
+	EXPECT_FLOAT_EQ(conv_res, flt_max_minus);
+
+	// 8 bytes float
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_max_plus), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast64->flt, BYTES_8, &conv_res), IPX_CONVERT_OK);
+	EXPECT_DOUBLE_EQ(conv_res, dbl_max_plus);
+
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_max_minus), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast64->flt, BYTES_8, &conv_res), IPX_CONVERT_OK);
+	EXPECT_DOUBLE_EQ(conv_res, dbl_max_minus);
 }
 
+/*
+ * Get the positive/negative smallest value and the positive and negative zero.
+ */
+TEST_F(ConverterFloat, GetZeroAndSmallest)
+{
+	double conv_res;
 
+	// 4 bytes float - positive/negative zero
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, 0.0), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast32->flt, BYTES_4, &conv_res), IPX_CONVERT_OK);
+	EXPECT_FLOAT_EQ(conv_res, 0.0f);
+	EXPECT_FALSE(std::signbit(conv_res));
+
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, -0.0), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast32->flt, BYTES_4, &conv_res), IPX_CONVERT_OK);
+	EXPECT_FLOAT_EQ(conv_res, -0.0f);
+	EXPECT_TRUE(std::signbit(conv_res));
+
+	// 4 bytes float - the positive/negative smallest value
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_smallest_plus), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast32->flt, BYTES_4, &conv_res), IPX_CONVERT_OK);
+	EXPECT_FLOAT_EQ(conv_res, flt_smallest_plus);
+
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_smallest_minus), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast32->flt, BYTES_4, &conv_res), IPX_CONVERT_OK);
+	EXPECT_FLOAT_EQ(conv_res, flt_smallest_minus);
+
+	// 8 bytes float - positive/negative zero
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, 0.0), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast64->flt, BYTES_8, &conv_res), IPX_CONVERT_OK);
+	EXPECT_DOUBLE_EQ(conv_res, 0.0);
+	EXPECT_FALSE(std::signbit(conv_res));
+
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, -0.0), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast64->flt, BYTES_8, &conv_res), IPX_CONVERT_OK);
+	EXPECT_DOUBLE_EQ(conv_res, -0.0);
+	EXPECT_TRUE(std::signbit(conv_res));
+
+	// 8 bytes float - the positive/negative smallest value
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_smallest_plus), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast64->flt, BYTES_8, &conv_res), IPX_CONVERT_OK);
+	EXPECT_DOUBLE_EQ(conv_res, dbl_smallest_plus);
+
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_smallest_minus), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast64->flt, BYTES_8, &conv_res), IPX_CONVERT_OK);
+	EXPECT_DOUBLE_EQ(conv_res, dbl_smallest_minus);
+}
+
+/*
+ * Test getter for random values in the interval
+ */
 TEST_F(ConverterFloat, GetRandom)
 {
+	double conv_res;
 
+	// 4 bytes float
+	const float flt_rand1 = 2.468877e+24f;
+	const float flt_rand2 = 9.897987e-2f;
+	const float flt_rand3 = -3.123545e+2f;
+	const float flt_rand4 = -1.562152e-33f;
+
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_rand1), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast32->flt, BYTES_4, &conv_res), IPX_CONVERT_OK);
+	EXPECT_FLOAT_EQ(conv_res, flt_rand1);
+
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_rand2), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast32->flt, BYTES_4, &conv_res), IPX_CONVERT_OK);
+	EXPECT_FLOAT_EQ(conv_res, flt_rand2);
+
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_rand3), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast32->flt, BYTES_4, &conv_res), IPX_CONVERT_OK);
+	EXPECT_FLOAT_EQ(conv_res, flt_rand3);
+
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_rand4), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast32->flt, BYTES_4, &conv_res), IPX_CONVERT_OK);
+	EXPECT_FLOAT_EQ(conv_res, flt_rand4);
+
+	// 8 bytes float
+	const double dbl_rand1 = 8.2130045014424771e+254;
+	const double dbl_rand2 = 3.9879810211388147e-101;
+	const double dbl_rand3 = -9.987654321012345e+168;
+	const double dbl_rand4 = -1.234567890123456e-99;
+
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_rand1), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast64->flt, BYTES_8, &conv_res), IPX_CONVERT_OK);
+	EXPECT_DOUBLE_EQ(conv_res, dbl_rand1);
+
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_rand2), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast64->flt, BYTES_8, &conv_res), IPX_CONVERT_OK);
+	EXPECT_DOUBLE_EQ(conv_res, dbl_rand2);
+
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_rand3), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast64->flt, BYTES_8, &conv_res), IPX_CONVERT_OK);
+	EXPECT_DOUBLE_EQ(conv_res, dbl_rand3);
+
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_rand4), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast64->flt, BYTES_8, &conv_res), IPX_CONVERT_OK);
+	EXPECT_DOUBLE_EQ(conv_res, dbl_rand4);
 }
 
+/*
+ * Test unsupported size of data fields
+ */
 TEST_F(ConverterFloat, GetOutOfRange)
 {
+	void *ptr = NULL; // Invalid pointer
+	const double c_value = -1.234567890123e+23;
+	double value = c_value;
 
+	uint8_t mem128[16];
+	EXPECT_EQ(ipx_get_float_be(mem128, 0, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_float_be(mem128, 1, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_float_be(mem128, 2, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_float_be(mem128, 3, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_float_be(mem128, 5, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_float_be(mem128, 6, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_float_be(mem128, 7, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_float_be(mem128, 9, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_float_be(mem128, 16, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+
+	EXPECT_EQ(ipx_get_float_be(ptr, 0, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_float_be(ptr, 1, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_float_be(ptr, 2, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_float_be(ptr, 3, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_float_be(ptr, 5, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_float_be(ptr, 6, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_float_be(ptr, 7, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_float_be(ptr, 9, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
+	EXPECT_EQ(ipx_get_float_be(ptr, 16, &value), IPX_CONVERT_ERR_ARG);
+	EXPECT_TRUE(value == c_value);
 }
 
 TEST_F(ConverterFloat, SetAndGetInfinity)
 {
+	const double dbl_inf = std::numeric_limits<double>::infinity();
+	const float flt_inf = std::numeric_limits<float>::infinity();
+	double conv_res;
 
+	// 4 bytes float
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_inf), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast32->flt, BYTES_4, &conv_res), IPX_CONVERT_OK);
+	EXPECT_FLOAT_EQ(conv_res, flt_inf);
+
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, -flt_inf), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast32->flt, BYTES_4, &conv_res), IPX_CONVERT_OK);
+	EXPECT_FLOAT_EQ(conv_res, -flt_inf);
+
+	// 8 bytes float
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_inf), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast64->flt, BYTES_8, &conv_res), IPX_CONVERT_OK);
+	EXPECT_DOUBLE_EQ(conv_res, dbl_inf);
+
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, -dbl_inf), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast64->flt, BYTES_8, &conv_res), IPX_CONVERT_OK);
+	EXPECT_DOUBLE_EQ(conv_res, -dbl_inf);
 }
 
 TEST_F(ConverterFloat, SetAndGetNan)
 {
+	const double dbl_nan = std::numeric_limits<double>::quiet_NaN();
+	const float flt_nan = std::numeric_limits<float>::quiet_NaN();
+	double conv_res;
 
+	// 4 bytes float
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, flt_nan), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast32->flt, BYTES_4, &conv_res), IPX_CONVERT_OK);
+	EXPECT_TRUE(isnan(conv_res));
+
+	EXPECT_EQ(ipx_set_float_be(&cast32->flt, BYTES_4, -flt_nan), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast32->flt, BYTES_4, &conv_res), IPX_CONVERT_OK);
+	EXPECT_TRUE(isnan(conv_res));
+
+	// 8 bytes float
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, dbl_nan), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast64->flt, BYTES_8, &conv_res), IPX_CONVERT_OK);
+	EXPECT_TRUE(isnan(conv_res));
+
+	EXPECT_EQ(ipx_set_float_be(&cast64->flt, BYTES_8, -dbl_nan), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_float_be(&cast64->flt, BYTES_8, &conv_res), IPX_CONVERT_OK);
+	EXPECT_TRUE(isnan(conv_res));
 }
 
 /**

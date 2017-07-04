@@ -41,7 +41,8 @@
  */
 
 #include <ipfixcol2.h>
-#include <stdio.h> // snprintf
+#include <stdio.h>    // snprintf
+#include <inttypes.h> // PRIi64, PRIu32,...
 
 int
 ipx_uint2str_be(const void *field, size_t size, char *str, size_t str_size)

@@ -51,10 +51,10 @@
 #include <assert.h>    // static_assert
 #include <arpa/inet.h> // inet_ntop
 #include <endian.h>    // htobe64, be64toh
+#include <math.h>      // isnormal
 
 #include <ipfixcol2/ipfix_element.h>
 #include <ipfixcol2/api.h>
-#include <inttypes.h>
 
 /**
  * \defgroup ipx_converters Data conversion
@@ -320,10 +320,10 @@ ipx_set_float_be(void *field, size_t size, double value)
 		} cast_helper;
 		bool over = false;
 
-		if (value < -FLT_MAX) {
+		if (value < -FLT_MAX && isnormal(value)) {
 			cast_helper.flt = -FLT_MAX;
 			over = true;
-		} else if (value > FLT_MAX) {
+		} else if (value > FLT_MAX && isnormal(value)) {
 			cast_helper.flt = FLT_MAX;
 			over = true;
 		} else {
