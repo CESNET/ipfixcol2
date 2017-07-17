@@ -83,6 +83,11 @@ protected:
 	uint8_t mem[mem_size];
 
 	// Auxiliary test functions (defined together with appropriate test cases)
+	uint32_t
+	fraction2nanosec(uint32_t frac);
+	uint32_t
+	nanosec2fraction(uint32_t nsec);
+
 	void
 	SetInvalidSizeLP_test(enum ipx_element_type type, size_t except);
 	void
@@ -92,10 +97,16 @@ protected:
 	GetInvalidSizeLP_test(enum ipx_element_type type, size_t except);
 	void
 	GetInvalidSizeHP_test(enum ipx_element_type type, size_t except);
-	uint32_t
-	fraction2nanosec(uint32_t frac);
-	uint32_t
-	nanosec2fraction(uint32_t nsec);
+
+	void
+	DatetimeSetTestLowPrecision(uint64_t in_sec, uint64_t in_nsec);
+	void
+	DatetimeSetTestHighPrecision(uint64_t in_sec, uint64_t in_nsec);
+
+	void
+	DatetimeGetTestLowPrecision(uint64_t in_sec, uint64_t in_nsec);
+	void
+	DatetimeGetTestHighPrecision(uint64_t in_sec, uint64_t in_nsec);
 
 public:
 	/** Create variables for tests */
@@ -287,7 +298,7 @@ TEST_F(ConverterDateTime, SetMinMaxHighPrecision)
 
 	// Milliseconds: 64 bit unsigned integer since 1.1.1970
 	const timespec msec_min = {0, 0}; // 1 January 1970 00:00 (UTC)
-	const timespec msec_max = {std::numeric_limits<uint64_t>::max() / 1000, nano_max};
+	const timespec msec_max = {(std::numeric_limits<uint64_t>::max() / 1000) - 1, nano_max};
 
 	// Microseconds: 64bit NTP timestamp since 1.1.1900
 	const uint64_t ntp_era_end_as_unix = 2085978495UL; // 7 February 2036 6:28:15
@@ -413,6 +424,104 @@ TEST_F(ConverterDateTime, SetInvalidDataTypeHighPrecision)
 }
 
 /*
+ * Test "random" dates in the current era
+ */
+void
+ConverterDateTime::DatetimeSetTestLowPrecision(uint64_t in_sec, uint64_t in_nsec)
+{
+	// Calculate inputs
+	const uint64_t input_lp = (in_sec * 1000) + (in_nsec / 1000000);   // [ms]
+	// Low level API can handle only milliseconds precision
+	in_nsec /= 1000000;
+	in_nsec *= 1000000;
+
+	// Calculate expected results of low precision API
+	const uint32_t res_sec = htonl(in_sec);
+	const uint64_t res_msec = htobe64(input_lp);
+	const uint32_t aux_frac = nanosec2fraction(in_nsec);
+	const uint32_t res_usec[2] = {htonl(in_sec + EPOCH_DIFF), htonl(aux_frac & USEC_MASK)};
+	const uint32_t res_nsec[2] = {htonl(in_sec + EPOCH_DIFF), htonl(aux_frac)};
+
+	// Test seconds, milliseconds, etc.
+	enum ipx_element_type type;
+	type = IPX_ET_DATE_TIME_SECONDS;
+	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_4, type, input_lp), IPX_CONVERT_OK);
+	EXPECT_EQ(*(uint32_t *) mem, res_sec);
+
+	type = IPX_ET_DATE_TIME_MILLISECONDS;
+	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, input_lp), IPX_CONVERT_OK);
+	EXPECT_EQ(*(uint64_t *) mem, res_msec);
+
+	type = IPX_ET_DATE_TIME_MICROSECONDS;
+	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, input_lp), IPX_CONVERT_OK);
+	EXPECT_EQ(*(uint64_t *) mem, *(uint64_t *) res_usec);
+
+	type = IPX_ET_DATE_TIME_NANOSECONDS;
+	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, input_lp), IPX_CONVERT_OK);
+	EXPECT_EQ(*(uint64_t *) mem, *(uint64_t *) res_nsec);
+}
+
+void
+ConverterDateTime::DatetimeSetTestHighPrecision(uint64_t in_sec, uint64_t in_nsec)
+{
+	// Calculate inputs
+	const struct timespec input_hp = {
+			static_cast<time_t>(in_sec),
+			static_cast<long>(in_nsec)
+	}; // [s, ns]
+
+	// Calculate expected results of low precision API
+	const uint32_t res_sec = htonl(in_sec);
+	const uint64_t res_msec = htobe64((in_sec * 1000) + (in_nsec / 1000000));
+	const uint32_t aux_frac = nanosec2fraction(in_nsec);
+	const uint32_t res_usec[2] = {htonl(in_sec + EPOCH_DIFF), htonl(aux_frac & USEC_MASK)};
+	const uint32_t res_nsec[2] = {htonl(in_sec + EPOCH_DIFF), htonl(aux_frac)};
+
+	// Test seconds, milliseconds, etc.
+	enum ipx_element_type type;
+	type = IPX_ET_DATE_TIME_SECONDS;
+	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_4, type, input_hp), IPX_CONVERT_OK);
+	EXPECT_EQ(*(uint32_t *) mem, res_sec);
+
+	type = IPX_ET_DATE_TIME_MILLISECONDS;
+	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, input_hp), IPX_CONVERT_OK);
+	EXPECT_EQ(*(uint64_t *) mem, res_msec);
+
+	type = IPX_ET_DATE_TIME_MICROSECONDS;
+	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, input_hp), IPX_CONVERT_OK);
+	EXPECT_EQ(*(uint64_t *) mem, *(uint64_t *) res_usec);
+
+	type = IPX_ET_DATE_TIME_NANOSECONDS;
+	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, input_hp), IPX_CONVERT_OK);
+	EXPECT_EQ(*(uint64_t *) mem, *(uint64_t *) res_nsec);
+}
+
+TEST_F(ConverterDateTime, SetRandomValue)
+{
+	{
+		SCOPED_TRACE("Timestamp test: \"29 Nov 1973 21:33:09.987654321 (UTC)\"");
+		const uint64_t sec = 123456789;
+		const uint64_t nsec = 987654321;
+		DatetimeSetTestLowPrecision(sec, nsec);
+		DatetimeSetTestHighPrecision(sec, nsec);
+	}
+	{
+		SCOPED_TRACE("Timestamp test: \"11 Jul 2017 11:59:23.123456789 (UTC)\"");
+		const uint64_t sec = 1499774363;
+		const uint64_t nsec = 123456789;
+		DatetimeSetTestLowPrecision(sec, nsec);
+		DatetimeSetTestHighPrecision(sec, nsec);
+	}
+	{
+		SCOPED_TRACE("Timestamp test: \"14 Dec 2035 20:04:24.280048921 (UTC)\"");
+		const uint64_t sec = 2081275464;
+		const uint64_t nsec = 280048921;
+		DatetimeSetTestLowPrecision(sec, nsec);
+		DatetimeSetTestHighPrecision(sec, nsec);
+	}
+}
+
+/*
  * Check that the function works only when the correct combinations of type and
  * memory size are used
  */
@@ -505,6 +614,300 @@ TEST_F(ConverterDateTime, GetInvalidSizeHighPrecision)
 	{
 		SCOPED_TRACE("Element type: nanoseconds");
 		GetInvalidSizeHP_test(IPX_ET_DATE_TIME_NANOSECONDS, BYTES_8);
+	}
+}
+
+/*
+ * Get the minimum and maximum value that can be stored into each data type
+ */
+TEST_F(ConverterDateTime, GetMinMaxLowPrecision)
+{
+	// NOTE: All constant values below are in milliseconds unless otherwise stated.
+	// Seconds: 32 bit unsigned integer since 1.1.1970
+	const uint64_t sec_min = 0; // 1 January 1970 00:00 (UTC)
+	// 7 February 2106 6:28:15 (UTC)
+	const uint64_t sec_max = static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) * 1000U;
+
+	// Milliseconds: 64 bit unsigned integer since 1.1.1970
+	const uint64_t msec_min = 0; // 1 January 1970 00:00 (UTC)
+	const uint64_t msec_max = std::numeric_limits<uint64_t>::max();
+
+	// Microseconds: 64bit NTP timestamp since 1.1.1900
+	const uint64_t ntp_era_end_as_unix = 2085978495UL * 1000U; // 7 February 2036 6:28:15
+	const uint64_t usec_min = 0; // API uses Unix timestamp i.e. 1.1.1970
+	const uint64_t usec_max = ntp_era_end_as_unix + 999;
+
+	// Nanoseconds: 64bit NTP timestamp since 1.1.1900
+	const uint64_t nsec_min = 0; // API uses Unix timestamp i.e. 1.1.1970
+	const uint64_t nsec_max = ntp_era_end_as_unix + 999;
+
+	enum ipx_element_type type;
+	uint64_t result;
+
+	// Seconds
+	type = IPX_ET_DATE_TIME_SECONDS;
+	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_4, type, sec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_4, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(result, sec_min);
+	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_4, type, sec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_4, type, &result), IPX_CONVERT_OK);
+	// Milliseconds are lost!
+	EXPECT_EQ(result, (sec_max / 1000) * 1000);
+
+	// Milliseconds
+	type = IPX_ET_DATE_TIME_MILLISECONDS;
+	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, msec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(result, msec_min);
+	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, msec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(result, msec_max);
+
+	// Microseconds
+	type = IPX_ET_DATE_TIME_MICROSECONDS;
+	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, usec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(result, usec_min);
+	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, usec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	// Conversion can cause rounding - therefore we use the acceptable error bound
+	EXPECT_NEAR(result, usec_max, 1);
+
+	// Nanoseconds
+	type = IPX_ET_DATE_TIME_NANOSECONDS;
+	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, nsec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(result, nsec_min);
+	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, nsec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	// Conversion can cause rounding - therefore we use the acceptable error bound
+	EXPECT_NEAR(result, nsec_max, 1);
+}
+
+TEST_F(ConverterDateTime, GetMinMaxHighPrecision)
+{
+	const long nano_max = 999999999L;
+
+	// Seconds: 32 bit unsigned integer since 1.1.1970
+	const timespec sec_min = {0, 0}; // 1 January 1970 00:00 (UTC)
+	const timespec sec_max = {UINT32_MAX, nano_max};
+
+	// Milliseconds: 64 bit unsigned integer since 1.1.1970
+	const timespec msec_min = {0, 0}; // 1 January 1970 00:00 (UTC)
+	const timespec msec_max = {(std::numeric_limits<uint64_t>::max() / 1000) - 1, nano_max};
+
+	// Microseconds: 64bit NTP timestamp since 1.1.1900
+	const uint64_t ntp_era_end_as_unix = 2085978495UL; // 7 February 2036 6:28:15
+	const timespec usec_min = {0, 0}; // API uses Unix timestamp i.e. 1.1.1970
+	const timespec usec_max = {ntp_era_end_as_unix, nano_max};
+
+	// Nanoseconds: 64bit NTP timestamp since 1.1.1900
+	const timespec nsec_min = {0, 0}; // API uses Unix timestamp i.e. 1.1.1970
+	const timespec nsec_max = {ntp_era_end_as_unix, nano_max};
+
+	enum ipx_element_type type;
+	struct timespec result;
+
+	// Seconds
+	type = IPX_ET_DATE_TIME_SECONDS;
+	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_4, type, sec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_4, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(result.tv_sec, sec_min.tv_sec);
+	EXPECT_EQ(result.tv_nsec, sec_min.tv_nsec);
+	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_4, type, sec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_4, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(result.tv_sec, sec_max.tv_sec);
+	EXPECT_EQ(result.tv_nsec, 0); // Fraction is lost!
+
+	// Milliseconds
+	type = IPX_ET_DATE_TIME_MILLISECONDS;
+	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, msec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(result.tv_sec, msec_min.tv_sec);
+	EXPECT_EQ(result.tv_nsec, msec_min.tv_nsec);
+	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, msec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	// Fraction is partly lost
+	EXPECT_EQ(result.tv_sec, msec_max.tv_sec);
+	EXPECT_NEAR(result.tv_nsec, msec_max.tv_nsec, 1000000);
+
+	// Microseconds
+	type = IPX_ET_DATE_TIME_MICROSECONDS;
+	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, usec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(result.tv_sec, usec_min.tv_sec);
+	EXPECT_EQ(result.tv_nsec, usec_min.tv_nsec);
+	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, usec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	// Fraction is partly lost
+	EXPECT_EQ(result.tv_sec, usec_max.tv_sec);
+	EXPECT_NEAR(result.tv_nsec, usec_max.tv_nsec, 1000);
+
+	// Nanoseconds
+	type = IPX_ET_DATE_TIME_NANOSECONDS;
+	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, nsec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(result.tv_sec, nsec_min.tv_sec);
+	EXPECT_EQ(result.tv_nsec, nsec_min.tv_nsec);
+	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, nsec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	// Conversion can cause rounding - therefore we use the acceptable error bound
+	EXPECT_EQ(result.tv_sec, nsec_max.tv_sec);
+	EXPECT_NEAR(result.tv_nsec, nsec_max.tv_nsec, 1);
+}
+
+/*
+ * Get random dates from the current era
+ */
+void
+ConverterDateTime::DatetimeGetTestLowPrecision(uint64_t in_sec, uint64_t in_nsec)
+{
+	// Calculate inputs
+	uint64_t result;
+	const uint64_t input_lp = (in_sec * 1000) + (in_nsec / 1000000);   // [ms]
+
+	// Test seconds, milliseconds, etc.
+	enum ipx_element_type type;
+	type = IPX_ET_DATE_TIME_SECONDS;
+	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_4, type, input_lp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_4, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(in_sec * 1000, result);
+
+	type = IPX_ET_DATE_TIME_MILLISECONDS;
+	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, input_lp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_NEAR(input_lp, result, 1);
+
+	type = IPX_ET_DATE_TIME_MICROSECONDS;
+	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, input_lp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_NEAR(input_lp, result, 1);
+
+	type = IPX_ET_DATE_TIME_NANOSECONDS;
+	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, input_lp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_NEAR(input_lp, result, 1);
+}
+
+void
+ConverterDateTime::DatetimeGetTestHighPrecision(uint64_t in_sec, uint64_t in_nsec)
+{
+	// Calculate inputs
+	struct timespec result;
+	const struct timespec input_hp = {static_cast<time_t>(in_sec), static_cast<long>(in_nsec)};
+
+	// Test seconds, milliseconds, etc.
+	enum ipx_element_type type;
+	type = IPX_ET_DATE_TIME_SECONDS;
+	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_4, type, input_hp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_4, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(input_hp.tv_sec, result.tv_sec);
+	EXPECT_EQ(input_hp.tv_nsec, 0); // Fraction is lost!
+
+	type = IPX_ET_DATE_TIME_MILLISECONDS;
+	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, input_hp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(input_hp.tv_sec, result.tv_sec);
+	EXPECT_NEAR(input_hp.tv_nsec, result.tv_nsec, 1000000);
+
+	type = IPX_ET_DATE_TIME_MICROSECONDS;
+	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, input_hp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(input_hp.tv_sec, result.tv_sec);
+	EXPECT_NEAR(input_hp.tv_nsec, result.tv_nsec, 1000);
+
+	type = IPX_ET_DATE_TIME_NANOSECONDS;
+	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, input_hp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(input_hp.tv_sec, result.tv_sec);
+	EXPECT_NEAR(input_hp.tv_nsec, result.tv_nsec, 1);
+}
+
+TEST_F(ConverterDateTime, GetRandomValue)
+{
+	{
+		SCOPED_TRACE("Timestamp test: \"29 Nov 1973 21:33:09.987654321 (UTC)\"");
+		const uint64_t sec = 123456789;
+		const uint64_t nsec = 987654321;
+		DatetimeGetTestLowPrecision(sec, nsec);
+		DatetimeSetTestHighPrecision(sec, nsec);
+	}
+	{
+		SCOPED_TRACE("Timestamp test: \"11 Jul 2017 11:59:23.123456789 (UTC)\"");
+		const uint64_t sec = 1499774363;
+		const uint64_t nsec = 123456789;
+		DatetimeGetTestLowPrecision(sec, nsec);
+		DatetimeSetTestHighPrecision(sec, nsec);
+	}
+	{
+		SCOPED_TRACE("Timestamp test: \"14 Dec 2035 20:04:24.280048921 (UTC)\"");
+		const uint64_t sec = 2081275464;
+		const uint64_t nsec = 280048921;
+		DatetimeGetTestLowPrecision(sec, nsec);
+		DatetimeSetTestHighPrecision(sec, nsec);
+	}
+}
+
+/*
+ * Invalid data types
+ */
+TEST_F(ConverterDateTime, GetInvalidDataTypeLowPrecision)
+{
+	for (int i = 0; i < IPX_ET_UNASSIGNED; ++i) {
+		SCOPED_TRACE("Type ID: " + std::to_string(i));
+		switch (i) {
+		case IPX_ET_DATE_TIME_SECONDS:
+		case IPX_ET_DATE_TIME_MILLISECONDS:
+		case IPX_ET_DATE_TIME_MICROSECONDS:
+		case IPX_ET_DATE_TIME_NANOSECONDS:
+			// Skip valid types
+			continue;
+		default:
+			// Try all invalid types
+			break;
+		}
+
+		enum ipx_element_type type = static_cast<enum ipx_element_type>(i);
+		uint64_t result;
+		memcpy(mem, mem_const, mem_size);
+
+		// Check that the return code is correct
+		EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_4, type, &result), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_ERR_ARG);
+
+		// Check also that memory is not used at all - can cause SEGFAULT
+		EXPECT_EQ(ipx_get_date_lp_be(NULL, BYTES_4, type, &result), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_get_date_lp_be(NULL, BYTES_8, type, &result), IPX_CONVERT_ERR_ARG);
+	}
+}
+
+TEST_F(ConverterDateTime, GetInvalidDataTypeHighPrecision)
+{
+	for (int i = 0; i < IPX_ET_UNASSIGNED; ++i) {
+		SCOPED_TRACE("Type ID: " + std::to_string(i));
+		switch (i) {
+		case IPX_ET_DATE_TIME_SECONDS:
+		case IPX_ET_DATE_TIME_MILLISECONDS:
+		case IPX_ET_DATE_TIME_MICROSECONDS:
+		case IPX_ET_DATE_TIME_NANOSECONDS:
+			// Skip valid types
+			continue;
+		default:
+			// Try all invalid types
+			break;
+		}
+
+		enum ipx_element_type type = static_cast<enum ipx_element_type>(i);
+		struct timespec result;
+		memcpy(mem, mem_const, mem_size);
+
+		// Check that the return code is correct
+		EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_4, type, &result), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_ERR_ARG);
+
+		// Check also that memory is not used at all - can cause SEGFAULT
+		EXPECT_EQ(ipx_get_date_hp_be(NULL, BYTES_4, type, &result), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_get_date_hp_be(NULL, BYTES_8, type, &result), IPX_CONVERT_ERR_ARG);
 	}
 }
 

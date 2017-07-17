@@ -423,7 +423,7 @@ ipx_set_date_lp_be(void *field, size_t size, enum ipx_element_type type,
  * \param[in]  ts     Number of seconds and nanoseconds (see time.h)
  * \warning Wraparound for dates after 8 February 2036 is not implemented.
  * \warning The value of the nanoseconds field MUST be in the range 0
- *   to 999999999.
+ *   to 999999999. Otherwise behavior is undefined.
  * \return On success returns #IPX_CONVERT_OK. Otherwise (usually
  *   incorrect \p size of the field) returns #IPX_CONVERT_ERR_ARG and an
  *   original value of the \p field is unchanged.
@@ -435,10 +435,6 @@ ipx_set_date_hp_be(void *field, size_t size, enum ipx_element_type type,
 	const uint64_t S1E3 = 1000ULL;       // One second to milliseconds
 	const uint64_t S1E6 = 1000000ULL;    // One second to microseconds
 	const uint64_t S1E9 = 1000000000ULL; // One second to nanoseconds
-
-	if ((uint64_t) ts.tv_nsec >= S1E9) {
-		return IPX_CONVERT_ERR_ARG;
-	}
 
 	if ((size != sizeof(uint64_t) || type == IPX_ET_DATE_TIME_SECONDS)
 			&& (size != sizeof(uint32_t) || type != IPX_ET_DATE_TIME_SECONDS)) {
