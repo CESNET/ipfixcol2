@@ -156,7 +156,7 @@ ConverterDateTime::SetInvalidSizeLP_test(enum ipx_element_type type, size_t exce
 		}
 
 		memcpy(mem, mem_const, mem_size);
-		EXPECT_EQ(ipx_set_date_lp_be(mem, i, type, timestamp), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_set_datetime_lp_be(mem, i, type, timestamp), IPX_CONVERT_ERR_ARG);
 		EXPECT_EQ(memcmp(mem, mem_const, mem_size), 0);
 	}
 }
@@ -173,7 +173,7 @@ ConverterDateTime::SetInvalidSizeHP_test(enum ipx_element_type type, size_t exce
 		}
 
 		memcpy(mem, mem_const, mem_size);
-		EXPECT_EQ(ipx_set_date_hp_be(mem, i, type, timestamp), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_set_datetime_hp_be(mem, i, type, timestamp), IPX_CONVERT_ERR_ARG);
 		EXPECT_EQ(memcmp(mem, mem_const, mem_size), 0);
 	}
 }
@@ -249,25 +249,25 @@ TEST_F(ConverterDateTime, SetMinMaxLowPrecision)
 
 	// Seconds
 	type = IPX_ET_DATE_TIME_SECONDS;
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_4, type, sec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_4, type, sec_min), IPX_CONVERT_OK);
 	EXPECT_EQ(*(uint32_t *) mem, htonl(sec_min / 1000U));
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_4, type, sec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_4, type, sec_max), IPX_CONVERT_OK);
 	EXPECT_EQ(*(uint32_t *) mem, htonl(sec_max / 1000U));
 
 	// Milliseconds
 	type = IPX_ET_DATE_TIME_MILLISECONDS;
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, msec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, msec_min), IPX_CONVERT_OK);
 	EXPECT_EQ(*(uint64_t *) mem, htobe64(msec_min));
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, msec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, msec_max), IPX_CONVERT_OK);
 	EXPECT_EQ(*(uint64_t *) mem, htobe64(msec_max));
 
 	// Microseconds
 	type = IPX_ET_DATE_TIME_MICROSECONDS;
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, usec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, usec_min), IPX_CONVERT_OK);
 	EXPECT_EQ(*(uint32_t *) &mem[0], htonl(unix_epoch_as_ntp / 1000U)); // Seconds
 	EXPECT_EQ(*(uint32_t *) &mem[4], 0U); // Fraction
 
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, usec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, usec_max), IPX_CONVERT_OK);
 	EXPECT_EQ(*(uint32_t *) &mem[0], htonl(UINT32_MAX)); // Seconds
 	fraction = nanosec2fraction(999000000U);
 	fraction &= 0xFFFFF800;
@@ -275,11 +275,11 @@ TEST_F(ConverterDateTime, SetMinMaxLowPrecision)
 
 	// Nanoseconds
 	type = IPX_ET_DATE_TIME_NANOSECONDS;
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, nsec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, nsec_min), IPX_CONVERT_OK);
 	EXPECT_EQ(*(uint32_t *) &mem[0], htonl(unix_epoch_as_ntp / 1000U)); // Seconds
 	EXPECT_EQ(*(uint32_t *) &mem[4], 0U); // Fraction
 
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, nsec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, nsec_max), IPX_CONVERT_OK);
 	EXPECT_EQ(*(uint32_t *) &mem[0], htonl(UINT32_MAX)); // Seconds
 	fraction = nanosec2fraction(999000000U);
 	EXPECT_EQ(*(uint32_t *) &mem[4], htonl(fraction)); // Fraction
@@ -315,28 +315,28 @@ TEST_F(ConverterDateTime, SetMinMaxHighPrecision)
 
 	// Seconds
 	type = IPX_ET_DATE_TIME_SECONDS;
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_4, type, sec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_4, type, sec_min), IPX_CONVERT_OK);
 	EXPECT_EQ(*(uint32_t *) mem, htonl(sec_min.tv_sec));
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_4, type, sec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_4, type, sec_max), IPX_CONVERT_OK);
 	EXPECT_EQ(*(uint32_t *) mem, htonl(sec_max.tv_sec));
 
 	// Milliseconds
 	uint64_t result;
 	type = IPX_ET_DATE_TIME_MILLISECONDS;
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, msec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, msec_min), IPX_CONVERT_OK);
 	result = (msec_min.tv_sec * 1000U) + (msec_min.tv_nsec / 1000000U);
 	EXPECT_EQ(*(uint64_t *) mem, htobe64(result));
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, msec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, msec_max), IPX_CONVERT_OK);
 	result = (msec_max.tv_sec * 1000U) + (msec_max.tv_nsec / 1000000U);
 	EXPECT_EQ(*(uint64_t *) mem, htobe64(result));
 
 	// Microseconds
 	type = IPX_ET_DATE_TIME_MICROSECONDS;
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, usec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, usec_min), IPX_CONVERT_OK);
 	EXPECT_EQ(*(uint32_t *) &mem[0], htonl(unix_epoch_as_ntp)); // Seconds
 	EXPECT_EQ(*(uint32_t *) &mem[4], 0U); // Fraction
 
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, usec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, usec_max), IPX_CONVERT_OK);
 	EXPECT_EQ(*(uint32_t *) &mem[0], htonl(UINT32_MAX)); // Seconds
 	fraction = nanosec2fraction(usec_max.tv_nsec);
 	fraction &= USEC_MASK;
@@ -344,11 +344,11 @@ TEST_F(ConverterDateTime, SetMinMaxHighPrecision)
 
 	// Nanoseconds
 	type = IPX_ET_DATE_TIME_NANOSECONDS;
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, nsec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, nsec_min), IPX_CONVERT_OK);
 	EXPECT_EQ(*(uint32_t *) &mem[0], htonl(unix_epoch_as_ntp)); // Seconds
 	EXPECT_EQ(*(uint32_t *) &mem[4], 0U); // Fraction
 
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, nsec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, nsec_max), IPX_CONVERT_OK);
 	EXPECT_EQ(*(uint32_t *) &mem[0], htonl(UINT32_MAX)); // Seconds
 	fraction = nanosec2fraction(nsec_max.tv_nsec);
 	EXPECT_EQ(*(uint32_t *) &mem[4], htonl(fraction)); // Fraction
@@ -377,15 +377,15 @@ TEST_F(ConverterDateTime, SetInvalidDataTypeLowPrecision)
 
 		// Check that the return code is correct and the memory is not changed
 		memcpy(mem, mem_const, mem_size);
-		EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_4, type, 0), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_4, type, 0), IPX_CONVERT_ERR_ARG);
 		EXPECT_EQ(memcmp(mem, mem_const, mem_size), 0);
 		memcpy(mem, mem_const, mem_size);
-		EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, 0), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, 0), IPX_CONVERT_ERR_ARG);
 		EXPECT_EQ(memcmp(mem, mem_const, mem_size), 0);
 
 		// Check also that memory is not used at all - can cause SEGFAULT
-		EXPECT_EQ(ipx_set_date_lp_be(NULL, BYTES_4, type, 0), IPX_CONVERT_ERR_ARG);
-		EXPECT_EQ(ipx_set_date_lp_be(NULL, BYTES_8, type, 0), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_set_datetime_lp_be(NULL, BYTES_4, type, 0), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_set_datetime_lp_be(NULL, BYTES_8, type, 0), IPX_CONVERT_ERR_ARG);
 	}
 }
 
@@ -411,15 +411,15 @@ TEST_F(ConverterDateTime, SetInvalidDataTypeHighPrecision)
 
 		// Check that the return code is correct and the memory is not changed
 		memcpy(mem, mem_const, mem_size);
-		EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_4, type, ts), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_4, type, ts), IPX_CONVERT_ERR_ARG);
 		EXPECT_EQ(memcmp(mem, mem_const, mem_size), 0);
 		memcpy(mem, mem_const, mem_size);
-		EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, ts), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, ts), IPX_CONVERT_ERR_ARG);
 		EXPECT_EQ(memcmp(mem, mem_const, mem_size), 0);
 
 		// Check also that memory is not used at all - can cause SEGFAULT
-		EXPECT_EQ(ipx_set_date_hp_be(NULL, BYTES_4, type, ts), IPX_CONVERT_ERR_ARG);
-		EXPECT_EQ(ipx_set_date_hp_be(NULL, BYTES_8, type, ts), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_set_datetime_hp_be(NULL, BYTES_4, type, ts), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_set_datetime_hp_be(NULL, BYTES_8, type, ts), IPX_CONVERT_ERR_ARG);
 	}
 }
 
@@ -445,19 +445,19 @@ ConverterDateTime::DatetimeSetTestLowPrecision(uint64_t in_sec, uint64_t in_nsec
 	// Test seconds, milliseconds, etc.
 	enum ipx_element_type type;
 	type = IPX_ET_DATE_TIME_SECONDS;
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_4, type, input_lp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_4, type, input_lp), IPX_CONVERT_OK);
 	EXPECT_EQ(*(uint32_t *) mem, res_sec);
 
 	type = IPX_ET_DATE_TIME_MILLISECONDS;
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, input_lp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, input_lp), IPX_CONVERT_OK);
 	EXPECT_EQ(*(uint64_t *) mem, res_msec);
 
 	type = IPX_ET_DATE_TIME_MICROSECONDS;
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, input_lp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, input_lp), IPX_CONVERT_OK);
 	EXPECT_EQ(*(uint64_t *) mem, *(uint64_t *) res_usec);
 
 	type = IPX_ET_DATE_TIME_NANOSECONDS;
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, input_lp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, input_lp), IPX_CONVERT_OK);
 	EXPECT_EQ(*(uint64_t *) mem, *(uint64_t *) res_nsec);
 }
 
@@ -480,19 +480,19 @@ ConverterDateTime::DatetimeSetTestHighPrecision(uint64_t in_sec, uint64_t in_nse
 	// Test seconds, milliseconds, etc.
 	enum ipx_element_type type;
 	type = IPX_ET_DATE_TIME_SECONDS;
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_4, type, input_hp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_4, type, input_hp), IPX_CONVERT_OK);
 	EXPECT_EQ(*(uint32_t *) mem, res_sec);
 
 	type = IPX_ET_DATE_TIME_MILLISECONDS;
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, input_hp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, input_hp), IPX_CONVERT_OK);
 	EXPECT_EQ(*(uint64_t *) mem, res_msec);
 
 	type = IPX_ET_DATE_TIME_MICROSECONDS;
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, input_hp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, input_hp), IPX_CONVERT_OK);
 	EXPECT_EQ(*(uint64_t *) mem, *(uint64_t *) res_usec);
 
 	type = IPX_ET_DATE_TIME_NANOSECONDS;
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, input_hp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, input_hp), IPX_CONVERT_OK);
 	EXPECT_EQ(*(uint64_t *) mem, *(uint64_t *) res_nsec);
 }
 
@@ -539,12 +539,12 @@ ConverterDateTime::GetInvalidSizeLP_test(enum ipx_element_type type, size_t exce
 		}
 
 		timestamp_out = timestamp_const;
-		EXPECT_EQ(ipx_get_date_lp_be(mem_const, i, type, &timestamp_out), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_get_datetime_lp_be(mem_const, i, type, &timestamp_out), IPX_CONVERT_ERR_ARG);
 		EXPECT_EQ(timestamp_out, timestamp_const);
 
 		// Should not touch the memory, therefore the NULL pointer could cause SEGFAULT
 		timestamp_out = timestamp_const;
-		EXPECT_EQ(ipx_get_date_lp_be(NULL, i, type, &timestamp_out), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_get_datetime_lp_be(NULL, i, type, &timestamp_out), IPX_CONVERT_ERR_ARG);
 		EXPECT_EQ(timestamp_out, timestamp_const);
 	}
 }
@@ -563,13 +563,13 @@ ConverterDateTime::GetInvalidSizeHP_test(enum ipx_element_type type, size_t exce
 		}
 
 		timestamp_out = timestamp_const;
-		EXPECT_EQ(ipx_get_date_hp_be(mem_const, i, type, &timestamp_out), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_get_datetime_hp_be(mem_const, i, type, &timestamp_out), IPX_CONVERT_ERR_ARG);
 		EXPECT_EQ(timestamp_out.tv_sec, timestamp_const.tv_sec);
 		EXPECT_EQ(timestamp_out.tv_nsec, timestamp_const.tv_nsec);
 
 		// Should not touch the memory, therefore the NULL pointer could cause SEGFAULT
 		timestamp_out = timestamp_const;
-		EXPECT_EQ(ipx_get_date_hp_be(NULL, i, type, &timestamp_out), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_get_datetime_hp_be(NULL, i, type, &timestamp_out), IPX_CONVERT_ERR_ARG);
 		EXPECT_EQ(timestamp_out.tv_sec, timestamp_const.tv_sec);
 		EXPECT_EQ(timestamp_out.tv_nsec, timestamp_const.tv_nsec);
 	}
@@ -646,40 +646,40 @@ TEST_F(ConverterDateTime, GetMinMaxLowPrecision)
 
 	// Seconds
 	type = IPX_ET_DATE_TIME_SECONDS;
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_4, type, sec_min), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_4, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_4, type, sec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_lp_be(mem, BYTES_4, type, &result), IPX_CONVERT_OK);
 	EXPECT_EQ(result, sec_min);
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_4, type, sec_max), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_4, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_4, type, sec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_lp_be(mem, BYTES_4, type, &result), IPX_CONVERT_OK);
 	// Milliseconds are lost!
 	EXPECT_EQ(result, (sec_max / 1000) * 1000);
 
 	// Milliseconds
 	type = IPX_ET_DATE_TIME_MILLISECONDS;
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, msec_min), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, msec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
 	EXPECT_EQ(result, msec_min);
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, msec_max), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, msec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
 	EXPECT_EQ(result, msec_max);
 
 	// Microseconds
 	type = IPX_ET_DATE_TIME_MICROSECONDS;
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, usec_min), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, usec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
 	EXPECT_EQ(result, usec_min);
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, usec_max), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, usec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
 	// Conversion can cause rounding - therefore we use the acceptable error bound
 	EXPECT_NEAR(result, usec_max, 1);
 
 	// Nanoseconds
 	type = IPX_ET_DATE_TIME_NANOSECONDS;
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, nsec_min), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, nsec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
 	EXPECT_EQ(result, nsec_min);
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, nsec_max), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, nsec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
 	// Conversion can cause rounding - therefore we use the acceptable error bound
 	EXPECT_NEAR(result, nsec_max, 1);
 }
@@ -710,47 +710,47 @@ TEST_F(ConverterDateTime, GetMinMaxHighPrecision)
 
 	// Seconds
 	type = IPX_ET_DATE_TIME_SECONDS;
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_4, type, sec_min), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_4, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_4, type, sec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_hp_be(mem, BYTES_4, type, &result), IPX_CONVERT_OK);
 	EXPECT_EQ(result.tv_sec, sec_min.tv_sec);
 	EXPECT_EQ(result.tv_nsec, sec_min.tv_nsec);
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_4, type, sec_max), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_4, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_4, type, sec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_hp_be(mem, BYTES_4, type, &result), IPX_CONVERT_OK);
 	EXPECT_EQ(result.tv_sec, sec_max.tv_sec);
 	EXPECT_EQ(result.tv_nsec, 0); // Fraction is lost!
 
 	// Milliseconds
 	type = IPX_ET_DATE_TIME_MILLISECONDS;
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, msec_min), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, msec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
 	EXPECT_EQ(result.tv_sec, msec_min.tv_sec);
 	EXPECT_EQ(result.tv_nsec, msec_min.tv_nsec);
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, msec_max), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, msec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
 	// Fraction is partly lost
 	EXPECT_EQ(result.tv_sec, msec_max.tv_sec);
 	EXPECT_NEAR(result.tv_nsec, msec_max.tv_nsec, 1000000);
 
 	// Microseconds
 	type = IPX_ET_DATE_TIME_MICROSECONDS;
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, usec_min), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, usec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
 	EXPECT_EQ(result.tv_sec, usec_min.tv_sec);
 	EXPECT_EQ(result.tv_nsec, usec_min.tv_nsec);
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, usec_max), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, usec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
 	// Fraction is partly lost
 	EXPECT_EQ(result.tv_sec, usec_max.tv_sec);
 	EXPECT_NEAR(result.tv_nsec, usec_max.tv_nsec, 1000);
 
 	// Nanoseconds
 	type = IPX_ET_DATE_TIME_NANOSECONDS;
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, nsec_min), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, nsec_min), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
 	EXPECT_EQ(result.tv_sec, nsec_min.tv_sec);
 	EXPECT_EQ(result.tv_nsec, nsec_min.tv_nsec);
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, nsec_max), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, nsec_max), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
 	// Conversion can cause rounding - therefore we use the acceptable error bound
 	EXPECT_EQ(result.tv_sec, nsec_max.tv_sec);
 	EXPECT_NEAR(result.tv_nsec, nsec_max.tv_nsec, 1);
@@ -769,23 +769,23 @@ ConverterDateTime::DatetimeGetTestLowPrecision(uint64_t in_sec, uint64_t in_nsec
 	// Test seconds, milliseconds, etc.
 	enum ipx_element_type type;
 	type = IPX_ET_DATE_TIME_SECONDS;
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_4, type, input_lp), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_4, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_4, type, input_lp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_lp_be(mem, BYTES_4, type, &result), IPX_CONVERT_OK);
 	EXPECT_EQ(in_sec * 1000, result);
 
 	type = IPX_ET_DATE_TIME_MILLISECONDS;
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, input_lp), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, input_lp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
 	EXPECT_NEAR(input_lp, result, 1);
 
 	type = IPX_ET_DATE_TIME_MICROSECONDS;
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, input_lp), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, input_lp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
 	EXPECT_NEAR(input_lp, result, 1);
 
 	type = IPX_ET_DATE_TIME_NANOSECONDS;
-	EXPECT_EQ(ipx_set_date_lp_be(mem, BYTES_8, type, input_lp), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, input_lp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
 	EXPECT_NEAR(input_lp, result, 1);
 }
 
@@ -799,26 +799,26 @@ ConverterDateTime::DatetimeGetTestHighPrecision(uint64_t in_sec, uint64_t in_nse
 	// Test seconds, milliseconds, etc.
 	enum ipx_element_type type;
 	type = IPX_ET_DATE_TIME_SECONDS;
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_4, type, input_hp), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_4, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_4, type, input_hp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_hp_be(mem, BYTES_4, type, &result), IPX_CONVERT_OK);
 	EXPECT_EQ(input_hp.tv_sec, result.tv_sec);
 	EXPECT_EQ(input_hp.tv_nsec, 0); // Fraction is lost!
 
 	type = IPX_ET_DATE_TIME_MILLISECONDS;
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, input_hp), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, input_hp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
 	EXPECT_EQ(input_hp.tv_sec, result.tv_sec);
 	EXPECT_NEAR(input_hp.tv_nsec, result.tv_nsec, 1000000);
 
 	type = IPX_ET_DATE_TIME_MICROSECONDS;
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, input_hp), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, input_hp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
 	EXPECT_EQ(input_hp.tv_sec, result.tv_sec);
 	EXPECT_NEAR(input_hp.tv_nsec, result.tv_nsec, 1000);
 
 	type = IPX_ET_DATE_TIME_NANOSECONDS;
-	EXPECT_EQ(ipx_set_date_hp_be(mem, BYTES_8, type, input_hp), IPX_CONVERT_OK);
-	EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, input_hp), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_get_datetime_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_OK);
 	EXPECT_EQ(input_hp.tv_sec, result.tv_sec);
 	EXPECT_NEAR(input_hp.tv_nsec, result.tv_nsec, 1);
 }
@@ -872,12 +872,12 @@ TEST_F(ConverterDateTime, GetInvalidDataTypeLowPrecision)
 		memcpy(mem, mem_const, mem_size);
 
 		// Check that the return code is correct
-		EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_4, type, &result), IPX_CONVERT_ERR_ARG);
-		EXPECT_EQ(ipx_get_date_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_get_datetime_lp_be(mem, BYTES_4, type, &result), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_get_datetime_lp_be(mem, BYTES_8, type, &result), IPX_CONVERT_ERR_ARG);
 
 		// Check also that memory is not used at all - can cause SEGFAULT
-		EXPECT_EQ(ipx_get_date_lp_be(NULL, BYTES_4, type, &result), IPX_CONVERT_ERR_ARG);
-		EXPECT_EQ(ipx_get_date_lp_be(NULL, BYTES_8, type, &result), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_get_datetime_lp_be(NULL, BYTES_4, type, &result), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_get_datetime_lp_be(NULL, BYTES_8, type, &result), IPX_CONVERT_ERR_ARG);
 	}
 }
 
@@ -902,12 +902,12 @@ TEST_F(ConverterDateTime, GetInvalidDataTypeHighPrecision)
 		memcpy(mem, mem_const, mem_size);
 
 		// Check that the return code is correct
-		EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_4, type, &result), IPX_CONVERT_ERR_ARG);
-		EXPECT_EQ(ipx_get_date_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_get_datetime_hp_be(mem, BYTES_4, type, &result), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_get_datetime_hp_be(mem, BYTES_8, type, &result), IPX_CONVERT_ERR_ARG);
 
 		// Check also that memory is not used at all - can cause SEGFAULT
-		EXPECT_EQ(ipx_get_date_hp_be(NULL, BYTES_4, type, &result), IPX_CONVERT_ERR_ARG);
-		EXPECT_EQ(ipx_get_date_hp_be(NULL, BYTES_8, type, &result), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_get_datetime_hp_be(NULL, BYTES_4, type, &result), IPX_CONVERT_ERR_ARG);
+		EXPECT_EQ(ipx_get_datetime_hp_be(NULL, BYTES_8, type, &result), IPX_CONVERT_ERR_ARG);
 	}
 }
 

@@ -360,7 +360,7 @@ ipx_set_float_be(void *field, size_t size, double value)
  *   original value of the \p field is unchanged.
  */
 static inline int
-ipx_set_date_lp_be(void *field, size_t size, enum ipx_element_type type,
+ipx_set_datetime_lp_be(void *field, size_t size, enum ipx_element_type type,
 	uint64_t value)
 {
 	// One second to milliseconds
@@ -429,7 +429,7 @@ ipx_set_date_lp_be(void *field, size_t size, enum ipx_element_type type,
  *   original value of the \p field is unchanged.
  */
 static inline int
-ipx_set_date_hp_be(void *field, size_t size, enum ipx_element_type type,
+ipx_set_datetime_hp_be(void *field, size_t size, enum ipx_element_type type,
 	struct timespec ts)
 {
 	const uint64_t S1E3 = 1000ULL;       // One second to milliseconds
@@ -788,7 +788,7 @@ ipx_get_float_be(const void *field, size_t size, double *value)
  *   #IPX_CONVERT_ERR_ARG and the \p value is not filled.
  */
 static inline int
-ipx_get_date_lp_be(const void *field, size_t size, enum ipx_element_type type,
+ipx_get_datetime_lp_be(const void *field, size_t size, enum ipx_element_type type,
 	uint64_t *value)
 {
 	// One second to milliseconds
@@ -856,8 +856,8 @@ ipx_get_date_lp_be(const void *field, size_t size, enum ipx_element_type type,
  *   #IPX_CONVERT_ERR_ARG and the \p value is not filled.
  */
 static inline int
-ipx_get_date_hp_be(const void *field, size_t size, enum ipx_element_type type,
-		struct timespec *ts)
+ipx_get_datetime_hp_be(const void *field, size_t size, enum ipx_element_type type,
+	struct timespec *ts)
 {
 	const uint64_t S1E3 = 1000ULL;       // One second to milliseconds
 	const uint64_t S1E6 = 1000000ULL;    // One second to microseconds
@@ -1215,7 +1215,7 @@ ipx_float2str_be(const void *field, size_t size, char *str, size_t str_size);
  * \return Same as a return value of ipx_uint2str().
  */
 API int
-ipx_date2str_be(const void *field, size_t size, enum ipx_element_type type,
+ipx_datetime2str_be(const void *field, size_t size, enum ipx_element_type type,
 	char *str, size_t str_size, enum ipx_convert_time_fmt fmt);
 
 /**
