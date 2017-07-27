@@ -143,6 +143,8 @@ TEST(ConverterToStrings, uint2strFormatErr)
 			IPX_CONVERT_ERR_ARG);
 }
 
+// -----------------------------------------------------------------------------
+
 /*
  * Test the signed integer to string converter
  */
@@ -217,6 +219,8 @@ TEST(ConverterToStrings, int2strFormatErr)
 	EXPECT_EQ(ipx_int2str_be(NULL, 9, str_ptr.get(), size),
 			IPX_CONVERT_ERR_ARG);
 }
+
+// -----------------------------------------------------------------------------
 
 /*
  * Test the 32bit float to string converter
@@ -446,6 +450,79 @@ TEST(ConverterToStrings, float2strInvalidInput)
 	float2strSmallBuffer_64check(5.02465721798100e-23);
 	float2strSmallBuffer_64check(-1.54643210045789e50);
 	float2strSmallBuffer_64check(-8.2234687921134e-123);
+}
+
+// -----------------------------------------------------------------------------
+
+/*
+ * Test the bool to string converter
+ */
+TEST(ConverterToStrings, bool2strNormal)
+{
+	const size_t data_size = BYTES_1;
+	std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[data_size]};
+
+	// Test "True"
+	std::string true_str{"true"};
+	size_t res_size = true_str.length() + 1; // 1 == '\0'
+	std::unique_ptr<char[]> res_ptr{new char[res_size]};
+
+	EXPECT_EQ(ipx_set_bool(data_ptr.get(), data_size, true), IPX_CONVERT_OK);
+	EXPECT_GT(ipx_bool2str(data_ptr.get(), res_ptr.get(), res_size), 0);
+	EXPECT_EQ(true_str, res_ptr.get());
+
+	// Test "False"
+	std::string false_str{"false"};
+	res_size = false_str.length() + 1; // 1 == '\0'
+	res_ptr.reset(new char[res_size]);
+
+	EXPECT_EQ(ipx_set_bool(data_ptr.get(), data_size, false), IPX_CONVERT_OK);
+	EXPECT_GT(ipx_bool2str(data_ptr.get(), res_ptr.get(), res_size), 0);
+	EXPECT_EQ(false_str, res_ptr.get());
+}
+
+/*
+ *  Test invalid boolean values stored in a data field
+ */
+TEST(ConverterToStrings, bool2strInvalidInput)
+{
+	uint8_t data;
+	const size_t res_size = 32;
+	std::unique_ptr<char[]> res_ptr{new char[res_size]};
+
+	for (uint16_t i = 0; i < 256; ++i) {
+		if (i == 1 || i == 2) { // true == 1 and false == 2
+			continue;
+		}
+
+		data = i;
+		EXPECT_EQ(ipx_bool2str(&data, res_ptr.get(), res_size), IPX_CONVERT_ERR_ARG);
+	}
+}
+
+/*
+ * Test insufficient size of an output string buffer
+ */
+TEST(ConverterToStrings, bool2strSmallBuffer)
+{
+	const size_t data_size = BYTES_1;
+	std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[data_size]};
+
+	// Test true
+	std::string true_str{"true"};
+	size_t res_size = true_str.length(); // Not enough space for '\0'
+	std::unique_ptr<char[]> res_ptr{new char[res_size]};
+
+	EXPECT_EQ(ipx_set_bool(data_ptr.get(), data_size, true), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_bool2str(data_ptr.get(), res_ptr.get(), res_size), IPX_CONVERT_ERR_BUFFER);
+
+	// Test "False"
+	std::string false_str{"false"};
+	res_size = false_str.length(); // Not enough space for '\0'
+	res_ptr.reset(new char[res_size]);
+
+	EXPECT_EQ(ipx_set_bool(data_ptr.get(), data_size, false), IPX_CONVERT_OK);
+	EXPECT_EQ(ipx_bool2str(data_ptr.get(), res_ptr.get(), res_size), IPX_CONVERT_ERR_BUFFER);
 }
 
 /**
