@@ -90,8 +90,8 @@ ipx_float2str_be(const void *field, size_t size, char *str, size_t str_size)
 	}
 
 	const char *fmt = (size == sizeof(float))
-			? ("%." IPX_CONVERT_STRX(FLT_DIG) "g")  // float precision
-			: ("%." IPX_CONVERT_STRX(DBL_DIG) "g"); // double precision
+		? ("%." IPX_CONVERT_STRX(FLT_DIG) "g")  // float precision
+		: ("%." IPX_CONVERT_STRX(DBL_DIG) "g"); // double precision
 	int str_real_len = snprintf(str, str_size, fmt, result);
 	if (str_real_len < 0 || (size_t) str_real_len >= str_size) {
 		return IPX_CONVERT_ERR_BUFFER;

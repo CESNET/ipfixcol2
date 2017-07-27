@@ -728,7 +728,7 @@ ipx_get_int_be(const void *field, size_t size, int64_t *value)
  * The \p value is read from a data \p field and converted from
  * "network byte order" to host byte order.
  * \param[in]  field  Pointer to the data field (in "network byte order")
- * \param[in]  size   Size of the data field (min: 1 byte, max: 8 bytes)
+ * \param[in]  size   Size of the data field (4 or 8 bytes)
  * \param[out] value  Pointer to a variable for the result
  * \return On success returns #IPX_CONVERT_OK and fills the \p value. Otherwise
  *   (usually the incorrect \p size of the field) returns #IPX_CONVERT_ERR_ARG
@@ -1114,7 +1114,7 @@ ipx_get_string(const void *field, size_t size, char *value)
 /**
  * \def IPX_CONVERT_STR
  * \brief Auxiliary macro for converting parameter to string
- * \note Example: IPX_CONVERT_STR(EXIT_SUCCESS) == "EXIT_SUCCESS"
+ * \note Example: IPX_CONVERT_STR(EXIT_SUCCESS) == "EXIT_SUCCESS" (C++)
  */
 #define IPX_CONVERT_STR(s) #s
 
@@ -1142,7 +1142,7 @@ enum ipx_convert_time_fmt {
  * \param[in]  str_size  Size of the output buffer (in bytes)
  * \warning The buffer size \p str_size MUST be always greater than zero!
  * \return On success returns a number of characters (excluding the termination
- *   null byte) placed into the buffer \p str. Therefor, if the result is
+ *   null byte) placed into the buffer \p str. Therefore, if the result is
  *   greater than zero, conversion was successful. If the length of the result
  *   string (including the termination null byte) would exceed \p str_size,
  *   then returns #IPX_CONVERT_ERR_BUFFER and the content written to
@@ -1174,8 +1174,11 @@ ipx_int2str_be(const void *field, size_t size, char *str, size_t str_size);
  *
  * The \p value is read from a data \p field, converted from
  * the appropriate byte order to host byte order and converted to string.
+ * \note Keep in mind that a valid output is also positive and negative
+ *   infinity and NaN i.e. "inf", "nan".
+ *
  * \param[in]  field     Pointer to the data field (in "network byte order")
- * \param[in]  size      Size of the data field (min: 1 byte, max: 8 bytes)
+ * \param[in]  size      Size of the data field (4 or 8 bytes)
  * \param[out] str       Pointer to an output character buffer
  * \param[in]  str_size  Size of the output buffer (in bytes)
  * \return Same as a return value of ipx_uint2str().
