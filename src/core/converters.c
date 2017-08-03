@@ -138,33 +138,51 @@ ipx_datetime2str_be(const void *field, size_t size, enum ipx_element_type type,
 		return IPX_CONVERT_ERR_ARG;
 	}
 
-	// Convert common part
-	struct tm utc_time;
-	if (!gmtime_r(&ts.tv_sec, &utc_time)) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    // Convert common part
+    bool utc_time = true;
+    if (fmt & 0x10) { // The 5.bit is set -> local timestamp
+        utc_time = false;
+        fmt &= 0x0F;
+    }
 
-	size_t size_used = strftime(str, str_size, "%FT%T", &utc_time);
+	struct tm timestamp;
+    if (utc_time) {
+        // Convert to UTC time
+        if (!gmtime_r(&ts.tv_sec, &timestamp)) {
+            return IPX_CONVERT_ERR_ARG;
+        }
+    } else {
+        // Convert to local time
+        if (!localtime_r(&ts.tv_sec, &timestamp)) {
+            return IPX_CONVERT_ERR_ARG;
+        }
+    }
+
+	size_t size_used = strftime(str, str_size, "%FT%T", &timestamp);
 	if (size_used == 0) {
 		return IPX_CONVERT_ERR_BUFFER;
 	}
+
+    size_t size_remain = str_size - size_used;
+    char *str_remain = str + size_used;
 
 	// Add the faction part
 	uint32_t frac;
 	int frac_width;
 
 	switch (fmt) {
-	case IPX_CONVERT_TF_SEC:
-		return (int) size_used;
-	case IPX_CONVERT_TF_MSEC:
-		frac = (uint32_t) (ts.tv_nsec / 1000000U);
+	case IPX_CONVERT_TF_SEC_UTC:
+        frac_width = 0;
+		break;
+	case IPX_CONVERT_TF_MSEC_UTC:
+		frac = (uint32_t) (ts.tv_nsec / 1000000);
 		frac_width = 3;
 		break;
-	case IPX_CONVERT_TF_USEC:
-		frac = (uint32_t) (ts.tv_nsec / 1000U);
+	case IPX_CONVERT_TF_USEC_UTC:
+		frac = (uint32_t) (ts.tv_nsec / 1000);
 		frac_width = 6;
 		break;
-	case IPX_CONVERT_TF_NSEC:
+	case IPX_CONVERT_TF_NSEC_UTC:
 		frac = (uint32_t) (ts.tv_nsec);
 		frac_width = 9;
 		break;
@@ -172,15 +190,35 @@ ipx_datetime2str_be(const void *field, size_t size, enum ipx_element_type type,
 		return IPX_CONVERT_ERR_ARG;
 	}
 
-	size_t size_remain = size - size_used;
-	char *str_remain = str + size_used;
+    if (frac_width > 0) {
+        int ret = snprintf(str_remain, size_remain, ".%0*" PRIu32, frac_width, frac);
+        if (ret >= (int) size_remain || ret < 0) {
+            return IPX_CONVERT_ERR_BUFFER;
+        }
 
-	int ret = snprintf(str_remain, size_remain, ".%0*" PRIu32, frac_width, frac);
-	if (ret >= (int) size_remain || ret < 0) {
-		return IPX_CONVERT_ERR_BUFFER;
-	}
+        size_remain -= ret;
+        size_used += ret;
+        str_remain = str + size_used;
+    }
 
-	return (int) size_used + ret;
+    // Add timezone information
+    if (utc_time) {
+        if (size_remain < 2) { // We need space for 'Z' and '\0'
+            return IPX_CONVERT_ERR_BUFFER;
+        }
+
+        str_remain[0] = 'Z';
+        str_remain[1] = '\0';
+        size_used += 2;
+    } else {
+        size_t ret = strftime(str_remain, size_remain, "%z", &timestamp);
+        if (ret == 0) {
+            return IPX_CONVERT_ERR_BUFFER;
+        }
+        size_used += ret;
+    }
+
+	return (int) size_used;
 }
 
 int

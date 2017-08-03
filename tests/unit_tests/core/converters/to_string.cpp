@@ -525,6 +525,189 @@ TEST(ConverterToStrings, bool2strSmallBuffer)
 	EXPECT_EQ(ipx_bool2str(data_ptr.get(), res_ptr.get(), res_size), IPX_CONVERT_ERR_BUFFER);
 }
 
+// -----------------------------------------------------------------------------
+
+/*
+ * Test the datetime to string converter
+ */
+// Compare timestamps
+void
+datetime2strNormal_compare(const std::string &str1, const std::string &str2,
+    uint64_t frac_eps = 0)
+{
+    SCOPED_TRACE("Test value: '" + str1 + "' and '" + str2 + "'");
+
+    // Locate start of fractions
+    size_t frac1_start = str1.find('.');
+    size_t frac2_start = str2.find('.');
+    ASSERT_EQ(frac1_start, frac2_start);
+
+    // Compare the parts before fractions
+    ASSERT_EQ(str1.substr(0, frac1_start), str2.substr(0, frac2_start));
+
+    if (frac1_start == std::string::npos && frac2_start == std::string::npos) {
+        // Nothing more to compare
+        return;
+    }
+
+    ASSERT_NE(frac1_start, std::string::npos);
+    ASSERT_NE(frac2_start, std::string::npos);
+
+    size_t frac1_end;
+    size_t frac2_end;
+    uint64_t num1 = std::stoul(str1.substr(frac1_start + 1), &frac1_end);
+    uint64_t num2 = std::stoul(str2.substr(frac2_start + 1), &frac2_end);
+    frac1_end += frac1_start + 1;
+    frac2_end += frac2_start + 1;
+
+    // Compare length of fractions
+    ASSERT_EQ(frac1_end - frac1_start, frac2_end - frac2_start);
+
+    // Compare numbers
+    uint64_t diff = (num1 > num2) ? num1 - num2 : num2 - num1;
+    EXPECT_LE(diff, frac_eps) << "The difference between " + std::to_string(num1) + " and "
+        + std::to_string(num2) + " is " + std::to_string(diff) + ", which exceeds "
+        + std::to_string(frac_eps) + ".";
+
+    // Compare the rest
+    std::string str1_end = str1.substr(frac1_end);
+    std::string str2_end = str2.substr(frac2_end);
+    EXPECT_EQ(str1_end, str2_end);
+}
+
+void
+datetime2strNormal_check(struct timespec ts, size_t data_size, enum ipx_element_type type)
+{
+    SCOPED_TRACE("Test value: " + std::to_string(ts.tv_sec) + " seconds, "
+        + std::to_string(ts.tv_nsec) + " nanoseconds, type " + std::to_string(type)
+        + ", size " + std::to_string(data_size));
+
+    const size_t res_size = IPX_CONVERT_STRLEN_DATE;
+    std::unique_ptr<char[]> res_ptr{new char[res_size]};
+    std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[data_size]};
+    enum ipx_convert_time_fmt fmt;
+
+    // Store the timestamp to a field
+    ASSERT_EQ(ipx_set_datetime_hp_be(data_ptr.get(), data_size, type, ts), IPX_CONVERT_OK);
+
+	// Compute the expected result
+    switch (type) {
+    case IPX_ET_DATE_TIME_SECONDS:
+        ts.tv_nsec = 0;
+        break;
+    case IPX_ET_DATE_TIME_MILLISECONDS:
+        ts.tv_nsec /= 1000000;
+        ts.tv_nsec *= 1000000;
+        break;
+    case IPX_ET_DATE_TIME_MICROSECONDS:
+    case IPX_ET_DATE_TIME_NANOSECONDS:
+        // Nothing to do, because these both types use the same encoding
+        break;
+    default:
+        FAIL() << "We shouldn't get here.";
+    }
+
+    struct tm time_utc;
+    ASSERT_NE(gmtime_r(&ts.tv_sec, &time_utc), nullptr);
+    std::unique_ptr<char[]> tmp_ptr{new char[res_size]};
+    ASSERT_GT(strftime(tmp_ptr.get(), res_size, "%FT%T", &time_utc), 0U);
+
+    std::string exp_str{tmp_ptr.get()};
+    exp_str += ".";
+    std::stringstream ss;
+    ss << std::setw(9) << std::setfill('0') << ts.tv_nsec;
+    exp_str += ss.str();
+    exp_str += "Z";
+
+    /*
+     * Test format "nanoseconds"
+     * Note: In case you try to read a value stored in microseconds as nanoseconds
+     *   result can vary by up to 477 nanoseconds due to identical encoding.
+     *   See https://tools.ietf.org/html/rfc7011#section-6.1.9
+     */
+    fmt = IPX_CONVERT_TF_NSEC_UTC;
+    EXPECT_GT(ipx_datetime2str_be(data_ptr.get(), data_size, type, res_ptr.get(), res_size,
+        fmt), 0);
+
+    if (type == IPX_ET_DATE_TIME_MICROSECONDS) {
+        // Special case
+        const uint64_t max_diff = 477;
+        datetime2strNormal_compare(exp_str, std::string(res_ptr.get()), max_diff);
+    } else {
+        // Normal case
+        datetime2strNormal_compare(exp_str, std::string(res_ptr.get()));
+    }
+
+    // Test format "microseconds"
+    fmt = IPX_CONVERT_TF_USEC_UTC;
+    EXPECT_GT(ipx_datetime2str_be(data_ptr.get(), data_size, type, res_ptr.get(), res_size,
+        fmt), 0);
+    exp_str.erase(exp_str.size() - 4); // Decrease precision
+    exp_str += "Z";
+    datetime2strNormal_compare(exp_str, std::string(res_ptr.get()));
+
+    // Test format "milliseconds"
+    fmt = IPX_CONVERT_TF_MSEC_UTC;
+    EXPECT_GT(ipx_datetime2str_be(data_ptr.get(), data_size, type, res_ptr.get(), res_size,
+        fmt), 0);
+    exp_str.erase(exp_str.size() - 4); // Decrease precision
+    exp_str += "Z";
+    datetime2strNormal_compare(exp_str, std::string(res_ptr.get()));
+
+    // Test format "seconds"
+    fmt = IPX_CONVERT_TF_SEC_UTC;
+    EXPECT_GT(ipx_datetime2str_be(data_ptr.get(), data_size, type, res_ptr.get(), res_size,
+        fmt), 0);
+    exp_str.erase(exp_str.size() - 5); // Decrease precision
+    exp_str += "Z";
+    datetime2strNormal_compare(exp_str, std::string(res_ptr.get()));
+}
+
+TEST(ConverterToStrings, ipx_datetime2strUTCNormal)
+{
+    const uint64_t ntp_era_end_as_unix = 2085978495UL; // 7 February 2036 6:28:15
+    const time_t msec_max_val = (std::numeric_limits<uint64_t>::max() / 1000) - 1;
+
+    // Epoch start
+    struct timespec t1 = {0, 0};
+    datetime2strNormal_check(t1, BYTES_4, IPX_ET_DATE_TIME_SECONDS);
+    datetime2strNormal_check(t1, BYTES_8, IPX_ET_DATE_TIME_MILLISECONDS);
+    datetime2strNormal_check(t1, BYTES_8, IPX_ET_DATE_TIME_MICROSECONDS);
+    datetime2strNormal_check(t1, BYTES_8, IPX_ET_DATE_TIME_NANOSECONDS);
+
+    struct timespec t2 = {1501161713, 123456789};
+    datetime2strNormal_check(t2, BYTES_4, IPX_ET_DATE_TIME_SECONDS);
+    datetime2strNormal_check(t2, BYTES_8, IPX_ET_DATE_TIME_MILLISECONDS);
+    datetime2strNormal_check(t2, BYTES_8, IPX_ET_DATE_TIME_MICROSECONDS);
+    datetime2strNormal_check(t2, BYTES_8, IPX_ET_DATE_TIME_NANOSECONDS);
+
+    struct timespec t3 = {ntp_era_end_as_unix, 999999999};
+    datetime2strNormal_check(t3, BYTES_4, IPX_ET_DATE_TIME_SECONDS);
+    datetime2strNormal_check(t3, BYTES_8, IPX_ET_DATE_TIME_MILLISECONDS);
+    datetime2strNormal_check(t3, BYTES_8, IPX_ET_DATE_TIME_MICROSECONDS);
+    datetime2strNormal_check(t3, BYTES_8, IPX_ET_DATE_TIME_NANOSECONDS);
+
+    struct timespec t4 = {UINT32_MAX, 999999999};
+    datetime2strNormal_check(t4, BYTES_4, IPX_ET_DATE_TIME_SECONDS);
+    datetime2strNormal_check(t4, BYTES_8, IPX_ET_DATE_TIME_MILLISECONDS);
+    /*
+     * Following tests are disabled, because time wraparound is not implemented
+     * datetime2strNormal_check(t4, BYTES_8, IPX_ET_DATE_TIME_MICROSECONDS);
+     * datetime2strNormal_check(t4, BYTES_8, IPX_ET_DATE_TIME_NANOSECONDS);
+    */
+
+    struct timespec t5 = {msec_max_val, 999999999};
+    datetime2strNormal_check(t5, BYTES_8, IPX_ET_DATE_TIME_MILLISECONDS);
+    /*
+     * Following tests are disabled, because time wraparound is not implemented
+     * datetime2strNormal_check(t5, BYTES_4, IPX_ET_DATE_TIME_SECONDS);
+     * datetime2strNormal_check(t5, BYTES_8, IPX_ET_DATE_TIME_MICROSECONDS);
+     * datetime2strNormal_check(t5, BYTES_8, IPX_ET_DATE_TIME_NANOSECONDS);
+    */
+}
+
+// TODO: add localtime tests
+
 /**
  * @}
  */

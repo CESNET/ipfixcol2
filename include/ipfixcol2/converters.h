@@ -419,7 +419,7 @@ ipx_set_datetime_lp_be(void *field, size_t size, enum ipx_element_type type,
  * order.
  * \param[out] field  Pointer to a data field
  * \param[in]  size   Size of the data field
- * \param[in]  type   Type of the timestamp (see ipx_set_date_lr())
+ * \param[in]  type   Type of the timestamp (see ipx_set_datetime_lp_be())
  * \param[in]  ts     Number of seconds and nanoseconds (see time.h)
  * \warning Wraparound for dates after 8 February 2036 is not implemented.
  * \warning The value of the nanoseconds field MUST be in the range 0
@@ -848,7 +848,7 @@ ipx_get_datetime_lp_be(const void *field, size_t size, enum ipx_element_type typ
  * data type.
  * \param[in]  field  Pointer to the data field (in "network byte order")
  * \param[in]  size   Size of the data field (in bytes)
- * \param[in]  type   Type of the timestamp (see ipx_get_date_lp())
+ * \param[in]  type   Type of the timestamp (see ipx_get_datetime_lp_be())
  * \param[out] ts     Pointer to a variable for the result (see time.h)
  * \warning Wraparound for dates after 8 February 2036 is not implemented.
  * \return On success returns #IPX_CONVERT_OK and fills the \p value.
@@ -902,7 +902,23 @@ ipx_get_datetime_hp_be(const void *field, size_t size, enum ipx_element_type typ
 			fraction &= 0xFFFFF800UL; // Make sure that last 11 bits are zeros
 		}
 
-		ts->tv_nsec = (fraction * S1E9) >> 32;
+		/*
+		 * Rounding error correction
+		 * Without correction, almost all numbers will be slightly imprecise.
+		 * For example, if the number 999,999,999 nanoseconds is converted to
+		 * a fraction and back to nanoseconds, rounding will change the number
+		 * to 999,999,998 (the last digit is incorrect). This can be solved
+		 * be rounding result in nanoseconds based on number after the decimal
+		 * mask. Because we don't want to work with floating point numbers
+		 * we perform a small trick. See below.
+		 */
+		fraction *= S1E9;
+		fraction >>= 31;      // Instead of 32, shift only 31 times
+		if (fraction & 0x1) { // If the last digit is odd, increment the number
+            ++fraction;
+		}
+
+		ts->tv_nsec = fraction >> 1; // Perform the last shift
 		}
 
 		return IPX_CONVERT_OK;
@@ -1074,9 +1090,12 @@ ipx_get_string(const void *field, size_t size, char *value)
 
 /**
  * \def IPX_CONVERT_STRLEN_DATE
- * \brief Minimum size of an output buffer for safe time conversion
+ * \brief Minimum size of an output buffer for guaranteed time conversion
+ * \note This value represents length of the longest possible string, maximum
+ *   possible value is milliseconds in local time i.e.
+ *   "584556019-04-03T14:25:50.000000000+0000"
  */
-#define IPX_CONVERT_STRLEN_DATE (30)
+#define IPX_CONVERT_STRLEN_DATE (40)
 
 /**
  * \def IPX_CONVERT_STR_TRUE
@@ -1120,13 +1139,27 @@ ipx_get_string(const void *field, size_t size, char *value)
 
 /**
  * \enum ipx_convert_time_fmt
- * \brief Time conversion output precision
+ * \brief Time conversion timezone and precision format
+ * \note All following format options should comply with ISO 8601 standard
+ *   for representation of dates and times.
  */
 enum ipx_convert_time_fmt {
-	IPX_CONVERT_TF_SEC,   /**< Seconds (i.e. no extra numbers)               */
-	IPX_CONVERT_TF_MSEC,  /**< Milliseconds (i.e. ".mmm")                    */
-	IPX_CONVERT_TF_USEC,  /**< Microseconds (i.e. ".uuuuuu")                 */
-	IPX_CONVERT_TF_NSEC   /**< Nanoseconds  (i.e. ".nnnnnnnnn")              */
+    /** UTC time, seconds (i.e. %Y-%m-%dT%H:%M:%SZ)                          */
+	IPX_CONVERT_TF_SEC_UTC = 0x01,
+    /** UTC time, milliseconds (i.e. "%Y-%m-%dT%H:%M:%S.mmmZ")               */
+	IPX_CONVERT_TF_MSEC_UTC = 0x02,
+    /** UTC time, microseconds (i.e. "%Y-%m-%dT%H:%M:%S.uuuuuuZ")            */
+	IPX_CONVERT_TF_USEC_UTC = 0x03,
+    /** UTC time, nanoseconds (i.e. "%Y-%m-%dT%H:%M:%S.nnnnnnnnnZ")          */
+	IPX_CONVERT_TF_NSEC_UTC = 0x04,
+    /** Local time, seconds (i.e. %Y-%m-%dT%H:%M:%S±hhmm)                    */
+    IPX_CONVERT_TF_SEC_LOCAL = 0x11,
+    /** Local time, milliseconds (i.e. "%Y-%m-%dT%H:%M:%S.mmm±hhmm")         */
+    IPX_CONVERT_TF_MSEC_LOCAL = 0x12,
+    /** Local time, microseconds (i.e. "%Y-%m-%dT%H:%M:%S.uuuuuu±hhmm")      */
+    IPX_CONVERT_TF_USEC_LOCAL = 0x13,
+    /** Local time, nanoseconds (i.e. "%Y-%m-%dT%H:%M:%S.nnnnnnnnn±hhmm")    */
+    IPX_CONVERT_TF_NSEC_LOCAL = 0x14
 };
 
 /**
@@ -1163,7 +1196,7 @@ ipx_uint2str_be(const void *field, size_t size, char *str, size_t str_size);
  * \param[out] str       Pointer to an output character buffer
  * \param[in]  str_size  Size of the output buffer (in bytes)
  * \warning The buffer size \p str_size MUST be always greater than zero!
- * \return Same as a return value of ipx_uint2str().
+ * \return Same as a return value of ipx_uint2str_be().
  */
 API int
 ipx_int2str_be(const void *field, size_t size, char *str, size_t str_size);
@@ -1181,7 +1214,7 @@ ipx_int2str_be(const void *field, size_t size, char *str, size_t str_size);
  * \param[in]  size      Size of the data field (4 or 8 bytes)
  * \param[out] str       Pointer to an output character buffer
  * \param[in]  str_size  Size of the output buffer (in bytes)
- * \return Same as a return value of ipx_uint2str().
+ * \return Same as a return value of ipx_uint2str_be().
  */
 API int
 ipx_float2str_be(const void *field, size_t size, char *str, size_t str_size);
@@ -1202,7 +1235,7 @@ ipx_float2str_be(const void *field, size_t size, char *str, size_t str_size);
  * \param[in]  str_size  Size of the output buffer (in bytes)
  * \param[in]  fmt       Output format (see ::ipx_convert_time_fmt)
  * \remark For more details about the parameter \p type see the documentation
- *    of ipx_get_date_lp().
+ *    of ipx_get_datetime_lp_be().
  * \remark Output format for: \n
  *   - seconds (#IPX_CONVERT_TF_SEC) is "%Y-%m-%dT%H:%M:%S" \n
  *   - milliseconds (#IPX_CONVERT_TF_MSEC) is "%Y-%m-%dT%H:%M:%S.mmm" \n
@@ -1212,7 +1245,7 @@ ipx_float2str_be(const void *field, size_t size, char *str, size_t str_size);
  *   #IPX_CONVERT_STRLEN_DATE bytes to guarantee enough size for all conversion
  *   types.
  * \warning Wraparound for dates after 8 February 2036 is not implemented.
- * \return Same as a return value of ipx_uint2str().
+ * \return Same as a return value of ipx_uint2str_be().
  */
 API int
 ipx_datetime2str_be(const void *field, size_t size, enum ipx_element_type type,
@@ -1230,7 +1263,7 @@ ipx_datetime2str_be(const void *field, size_t size, enum ipx_element_type type,
  * \remark A size of the \p field is always consider as 1 byte.
  * \remark If the content of the \p field is invalid value, the function
  *   will also return #IPX_CONVERT_ERR_ARG.
- * \return Same as a return value of ipx_uint2str().
+ * \return Same as a return value of ipx_uint2str_be().
  */
 API int
 ipx_bool2str(const void *field, char *str, size_t str_size);
@@ -1248,7 +1281,7 @@ ipx_bool2str(const void *field, char *str, size_t str_size);
  * \param[in]  str_size  Size of the output buffer (in bytes)
  * \remark The size of the output buffer (\p str_size) should be at least
  *   #IPX_CONVERT_STRLEN_IP bytes to guarantee enought size for conversion.
- * \return Same as a return value of ipx_uint2str().
+ * \return Same as a return value of ipx_uint2str_be().
  */
 API int
 ipx_ip2str(const void *field, size_t size, char *str, size_t str_size);
@@ -1268,7 +1301,7 @@ ipx_ip2str(const void *field, size_t size, char *str, size_t str_size);
  *   symbols (:), for example: "00:0a:bc:e0:12:34" (without quotation marks)
  * \remark The size of the output buffer (\p str_size) must be at least
  *   #IPX_CONVERT_STRLEN_MAC bytes to guarantee enough size for conversion.
- * \return Same as a return value of ipx_uint2str().
+ * \return Same as a return value of ipx_uint2str_be().
  */
 API int
 ipx_mac2str(const void *field, char *str, size_t str_size);
@@ -1290,7 +1323,7 @@ ipx_mac2str(const void *field, char *str, size_t str_size);
  *   hexadecimal representation of one byte.
  * \remark Minimum size of the output buffer (\p str_size) must be at least
  *   (2 * \p size) + 1 ('\0') bytes.
- * \return Same as a return value of ipx_uint2str().
+ * \return Same as a return value of ipx_uint2str_be().
  */
 API int
 ipx_octet_array2str(const void *field, size_t size, char *str, size_t str_size);
@@ -1313,8 +1346,8 @@ ipx_octet_array2str(const void *field, size_t size, char *str, size_t str_size);
  *   characters) are replaced with \\xhh (where "hh" is a hexadecimal value).
  * \remark Malformed characters are replaced with UTF-8 "REPLACEMENT CHARACTER"
  * \note Character backslash, single and double quotation mark and NOT escaped.
- * \return Same as a return value of ipx_uint2str(), but value 0 is also valid
- *   because the original string could be also empty.
+ * \return Same as a return value of ipx_uint2str_be(), but value 0 is also
+ *   valid because the original string could be also empty.
  */
 API int
 ipx_string2str(const void *field, size_t size, char *str, size_t str_size);
