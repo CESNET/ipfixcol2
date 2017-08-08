@@ -47,96 +47,96 @@
 int
 ipx_uint2str_be(const void *field, size_t size, char *str, size_t str_size)
 {
-	// Get a value
-	uint64_t result;
-	if (ipx_get_uint_be(field, size, &result) != IPX_CONVERT_OK) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    // Get a value
+    uint64_t result;
+    if (ipx_get_uint_be(field, size, &result) != IPX_CONVERT_OK) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	// TODO: use something faster than snprintf
-	int str_real_len = snprintf(str, str_size, "%" PRIu64, result);
-	if (str_real_len < 0 || (size_t) str_real_len >= str_size) {
-		return IPX_CONVERT_ERR_BUFFER;
-	}
+    // TODO: use something faster than snprintf
+    int str_real_len = snprintf(str, str_size, "%" PRIu64, result);
+    if (str_real_len < 0 || (size_t) str_real_len >= str_size) {
+        return IPX_CONVERT_ERR_BUFFER;
+    }
 
-	return str_real_len;
+    return str_real_len;
 }
 
 int
 ipx_int2str_be(const void *field, size_t size, char *str, size_t str_size)
 {
-	// Get a value
-	int64_t result;
-	if (ipx_get_int_be(field, size, &result) != IPX_CONVERT_OK) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    // Get a value
+    int64_t result;
+    if (ipx_get_int_be(field, size, &result) != IPX_CONVERT_OK) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	// TODO: use something faster than snprintf
-	int str_real_len = snprintf(str, str_size, "%" PRIi64, result);
-	if (str_real_len < 0 || (size_t) str_real_len >= str_size) {
-		return IPX_CONVERT_ERR_BUFFER;
-	}
+    // TODO: use something faster than snprintf
+    int str_real_len = snprintf(str, str_size, "%" PRIi64, result);
+    if (str_real_len < 0 || (size_t) str_real_len >= str_size) {
+        return IPX_CONVERT_ERR_BUFFER;
+    }
 
-	return str_real_len;
+    return str_real_len;
 }
 
 int
 ipx_float2str_be(const void *field, size_t size, char *str, size_t str_size)
 {
-	// Get a value
-	double result;
-	if (ipx_get_float_be(field, size, &result) != IPX_CONVERT_OK) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    // Get a value
+    double result;
+    if (ipx_get_float_be(field, size, &result) != IPX_CONVERT_OK) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	const char *fmt = (size == sizeof(float))
-		? ("%." IPX_CONVERT_STRX(FLT_DIG) "g")  // float precision
-		: ("%." IPX_CONVERT_STRX(DBL_DIG) "g"); // double precision
-	int str_real_len = snprintf(str, str_size, fmt, result);
-	if (str_real_len < 0 || (size_t) str_real_len >= str_size) {
-		return IPX_CONVERT_ERR_BUFFER;
-	}
+    const char *fmt = (size == sizeof(float))
+        ? ("%." IPX_CONVERT_STRX(FLT_DIG) "g")  // float precision
+        : ("%." IPX_CONVERT_STRX(DBL_DIG) "g"); // double precision
+    int str_real_len = snprintf(str, str_size, fmt, result);
+    if (str_real_len < 0 || (size_t) str_real_len >= str_size) {
+        return IPX_CONVERT_ERR_BUFFER;
+    }
 
-	return str_real_len;
+    return str_real_len;
 }
 
 int
 ipx_bool2str(const void *field, char *str, size_t str_size)
 {
-	bool result;
-	if (ipx_get_bool(field, 1, &result) != 0) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    bool result;
+    if (ipx_get_bool(field, 1, &result) != 0) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	const char *bool_str;
-	size_t bool_len;
+    const char *bool_str;
+    size_t bool_len;
 
-	if (result) {
-		// True
-		bool_str = IPX_CONVERT_STR_TRUE;
-		bool_len = IPX_CONVERT_STRLEN_TRUE;
-	} else {
-		// False
-		bool_str = IPX_CONVERT_STR_FALSE;
-		bool_len = IPX_CONVERT_STRLEN_FALSE;
-	}
+    if (result) {
+        // True
+        bool_str = IPX_CONVERT_STR_TRUE;
+        bool_len = IPX_CONVERT_STRLEN_TRUE;
+    } else {
+        // False
+        bool_str = IPX_CONVERT_STR_FALSE;
+        bool_len = IPX_CONVERT_STRLEN_FALSE;
+    }
 
-	if (str_size < bool_len) {
-		return IPX_CONVERT_ERR_BUFFER;
-	}
+    if (str_size < bool_len) {
+        return IPX_CONVERT_ERR_BUFFER;
+    }
 
-	memcpy(str, bool_str, bool_len);
-	return (int) (bool_len - 1); // Cast is OK. Max. size is length of "false".
+    memcpy(str, bool_str, bool_len);
+    return (int) (bool_len - 1); // Cast is OK. Max. size is length of "false".
 }
 
 int
 ipx_datetime2str_be(const void *field, size_t size, enum ipx_element_type type,
-	char *str, size_t str_size, enum ipx_convert_time_fmt fmt)
+    char *str, size_t str_size, enum ipx_convert_time_fmt fmt)
 {
-	struct timespec ts;
-	if (ipx_get_datetime_hp_be(field, size, type, &ts) != IPX_CONVERT_OK) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    struct timespec ts;
+    if (ipx_get_datetime_hp_be(field, size, type, &ts) != IPX_CONVERT_OK) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
     // Convert common part
     bool utc_time = true;
@@ -145,7 +145,7 @@ ipx_datetime2str_be(const void *field, size_t size, enum ipx_element_type type,
         fmt &= 0x0F;
     }
 
-	struct tm timestamp;
+    struct tm timestamp;
     if (utc_time) {
         // Convert to UTC time
         if (!gmtime_r(&ts.tv_sec, &timestamp)) {
@@ -158,37 +158,37 @@ ipx_datetime2str_be(const void *field, size_t size, enum ipx_element_type type,
         }
     }
 
-	size_t size_used = strftime(str, str_size, "%FT%T", &timestamp);
-	if (size_used == 0) {
-		return IPX_CONVERT_ERR_BUFFER;
-	}
+    size_t size_used = strftime(str, str_size, "%FT%T", &timestamp);
+    if (size_used == 0) {
+        return IPX_CONVERT_ERR_BUFFER;
+    }
 
     size_t size_remain = str_size - size_used;
     char *str_remain = str + size_used;
 
-	// Add the faction part
-	uint32_t frac;
-	int frac_width;
+    // Add the faction part
+    uint32_t frac;
+    int frac_width;
 
-	switch (fmt) {
-	case IPX_CONVERT_TF_SEC_UTC:
+    switch (fmt) {
+    case IPX_CONVERT_TF_SEC_UTC:
         frac_width = 0;
-		break;
-	case IPX_CONVERT_TF_MSEC_UTC:
-		frac = (uint32_t) (ts.tv_nsec / 1000000);
-		frac_width = 3;
-		break;
-	case IPX_CONVERT_TF_USEC_UTC:
-		frac = (uint32_t) (ts.tv_nsec / 1000);
-		frac_width = 6;
-		break;
-	case IPX_CONVERT_TF_NSEC_UTC:
-		frac = (uint32_t) (ts.tv_nsec);
-		frac_width = 9;
-		break;
-	default:
-		return IPX_CONVERT_ERR_ARG;
-	}
+        break;
+    case IPX_CONVERT_TF_MSEC_UTC:
+        frac = (uint32_t) (ts.tv_nsec / 1000000);
+        frac_width = 3;
+        break;
+    case IPX_CONVERT_TF_USEC_UTC:
+        frac = (uint32_t) (ts.tv_nsec / 1000);
+        frac_width = 6;
+        break;
+    case IPX_CONVERT_TF_NSEC_UTC:
+        frac = (uint32_t) (ts.tv_nsec);
+        frac_width = 9;
+        break;
+    default:
+        return IPX_CONVERT_ERR_ARG;
+    }
 
     if (frac_width > 0) {
         int ret = snprintf(str_remain, size_remain, ".%0*" PRIu32, frac_width, frac);
@@ -209,7 +209,7 @@ ipx_datetime2str_be(const void *field, size_t size, enum ipx_element_type type,
 
         str_remain[0] = 'Z';
         str_remain[1] = '\0';
-        size_used += 2;
+        size_used += 1; // Used size excludes the termination null byte!
     } else {
         size_t ret = strftime(str_remain, size_remain, "%z", &timestamp);
         if (ret == 0) {
@@ -218,75 +218,79 @@ ipx_datetime2str_be(const void *field, size_t size, enum ipx_element_type type,
         size_used += ret;
     }
 
-	return (int) size_used;
+    return (int) size_used;
 }
 
 int
-ipx_mac2str(const void *field, char *str, size_t str_size)
+ipx_mac2str(const void *field, size_t size, char *str, size_t str_size)
 {
-	// Get a copy of the MAC address
-	uint8_t mac[6];
-	if (ipx_get_mac(field, sizeof(mac), &mac) != IPX_CONVERT_OK) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    // Get a copy of the MAC address
+    uint8_t mac[6];
+    if (ipx_get_mac(field, size, &mac) != IPX_CONVERT_OK) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	// Convert to string
-	int ret = snprintf(str, str_size, "%02X:%02X:%02X:%02X:%02X:%02X",
-			mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-	if (ret != IPX_CONVERT_STRLEN_MAC) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    if (str_size < IPX_CONVERT_STRLEN_MAC) {
+        return IPX_CONVERT_ERR_BUFFER;
+    }
 
-	return IPX_CONVERT_STRLEN_MAC;
+    // Convert to string
+    int ret = snprintf(str, str_size, "%02X:%02X:%02X:%02X:%02X:%02X",
+            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    if (ret + 1 != IPX_CONVERT_STRLEN_MAC) { // +1 = '\0'
+        return IPX_CONVERT_ERR_ARG;
+    }
+
+    return ret;
 }
 
 int
 ipx_ip2str(const void *field, size_t size, char *str, size_t str_size)
 {
-	if (size == 4U) {
-		if (!inet_ntop(AF_INET, field, str, str_size)) {
-			return IPX_CONVERT_ERR_BUFFER;
-		}
+    if (size == 4U) {
+        if (!inet_ntop(AF_INET, field, str, str_size)) {
+            return IPX_CONVERT_ERR_BUFFER;
+        }
 
-		return (int) strlen(str);
-	}
+        return (int) strlen(str);
+    }
 
-	if (size == 16U) {
-		if (!inet_ntop(AF_INET6, field, str, str_size)) {
-			return IPX_CONVERT_ERR_BUFFER;
-		}
+    if (size == 16U) {
+        if (!inet_ntop(AF_INET6, field, str, str_size)) {
+            return IPX_CONVERT_ERR_BUFFER;
+        }
 
-		return (int) strlen(str);
-	}
+        return (int) strlen(str);
+    }
 
-	return IPX_CONVERT_ERR_ARG;
+    return IPX_CONVERT_ERR_ARG;
 }
 
 int
 ipx_octet_array2str(const void *field, size_t size, char *str, size_t str_size)
 {
-	size_t real_len = (2 * size) + 1; // 2 characters per byte + '\0'
-	if (real_len > str_size) {
-		return IPX_CONVERT_ERR_BUFFER;
-	}
+    size_t real_len = (2 * size) + 1; // 2 characters per byte + '\0'
+    if (real_len > str_size) {
+        return IPX_CONVERT_ERR_BUFFER;
+    }
 
-	const uint8_t *field_ptr = field;
+    const uint8_t *field_ptr = field;
 
-	while (size > 0) {
-		// Convert byte to a pair of hexadecimal digits
-		uint8_t byte;
-		byte = ((*field_ptr) & 0xF0) >> 4;
-		str[0] = (byte < 10) ? ('0' + byte) : ('A' - 10 + byte);
-		byte = (*field_ptr) & 0x0F;
-		str[1] = (byte < 10) ? ('0' + byte) : ('A' - 10 + byte);
+    while (size > 0) {
+        // Convert byte to a pair of hexadecimal digits
+        uint8_t byte;
+        byte = ((*field_ptr) & 0xF0) >> 4;
+        str[0] = (byte < 10) ? ('0' + byte) : ('A' - 10 + byte);
+        byte = (*field_ptr) & 0x0F;
+        str[1] = (byte < 10) ? ('0' + byte) : ('A' - 10 + byte);
 
-		str += 2;
-		field_ptr++;
-		size--;
-	}
+        str += 2;
+        field_ptr++;
+        size--;
+    }
 
-	*str = '\0';
-	return (int) (real_len - 1); // Cast is OK (max. value is 2*(2^16))
+    *str = '\0';
+    return (int) (real_len - 1); // Cast is OK (max. value is 2*(2^16))
 }
 
 /**
@@ -302,32 +306,32 @@ ipx_octet_array2str(const void *field, size_t size, char *str, size_t str_size)
 static inline int
 utf8char_is_valid(const uint8_t *str, size_t len)
 {
-	if ((str[0] & 0x80) == 0) {                // 0xxx xxxx
-		// Do nothing...
-		return 1;
-	}
+    if ((str[0] & 0x80) == 0) {                // 0xxx xxxx
+        // Do nothing...
+        return 1;
+    }
 
-	if ((str[0] & 0xE0) == 0xC0 && len >= 2) { // 110x xxxx + 1 more byte
-		// Check the second byte (must be 10xx xxxx)
-		return ((str[1] & 0xC0) == 0x80) ? 2 : 0;
-	}
+    if ((str[0] & 0xE0) == 0xC0 && len >= 2) { // 110x xxxx + 1 more byte
+        // Check the second byte (must be 10xx xxxx)
+        return ((str[1] & 0xC0) == 0x80) ? 2 : 0;
+    }
 
-	if ((str[0] & 0xF0) == 0xE0 && len >= 3) { // 1110 xxxx + 2 more bytes
-		// Check 2 tailing bytes (each must be 10xx xxxx)
-		uint16_t tail = *((const uint16_t *) &str[1]);
-		return ((tail & 0xC0C0) == 0x8080) ? 3 : 0;
-	}
+    if ((str[0] & 0xF0) == 0xE0 && len >= 3) { // 1110 xxxx + 2 more bytes
+        // Check 2 tailing bytes (each must be 10xx xxxx)
+        uint16_t tail = *((const uint16_t *) &str[1]);
+        return ((tail & 0xC0C0) == 0x8080) ? 3 : 0;
+    }
 
-	if ((str[0] & 0xF8) == 0xF0 && len >= 4) { // 1111 0xxx + 3 more bytes
-		// Check 3 tailing bytes (each must be 10xx xxxx)
-		uint32_t tail = *((const uint32_t *) &str[0]);
-		// Change the first byte for easier comparision
-		*(uint8_t *) &tail = 0x80; // Little/big endian compatible solution
-		return ((tail & 0xC0C0C0C0) == 80808080) ? 4 : 0;
-	}
+    if ((str[0] & 0xF8) == 0xF0 && len >= 4) { // 1111 0xxx + 3 more bytes
+        // Check 3 tailing bytes (each must be 10xx xxxx)
+        uint32_t tail = *((const uint32_t *) &str[0]);
+        // Change the first byte for easier comparision
+        *(uint8_t *) &tail = 0x80; // Little/big endian compatible solution
+        return ((tail & 0xC0C0C0C0) == 80808080) ? 4 : 0;
+    }
 
-	// Invalid character
-	return 0;
+    // Invalid character
+    return 0;
 }
 
 /**
@@ -340,18 +344,18 @@ utf8char_is_valid(const uint8_t *str, size_t len)
 static inline bool
 utf8char_is_control(const uint8_t *str, size_t len)
 {
-	(void) len;
-	// Check C0 control characters
-	if (str[0] <= 0x1F || str[0] == 0x7F) {
-		return true;
-	}
+    (void) len;
+    // Check C0 control characters
+    if (str[0] <= 0x1F || str[0] == 0x7F) {
+        return true;
+    }
 
-	// Check C1 control characters
-	if (str[0] >= 0x80 && str[0] <= 0x9F) {
-		return true;
-	}
+    // Check C1 control characters
+    if (str[0] >= 0x80 && str[0] <= 0x9F) {
+        return true;
+    }
 
-	return false;
+    return false;
 }
 
 /**
@@ -367,150 +371,150 @@ utf8char_is_control(const uint8_t *str, size_t len)
 static inline bool
 utf8char_is_escapable(const uint8_t *str, size_t len, uint8_t *repl)
 {
-	(void) len;
-	if ((str[0] & 0x80) != 0) {
-		// Only 1 byte characters can be escapable (for now)
-		return false;
-	}
+    (void) len;
+    if ((str[0] & 0x80) != 0) {
+        // Only 1 byte characters can be escapable (for now)
+        return false;
+    }
 
-	uint8_t new_char;
-	const char old_char = (char) *str;
-	switch (old_char) {
-	case '\n': new_char = 'n'; break;
-	case '\r': new_char = 'r'; break;
-	case '\t': new_char = 't'; break;
-	case '\b': new_char = 'b'; break;
-	case '\f': new_char = 'f'; break;
-	case '\v': new_char = 'v'; break;
-	default: return false;
-	}
+    uint8_t new_char;
+    const char old_char = (char) *str;
+    switch (old_char) {
+    case '\n': new_char = 'n'; break;
+    case '\r': new_char = 'r'; break;
+    case '\t': new_char = 't'; break;
+    case '\b': new_char = 'b'; break;
+    case '\f': new_char = 'f'; break;
+    case '\v': new_char = 'v'; break;
+    default: return false;
+    }
 
-	if (repl != NULL) {
-		*repl = new_char;
-	}
+    if (repl != NULL) {
+        *repl = new_char;
+    }
 
-	return true;
+    return true;
 }
 
 int
 ipx_string2str(const void *field, size_t size, char *str, size_t str_size)
 {
-	if (size + 1 > str_size) { // "+1" for '\0'
-		// The output buffer is definitely small
-		return IPX_CONVERT_ERR_BUFFER;
-	}
+    if (size + 1 > str_size) { // "+1" for '\0'
+        // The output buffer is definitely small
+        return IPX_CONVERT_ERR_BUFFER;
+    }
 
-	unsigned int step;
-	size_t pos_copy = 0; // Start of "copy" region
-	uint8_t subst; // Replacement character for escapable characters
+    unsigned int step;
+    size_t pos_copy = 0; // Start of "copy" region
+    uint8_t subst; // Replacement character for escapable characters
 
-	const uint8_t *ptr_in = (const uint8_t *) field;
-	uint8_t *ptr_out = (uint8_t *) str;
-	size_t pos_out = 0; // Position in the output buffer
+    const uint8_t *ptr_in = (const uint8_t *) field;
+    uint8_t *ptr_out = (uint8_t *) str;
+    size_t pos_out = 0; // Position in the output buffer
 
-	for (size_t pos_in = 0; pos_in < size; pos_in += step) {
-		const uint8_t *char_ptr = ptr_in + pos_in;
-		const size_t char_max = size - pos_in; // Maximum character length
+    for (size_t pos_in = 0; pos_in < size; pos_in += step) {
+        const uint8_t *char_ptr = ptr_in + pos_in;
+        const size_t char_max = size - pos_in; // Maximum character length
 
-		int  is_valid =     utf8char_is_valid(char_ptr, char_max);
-		bool is_escapable = utf8char_is_escapable(char_ptr, char_max, &subst);
-		bool is_control =   utf8char_is_control(char_ptr, char_max);
+        int  is_valid =     utf8char_is_valid(char_ptr, char_max);
+        bool is_escapable = utf8char_is_escapable(char_ptr, char_max, &subst);
+        bool is_control =   utf8char_is_control(char_ptr, char_max);
 
-		// Size of the current character
-		step = (is_valid > 0) ? (unsigned int) is_valid : 1;
+        // Size of the current character
+        step = (is_valid > 0) ? (unsigned int) is_valid : 1;
 
-		if (is_valid && !is_escapable && !is_control) {
-			// This character will be just copied
-			continue;
-		}
+        if (is_valid && !is_escapable && !is_control) {
+            // This character will be just copied
+            continue;
+        }
 
-		// Interpretation of the character must be changed
-		const size_t copy_len = pos_in - pos_copy;
-		size_t out_remaining = str_size - pos_out;
+        // Interpretation of the character must be changed
+        const size_t copy_len = pos_in - pos_copy;
+        size_t out_remaining = str_size - pos_out;
 
-		// Copy unchanged characters
-		if (copy_len > out_remaining) {
-			return IPX_CONVERT_ERR_BUFFER;
-		}
-		memcpy(&ptr_out[pos_out], &ptr_in[pos_copy], copy_len);
-		out_remaining -= copy_len;
-		pos_out += copy_len;
-		pos_copy = pos_in + 1; // Next time start from the next character
+        // Copy unchanged characters
+        if (copy_len > out_remaining) {
+            return IPX_CONVERT_ERR_BUFFER;
+        }
+        memcpy(&ptr_out[pos_out], &ptr_in[pos_copy], copy_len);
+        out_remaining -= copy_len;
+        pos_out += copy_len;
+        pos_copy = pos_in + 1; // Next time start from the next character
 
-		// Is it an escapable character?
-		if (is_escapable) {
-			const size_t subst_len = 2U;
-			if (out_remaining < subst_len) {
-				return IPX_CONVERT_ERR_BUFFER;
-			}
+        // Is it an escapable character?
+        if (is_escapable) {
+            const size_t subst_len = 2U;
+            if (out_remaining < subst_len) {
+                return IPX_CONVERT_ERR_BUFFER;
+            }
 
-			ptr_out[pos_out] = '\\';
-			ptr_out[pos_out + 1] = subst;
-			pos_out += subst_len;
-			continue;
-		}
+            ptr_out[pos_out] = '\\';
+            ptr_out[pos_out + 1] = subst;
+            pos_out += subst_len;
+            continue;
+        }
 
-		// Is it a control character?
-		if (is_control) {
-			const size_t subst_len = 4U;
-			if (out_remaining < subst_len) {
-				return IPX_CONVERT_ERR_BUFFER;
-			}
+        // Is it a control character?
+        if (is_control) {
+            const size_t subst_len = 4U;
+            if (out_remaining < subst_len) {
+                return IPX_CONVERT_ERR_BUFFER;
+            }
 
-			uint8_t hex;
-			ptr_out[pos_out] = '\\';
-			ptr_out[pos_out + 1] = 'x';
+            uint8_t hex;
+            ptr_out[pos_out] = '\\';
+            ptr_out[pos_out + 1] = 'x';
 
-			hex = ((*char_ptr) & 0xF0) >> 4;
-			ptr_out[pos_out + 2] = (hex < 10) ? ('0' + hex) : ('A' - 10 + hex);
-			hex = (*char_ptr) & 0x0F;
-			ptr_out[pos_out + 3] = (hex < 10) ? ('0' + hex) : ('A' - 10 + hex);
-			pos_out += subst_len;
-			continue;
-		}
+            hex = ((*char_ptr) & 0xF0) >> 4;
+            ptr_out[pos_out + 2] = (hex < 10) ? ('0' + hex) : ('A' - 10 + hex);
+            hex = (*char_ptr) & 0x0F;
+            ptr_out[pos_out + 3] = (hex < 10) ? ('0' + hex) : ('A' - 10 + hex);
+            pos_out += subst_len;
+            continue;
+        }
 
-		// Invalid character -> replace with "REPLACEMENT CHARACTER"
-		const size_t subst_len = 3U;
-		if (out_remaining < subst_len) {
-			return IPX_CONVERT_ERR_BUFFER;
-		}
+        // Invalid character -> replace with "REPLACEMENT CHARACTER"
+        const size_t subst_len = 3U;
+        if (out_remaining < subst_len) {
+            return IPX_CONVERT_ERR_BUFFER;
+        }
 
-		// Character U+FFFD in UTF8 encoding
-		ptr_out[pos_out] = 0xEF;
-		ptr_out[pos_out + 1] = 0xBF;
-		ptr_out[pos_out + 2] = 0xBD;
-		pos_out += subst_len;
-	}
+        // Character U+FFFD in UTF8 encoding
+        ptr_out[pos_out] = 0xEF;
+        ptr_out[pos_out + 1] = 0xBF;
+        ptr_out[pos_out + 2] = 0xBD;
+        pos_out += subst_len;
+    }
 
-	// Copy the rest and add termination symbol
-	const size_t copy_len = size - pos_copy;
-	const size_t out_remaining = str_size - pos_out;
+    // Copy the rest and add termination symbol
+    const size_t copy_len = size - pos_copy;
+    const size_t out_remaining = str_size - pos_out;
 
-	if (copy_len + 1 > out_remaining) { // "+1" for '\0'
-		return IPX_CONVERT_ERR_BUFFER;
-	}
-	memcpy(&ptr_out[pos_out], &ptr_in[pos_copy], copy_len);
-	pos_out += copy_len;
-	ptr_out[pos_out] = '\0';
-	return (int) pos_out;
+    if (copy_len + 1 > out_remaining) { // "+1" for '\0'
+        return IPX_CONVERT_ERR_BUFFER;
+    }
+    memcpy(&ptr_out[pos_out], &ptr_in[pos_copy], copy_len);
+    pos_out += copy_len;
+    ptr_out[pos_out] = '\0';
+    return (int) pos_out;
 }
 
 int
 ipx_string_utf8check(const void *field, size_t size)
 {
-	int step;
+    int step;
 
-	for (size_t idx = 0; idx < size; idx += step) {
-		const uint8_t *ptr = ((const uint8_t *) field) + idx;
-		const size_t remaining = size - idx;
+    for (size_t idx = 0; idx < size; idx += step) {
+        const uint8_t *ptr = ((const uint8_t *) field) + idx;
+        const size_t remaining = size - idx;
 
-		step = utf8char_is_valid(ptr, remaining);
-		if (step == 0) {
-			return IPX_CONVERT_ERR_ARG;
-		}
-	}
+        step = utf8char_is_valid(ptr, remaining);
+        if (step == 0) {
+            return IPX_CONVERT_ERR_ARG;
+        }
+    }
 
-	return IPX_CONVERT_OK;
+    return IPX_CONVERT_OK;
 }
 
 

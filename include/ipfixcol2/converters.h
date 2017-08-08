@@ -68,7 +68,7 @@
 
 // Check byte order
 #if (__BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__ \
-		&& __BYTE_ORDER__ != __ORDER_BIG_ENDIAN__)
+        && __BYTE_ORDER__ != __ORDER_BIG_ENDIAN__)
 #error Unsupported endianness of the machine.
 #endif
 
@@ -137,57 +137,57 @@ static_assert(sizeof(float)  == sizeof(uint32_t), "Float is not 4 bytes long");
 static inline int
 ipx_set_uint_be(void *field, size_t size, uint64_t value)
 {
-	switch (size) {
-	case 8:
-		*((uint64_t *) field) = htobe64(value);
-		return IPX_CONVERT_OK;
+    switch (size) {
+    case 8:
+        *((uint64_t *) field) = htobe64(value);
+        return IPX_CONVERT_OK;
 
-	case 4:
-		if (value > UINT32_MAX) {
-			*((uint32_t *) field) = UINT32_MAX; // byte conversion not required
-			return IPX_CONVERT_ERR_TRUNC;
-		}
+    case 4:
+        if (value > UINT32_MAX) {
+            *((uint32_t *) field) = UINT32_MAX; // byte conversion not required
+            return IPX_CONVERT_ERR_TRUNC;
+        }
 
-		*((uint32_t *) field) = htonl((uint32_t) value);
-		return IPX_CONVERT_OK;
+        *((uint32_t *) field) = htonl((uint32_t) value);
+        return IPX_CONVERT_OK;
 
-	case 2:
-		if (value > UINT16_MAX) {
-			*((uint16_t *) field) = UINT16_MAX; // byte conversion not required
-			return IPX_CONVERT_ERR_TRUNC;
-		}
+    case 2:
+        if (value > UINT16_MAX) {
+            *((uint16_t *) field) = UINT16_MAX; // byte conversion not required
+            return IPX_CONVERT_ERR_TRUNC;
+        }
 
-		*((uint16_t *) field) = htons((uint16_t) value);
-		return IPX_CONVERT_OK;
+        *((uint16_t *) field) = htons((uint16_t) value);
+        return IPX_CONVERT_OK;
 
-	case 1:
-		if (value > UINT8_MAX) {
-			*((uint8_t *) field) = UINT8_MAX;
-			return IPX_CONVERT_ERR_TRUNC;
-		}
+    case 1:
+        if (value > UINT8_MAX) {
+            *((uint8_t *) field) = UINT8_MAX;
+            return IPX_CONVERT_ERR_TRUNC;
+        }
 
-		*((uint8_t *) field) = (uint8_t) value;
-		return IPX_CONVERT_OK;
+        *((uint8_t *) field) = (uint8_t) value;
+        return IPX_CONVERT_OK;
 
-	default:
-		// Other sizes (3,5,6,7)
-		break;
-	}
+    default:
+        // Other sizes (3,5,6,7)
+        break;
+    }
 
-	if (size == 0 || size > 8U) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    if (size == 0 || size > 8U) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	const uint64_t over_limit = 1ULL << (size * 8U);
-	if (value >= over_limit) {
-		value = UINT64_MAX; // byte conversion not required (all bits set)
-		memcpy(field, &value, size);
-		return IPX_CONVERT_ERR_TRUNC;
-	}
+    const uint64_t over_limit = 1ULL << (size * 8U);
+    if (value >= over_limit) {
+        value = UINT64_MAX; // byte conversion not required (all bits set)
+        memcpy(field, &value, size);
+        return IPX_CONVERT_ERR_TRUNC;
+    }
 
-	value = htobe64(value);
-	memcpy(field, &(((uint8_t *) &value)[8U - size]), size);
-	return IPX_CONVERT_OK;
+    value = htobe64(value);
+    memcpy(field, &(((uint8_t *) &value)[8U - size]), size);
+    return IPX_CONVERT_OK;
 }
 
 /**
@@ -208,77 +208,77 @@ ipx_set_uint_be(void *field, size_t size, uint64_t value)
 static inline int
 ipx_set_int_be(void *field, size_t size, int64_t value)
 {
-	switch (size) {
-	case 8:
-		*((int64_t *) field) = (int64_t) htobe64((uint64_t) value);
-		return IPX_CONVERT_OK;
+    switch (size) {
+    case 8:
+        *((int64_t *) field) = (int64_t) htobe64((uint64_t) value);
+        return IPX_CONVERT_OK;
 
-	case 4:
-		if (value > INT32_MAX) {
-			*((int32_t *) field) = (int32_t) htonl((int32_t) INT32_MAX);
-			return IPX_CONVERT_ERR_TRUNC;
-		}
+    case 4:
+        if (value > INT32_MAX) {
+            *((int32_t *) field) = (int32_t) htonl((int32_t) INT32_MAX);
+            return IPX_CONVERT_ERR_TRUNC;
+        }
 
-		if (value < INT32_MIN) {
-			*((int32_t *) field) = (int32_t) htonl((int32_t) INT32_MIN);
-			return IPX_CONVERT_ERR_TRUNC;
-		}
+        if (value < INT32_MIN) {
+            *((int32_t *) field) = (int32_t) htonl((int32_t) INT32_MIN);
+            return IPX_CONVERT_ERR_TRUNC;
+        }
 
-		*((int32_t *) field) = (int32_t) htonl((int32_t) value);
-		return IPX_CONVERT_OK;
+        *((int32_t *) field) = (int32_t) htonl((int32_t) value);
+        return IPX_CONVERT_OK;
 
-	case 2:
-		if (value > INT16_MAX) {
-			*((int16_t *) field) = (int16_t) htons((int16_t) INT16_MAX);
-			return IPX_CONVERT_ERR_TRUNC;
-		}
+    case 2:
+        if (value > INT16_MAX) {
+            *((int16_t *) field) = (int16_t) htons((int16_t) INT16_MAX);
+            return IPX_CONVERT_ERR_TRUNC;
+        }
 
-		if (value < INT16_MIN) {
-			*((int16_t *) field) = (int16_t) htons((int16_t) INT16_MIN);
-			return IPX_CONVERT_ERR_TRUNC;
-		}
+        if (value < INT16_MIN) {
+            *((int16_t *) field) = (int16_t) htons((int16_t) INT16_MIN);
+            return IPX_CONVERT_ERR_TRUNC;
+        }
 
-		*((int16_t *) field) = (int16_t) htons((int16_t) value);
-		return IPX_CONVERT_OK;
+        *((int16_t *) field) = (int16_t) htons((int16_t) value);
+        return IPX_CONVERT_OK;
 
-	case 1:
-		if (value > INT8_MAX) {
-			*((int8_t *) field) = INT8_MAX;
-			return IPX_CONVERT_ERR_TRUNC;
-		}
+    case 1:
+        if (value > INT8_MAX) {
+            *((int8_t *) field) = INT8_MAX;
+            return IPX_CONVERT_ERR_TRUNC;
+        }
 
-		if (value < INT8_MIN) {
-			*((int8_t *) field) = INT8_MIN;
-			return IPX_CONVERT_ERR_TRUNC;
-		}
+        if (value < INT8_MIN) {
+            *((int8_t *) field) = INT8_MIN;
+            return IPX_CONVERT_ERR_TRUNC;
+        }
 
-		*((int8_t *) field) = (int8_t) value;
-		return IPX_CONVERT_OK;
+        *((int8_t *) field) = (int8_t) value;
+        return IPX_CONVERT_OK;
 
-	default:
-		// Other sizes (3,5,6,7)
-		break;
-	}
+    default:
+        // Other sizes (3,5,6,7)
+        break;
+    }
 
-	if (size == 0 || size > 8U) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    if (size == 0 || size > 8U) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	const int64_t over_limit = (((int64_t) INT64_MAX) >> ((8U - size) * 8U));
-	bool over = false;
+    const int64_t over_limit = (((int64_t) INT64_MAX) >> ((8U - size) * 8U));
+    bool over = false;
 
-	if (value > over_limit) {
-		value = (int64_t) htobe64(over_limit);
-		over = true;
-	} else if (value < ~over_limit) {
-		value = (int64_t) htobe64(~over_limit);
-		over = true;
-	} else {
-		value = (int64_t) htobe64(value);
-	}
+    if (value > over_limit) {
+        value = (int64_t) htobe64(over_limit);
+        over = true;
+    } else if (value < ~over_limit) {
+        value = (int64_t) htobe64(~over_limit);
+        over = true;
+    } else {
+        value = (int64_t) htobe64(value);
+    }
 
-	memcpy(field, &(((int8_t *) &value)[8U - size]), size);
-	return over ? IPX_CONVERT_ERR_TRUNC : IPX_CONVERT_OK;
+    memcpy(field, &(((int8_t *) &value)[8U - size]), size);
+    return over ? IPX_CONVERT_ERR_TRUNC : IPX_CONVERT_OK;
 }
 
 /**
@@ -301,41 +301,41 @@ ipx_set_int_be(void *field, size_t size, int64_t value)
 static inline int
 ipx_set_float_be(void *field, size_t size, double value)
 {
-	if (size == sizeof(uint64_t)) {
-		// 64 bits, we have static assert for sizeof(double) == sizeof(uint64_t)
-		union {
-			uint64_t u64;
-			double   dbl;
-		} cast_helper;
+    if (size == sizeof(uint64_t)) {
+        // 64 bits, we have static assert for sizeof(double) == sizeof(uint64_t)
+        union {
+            uint64_t u64;
+            double   dbl;
+        } cast_helper;
 
-		cast_helper.dbl = value;
-		*(uint64_t *) field = htobe64(cast_helper.u64);
-		return IPX_CONVERT_OK;
+        cast_helper.dbl = value;
+        *(uint64_t *) field = htobe64(cast_helper.u64);
+        return IPX_CONVERT_OK;
 
-	} else if (size == sizeof(uint32_t)) {
-		// 32 bits, we have static assert for sizeof(float) == sizeof(uint32_t)
-		union {
-			uint32_t u32;
-			float    flt;
-		} cast_helper;
-		bool over = false;
+    } else if (size == sizeof(uint32_t)) {
+        // 32 bits, we have static assert for sizeof(float) == sizeof(uint32_t)
+        union {
+            uint32_t u32;
+            float    flt;
+        } cast_helper;
+        bool over = false;
 
-		if (value < -FLT_MAX && isnormal(value)) {
-			cast_helper.flt = -FLT_MAX;
-			over = true;
-		} else if (value > FLT_MAX && isnormal(value)) {
-			cast_helper.flt = FLT_MAX;
-			over = true;
-		} else {
-			cast_helper.flt = (float) value;
-		}
+        if (value < -FLT_MAX && isnormal(value)) {
+            cast_helper.flt = -FLT_MAX;
+            over = true;
+        } else if (value > FLT_MAX && isnormal(value)) {
+            cast_helper.flt = FLT_MAX;
+            over = true;
+        } else {
+            cast_helper.flt = (float) value;
+        }
 
-		*(uint32_t *) field = htonl(cast_helper.u32);
-		return over ? IPX_CONVERT_ERR_TRUNC : IPX_CONVERT_OK;
+        *(uint32_t *) field = htonl(cast_helper.u32);
+        return over ? IPX_CONVERT_ERR_TRUNC : IPX_CONVERT_OK;
 
-	} else {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    } else {
+        return IPX_CONVERT_ERR_ARG;
+    }
 }
 
 /**
@@ -361,54 +361,54 @@ ipx_set_float_be(void *field, size_t size, double value)
  */
 static inline int
 ipx_set_datetime_lp_be(void *field, size_t size, enum ipx_element_type type,
-	uint64_t value)
+    uint64_t value)
 {
-	// One second to milliseconds
-	const uint64_t S1E3 = 1000ULL;
+    // One second to milliseconds
+    const uint64_t S1E3 = 1000ULL;
 
-	if ((size != sizeof(uint64_t) || type == IPX_ET_DATE_TIME_SECONDS)
-			&& (size != sizeof(uint32_t) || type != IPX_ET_DATE_TIME_SECONDS)) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    if ((size != sizeof(uint64_t) || type == IPX_ET_DATE_TIME_SECONDS)
+            && (size != sizeof(uint32_t) || type != IPX_ET_DATE_TIME_SECONDS)) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	switch (type) {
-	case IPX_ET_DATE_TIME_SECONDS:
-		*(uint32_t *) field = htonl(value / S1E3); // To seconds
-		return IPX_CONVERT_OK;
+    switch (type) {
+    case IPX_ET_DATE_TIME_SECONDS:
+        *(uint32_t *) field = htonl(value / S1E3); // To seconds
+        return IPX_CONVERT_OK;
 
-	case IPX_ET_DATE_TIME_MILLISECONDS:
-		*(uint64_t *) field = htobe64(value);
-		return IPX_CONVERT_OK;
+    case IPX_ET_DATE_TIME_MILLISECONDS:
+        *(uint64_t *) field = htobe64(value);
+        return IPX_CONVERT_OK;
 
-	case IPX_ET_DATE_TIME_MICROSECONDS:
-	case IPX_ET_DATE_TIME_NANOSECONDS: {
-		// Conversion from UNIX timestamp to NTP 64bit timestamp
-		uint32_t (*part)[2] = (uint32_t (*)[2]) field;
+    case IPX_ET_DATE_TIME_MICROSECONDS:
+    case IPX_ET_DATE_TIME_NANOSECONDS: {
+        // Conversion from UNIX timestamp to NTP 64bit timestamp
+        uint32_t (*part)[2] = (uint32_t (*)[2]) field;
 
-		// Seconds
-		(*part)[0] = htonl((value / S1E3) + IPX_CONVERT_EPOCHS_DIFF);
+        // Seconds
+        (*part)[0] = htonl((value / S1E3) + IPX_CONVERT_EPOCHS_DIFF);
 
-		// FIXME: use precalculated values (see nemea/unirec -> ur_time.h)
+        // FIXME: use precalculated values (see nemea/unirec -> ur_time.h)
 
-		/*
-		 * Fraction of second (1 / 2^32)
-		 * The "value" uses 1/1000 sec as unit of subsecond fractions and NTP
-		 * uses 1/(2^32) sec as its unit of fractional time.
-		 * Conversion is easy: First, multiply by 2^32, then divide by 1e3.
-		 * Warning: Calculation must use 64bit variable!!!
-		 */
-		uint32_t fraction = ((value % S1E3) << 32) / S1E3;
-		if (type == IPX_ET_DATE_TIME_MICROSECONDS) {
-			fraction &= 0xFFFFF800UL; // Make sure that last 11 bits are zeros
-		}
+        /*
+         * Fraction of second (1 / 2^32)
+         * The "value" uses 1/1000 sec as unit of subsecond fractions and NTP
+         * uses 1/(2^32) sec as its unit of fractional time.
+         * Conversion is easy: First, multiply by 2^32, then divide by 1e3.
+         * Warning: Calculation must use 64bit variable!!!
+         */
+        uint32_t fraction = ((value % S1E3) << 32) / S1E3;
+        if (type == IPX_ET_DATE_TIME_MICROSECONDS) {
+            fraction &= 0xFFFFF800UL; // Make sure that last 11 bits are zeros
+        }
 
-		(*part)[1] = htonl(fraction);
-		}
+        (*part)[1] = htonl(fraction);
+        }
 
-		return IPX_CONVERT_OK;
-	default:
-		return IPX_CONVERT_ERR_ARG;
-	}
+        return IPX_CONVERT_OK;
+    default:
+        return IPX_CONVERT_ERR_ARG;
+    }
 }
 
 /**
@@ -430,53 +430,53 @@ ipx_set_datetime_lp_be(void *field, size_t size, enum ipx_element_type type,
  */
 static inline int
 ipx_set_datetime_hp_be(void *field, size_t size, enum ipx_element_type type,
-	struct timespec ts)
+    struct timespec ts)
 {
-	const uint64_t S1E3 = 1000ULL;       // One second to milliseconds
-	const uint64_t S1E6 = 1000000ULL;    // One second to microseconds
-	const uint64_t S1E9 = 1000000000ULL; // One second to nanoseconds
+    const uint64_t S1E3 = 1000ULL;       // One second to milliseconds
+    const uint64_t S1E6 = 1000000ULL;    // One second to microseconds
+    const uint64_t S1E9 = 1000000000ULL; // One second to nanoseconds
 
-	if ((size != sizeof(uint64_t) || type == IPX_ET_DATE_TIME_SECONDS)
-			&& (size != sizeof(uint32_t) || type != IPX_ET_DATE_TIME_SECONDS)) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    if ((size != sizeof(uint64_t) || type == IPX_ET_DATE_TIME_SECONDS)
+            && (size != sizeof(uint32_t) || type != IPX_ET_DATE_TIME_SECONDS)) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	switch (type) {
-	case IPX_ET_DATE_TIME_SECONDS:
-		*(uint32_t *) field = htonl(ts.tv_sec); // To seconds
-		return IPX_CONVERT_OK;
+    switch (type) {
+    case IPX_ET_DATE_TIME_SECONDS:
+        *(uint32_t *) field = htonl(ts.tv_sec); // To seconds
+        return IPX_CONVERT_OK;
 
-	case IPX_ET_DATE_TIME_MILLISECONDS:
-		*(uint64_t *) field = htobe64((ts.tv_sec * S1E3) + (ts.tv_nsec / S1E6));
-		return IPX_CONVERT_OK;
+    case IPX_ET_DATE_TIME_MILLISECONDS:
+        *(uint64_t *) field = htobe64((ts.tv_sec * S1E3) + (ts.tv_nsec / S1E6));
+        return IPX_CONVERT_OK;
 
-	case IPX_ET_DATE_TIME_MICROSECONDS:
-	case IPX_ET_DATE_TIME_NANOSECONDS: {
-		// Conversion from UNIX timestamp to NTP 64bit timestamp
-		uint32_t (*parts)[2] = (uint32_t (*)[2]) field;
+    case IPX_ET_DATE_TIME_MICROSECONDS:
+    case IPX_ET_DATE_TIME_NANOSECONDS: {
+        // Conversion from UNIX timestamp to NTP 64bit timestamp
+        uint32_t (*parts)[2] = (uint32_t (*)[2]) field;
 
-		// Seconds
-		(*parts)[0] = htonl((uint32_t) ts.tv_sec + IPX_CONVERT_EPOCHS_DIFF);
+        // Seconds
+        (*parts)[0] = htonl((uint32_t) ts.tv_sec + IPX_CONVERT_EPOCHS_DIFF);
 
-		/*
-		 * Fraction of second (1 / 2^32)
-		 * The "ts" uses 1/1e9 sec as unit of subsecond fractions and NTP
-		 * uses 1/(2^32) sec as its unit of fractional time.
-		 * Conversion is easy: First, multiply by 2^32, then divide by 1e9.
-		 * Warning: Calculation must use 64bit variable!!!
-		 */
-		uint32_t fraction = (((uint64_t) ts.tv_nsec) << 32) / S1E9;
-		if (type == IPX_ET_DATE_TIME_MICROSECONDS) {
-			fraction &= 0xFFFFF800UL; // Make sure that last 11 bits are zeros
-		}
+        /*
+         * Fraction of second (1 / 2^32)
+         * The "ts" uses 1/1e9 sec as unit of subsecond fractions and NTP
+         * uses 1/(2^32) sec as its unit of fractional time.
+         * Conversion is easy: First, multiply by 2^32, then divide by 1e9.
+         * Warning: Calculation must use 64bit variable!!!
+         */
+        uint32_t fraction = (((uint64_t) ts.tv_nsec) << 32) / S1E9;
+        if (type == IPX_ET_DATE_TIME_MICROSECONDS) {
+            fraction &= 0xFFFFF800UL; // Make sure that last 11 bits are zeros
+        }
 
-		(*parts)[1] = htonl(fraction);
-		}
+        (*parts)[1] = htonl(fraction);
+        }
 
-		return IPX_CONVERT_OK;
-	default:
-		return IPX_CONVERT_ERR_ARG;
-	}
+        return IPX_CONVERT_OK;
+    default:
+        return IPX_CONVERT_ERR_ARG;
+    }
 }
 
 /**
@@ -494,13 +494,13 @@ ipx_set_datetime_hp_be(void *field, size_t size, enum ipx_element_type type,
 static inline int
 ipx_set_bool(void *field, size_t size, bool value)
 {
-	if (size != 1U) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    if (size != 1U) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	//According to the RFC 7011, section 6.1.5. "true" == 1 and "false" == 2
-	*(uint8_t *) field = value ? 1U : 2U;
-	return IPX_CONVERT_OK;
+    //According to the RFC 7011, section 6.1.5. "true" == 1 and "false" == 2
+    *(uint8_t *) field = value ? 1U : 2U;
+    return IPX_CONVERT_OK;
 }
 
 /**
@@ -521,12 +521,12 @@ ipx_set_bool(void *field, size_t size, bool value)
 static inline int
 ipx_set_ip(void *field, size_t size, const void *value)
 {
-	if (size != 4U && size != 16U) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    if (size != 4U && size != 16U) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	memcpy(field, value, size);
-	return IPX_CONVERT_OK;
+    memcpy(field, value, size);
+    return IPX_CONVERT_OK;
 }
 
 /**
@@ -548,12 +548,12 @@ ipx_set_ip(void *field, size_t size, const void *value)
 static inline int
 ipx_set_mac(void *field, size_t size, const void *value)
 {
-	if (size != 6U) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    if (size != 6U) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	memcpy(field, value, 6U);
-	return IPX_CONVERT_OK;
+    memcpy(field, value, 6U);
+    return IPX_CONVERT_OK;
 }
 
 /**
@@ -575,12 +575,12 @@ ipx_set_mac(void *field, size_t size, const void *value)
 static inline int
 ipx_set_octet_array(void *field, size_t size, const void *value)
 {
-	if (size == 0U) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    if (size == 0U) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	memcpy(field, value, size);
-	return IPX_CONVERT_OK;
+    memcpy(field, value, size);
+    return IPX_CONVERT_OK;
 }
 
 /**
@@ -600,12 +600,12 @@ ipx_set_octet_array(void *field, size_t size, const void *value)
 static inline int
 ipx_set_string(void *field, size_t size, const char *value)
 {
-	if (size == 0U) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    if (size == 0U) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	memcpy(field, value, size);
-	return IPX_CONVERT_OK;
+    memcpy(field, value, size);
+    return IPX_CONVERT_OK;
 }
 
 /**
@@ -633,37 +633,37 @@ ipx_set_string(void *field, size_t size, const char *value)
 static inline int
 ipx_get_uint_be(const void *field, size_t size, uint64_t *value)
 {
-	switch (size) {
-	case 8:
-		*value = be64toh(*(const uint64_t *) field);
-		return IPX_CONVERT_OK;
+    switch (size) {
+    case 8:
+        *value = be64toh(*(const uint64_t *) field);
+        return IPX_CONVERT_OK;
 
-	case 4:
-		*value = ntohl(*(const uint32_t *) field);
-		return IPX_CONVERT_OK;
+    case 4:
+        *value = ntohl(*(const uint32_t *) field);
+        return IPX_CONVERT_OK;
 
-	case 2:
-		*value = ntohs(*(const uint16_t *) field);
-		return IPX_CONVERT_OK;
+    case 2:
+        *value = ntohs(*(const uint16_t *) field);
+        return IPX_CONVERT_OK;
 
-	case 1:
-		*value = *(const uint8_t *) field;
-		return IPX_CONVERT_OK;
+    case 1:
+        *value = *(const uint8_t *) field;
+        return IPX_CONVERT_OK;
 
-	default:
-		// Other sizes (3,5,6,7)
-		break;
-	}
+    default:
+        // Other sizes (3,5,6,7)
+        break;
+    }
 
-	if (size == 0 || size > 8) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    if (size == 0 || size > 8) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	uint64_t new_value = 0;
-	memcpy(&(((uint8_t *) &new_value)[8U - size]), field, size);
+    uint64_t new_value = 0;
+    memcpy(&(((uint8_t *) &new_value)[8U - size]), field, size);
 
-	*value = be64toh(new_value);
-	return IPX_CONVERT_OK;
+    *value = be64toh(new_value);
+    return IPX_CONVERT_OK;
 }
 
 /**
@@ -682,43 +682,43 @@ ipx_get_uint_be(const void *field, size_t size, uint64_t *value)
 static inline int
 ipx_get_int_be(const void *field, size_t size, int64_t *value)
 {
-	switch (size) {
-	case 8:
-		*value = (int64_t) be64toh(*(const uint64_t *) field);
-		return IPX_CONVERT_OK;
+    switch (size) {
+    case 8:
+        *value = (int64_t) be64toh(*(const uint64_t *) field);
+        return IPX_CONVERT_OK;
 
-	case 4:
-		*value = (int32_t) ntohl(*(const uint32_t *) field);
-		return IPX_CONVERT_OK;
+    case 4:
+        *value = (int32_t) ntohl(*(const uint32_t *) field);
+        return IPX_CONVERT_OK;
 
-	case 2:
-		*value = (int16_t) ntohs(*(const uint16_t *) field);
-		return IPX_CONVERT_OK;
+    case 2:
+        *value = (int16_t) ntohs(*(const uint16_t *) field);
+        return IPX_CONVERT_OK;
 
-	case 1:
-		*value = *(const int8_t *) field;
-		return IPX_CONVERT_OK;
+    case 1:
+        *value = *(const int8_t *) field;
+        return IPX_CONVERT_OK;
 
-	default:
-		// Other sizes (3,5,6,7)
-		break;
-	}
+    default:
+        // Other sizes (3,5,6,7)
+        break;
+    }
 
-	if (size == 0U || size > 8U) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    if (size == 0U || size > 8U) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	/*
-	 * Sign extension
-	 * The value is in network-byte-order therefore first bit determines
-	 * the sign of the number. If first bit is set, prepare a new value with
-	 * all bits set (-1). Otherwise with all bits unset (0).
-	 */
-	int64_t new_value = ((*(const uint8_t *) field) & 0x80) ? (-1) : 0;
-	memcpy(&(((int8_t *) &new_value)[8U - size]), field, size);
+    /*
+     * Sign extension
+     * The value is in network-byte-order therefore first bit determines
+     * the sign of the number. If first bit is set, prepare a new value with
+     * all bits set (-1). Otherwise with all bits unset (0).
+     */
+    int64_t new_value = ((*(const uint8_t *) field) & 0x80) ? (-1) : 0;
+    memcpy(&(((int8_t *) &new_value)[8U - size]), field, size);
 
-	*value = be64toh(new_value);
-	return IPX_CONVERT_OK;
+    *value = be64toh(new_value);
+    return IPX_CONVERT_OK;
 }
 
 /**
@@ -737,31 +737,31 @@ ipx_get_int_be(const void *field, size_t size, int64_t *value)
 static inline int
 ipx_get_float_be(const void *field, size_t size, double *value)
 {
-	if (size == sizeof(uint64_t)) {
-		// 64bit, we have static assert for sizeof(double) == sizeof(uint64_t)
-		union {
-			uint64_t u64;
-			double   dbl;
-		} cast_helper;
+    if (size == sizeof(uint64_t)) {
+        // 64bit, we have static assert for sizeof(double) == sizeof(uint64_t)
+        union {
+            uint64_t u64;
+            double   dbl;
+        } cast_helper;
 
-		cast_helper.u64 = be64toh(*(const uint64_t *) field);
-		*value = cast_helper.dbl;
-		return IPX_CONVERT_OK;
+        cast_helper.u64 = be64toh(*(const uint64_t *) field);
+        *value = cast_helper.dbl;
+        return IPX_CONVERT_OK;
 
-	} else if (size == sizeof(uint32_t)) {
-		// 32bit, we have static assert for sizeof(float) == sizeof(uint32_t)
-		union {
-			uint32_t u32;
-			float    flt;
-		} cast_helper;
+    } else if (size == sizeof(uint32_t)) {
+        // 32bit, we have static assert for sizeof(float) == sizeof(uint32_t)
+        union {
+            uint32_t u32;
+            float    flt;
+        } cast_helper;
 
-		cast_helper.u32 = ntohl(*(const uint32_t *) field);
-		*value = cast_helper.flt;
-		return IPX_CONVERT_OK;
+        cast_helper.u32 = ntohl(*(const uint32_t *) field);
+        *value = cast_helper.flt;
+        return IPX_CONVERT_OK;
 
-	} else {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    } else {
+        return IPX_CONVERT_ERR_ARG;
+    }
 }
 
 /**
@@ -789,54 +789,54 @@ ipx_get_float_be(const void *field, size_t size, double *value)
  */
 static inline int
 ipx_get_datetime_lp_be(const void *field, size_t size, enum ipx_element_type type,
-	uint64_t *value)
+    uint64_t *value)
 {
-	// One second to milliseconds
-	const uint64_t S1E3 = 1000ULL;
+    // One second to milliseconds
+    const uint64_t S1E3 = 1000ULL;
 
-	if ((size != sizeof(uint64_t) || type == IPX_ET_DATE_TIME_SECONDS)
-			&& (size != sizeof(uint32_t) || type != IPX_ET_DATE_TIME_SECONDS)) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    if ((size != sizeof(uint64_t) || type == IPX_ET_DATE_TIME_SECONDS)
+            && (size != sizeof(uint32_t) || type != IPX_ET_DATE_TIME_SECONDS)) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	switch (type) {
-	case IPX_ET_DATE_TIME_SECONDS:
-		*value = ntohl(*(const uint32_t *) field) * S1E3;
-		return IPX_CONVERT_OK;
+    switch (type) {
+    case IPX_ET_DATE_TIME_SECONDS:
+        *value = ntohl(*(const uint32_t *) field) * S1E3;
+        return IPX_CONVERT_OK;
 
-	case IPX_ET_DATE_TIME_MILLISECONDS:
-		*value = be64toh(*(const uint64_t *) field);
-		return IPX_CONVERT_OK;
+    case IPX_ET_DATE_TIME_MILLISECONDS:
+        *value = be64toh(*(const uint64_t *) field);
+        return IPX_CONVERT_OK;
 
-	case IPX_ET_DATE_TIME_MICROSECONDS:
-	case IPX_ET_DATE_TIME_NANOSECONDS: {
-		// Conversion from NTP 64bit timestamp to UNIX timestamp
-		const uint32_t (*parts)[2] = (const uint32_t (*)[2]) field;
-		uint64_t result;
+    case IPX_ET_DATE_TIME_MICROSECONDS:
+    case IPX_ET_DATE_TIME_NANOSECONDS: {
+        // Conversion from NTP 64bit timestamp to UNIX timestamp
+        const uint32_t (*parts)[2] = (const uint32_t (*)[2]) field;
+        uint64_t result;
 
-		// Seconds
-		result = (ntohl((*parts)[0]) - IPX_CONVERT_EPOCHS_DIFF) * S1E3;
+        // Seconds
+        result = (ntohl((*parts)[0]) - IPX_CONVERT_EPOCHS_DIFF) * S1E3;
 
-		/*
-		 * Fraction of second (1 / 2^32)
-		 * The "value" uses 1/1000 sec as unit of subsecond fractions and NTP
-		 * uses 1/(2^32) sec as its unit of fractional time.
-		 * Conversion is easy: First, multiply by 1e3, then divide by 2^32.
-		 * Warning: Calculation must use 64bit variable!!!
-		 */
-		uint64_t fraction = ntohl((*parts)[1]);
-		if (type == IPX_ET_DATE_TIME_MICROSECONDS) {
-			fraction &= 0xFFFFF800UL; // Make sure that last 11 bits are zeros
-		}
+        /*
+         * Fraction of second (1 / 2^32)
+         * The "value" uses 1/1000 sec as unit of subsecond fractions and NTP
+         * uses 1/(2^32) sec as its unit of fractional time.
+         * Conversion is easy: First, multiply by 1e3, then divide by 2^32.
+         * Warning: Calculation must use 64bit variable!!!
+         */
+        uint64_t fraction = ntohl((*parts)[1]);
+        if (type == IPX_ET_DATE_TIME_MICROSECONDS) {
+            fraction &= 0xFFFFF800UL; // Make sure that last 11 bits are zeros
+        }
 
-		result += (fraction * S1E3) >> 32;
-		*value = result;
-		}
+        result += (fraction * S1E3) >> 32;
+        *value = result;
+        }
 
-		return IPX_CONVERT_OK;
-	default:
-		return IPX_CONVERT_ERR_ARG;
-	}
+        return IPX_CONVERT_OK;
+    default:
+        return IPX_CONVERT_ERR_ARG;
+    }
 }
 
 /**
@@ -857,74 +857,74 @@ ipx_get_datetime_lp_be(const void *field, size_t size, enum ipx_element_type typ
  */
 static inline int
 ipx_get_datetime_hp_be(const void *field, size_t size, enum ipx_element_type type,
-	struct timespec *ts)
+    struct timespec *ts)
 {
-	const uint64_t S1E3 = 1000ULL;       // One second to milliseconds
-	const uint64_t S1E6 = 1000000ULL;    // One second to microseconds
-	const uint64_t S1E9 = 1000000000ULL; // One second to nanoseconds
+    const uint64_t S1E3 = 1000ULL;       // One second to milliseconds
+    const uint64_t S1E6 = 1000000ULL;    // One second to microseconds
+    const uint64_t S1E9 = 1000000000ULL; // One second to nanoseconds
 
-	if ((size != sizeof(uint64_t) || type == IPX_ET_DATE_TIME_SECONDS)
-			&& (size != sizeof(uint32_t) || type != IPX_ET_DATE_TIME_SECONDS)) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    if ((size != sizeof(uint64_t) || type == IPX_ET_DATE_TIME_SECONDS)
+            && (size != sizeof(uint32_t) || type != IPX_ET_DATE_TIME_SECONDS)) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	switch (type) {
-	case IPX_ET_DATE_TIME_SECONDS:
-		ts->tv_sec = ntohl(*(const uint32_t *) field);
-		ts->tv_nsec = 0;
-		return IPX_CONVERT_OK;
+    switch (type) {
+    case IPX_ET_DATE_TIME_SECONDS:
+        ts->tv_sec = ntohl(*(const uint32_t *) field);
+        ts->tv_nsec = 0;
+        return IPX_CONVERT_OK;
 
-	case IPX_ET_DATE_TIME_MILLISECONDS: {
-		const uint64_t new_value = be64toh(*(const uint64_t *) field);
-		ts->tv_sec =  new_value / S1E3;
-		ts->tv_nsec = (new_value % S1E3) * S1E6;
-		}
+    case IPX_ET_DATE_TIME_MILLISECONDS: {
+        const uint64_t new_value = be64toh(*(const uint64_t *) field);
+        ts->tv_sec =  new_value / S1E3;
+        ts->tv_nsec = (new_value % S1E3) * S1E6;
+        }
 
-		return IPX_CONVERT_OK;
+        return IPX_CONVERT_OK;
 
-	case IPX_ET_DATE_TIME_MICROSECONDS:
-	case IPX_ET_DATE_TIME_NANOSECONDS: {
-		// Conversion from NTP 64bit timestamp to UNIX timestamp
-		const uint32_t (*parts)[2] = (const uint32_t (*)[2]) field;
+    case IPX_ET_DATE_TIME_MICROSECONDS:
+    case IPX_ET_DATE_TIME_NANOSECONDS: {
+        // Conversion from NTP 64bit timestamp to UNIX timestamp
+        const uint32_t (*parts)[2] = (const uint32_t (*)[2]) field;
 
-		// Seconds
-		ts->tv_sec = ntohl((*parts)[0]) - IPX_CONVERT_EPOCHS_DIFF;
+        // Seconds
+        ts->tv_sec = ntohl((*parts)[0]) - IPX_CONVERT_EPOCHS_DIFF;
 
-		/*
-		 * Fraction of second (1 / 2^32)
-		 * The "ts" uses 1/1e9 sec as unit of subsecond fractions and NTP
-		 * uses 1/(2^32) sec as its unit of fractional time.
-		 * Conversion is easy: First, multiply by 1e9, then divide by 2^32.
-		 * Warning: Calculation must use 64bit variable!!!
-		 */
-		uint64_t fraction = ntohl((*parts)[1]);
-		if (type == IPX_ET_DATE_TIME_MICROSECONDS) {
-			fraction &= 0xFFFFF800UL; // Make sure that last 11 bits are zeros
-		}
+        /*
+         * Fraction of second (1 / 2^32)
+         * The "ts" uses 1/1e9 sec as unit of subsecond fractions and NTP
+         * uses 1/(2^32) sec as its unit of fractional time.
+         * Conversion is easy: First, multiply by 1e9, then divide by 2^32.
+         * Warning: Calculation must use 64bit variable!!!
+         */
+        uint64_t fraction = ntohl((*parts)[1]);
+        if (type == IPX_ET_DATE_TIME_MICROSECONDS) {
+            fraction &= 0xFFFFF800UL; // Make sure that last 11 bits are zeros
+        }
 
-		/*
-		 * Rounding error correction
-		 * Without correction, almost all numbers will be slightly imprecise.
-		 * For example, if the number 999,999,999 nanoseconds is converted to
-		 * a fraction and back to nanoseconds, rounding will change the number
-		 * to 999,999,998 (the last digit is incorrect). This can be solved
-		 * be rounding result in nanoseconds based on number after the decimal
-		 * mask. Because we don't want to work with floating point numbers
-		 * we perform a small trick. See below.
-		 */
-		fraction *= S1E9;
-		fraction >>= 31;      // Instead of 32, shift only 31 times
-		if (fraction & 0x1) { // If the last digit is odd, increment the number
+        /*
+         * Rounding error correction
+         * Without correction, almost all numbers will be slightly imprecise.
+         * For example, if the number 999,999,999 nanoseconds is converted to
+         * a fraction and back to nanoseconds, rounding will change the number
+         * to 999,999,998 (the last digit is incorrect). This can be solved
+         * be rounding result in nanoseconds based on number after the decimal
+         * mask. Because we don't want to work with floating point numbers
+         * we perform a small trick. See below.
+         */
+        fraction *= S1E9;
+        fraction >>= 31;      // Instead of 32, shift only 31 times
+        if (fraction & 0x1) { // If the last digit is odd, increment the number
             ++fraction;
-		}
+        }
 
-		ts->tv_nsec = fraction >> 1; // Perform the last shift
-		}
+        ts->tv_nsec = fraction >> 1; // Perform the last shift
+        }
 
-		return IPX_CONVERT_OK;
-	default:
-		return IPX_CONVERT_ERR_ARG;
-	}
+        return IPX_CONVERT_OK;
+    default:
+        return IPX_CONVERT_ERR_ARG;
+    }
 }
 
 /**
@@ -944,20 +944,20 @@ ipx_get_datetime_hp_be(const void *field, size_t size, enum ipx_element_type typ
 static inline int
 ipx_get_bool(const void *field, size_t size, bool *value)
 {
-	if (size != 1U) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    if (size != 1U) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	switch (*(const uint8_t *) field) {
-	case 1U: // True
-		*value = true;
-		return IPX_CONVERT_OK;
-	case 2U: // False (according to the RFC 7011, section 6.1.5. "false" == 2)
-		*value = false;
-		return IPX_CONVERT_OK;
-	default:
-		return IPX_CONVERT_ERR_ARG;
-	}
+    switch (*(const uint8_t *) field) {
+    case 1U: // True
+        *value = true;
+        return IPX_CONVERT_OK;
+    case 2U: // False (according to the RFC 7011, section 6.1.5. "false" == 2)
+        *value = false;
+        return IPX_CONVERT_OK;
+    default:
+        return IPX_CONVERT_ERR_ARG;
+    }
 }
 
 /**
@@ -979,12 +979,12 @@ ipx_get_bool(const void *field, size_t size, bool *value)
 static inline int
 ipx_get_ip(const void *field, size_t size, void *value)
 {
-	if (size != 4U && size != 16U) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    if (size != 4U && size != 16U) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	memcpy(value, field, size);
-	return IPX_CONVERT_OK;
+    memcpy(value, field, size);
+    return IPX_CONVERT_OK;
 }
 
 /**
@@ -1006,12 +1006,12 @@ ipx_get_ip(const void *field, size_t size, void *value)
 static inline int
 ipx_get_mac(const void *field, size_t size, void *value)
 {
-	if (size != 6U) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    if (size != 6U) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	memcpy(value, field, 6U);
-	return IPX_CONVERT_OK;
+    memcpy(value, field, 6U);
+    return IPX_CONVERT_OK;
 }
 
 /**
@@ -1032,12 +1032,12 @@ ipx_get_mac(const void *field, size_t size, void *value)
 static inline int
 ipx_get_octet_array(const void *field, size_t size, void *value)
 {
-	if (size == 0) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    if (size == 0) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	memcpy(value, field, size);
-	return IPX_CONVERT_OK;
+    memcpy(value, field, size);
+    return IPX_CONVERT_OK;
 }
 
 /**
@@ -1056,12 +1056,12 @@ ipx_get_octet_array(const void *field, size_t size, void *value)
 static inline int
 ipx_get_string(const void *field, size_t size, char *value)
 {
-	if (size == 0) {
-		return IPX_CONVERT_ERR_ARG;
-	}
+    if (size == 0) {
+        return IPX_CONVERT_ERR_ARG;
+    }
 
-	memcpy(value, field, size);
-	return IPX_CONVERT_OK;
+    memcpy(value, field, size);
+    return IPX_CONVERT_OK;
 }
 
 /**
@@ -1145,13 +1145,13 @@ ipx_get_string(const void *field, size_t size, char *value)
  */
 enum ipx_convert_time_fmt {
     /** UTC time, seconds (i.e. %Y-%m-%dT%H:%M:%SZ)                          */
-	IPX_CONVERT_TF_SEC_UTC = 0x01,
+    IPX_CONVERT_TF_SEC_UTC = 0x01,
     /** UTC time, milliseconds (i.e. "%Y-%m-%dT%H:%M:%S.mmmZ")               */
-	IPX_CONVERT_TF_MSEC_UTC = 0x02,
+    IPX_CONVERT_TF_MSEC_UTC = 0x02,
     /** UTC time, microseconds (i.e. "%Y-%m-%dT%H:%M:%S.uuuuuuZ")            */
-	IPX_CONVERT_TF_USEC_UTC = 0x03,
+    IPX_CONVERT_TF_USEC_UTC = 0x03,
     /** UTC time, nanoseconds (i.e. "%Y-%m-%dT%H:%M:%S.nnnnnnnnnZ")          */
-	IPX_CONVERT_TF_NSEC_UTC = 0x04,
+    IPX_CONVERT_TF_NSEC_UTC = 0x04,
     /** Local time, seconds (i.e. %Y-%m-%dT%H:%M:%S±hhmm)                    */
     IPX_CONVERT_TF_SEC_LOCAL = 0x11,
     /** Local time, milliseconds (i.e. "%Y-%m-%dT%H:%M:%S.mmm±hhmm")         */
@@ -1236,11 +1236,6 @@ ipx_float2str_be(const void *field, size_t size, char *str, size_t str_size);
  * \param[in]  fmt       Output format (see ::ipx_convert_time_fmt)
  * \remark For more details about the parameter \p type see the documentation
  *    of ipx_get_datetime_lp_be().
- * \remark Output format for: \n
- *   - seconds (#IPX_CONVERT_TF_SEC) is "%Y-%m-%dT%H:%M:%S" \n
- *   - milliseconds (#IPX_CONVERT_TF_MSEC) is "%Y-%m-%dT%H:%M:%S.mmm" \n
- *   - microseconds (#IPX_CONVERT_TF_USEC) is "%Y-%m-%dT%H:%M:%S.uuuuuu" \n
- *   - nanoseconds  (#IPX_CONVERT_TF_NSEC) is "%Y-%m-%dT%H:%M:%S.nnnnnnnnn"
  * \remark The size of the output buffer (\p str_size) must be at least
  *   #IPX_CONVERT_STRLEN_DATE bytes to guarantee enough size for all conversion
  *   types.
@@ -1249,7 +1244,7 @@ ipx_float2str_be(const void *field, size_t size, char *str, size_t str_size);
  */
 API int
 ipx_datetime2str_be(const void *field, size_t size, enum ipx_element_type type,
-	char *str, size_t str_size, enum ipx_convert_time_fmt fmt);
+    char *str, size_t str_size, enum ipx_convert_time_fmt fmt);
 
 /**
  * \brief Convert a boolean value to a character string
@@ -1294,6 +1289,7 @@ ipx_ip2str(const void *field, size_t size, char *str, size_t str_size);
  *   usual on Linux operating systems. Therefore, the \p value should be also
  *   in network byte order.
  * \param[in]  field     Pointer to a data field
+ * \param[in]  size      Size of the data field (MUST be always 6 bytes!)
  * \param[out] str       Pointer to an output character buffer
  * \param[in]  str_size  Size of the output buffer (in bytes)
  * \remark A size of the \p field is always consider as 6 byte.
@@ -1304,7 +1300,7 @@ ipx_ip2str(const void *field, size_t size, char *str, size_t str_size);
  * \return Same as a return value of ipx_uint2str_be().
  */
 API int
-ipx_mac2str(const void *field, char *str, size_t str_size);
+ipx_mac2str(const void *field, size_t size, char *str, size_t str_size);
 
 /**
  * \brief Convert a value of an octet array to a character string
