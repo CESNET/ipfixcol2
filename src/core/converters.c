@@ -380,6 +380,7 @@ utf8char_is_escapable(const uint8_t *str, size_t len, uint8_t *repl)
     uint8_t new_char;
     const char old_char = (char) *str;
     switch (old_char) {
+    case '\a': new_char = 'a'; break;
     case '\n': new_char = 'n'; break;
     case '\r': new_char = 'r'; break;
     case '\t': new_char = 't'; break;

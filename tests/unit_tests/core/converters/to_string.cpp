@@ -50,6 +50,7 @@
 
 #include <iomanip> // setprecision
 #include <sstream> // stringstream
+#include <arpa/inet.h> // inet_pton
 
 #define BYTES_1 (1U)
 #define BYTES_2 (2U)
@@ -926,6 +927,9 @@ TEST(ConverterToStrings, mac2strNormal)
     mac2strNormal_check("90:1b:0e:17:17:91");
 }
 
+/*
+ * Test invalid size of input fields and insufficient size of output buffer
+ */
 TEST(ConverterToStrings, mac2strInvalidInput)
 {
     const size_t mac_size = 6;
@@ -955,10 +959,334 @@ TEST(ConverterToStrings, mac2strInvalidInput)
     }
 }
 
+// -----------------------------------------------------------------------------
+
+/*
+ * Test IPv4/IPv6 to string converter
+ */
+void
+ip2strNormal_check(std::string addr_str)
+{
+    SCOPED_TRACE("Test IP: " + addr_str);
+
+    // Try to convert IP address into binary form
+    struct in6_addr addr_bin;
+    size_t addr_size;
+    int af_family;
+
+    if (inet_pton(AF_INET, addr_str.c_str(), &addr_bin) == 1) {
+        addr_size = 4;  // IPv4
+        af_family = AF_INET;
+    } else if (inet_pton(AF_INET6, addr_str.c_str(), &addr_bin) == 1) {
+        addr_size = 16; // IPv6
+        af_family = AF_INET6;
+    } else {
+        FAIL() << "Failed to convert '" + addr_str + "' into binary form";
+    }
+
+    // Store IP to a field
+    size_t data_size = addr_size;
+    std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[data_size]};
+    ASSERT_EQ(ipx_set_ip(data_ptr.get(), data_size, &addr_bin), IPX_CONVERT_OK);
+
+    // Convert it back into string
+    size_t res_size = IPX_CONVERT_STRLEN_IP;
+    std::unique_ptr<char[]> res_ptr{new char[res_size]};
+
+    int ret_code;
+    ret_code = ipx_ip2str(data_ptr.get(), data_size, res_ptr.get(), res_size);
+    ASSERT_GT(ret_code, 0);
+    EXPECT_EQ(strlen(res_ptr.get()), static_cast<size_t>(ret_code));
+
+    // Try to convert it back into binary form
+    struct in6_addr addr_new;
+    ASSERT_EQ(inet_pton(af_family, res_ptr.get(), &addr_new), 1);
+
+    // Compare binary forms
+    EXPECT_EQ(memcmp(&addr_bin, &addr_new, addr_size), 0);
+}
 
 
-// TODO: ip, octetarray, string
-// TODO: zkontrolovat ze vystup opravdu opovida zapsané delce (ret_code == strlen)
+TEST(ConverterToStrings, ip2strNormal)
+{
+    // IPv4 addresses
+    ip2strNormal_check("0.0.0.0");
+    ip2strNormal_check("255.255.255.255");
+
+    ip2strNormal_check("10.0.0.0");
+    ip2strNormal_check("176.16.0.0");
+    ip2strNormal_check("192.168.0.0");
+
+    ip2strNormal_check("127.0.0.1");
+    ip2strNormal_check("1.2.3.4");
+    ip2strNormal_check("123.234.123.234");
+    ip2strNormal_check("147.229.9.43");
+
+    // IPv6 addresses
+    ip2strNormal_check("0:0:0:0:0:0:0:0");
+    ip2strNormal_check("00FF:FF00:00FF:FF00:00FF:FF00:00FF:FF00");
+    ip2strNormal_check("FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF");
+
+    ip2strNormal_check("::");
+    ip2strNormal_check("::1");
+    ip2strNormal_check("fc00::");
+    ip2strNormal_check("::ffff:0:0");
+    ip2strNormal_check("64:ff9b::");
+    ip2strNormal_check("2002::");
+    ip2strNormal_check("2001:20::");
+
+    ip2strNormal_check("2001:718:1:101::144:228");
+    ip2strNormal_check("2001:db8:0:0:1:0:0:1");
+    ip2strNormal_check("2001:db8:a0b:12f0::1");
+    ip2strNormal_check("2a00:1450:4014:80c::200e");
+    ip2strNormal_check("2a03:2880:f106:83:face:b00c:0:25de");
+}
+
+void
+ip2strInvalid_small_buffer(std::string addr_str)
+{
+    // Try to convert IP address into binary form
+    struct in6_addr addr_bin;
+    size_t addr_size;
+
+    if (inet_pton(AF_INET, addr_str.c_str(), &addr_bin) == 1) {
+        addr_size = 4;  // IPv4
+    } else if (inet_pton(AF_INET6, addr_str.c_str(), &addr_bin) == 1) {
+        addr_size = 16; // IPv6
+    } else {
+        FAIL() << "Failed to convert '" + addr_str + "' into binary form";
+    }
+
+    // Store IP to a field
+    size_t data_size = addr_size;
+    std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[data_size]};
+    ASSERT_EQ(ipx_set_ip(data_ptr.get(), data_size, &addr_bin), IPX_CONVERT_OK);
+
+    // Convert it back into string
+    size_t res_size = IPX_CONVERT_STRLEN_IP;
+    std::unique_ptr<char[]> res_ptr{new char[res_size]};
+    int ret_code;
+    ret_code = ipx_ip2str(data_ptr.get(), data_size, res_ptr.get(), res_size);
+    ASSERT_GT(ret_code, 0);
+
+    // Now we know required size of the buffer... try smaller buffers
+    size_t max_len = static_cast<size_t>(ret_code) + 1; // +1 == '\0'
+    for (size_t i = 0; i < max_len; ++i) {
+        std::unique_ptr<char[]> tmp_ptr{new char[i]};
+        EXPECT_EQ(ipx_ip2str(data_ptr.get(), data_size, tmp_ptr.get(), i), IPX_CONVERT_ERR_BUFFER);
+    }
+}
+
+/*
+ * Test invalid size of input fields and insufficient size of output buffer
+ */
+TEST(ConverterToStrings, ip2strInvalid)
+{
+    // Try invalid field size
+    size_t res_size = IPX_CONVERT_STRLEN_IP;
+    std::unique_ptr<char[]> res_ptr{new char[res_size]};
+
+    for (size_t i = 0; i < 32U; ++i) {
+        if (i == 4U || i == 16U) {
+            // Skip valid field sizes
+            continue;
+        }
+
+        SCOPED_TRACE("Size: " + std::to_string(i));
+        std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[i]};
+        EXPECT_EQ(ipx_ip2str(data_ptr.get(), i, res_ptr.get(), res_size), IPX_CONVERT_ERR_ARG);
+    }
+
+    // Try insufficient size of output buffer
+    ip2strInvalid_small_buffer("0.0.0.0");
+    ip2strInvalid_small_buffer("255.255.255.255");
+    ip2strInvalid_small_buffer("147.229.9.43");
+
+    ip2strInvalid_small_buffer("0:0:0:0:0:0:0:0");
+    ip2strInvalid_small_buffer("00FF:FF00:00FF:FF00:00FF:FF00:00FF:FF00");
+    ip2strInvalid_small_buffer("FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF");
+    ip2strInvalid_small_buffer("::");
+    ip2strInvalid_small_buffer("2a03:2880:f106:83:face:b00c:0:25de");
+}
+
+// -----------------------------------------------------------------------------
+
+/*
+ * Test octet array to string converter
+ */
+void
+octet_array2strNormal_check(const uint8_t octet_data[], size_t octet_size)
+{
+    // Calculate expected result
+    std::stringstream ss;
+    ss << std::hex << std::setfill('0');
+    for (size_t i = 0; i < octet_size; ++i) {
+        ss << std::setw(2) << (unsigned int) octet_data[i];
+    }
+    std::string exp_str{ss.str()};
+
+    // Convert to string
+    size_t res_size = (2 * octet_size) + 1; // Based on documentation of conversion function
+    std::unique_ptr<char[]> res_ptr{new char[res_size]};
+
+    int ret_code = ipx_octet_array2str(octet_data, octet_size, res_ptr.get(), res_size);
+    ASSERT_GE(ret_code, 0);
+    EXPECT_EQ(strlen(res_ptr.get()), static_cast<size_t>(ret_code));
+
+    // Compare
+    EXPECT_STRCASEEQ(exp_str.c_str(), res_ptr.get());
+}
+
+TEST(ConverterToStrings, octet_array2strNormal)
+{
+    octet_array2strNormal_check(nullptr, 0);
+    const uint8_t oa1[] = {0x00};
+    octet_array2strNormal_check(oa1, sizeof(oa1));
+    const uint8_t oa2[] = {0xFF};
+    octet_array2strNormal_check(oa2, sizeof(oa2));
+    const uint8_t oa3[] = {0xFA, 0xCE, 0xB0, 0x0C};
+    octet_array2strNormal_check(oa3, sizeof(oa3));
+
+    // Try all symbols
+    constexpr size_t oa_full_size = 256;
+    uint8_t oa_full[oa_full_size];
+    for (size_t i = 0; i < oa_full_size; ++i) {
+        oa_full[i] = i;
+    }
+    octet_array2strNormal_check(oa_full, oa_full_size);
+}
+
+/*
+ * Test insufficient output buffer size
+ */
+TEST(ConverterToStrings, octet_array2strInvalid)
+{
+    constexpr size_t oa_size = 32;
+    const uint8_t oa_data[oa_size] = {0};
+
+    const size_t required_size = (2 * oa_size) + 1;
+    for (size_t i = 0; i < required_size; ++i) {
+        std::unique_ptr<char[]> res_ptr{new char[i]};
+        EXPECT_EQ(ipx_octet_array2str(oa_data, oa_size, res_ptr.get(), i), IPX_CONVERT_ERR_BUFFER);
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+/*
+ * Test IPFIX UTF-8 string (potentially malformed) to string converter
+ */
+TEST(ConverterToStrings, ipx_string2strNormal)
+{
+    /* Sentence "I can eat glass and it doesn't hurt me." in multiple languages and alphabets
+     * See: http://www.columbia.edu/~fdc/utf8/
+     */
+    std::vector<std::string> str_list = {
+        "I can eat glass and it doesn't hurt me.", // English
+        "⠊⠀⠉⠁⠝⠀⠑⠁⠞⠀⠛⠇⠁⠎⠎⠀⠁⠝⠙⠀⠊⠞⠀⠙⠕⠑⠎⠝⠞⠀⠓⠥⠗⠞⠀⠍⠑", // English (Braille)
+        "ЌЌЌ ЌЌЌЍ Ќ̈ЍЌЌ, ЌЌ ЌЌЍ ЍЌ ЌЌЌЌ ЌЍЌЌЌЌЌ", // Gothic
+        "काचं शक्नोम्यत्तुम् । नोपहिनस्ति माम् ॥", // Sanskrit
+        "Je peux manger du verre, ça ne me fait pas mal.", // French
+        "Posso mangiare il vetro e non mi fa male.", // Italian
+        "Pot să mănânc sticlă și ea nu mă rănește.", // Romanian
+        "Dw i'n gallu bwyta gwydr, 'dyw e ddim yn gwneud dolur i mi.", // Welsh
+        "Is féidir liom gloinne a ithe. Ní dhéanann sí dochar ar bith dom.", // Irish
+        "ᛁᚳ᛫ᛗᚨᚷ᛫ᚷᛚᚨᛋ᛫ᛖᚩᛏᚪᚾ᛫ᚩᚾᛞ᛫ᚻᛁᛏ᛫ᚾᛖ᛫ᚻᛖᚪᚱᛗᛁᚪᚧ᛫ᛗᛖ᛬", // Anglo-Saxon (Runes)
+        "Ic mæg glæs eotan ond hit ne hearmiað me.", // Anglo-Saxon (Latin)
+        " ᛖᚴ ᚷᛖᛏ ᛖᛏᛁ ᚧ ᚷᛚᛖᚱ ᛘᚾ ᚦᛖᛋᛋ ᚨᚧ ᚡᛖ ᚱᚧᚨ ᛋᚨᚱ", // Old Norse (Runes)
+        "Eg kan eta glas utan å skada meg.", // Norwegian (Nynorsk)
+        "Jeg kan spise glas, det gør ikke ondt på mig.", // Danish
+        "Æ ka æe glass uhen at det go mæ naue.", // Sønderjysk
+        "Ich kann Glas essen, ohne mir zu schaden.", // German
+        "Meg tudom enni az üveget, nem lesz tőle bajom.", // Hungarian
+        "Мон ярсан суликадо, ды зыян эйстэнзэ а ули.", // Erzian
+        "Aš galiu valgyti stiklą ir jis manęs nežeidžia.", // Lithuanian
+        "Es varu ēst stiklu, tas man nekaitē.", // Litvian
+        "Mohu jíst sklo, neublíží mi.", // Czech
+        "Môžem jesť sklo. Nezraní ma.", // Slovak
+        "Mogę jeść szkło i mi nie szkodzi.", // Polish
+        "Можам да јадам стакло, а не ме штета.", // Macedonian
+        "Я могу есть стекло, оно мне не вредит.", // Russian
+        "Я магу есці шкло, яно мне не шкодзіць.", // Belarusian
+        "Мога да ям стъкло, то не ми вреди.", // Bulgarian
+        "მინას ვჭამ და არა მტკივა.", // Georgian
+        "Կրնամ ապակի ուտել և ինծի անհանգիստ չըներ։", // Armenian
+        "جام ييه بلورم بڭا ضررى طوقونمز", // Turkish (Ottoman)
+        "আমি কাঁচ খেতে পারি, তাতে আমার কোনো ক্ষতি হয় না।", // Bengali
+        "मी काच खाऊ शकतो, मला ते दुखत नाही.", // Marathi
+        "मैं काँच खा सकता हूँ और मुझे उससे कोई चोट नहीं पहुंचती.", // Hindi
+        "நான் கண்ணாடி சாப்பிடுவேன், அதனால் எனக்கு ஒரு கேடும் வராது.", // Tamil
+        "ن می توانم بدونِ احساس درد شيشه بخورم", // Persian
+        "أنا قادر على أكل الزجاج و هذا لا يؤلمني. ", // Arabic
+        "אני יכול לאכול זכוכית וזה לא מזיק לי.", // Hebrew
+        "Tôi có thể ăn thủy tinh mà không hại gì.", // Vietnamese
+        "我能吞下玻璃而不伤身体。", // Chinese
+        "我能吞下玻璃而不傷身體。", // Chinese (traditional)
+        "私はガラスを食べられます。それは私を傷つけません。", // Japan
+        "나는 유리를 먹을 수 있어요. 그래도 아프지 않아요" // Korean
+    };
+
+    for (const std::string &str : str_list) {
+        SCOPED_TRACE("String: " + str);
+        // Prepare input buffer
+        const size_t data_size = str.size();
+        std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[data_size]};
+
+        // Store string to the buffer (without '\0')
+        ASSERT_EQ(ipx_set_string(data_ptr.get(), data_size, str.c_str()), IPX_CONVERT_OK);
+
+        // Try to read the value
+        const size_t res_size = (4 * data_size) + 1; // Max. size based on the documentation
+        std::unique_ptr<char[]> res_ptr{new char[res_size]};
+        int ret_code = ipx_string2str(data_ptr.get(), data_size, res_ptr.get(), res_size);
+        ASSERT_GE(ret_code, 0);
+        EXPECT_EQ(strlen(res_ptr.get()), static_cast<size_t>(ret_code));
+
+        // Compare
+        EXPECT_EQ(str, res_ptr.get());
+    }
+}
+
+TEST(ConverterToStrings, ipx_string2strEscapeChar)
+{
+    // First is input, second is expected output
+    using byte_arr = std::array<char, 14>;
+    using my_pair = std::pair<byte_arr, std::string>;
+
+    std::vector<std::pair<byte_arr, std::string>> pair_list = {
+        // Only control C1 characters
+        my_pair({0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xC, 0xD},
+            "\\x00\\x01\\x02\\x03\\x04\\x05\\x06\\a\\b\\t\\n\\v\\f\\r"),
+        // Combination of C1 characters and normal characters
+        my_pair({'a', '\\', 0x1F, 0x20, ' ', 0x7F, '\t', 'd', '?', '_', '1', '[', '+', '.'},
+            "a\\\\x1F  \\x7F\\td?_1[+."),
+        // Null byte and other characters
+        my_pair({'0', 'a', 'b', '\0', 'c', 'd', 'e', '\0', 'f', 'g', '\0', '9', '\0', '\0'},
+            "0ab\\x00cde\\x00fg\\x009\\x00\\x00")
+        // TODO: control characters
+        // TODO: \", \\, \'
+    };
+
+    for (const auto &pair : pair_list) {
+        const byte_arr &arr_in = pair.first;
+        const std::string &str_out = pair.second;
+        SCOPED_TRACE("String: " + str_out);
+
+        // Store to a field
+        const size_t data_size = arr_in.size();
+        std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[data_size]};
+        ASSERT_EQ(ipx_set_string(data_ptr.get(), data_size, arr_in.data()), IPX_CONVERT_OK);
+
+        // Try to convert the value
+        const size_t res_size = (4 * data_size) + 1; // Max. size based on the documentation
+        std::unique_ptr<char[]> res_ptr{new char[res_size]};
+        int ret_code = ipx_string2str(data_ptr.get(), data_size, res_ptr.get(), res_size);
+        ASSERT_GE(ret_code, 0);
+        EXPECT_EQ(strlen(res_ptr.get()), static_cast<size_t>(ret_code));
+
+        EXPECT_STREQ(str_out.c_str(), res_ptr.get());
+    }
+}
 
 /**
  * @}

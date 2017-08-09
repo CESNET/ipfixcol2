@@ -593,7 +593,7 @@ ipx_set_octet_array(void *field, size_t size, const void *value)
  * \param[in]  value  Pointer to a new value of the field
  * \remark The function can be implemented as a wrapper over memcpy.
  * \warning The \p value MUST be at least \p size bytes long.
- * \warning The \p value MUST be a valid UTF-8 string! You can use
+ * \warning The \p value MUST be a valid UTF-8 string!
  * \return On success returns #IPX_CONVERT_OK. Otherwise returns
  *   #IPX_CONVERT_ERR_ARG.
  */
@@ -1275,7 +1275,7 @@ ipx_bool2str(const void *field, char *str, size_t str_size);
  * \param[out] str       Pointer to an output character buffer
  * \param[in]  str_size  Size of the output buffer (in bytes)
  * \remark The size of the output buffer (\p str_size) should be at least
- *   #IPX_CONVERT_STRLEN_IP bytes to guarantee enought size for conversion.
+ *   #IPX_CONVERT_STRLEN_IP bytes to guarantee enough size for conversion.
  * \return Same as a return value of ipx_uint2str_be().
  */
 API int
@@ -1318,8 +1318,9 @@ ipx_mac2str(const void *field, size_t size, char *str, size_t str_size);
  *   "wire" (i.e. network byte order). Example: "HH...", where "HH" is
  *   hexadecimal representation of one byte.
  * \remark Minimum size of the output buffer (\p str_size) must be at least
- *   (2 * \p size) + 1 ('\0') bytes.
- * \return Same as a return value of ipx_uint2str_be().
+ *   (2 * \p size) + 1 bytes.
+ * \return Same as a return value of ipx_uint2str_be(), but value 0 is also
+ *   valid because the original array could be also empty.
  */
 API int
 ipx_octet_array2str(const void *field, size_t size, char *str, size_t str_size);
@@ -1337,13 +1338,17 @@ ipx_octet_array2str(const void *field, size_t size, char *str, size_t str_size);
  *   hexadecimal representation), required size of the output buffer is
  *   (4 * \p size) + 1.
  * \remark Some characters representable by escape sequences are represented as
- *   particular escape sequences i.e. backspace, formfeed, newline, carriage
- *   return, horizontal tab and vertical tab. Non-printable (e.g. other control
- *   characters) are replaced with \\xhh (where "hh" is a hexadecimal value).
+ *   particular escape sequences i.e. alarm, backspace, formfeed, newline,
+ *   carriage return, horizontal tab and vertical tab. Non-printable (e.g. other
+ *   control characters) are replaced with \\xHH (where "HH" is a hexadecimal
+ *   value).
  * \remark Malformed characters are replaced with UTF-8 "REPLACEMENT CHARACTER"
- * \note Character backslash, single and double quotation mark and NOT escaped.
+ * \note Backslash, single and double quotation mark characters and NOT escaped.
  * \return Same as a return value of ipx_uint2str_be(), but value 0 is also
- *   valid because the original string could be also empty.
+ *   valid because the original string could be also empty. In other words,
+ *   a positive value represents number of bytes (excluding the termination
+ *   null byte) written to the output buffer. It does NOT represents number
+ *   of UTF-8 characters!
  */
 API int
 ipx_string2str(const void *field, size_t size, char *str, size_t str_size);
