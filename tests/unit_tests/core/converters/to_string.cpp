@@ -1174,7 +1174,7 @@ TEST(ConverterToStrings, octet_array2strInvalid)
 // -----------------------------------------------------------------------------
 
 /*
- * Test IPFIX UTF-8 string (potentially malformed) to string converter
+ * Test IPFIX UTF-8 string to string converter (only valid cases)
  */
 TEST(ConverterToStrings, ipx_string2strNormal)
 {
@@ -1223,7 +1223,11 @@ TEST(ConverterToStrings, ipx_string2strNormal)
         "我能吞下玻璃而不伤身体。", // Chinese
         "我能吞下玻璃而不傷身體。", // Chinese (traditional)
         "私はガラスを食べられます。それは私を傷つけません。", // Japan
-        "나는 유리를 먹을 수 있어요. 그래도 아프지 않아요" // Korean
+        "나는 유리를 먹을 수 있어요. 그래도 아프지 않아요", // Korean
+        // Test also random 4 byte characters
+        "𠜎𠜱𠝹𠱓𠱸𠲖𠳏𠳕𠴕𠵼𠵿𠸎𠸏𠹷𠺝𠺢",
+        "\xF0\xA0\x9C\x8E \xF0\xA0\x9C\xB1 \xF0\xA0\x9D\xB9 \xF0\xA0\xB1\xB8", // 𠜎 𠜱 𠝹 𠱸
+        "\xF0\xA0\x9C\x8E\xF0\xA0\x9C\xB1\xF0\xA0\x9D\xB9\xF0\xA0\xB1\xB8" // 𠜎𠜱𠝹𠱸
     };
 
     for (const std::string &str : str_list) {
@@ -1247,24 +1251,41 @@ TEST(ConverterToStrings, ipx_string2strNormal)
     }
 }
 
+/*
+ * Test IPFIX UTF-8 string to string converter (escape sequences)
+ */
 TEST(ConverterToStrings, ipx_string2strEscapeChar)
 {
     // First is input, second is expected output
-    using byte_arr = std::array<char, 14>;
+    using byte_arr = std::array<unsigned char, 14>;
     using my_pair = std::pair<byte_arr, std::string>;
 
-    std::vector<std::pair<byte_arr, std::string>> pair_list = {
-        // Only control C1 characters
+    std::vector<my_pair> pair_list = {
+        // Only control C0 characters (beginning)
         my_pair({0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xC, 0xD},
             "\\x00\\x01\\x02\\x03\\x04\\x05\\x06\\a\\b\\t\\n\\v\\f\\r"),
-        // Combination of C1 characters and normal characters
+        // Only control C0 characters (ending)
+        my_pair({0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x7F},
+            "\\x13\\x14\\x15\\x16\\x17\\x18\\x19\\x1A\\x1B\\x1C\\x1D\\x1E\\x1F\\x7F"),
+        // C1 control characters
+        my_pair({0x80, 0x81, 0x82, 0x83, 0x88, 0x90, 0x93, 0x95, 0x98, 0x9B, 0x9C, 0x9D, 0x9E, 0x9F},
+            "\\x80\\x81\\x82\\x83\\x88\\x90\\x93\\x95\\x98\\x9B\\x9C\\x9D\\x9E\\x9F"),
+        // Combination of C0 characters and normal characters
         my_pair({'a', '\\', 0x1F, 0x20, ' ', 0x7F, '\t', 'd', '?', '_', '1', '[', '+', '.'},
             "a\\\\x1F  \\x7F\\td?_1[+."),
         // Null byte and other characters
         my_pair({'0', 'a', 'b', '\0', 'c', 'd', 'e', '\0', 'f', 'g', '\0', '9', '\0', '\0'},
-            "0ab\\x00cde\\x00fg\\x009\\x00\\x00")
-        // TODO: control characters
-        // TODO: \", \\, \'
+            "0ab\\x00cde\\x00fg\\x009\\x00\\x00"),
+        my_pair({'"', 'w', 'o', 'r', 'l', 'd', '\'', '\\', 'n', '\'', 'i', 'n', '\\', '"'},
+            "\"world'\\n'in\\\""),
+
+        // Boundaries
+        // First possible sequence of a certain length (1 - 4 bytes length)
+        my_pair({0x00, ' ', 0xC0, 0x80, ' ', 0xE0, 0x80, 0x80, ' ', 0xF0, 0x80, 0x80, 0x80, ' '},
+            "\\x00 \xC0\x80 \xE0\x80\x80 \xF0\x80\x80\x80 "),
+        // Last possible sequence of a certain length (1 - 4 bytes length)
+        my_pair({0x7F, ' ', 0xDF, 0xBF, ' ', 0xEF, 0xBF, 0xBF, ' ', 0xF7, 0xBF, 0xBF, 0xBF, ' '},
+            "\\x7F \xDF\xBF \xEF\xBF\xBF \xF7\xBF\xBF\xBF "),
     };
 
     for (const auto &pair : pair_list) {
@@ -1275,7 +1296,8 @@ TEST(ConverterToStrings, ipx_string2strEscapeChar)
         // Store to a field
         const size_t data_size = arr_in.size();
         std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[data_size]};
-        ASSERT_EQ(ipx_set_string(data_ptr.get(), data_size, arr_in.data()), IPX_CONVERT_OK);
+        const char *input = reinterpret_cast<const char *>(arr_in.data());
+        ASSERT_EQ(ipx_set_string(data_ptr.get(), data_size, input), IPX_CONVERT_OK);
 
         // Try to convert the value
         const size_t res_size = (4 * data_size) + 1; // Max. size based on the documentation
@@ -1287,6 +1309,93 @@ TEST(ConverterToStrings, ipx_string2strEscapeChar)
         EXPECT_STREQ(str_out.c_str(), res_ptr.get());
     }
 }
+
+/*
+ * Test IPFIX UTF-8 string to string converter (escape sequences)
+ */
+TEST(ConverterToStrings, ipx_string2strInvalidChar)
+{
+    struct test_data {
+        const char  *buffer_data;
+        const size_t buffer_size;
+        const char  *expectation;
+    };
+
+    #define MY_INPUT(str) str, (sizeof(str) - 1)
+    std::vector<struct test_data> input_list = {
+        /* First and last continuation byte 0x80 (1000 0000), 0xBF (1011 1111) i.e. missing leading
+         * byte that determines length. In this case 0x80 is C1 control character -> just escape  */
+        {MY_INPUT("\x80"), "\\x80"},
+        {MY_INPUT("\xBF"), "\uFFFD"},
+        // 1 - 3 random continuation bytes (10xx xxxx) without the leading bytes
+        {MY_INPUT("\xAA"), "\uFFFD"},
+        {MY_INPUT("\xBB\xBB"), "\uFFFD\uFFFD"},
+        {MY_INPUT("\xB1\xB2\xB3"), "\uFFFD\uFFFD\uFFFD"},
+        // Random lonely start characters (110x xxxx..., 1110 xxxx..., 1111 0xxx...)
+        {MY_INPUT("\xC0"), "\uFFFD"},
+        {MY_INPUT("\xC5"), "\uFFFD"},
+        {MY_INPUT("\xE0"), "\uFFFD"},
+        {MY_INPUT("\xE5"), "\uFFFD"},
+        {MY_INPUT("\xF0"), "\uFFFD"},
+        {MY_INPUT("\xF5"), "\uFFFD"},
+        // Sequences with last continuation byte missing
+        {MY_INPUT("\xC0"), "\uFFFD"}, // 2 bytes
+        {MY_INPUT("\xDF"), "\uFFFD"},
+        {MY_INPUT("\xE0\x80"), "\uFFFD\\x80"}, // 3 bytes (0x80 is C1 control character)
+        {MY_INPUT("\xEF\xBF"), "\uFFFD\uFFFD"},
+        {MY_INPUT("\xF0\x80\x80"), "\uFFFD\\x80\\x80"}, // 4 bytes
+        {MY_INPUT("\xF7\xBF\xBF"), "\uFFFD\uFFFD\uFFFD"},
+        // Impossible bytes (not valid in UTF8) - 0xF0 - 0xFF
+        {MY_INPUT("\xF0"), "\uFFFD"},
+        {MY_INPUT("\xF1"), "\uFFFD"},
+        {MY_INPUT("\xF2"), "\uFFFD"},
+        {MY_INPUT("\xF3"), "\uFFFD"},
+        {MY_INPUT("\xF4"), "\uFFFD"},
+        {MY_INPUT("\xF5"), "\uFFFD"},
+        {MY_INPUT("\xF6"), "\uFFFD"},
+        {MY_INPUT("\xF7"), "\uFFFD"},
+        {MY_INPUT("\xF8"), "\uFFFD"},
+        {MY_INPUT("\xF9"), "\uFFFD"},
+        {MY_INPUT("\xFA"), "\uFFFD"},
+        {MY_INPUT("\xFB"), "\uFFFD"},
+        {MY_INPUT("\xFC"), "\uFFFD"},
+        {MY_INPUT("\xFD"), "\uFFFD"},
+        {MY_INPUT("\xFE"), "\uFFFD"},
+        {MY_INPUT("\xFF"), "\uFFFD"},
+        // Sequences with last invalid continuation byte
+        /*
+
+         // TODO: solve
+        {MY_INPUT("\xC0\x00"), "\uFFFD\\x00"},
+        {MY_INPUT("\xC0\xEF"), "\uFFFD\uFFFD"},
+        {MY_INPUT("\xE0\x80\xC0"), "\uFFFD\uFFFD\uFFFD"},
+        {MY_INPUT("\xEF\xBF\xCF"), "\uFFFD\uFFFD\uFFFD"},
+
+         */
+
+    };
+    #undef MY_INPUT
+
+    for (const auto &input_struct: input_list) {
+        SCOPED_TRACE(std::string("Expected string: ") + input_struct.expectation);
+
+        // Store to a field
+        const size_t data_size = input_struct.buffer_size;
+        std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[data_size]};
+        const char *input_data = reinterpret_cast<const char *>(input_struct.buffer_data);
+        ASSERT_EQ(ipx_set_string(data_ptr.get(), data_size, input_data), IPX_CONVERT_OK);
+
+        // Try to convert the value
+        const size_t res_size = (4 * data_size) + 1; // Max. size based on the documentation
+        std::unique_ptr<char[]> res_ptr{new char[res_size]};
+        int ret_code = ipx_string2str(data_ptr.get(), data_size, res_ptr.get(), res_size);
+        ASSERT_GE(ret_code, 0);
+        EXPECT_EQ(strlen(res_ptr.get()), static_cast<size_t>(ret_code));
+
+        EXPECT_STREQ(input_struct.expectation, res_ptr.get());
+    }
+}
+
 
 /**
  * @}

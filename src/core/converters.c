@@ -327,7 +327,7 @@ utf8char_is_valid(const uint8_t *str, size_t len)
         uint32_t tail = *((const uint32_t *) &str[0]);
         // Change the first byte for easier comparision
         *(uint8_t *) &tail = 0x80; // Little/big endian compatible solution
-        return ((tail & 0xC0C0C0C0) == 80808080) ? 4 : 0;
+        return ((tail & 0xC0C0C0C0) == 0x80808080) ? 4 : 0;
     }
 
     // Invalid character
