@@ -40,7 +40,6 @@
  */
 
 #include <stdlib.h>
-#include <assert.h>
 #include <string.h>
 #include <ipfixcol2/templater.h>
 #include <ipfixcol2.h>
@@ -304,14 +303,14 @@ bool
 garbage_add(garbage_t *gar, const ipx_tmpl_t *tmpl, uint16_t index)
 {
     ipx_tmpl_template_t *res = vectm_get_template(tmpl->templates, index);
-    if (res->time.end + tmpl->life.time < tmpl->current.time) {
+    if (res->time.end + tmpl->life.time < tmpl->current.time && res->time.end != 0) {
         return tmpl_garbage_template_index_add(gar, index);
     }
 
     ipx_tmpl_template_t *prev = res;
     res = res->next;
     while (res != NULL) {
-        if (res->time.end + tmpl->life.time < tmpl->current.time) {
+        if (res->time.end + tmpl->life.time < tmpl->current.time && res->time.end != 0) {
             return tmpl_garbage_template_add(gar, prev);
         }
         prev = res;
@@ -347,7 +346,6 @@ garbage_get(const ipx_tmpl_t *tmpl)
         }
     }
 
-    // TODO what if snapshot points to deleted template
     tmpl_garbage_snapshot_add(gar, snapshot_before_die_time(tmpl));
     return gar;
 }

@@ -257,8 +257,15 @@ TEST_F(Records, snapshot_valid) {
 }
 
 TEST_F(Records, garbage_valid) {
-    auto scope = Records::valid_2elem();
+    auto scope         = Records::valid_2elem();
+    auto withdrawal    = Records::valid_withdrawal();
+    auto scope259      = Records::valid_2elem();
+    auto withdrawal259 = Records::valid_withdrawal();
+    ipx_set_uint_be(&scope259->template_id, 2, 259);
+    ipx_set_uint_be(&withdrawal259->template_id, 2, 259);
     ipx_tmpl_template_t *res = NULL;
+
+    // TCP
     ipx_tmpl_set(tmpl_tcp, 10, 10);
     EXPECT_GT(ipx_tmpl_template_parse(tmpl_tcp, scope, 20), 0);
     EXPECT_EQ(ipx_tmpl_template_get(tmpl_tcp, 258, &res), IPX_OK);
@@ -266,7 +273,19 @@ TEST_F(Records, garbage_valid) {
     ipx_tmpl_set(tmpl_tcp, 100, 100);
     EXPECT_EQ(ipx_tmpl_garbage_get(tmpl_tcp), nullptr);
 
+    // UDP
     ipx_tmpl_set(tmpl_udp, 10, 10);
+    EXPECT_GT(ipx_tmpl_template_parse(tmpl_udp, scope, 20), 0);
+    EXPECT_EQ(ipx_tmpl_template_get(tmpl_udp, 258, &res), IPX_OK);
+    EXPECT_GT(ipx_tmpl_template_parse(tmpl_udp, withdrawal, 4), 0);
+    EXPECT_EQ(ipx_tmpl_template_get(tmpl_udp, 258, &res), IPX_NOT_FOUND);
+
+    EXPECT_GT(ipx_tmpl_template_parse(tmpl_udp, scope259, 20), 0);
+    EXPECT_EQ(ipx_tmpl_template_get(tmpl_udp, 259, &res), IPX_OK);
+    EXPECT_GT(ipx_tmpl_template_parse(tmpl_udp, withdrawal259, 4), 0);
+    EXPECT_EQ(ipx_tmpl_template_get(tmpl_udp, 259, &res), IPX_NOT_FOUND);
+
+    ipx_tmpl_set(tmpl_udp, 90, 90);
     EXPECT_GT(ipx_tmpl_template_parse(tmpl_udp, scope, 20), 0);
     EXPECT_EQ(ipx_tmpl_template_get(tmpl_udp, 258, &res), IPX_OK);
 

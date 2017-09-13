@@ -5,7 +5,6 @@
 #include <string.h>
 #include <ipfixcol2/templater.h>
 #include <ipfixcol2/converters.h>
-#include <libfds/iemgr.h>
 #include "tmpl_common.h"
 
 #define FIRST_BIT(_value_)    ((_value_) &  (0x8000)) // TODO
@@ -378,24 +377,37 @@ int
 template_overwrite(ipx_tmpl_t *tmpl, ipx_tmpl_template_t *template,
                        const struct ipfix_template_record *rec, uint16_t max_len, ssize_t index)
 {
-    if (templates_identical(template, rec, max_len)) {
-        return IPX_OK;
-    }
-    if (template->time.end == 0 && !tmpl->flag.can_overwrite) {
-        return IPX_ERR;
-    }
     if (tmpl->current.time < template->time.last) {
         return IPX_ERR;
     }
 
-    ipx_tmpl_template_t *res = template_create(rec->count);
-    int len = template_convert(tmpl, rec, max_len, res);
-    if (len < 0) {
-        return len;
-    }
+    int len;
+    if (template->time.end > 0) {
+        ipx_tmpl_template_t *res = template_create(rec->count);
+        len = template_convert(tmpl, rec, max_len, res);
+        if (len < 0) {
+            return len;
+        }
+        res->next = template;
+        vectm_set_index(tmpl, tmpl->templates, (size_t) index, res);
+    } else {
+        if (tmpl->flag.can_overwrite) {
 
-    res->next = template_copy_end(tmpl, template);
-    vectm_set_index(tmpl, tmpl->templates, (size_t) index, res);
+            ipx_tmpl_template_t *res = template_create(rec->count);
+            len = template_convert(tmpl, rec, max_len, res);
+            if (len < 0) {
+                return len;
+            }
+
+            res->next = template_copy_end(tmpl, template);
+            vectm_set_index(tmpl, tmpl->templates, (size_t) index, res);
+        } else {
+            if (!templates_identical(template, rec, max_len)) {
+                return IPX_ERR;
+            }
+            return IPX_OK;
+        }
+    }
     return len;
 }
 
