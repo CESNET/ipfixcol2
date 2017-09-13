@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Scope of IPFIX elements -->
+<ipfix-elements>
+    <scope>
+        <pen>1</pen>
+        <name>iana</name>
+        <biflow mode="individual">29</biflow>
+    </scope>
+
+    <element>
+        <id>1</id>
+        <name>a</name>
+        <dataType>unsigned64</dataType>
+        <dataSemantics>deltaCounter</dataSemantics>
+        <units>octets</units>
+        <status>current</status>
+        <biflowId>41</biflowId>
+    </element>
+
+    <element>
+        <id>2</id>
+        <name>c</name>
+        <dataType>unsigned64</dataType>
+        <dataSemantics>deltaCounter</dataSemantics>
+        <units>packets</units>
+        <status>current</status>
+        <biflowId>42</biflowId>
+    </element>
+
+    <element>
+        <id>3</id>
+        <name>d</name>
+        <dataType>unsigned64</dataType>
+        <dataSemantics>deltaCounter</dataSemantics>
+        <units>flows</units>
+        <status>current</status>
+        <biflowId>43</biflowId>
+    </element>
+
+    <element>
+        <id>4</id>
+        <name>e</name>
+        <dataType>unsigned8</dataType>
+        <dataSemantics>identifier</dataSemantics>
+        <biflowId>44</biflowId>
+    </element>
+
+    <element>
+        <id>5</id>
+        <name>f</name>
+        <dataType>unsigned8</dataType>
+        <dataSemantics>identifier</dataSemantics>
+        <biflowId>45</biflowId>
+    </element>
+
+    <element>
+        <id>6</id>
+        <name>g</name>
+        <dataType>unsigned16</dataType>
+        <dataSemantics>flags</dataSemantics>
+        <biflowId>46</biflowId>
+    </element>
+
+    <element>
+        <id>7</id>
+        <name>h</name>
+        <dataType>unsigned16</dataType>
+        <dataSemantics>identifier</dataSemantics>
+        <biflowId>47</biflowId>
+    </element>
+
+    <element>
+        <id>8</id>
+        <name>i</name>
+        <dataType>ipv4Address</dataType>
+        <dataSemantics>default</dataSemantics>
+        <biflowId>48</biflowId>
+    </element>
+
+    <!-- TODO: all remaining elements... -->
+</ipfix-elements>
+

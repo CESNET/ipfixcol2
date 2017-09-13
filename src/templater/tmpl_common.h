@@ -1,5 +1,5 @@
 /**
- * \file // TODO
+ * \file   src/templater/tmpl_common.h
  * \author Michal Režňák
  * \brief  Common definitions for templater
  * \date   8/21/17
@@ -57,6 +57,7 @@
 #define TEMPL_SET_HEAD_SIZE  ((uint16_t) 4)
 /** Size of the int32_t in bytes                                          */
 #define INT32_SIZE           (4)
+/** Size of the int16_t in bytes                                          */
 #define INT16_SIZE          (sizeof(uint16_t))
 
 /** \brief Timestamps relating to a template record                          */
@@ -99,7 +100,7 @@ struct ipx_tmpl_template {
         void     *data;
         /** Length of the record (in bytes)                                  */
         uint16_t  length;
-    } raw;
+    } raw; /**< Raw template record                                          */
 
     /** Template properties */
     struct properties_s {
@@ -110,7 +111,7 @@ struct ipx_tmpl_template {
         bool has_multiple_defs;
         /** Has at least one variable-length element                         */
         bool has_dynamic;
-    } properties;
+    } properties; /**< Properties of the template                            */
 
     /**
      * Time information related to exporting process.

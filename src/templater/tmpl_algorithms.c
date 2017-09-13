@@ -1,6 +1,41 @@
 /**
+ * \file   src/templater/tmpl_algorithms.c
  * \author Michal Režňák
  * \date   8/28/17
+ */
+
+/* Copyright (C) 2016 CESNET, z.s.p.o.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is'', and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
  */
 
 #include <stdbool.h>
@@ -81,6 +116,11 @@ vectm_get_global_die_time(vectm_t *vec)
     return vec->global_die_time;
 }
 
+/**
+ * \brief Resize vector
+ * \param[in,out] vec Vector of templates
+ * \return True if there's not memory error, otherwise False
+ */
 bool
 vectm_resize(vectm_t *vec)
 {
@@ -134,6 +174,12 @@ vectm_find(const vectm_t *vec, uint16_t id)
     return vec->fields[index].templates;
 }
 
+/**
+ * \brief Compare two templates
+ * \param[in] first  First template
+ * \param[in] second Second template
+ * \return Different
+ */
 int
 tmpl_cmp(const void* first, const void* second)
 {
@@ -149,18 +195,24 @@ vectm_sort(vectm_t *vec)
     qsort(vec->fields, vec->end, sizeof(struct vectm_fields), tmpl_cmp);
 }
 
-bool
-vectm_remove(vectm_t *vec, size_t index)
-{
-    free(vec->fields[index].templates->raw.data);
-    free(vec->fields[index].templates);
+//bool
+//vectm_remove(vectm_t *vec, size_t index)
+//{
+//    free(vec->fields[index].templates->raw.data);
+//    free(vec->fields[index].templates);
+//
+//    vec->fields[index] = vec->fields[vec->end -1];
+//    vec->end--;
+//    vectm_sort(vec);
+//    return true;
+//}
 
-    vec->fields[index] = vec->fields[vec->end -1];
-    vec->end--;
-    vectm_sort(vec);
-    return true;
-}
-
+/**
+ * \brief Set die_time of the template
+ * \param[in] tmpl Templater
+ * \param[in] src  Source template
+ * \return Die_time
+ */
 uint64_t
 set_die_time(ipx_tmpl_t *tmpl, ipx_tmpl_template_t *src)
 {
@@ -201,24 +253,16 @@ vectm_destroy(vectm_t *vec)
 
 // GARBAGE
 
-/** Garbage                                                            */
+/** Garbage                                                                               */
 struct garbage {
-    /** Vector of templates                                            */
+    /** Vector of templates                                                               */
     struct temps {
-        size_t                end;    /**< One after the last element   */
-        size_t                used;   /**< Size of the allocated memory */
-        ipx_tmpl_template_t **fields; /**< templates                    */
-    } temps;
+        size_t                end;    /**< One after the last element                     */
+        size_t                used;   /**< Size of the allocated memory                   */
+        ipx_tmpl_template_t **fields; /**< Old templates that should be removed           */
+    } temps;                          /**< Vector of old templates that should be removed */
 
-    /** Vector of template indexes                                      */
-    struct indexes {
-        size_t                end;    /**< One after the last element   */
-        size_t                used;   /**< Size of the allocated memory */
-        uint16_t             *fields;  /**< Indexes                      */
-    } index;
-
-    ipx_tmpl_t *tmpl;
-    ipx_tmpl_t *snapshot; /**< One before the snapshot that should be removed */
+    ipx_tmpl_t *snapshot;             /**< First old snapshot that should be removed      */
 };
 
 struct garbage *
@@ -228,10 +272,6 @@ tmpl_garbage_create(ipx_tmpl_t *tmpl)
     res->temps.end      = 0;
     res->temps.used     = 0;
     res->temps.fields   = NULL;
-    res->index.end    = 0;
-    res->index.used   = 0;
-    res->index.fields = NULL;
-    res->tmpl         = tmpl;
     return res;
 }
 
@@ -256,27 +296,6 @@ tmpl_garbage_template_resize(struct garbage* gar)
     return true;
 }
 
-/**
- * \brief Resize garbage if there isn't any space for another template
- * \param[in,out] gar Garbage
- * \return True if no error, False if memory error
- */
-bool
-tmpl_garbage_template_index_resize(struct garbage* gar)
-{
-    if (gar->index.end >= gar->index.used) {
-        if (gar->index.used == 0) {
-            gar->index.used = 4;
-        }
-        gar->index.used *= 2;
-        gar->index.fields = realloc(gar->index.fields, gar->index.used*sizeof(ipx_tmpl_template_t));
-        if (gar->index.fields == NULL) {
-            return false;
-        }
-    }
-    return true;
-}
-
 bool
 tmpl_garbage_template_add(struct garbage *gar, ipx_tmpl_template_t *tmp)
 {
@@ -289,38 +308,10 @@ tmpl_garbage_template_add(struct garbage *gar, ipx_tmpl_template_t *tmp)
     return true;
 }
 
-bool
-tmpl_garbage_template_index_add(struct garbage *gar, uint16_t index)
-{
-    if (!tmpl_garbage_template_index_resize(gar)) {
-        return false;
-    }
-
-    gar->index.fields[gar->index.end] = index;
-    gar->index.end++;
-    return true;
-}
-
 void
 tmpl_garbage_snapshot_add(struct garbage *gar, ipx_tmpl_t *snapshot)
 {
     gar->snapshot = snapshot;
-}
-
-/**
- * \brief Remove all templates except \p src template
- * \param[in] src Template
- */
-void
-templates_remove_previous(ipx_tmpl_template_t *src)
-{
-    ipx_tmpl_template_t *tmp = src->next;
-    ipx_tmpl_template_t *rem = NULL;
-    while(tmp != NULL) {
-        rem = tmp;
-        tmp = tmp->next;
-        template_destroy(rem);
-    }
 }
 
 /**
@@ -331,34 +322,20 @@ void
 garbage_templates_remove(garbage_t *gar)
 {
     for (size_t i = 0; i < gar->temps.end; ++i) {
-        templates_remove_previous(gar->temps.fields[i]);
+        template_remove_previous(gar->temps.fields[i]);
         gar->temps.fields[i]->next = NULL;
     }
     free(gar->temps.fields);
 }
 
-void
-garbage_indexes_remove(garbage_t *gar)
-{
-    for (size_t i = 0; i < gar->index.end; ++i) {
-        templates_remove_previous(gar->tmpl->templates->fields[i].templates);
-        vectm_remove(gar->tmpl->templates, gar->index.fields[i]);
-    }
-    free(gar->index.fields);
-}
-
+/**
+ * \brief Remove all snapshots from a garbage
+ * \param[in,out] gar Garbage
+ */
 void
 garbage_snapshots_remove(garbage_t *gar)
 {
-    const ipx_tmpl_t *snap = gar->snapshot->snapshot;
-    const ipx_tmpl_t *rem;
-    while(snap != NULL) {
-        rem = snap;
-        snap = snap->snapshot;
-
-        vectm_destroy(rem->templates);
-        free((void*) rem);
-    }
+    snapshots_remove(gar->snapshot->snapshot);
     gar->snapshot->snapshot = NULL;
 }
 
@@ -366,89 +343,88 @@ void
 tmpl_garbage_destroy(garbage_t *gar)
 {
     garbage_templates_remove(gar);
-    garbage_indexes_remove(gar);
     garbage_snapshots_remove(gar);
     free(gar);
 }
 
-// BINARY TREE
-struct node{
-    ipx_tmpl_template_t *key;
-    struct node *left;
-    struct node *right;
-};
-
-node_t *
-create_node(ipx_tmpl_template_t *key)
-{
-    node_t *res = malloc(sizeof(node_t));
-    if (res == NULL) {
-        return NULL;
-    }
-    res->key   = key;
-    res->left  = NULL;
-    res->right = NULL;
-    return res;
-}
-
-void
-tmpl_tree_add(node_t **leaf, ipx_tmpl_template_t *key, bool is_left) {
-    node_t *res = create_node(key);
-    if (res == NULL) {
-        return;
-    }
-
-    if (is_left) {
-        (*leaf)->left = res;
-    } else {
-        (*leaf)->right = res;
-    }
-}
-
-const node_t *
-tmpl_tree_get(node_t **leaf, ipx_tmpl_template_t *key) {
-    if (*leaf == NULL) {
-        *leaf = create_node(key);
-        return NULL;
-    }
-
-    if ((*leaf)->key == key) {
-        return *leaf;
-    }
-    else if ((*leaf)->key < key) {
-        if ((*leaf)->left != NULL) {
-            return tmpl_tree_get(&(*leaf)->left, key);
-        }
-        tmpl_tree_add(leaf, key, true);
-    }
-    else {
-        if ((*leaf)->right != NULL) {
-            return tmpl_tree_get(&(*leaf)->right, key);
-        }
-        tmpl_tree_add(leaf, key, false);
-    }
-    return NULL;
-}
-
-void
-destroy(node_t *leaf)
-{
-    if (leaf->left != NULL) {
-        destroy(leaf->left);
-    }
-    if (leaf->right != NULL) {
-        destroy(leaf->right);
-    }
-
-    free(leaf);
-}
-
-void
-tmpl_tree_destroy(node_t *leaf)
-{
-    if (leaf == NULL) {
-        return;
-    }
-
-    destroy(leaf);
-}
+//// BINARY TREE
+//struct node{
+//    ipx_tmpl_template_t *key;
+//    struct node *left;
+//    struct node *right;
+//};
+//
+//node_t *
+//create_node(ipx_tmpl_template_t *key)
+//{
+//    node_t *res = malloc(sizeof(node_t));
+//    if (res == NULL) {
+//        return NULL;
+//    }
+//    res->key   = key;
+//    res->left  = NULL;
+//    res->right = NULL;
+//    return res;
+//}
+//
+//void
+//tmpl_tree_add(node_t **leaf, ipx_tmpl_template_t *key, bool is_left) {
+//    node_t *res = create_node(key);
+//    if (res == NULL) {
+//        return;
+//    }
+//
+//    if (is_left) {
+//        (*leaf)->left = res;
+//    } else {
+//        (*leaf)->right = res;
+//    }
+//}
+//
+//const node_t *
+//tmpl_tree_get(node_t **leaf, ipx_tmpl_template_t *key) {
+//    if (*leaf == NULL) {
+//        *leaf = create_node(key);
+//        return NULL;
+//    }
+//
+//    if ((*leaf)->key == key) {
+//        return *leaf;
+//    }
+//    else if ((*leaf)->key < key) {
+//        if ((*leaf)->left != NULL) {
+//            return tmpl_tree_get(&(*leaf)->left, key);
+//        }
+//        tmpl_tree_add(leaf, key, true);
+//    }
+//    else {
+//        if ((*leaf)->right != NULL) {
+//            return tmpl_tree_get(&(*leaf)->right, key);
+//        }
+//        tmpl_tree_add(leaf, key, false);
+//    }
+//    return NULL;
+//}
+//
+//void
+//destroy(node_t *leaf)
+//{
+//    if (leaf->left != NULL) {
+//        destroy(leaf->left);
+//    }
+//    if (leaf->right != NULL) {
+//        destroy(leaf->right);
+//    }
+//
+//    free(leaf);
+//}
+//
+//void
+//tmpl_tree_destroy(node_t *leaf)
+//{
+//    if (leaf == NULL) {
+//        return;
+//    }
+//
+//    destroy(leaf);
+//}

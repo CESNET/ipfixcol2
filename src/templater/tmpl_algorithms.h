@@ -1,5 +1,5 @@
 /**
- * \file // TODO
+ * \file   src/templater/tmpl_algorithms.h
  * \author Michal Režňák
  * \brief  Basic vectors for templater
  * \date   8/23/17
@@ -52,12 +52,12 @@ struct vectm_fields {
     uint64_t                  die_time;  /**< Time after which template shouldn't be used */
 };
 
-/** Vector of templates                                                                     */
+/** Vector of templates                                                           */
 typedef struct vec_tm_s {
-    uint64_t             global_die_time; /**< Smallest die_time of the templates       */
-    size_t               end;             /**< Index one after the last element         */
-    size_t               used;            /**< Number of used fields of elements        */
-    struct vectm_fields *fields;
+    uint64_t             global_die_time; /**< Smallest die_time of the templates */
+    size_t               end;             /**< Index one after the last element   */
+    size_t               used;            /**< Number of used fields of elements  */
+    struct vectm_fields *fields;          /**< Field of vector elements           */
 } vectm_t;
 
 /**
@@ -96,6 +96,7 @@ vectm_get_template(const vectm_t* vec, size_t index);
 
 /**
  * \brief Set template on the index to the different value.
+ * \param[in]     tmpl  Templater
  * \param[in,out] vec   Vector of templates
  * \param[in]     index Index of the template
  * \param[in]     src   Source template
@@ -117,8 +118,11 @@ vectm_set_die_time(vectm_t *vec, size_t index, uint64_t time);
 
 /**
  * \brief Get die_time of the template
- * \param vec Vector of templates
+ * \param vec   Vector of templates
+ * \param index Index of the template in a vector
  * \return die_time
+ *
+ * \note Because of performance, function doesn't check boundaries
  */
 uint64_t
 vectm_get_die_time(vectm_t *vec, size_t index);
@@ -151,14 +155,14 @@ vectm_find_index(const vectm_t *vec, uint16_t id);
 struct ipx_tmpl_template *
 vectm_find(const vectm_t *vec, uint16_t id);
 
-/**
- * \brief Create new empty template in a vector
- * \param[in] vec   Template vector
- * \param[in] count Number of fields in a template
- * \return Template in a vector
- */
-ipx_tmpl_template_t *
-vectm_make(ipx_tmpl_t *tmpl, vectm_t *vec, size_t count);
+//*
+// * \brief Create new empty template in a vector
+// * \param[in] vec   Template vector
+// * \param[in] count Number of fields in a template
+// * \return Template in a vector
+// */
+//ipx_tmpl_template_t *
+//vectm_make(ipx_tmpl_t *tmpl, vectm_t *vec, size_t count);
 
 /**
  * \brief Add template to the end of the vector
@@ -191,6 +195,7 @@ void
 vectm_destroy(vectm_t *vec);
 
 // GARBAGE
+/** Garbage */
 typedef struct garbage garbage_t;
 
 /**
@@ -239,23 +244,23 @@ tmpl_garbage_snapshot_add(garbage_t *gar, ipx_tmpl_t *tmp);
 void
 tmpl_garbage_destroy(garbage_t *gar);
 
-// BINARY TREE
-typedef struct node node_t;
-
-/**
- * \brief Search binary tree.
- * \param[in,out] leaf Binary tree
- * \param[in]     key  Key value
- * \return Founded node on success, otherwise NULL and key is added
- */
-const node_t *
-tmpl_tree_get(node_t **leaf, ipx_tmpl_template_t *key);
-
-/**
- * \brief Destroy binary tree
- * \param[in] leaf Binary tree
- */
-void
-tmpl_tree_destroy(node_t *leaf);
+//// BINARY TREE
+//typedef struct node node_t;
+//
+///**
+// * \brief Search binary tree.
+// * \param[in,out] leaf Binary tree
+// * \param[in]     key  Key value
+// * \return Founded node on success, otherwise NULL and key is added
+// */
+//const node_t *
+//tmpl_tree_get(node_t **leaf, ipx_tmpl_template_t *key);
+//
+///**
+// * \brief Destroy binary tree
+// * \param[in] leaf Binary tree
+// */
+//void
+//tmpl_tree_destroy(node_t *leaf);
 
 #endif // TEMPLATER_VECTORS_H

@@ -1,7 +1,43 @@
 /**
+ * \file   src/templater/tmpl_template.h
  * \author Michal Režňák
  * \date   8/28/17
  */
+
+/* Copyright (C) 2016 CESNET, z.s.p.o.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is'', and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
+
 #ifndef TEMPLATE_H
 #define TEMPLATE_H
 
@@ -91,6 +127,17 @@ template_overwrite(ipx_tmpl_t *tmpl, struct ipx_tmpl_template *template,
 bool
 template_save_properties(ipx_tmpl_t* tmpl, struct ipx_tmpl_template* res,
                          const struct ipfix_template_record* rec, uint16_t len);
+/**
+ * \brief Save properties of the options template from a record
+ * \param[in]  tmpl Templater
+ * \param[out] res  Options template
+ * \param[in]  rec  Record
+ * \param[in]  len  Length of the raw data in a record
+ * \return True on success, otherwise False
+ */
+void
+opts_template_save_properties(ipx_tmpl_t *tmpl, ipx_tmpl_template_t *res,
+                              const struct ipfix_options_template_record *rec, uint16_t len);
 
 /**
  * \brief Add options template to the templater
@@ -101,6 +148,35 @@ template_save_properties(ipx_tmpl_t* tmpl, struct ipx_tmpl_template* res,
  */
 int
 opts_template_add(ipx_tmpl_t *tmpl, const struct ipfix_options_template_record *rec, uint16_t max_len);
+
+/**
+ * \brief If can (depends on templater's flags), create new options template and save to the templater
+ * \param[in,out] tmpl     Templater
+ * \param[in]     template Previous options template
+ * \param[in]     rec      Template record that will be parsed
+ * \param[in]     max_len  Maximal length of the template record
+ * \param[in]     index    Index on which previous options template was in templater's field of templates
+ * \return IPX_OK on success, otherwise IPX_ERR or IPX_NOMEM
+ *
+ * \note New options template will points to the previous
+ */
+int
+opts_template_overwrite(ipx_tmpl_t *tmpl, ipx_tmpl_template_t *template,
+                        const struct ipfix_options_template_record *rec, uint16_t max_len, ssize_t index);
+
+/**
+ * \brief Convert record to the options template
+ * \param[in,out] tmpl    Templater
+ * \param[in]     rec     Record
+ * \param[in]     max_len Maximal length of the record
+ * \param[out]    res     Converted options template
+ * \return Length of the record on success, otherwise IPX_ERR or IPX_NOMEM
+ *
+ * \note Record is copied
+ */
+int
+opts_template_convert(ipx_tmpl_t *tmpl, const struct ipfix_options_template_record *rec,
+                      uint16_t max_len, ipx_tmpl_template_t *res);
 
 /**
  * \brief Go throw all options templates in a record and parse them to the templater
@@ -149,6 +225,32 @@ ipx_tmpl_template_t *
 template_find_with_time(const ipx_tmpl_t* tmpl, uint16_t id);
 
 /**
+ * \brief Create new template with same definitions as 'template record' and save to the templater
+ * \param[in] tmpl    Templater
+ * \param[in] next    Next template
+ * \param[in] rec     Template record
+ * \param[in] max_len Maximal length
+ * \param[in] index   Index of the template in a templater
+ * \return Real length when template is saved, otherwise IPX_ERR or IPX_NOMEM
+ *
+ * \note Template next will be used as a 'next' pointer in a new template.
+ */
+int
+template_replace_index(ipx_tmpl_t *tmpl, ipx_tmpl_template_t *next,
+                       const struct ipfix_template_record *rec, uint16_t max_len, ssize_t index);
+
+/**
+ * \brief Check if templates are identical
+ * \param[in] template Template
+ * \param[in] rec      Template record
+ * \param[in] max_len  Maximal length
+ * \return
+ */
+int
+templates_identical(const ipx_tmpl_template_t *template, const struct ipfix_template_record *rec,
+                    uint16_t max_len);
+
+/**
  * \brief Move template withe defined ID to the garbage
  * \param[in,out] tmpl  Templater
  * \param[in]     index Index of the template in a vector of templates
@@ -165,6 +267,27 @@ template_remove(ipx_tmpl_t *tmpl, size_t index);
  */
 void
 template_destroy(ipx_tmpl_template_t *src);
+
+/**
+ * \brief Remove all templates except \p src template
+ * \param[in] src Template
+ */
+void
+template_remove_previous(ipx_tmpl_template_t* src);
+
+/**
+ * \brief Remove all templates with previous definitions of the same ID
+ * \param[in] src Template
+ */
+void
+template_remove_all(ipx_tmpl_template_t* src);
+
+/**
+ * \brief Remove all snapshots
+ * \param[in] snap Snapshot
+ */
+void
+snapshots_remove(const ipx_tmpl_t *snap);
 
 /**
  * \brief Move all templates with defined ID to the garbage

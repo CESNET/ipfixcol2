@@ -1,5 +1,5 @@
 /**
- * \file // TODO
+ * \file   include/ipfixcol2/templater.h
  * \author Michal Režňák
  * \brief  Simple template manager
  * \date   17. August 2017
@@ -116,8 +116,9 @@ typedef struct ipx_tmpl_template ipx_tmpl_template_t;
 
 /**
  * \brief Create templater
- * \param[in] life_time  Time after which template is old (UDP only)
+ * \param[in] life_time   Time after which template is old (UDP only)
  * \param[in] life_packet Number of IPFIX messages after which template is old (UDP only)
+ * \param[in] type        Protocol of the session
  * \return Templater on success, otherwise NULL when memory error
  */
 IPX_API ipx_tmpl_t*
@@ -157,8 +158,8 @@ ipx_tmpl_destroy(ipx_tmpl_t* tmpl);
  *
  * \note
  * May occur a situation when newer IPFIX message is sent earlier than older message. That's why
- * current time must be set. Templater will compare <tt>current time<\tt> with template's time
- * and 'do something with' template only if <tt>current time<\tt> is between template's \p first
+ * current time must be set. Templater will compare \p current \p time with template's time
+ * and 'do something with' template only if \p current \p time is between template's \p first
  * and \p last time (see ipx_template_time).
  * \note
  * When UDP protocol is used, than template's life can end after a number of IPFIX messages.
@@ -173,7 +174,7 @@ ipx_tmpl_set(ipx_tmpl_t* tmpl, uint64_t current_time, uint64_t current_packet);
  * \brief Remove all templates from a templater (withdrawal all)
  *
  * When UDP protocol is set, then remove all templates.
- * When TCP or SCTP protocol is set, then only \p last time is set to the <tt>compare time<\tt>
+ * When TCP or SCTP protocol is set, then only \p last time is set to the \p compare \p time
  * (see ipx_template_time and ipx_tmpl_set).
  * Thus ipx_tmpl_set should be called before this.
  * It doesn't remove templates because when older message will be sent, than it need older
@@ -191,7 +192,7 @@ ipx_tmpl_clear(ipx_tmpl_t* tmpl);
  * \brief Remove template from a templater (withdrawal)
  *
  * When UDP protocol is set, then remove all templates with defined ID.
- * When TCP or SCTP protocol is set, then only \p last time is set to the <tt>compare time<\tt>
+ * When TCP or SCTP protocol is set, then only \p last time is set to the \p compare \p time
  * (see ipx_template_time and ipx_tmpl_set).
  * Thus ipx_tmpl_set should be called before this.
  * It doesn't remove template because when older message will be sent, than it need older
@@ -202,8 +203,8 @@ ipx_tmpl_clear(ipx_tmpl_t* tmpl);
  * doesn't exists, otherwise IPX_ERR or IPX_NOMEM
  *
  * \warning \p ipx_tmpl_set should be called before to work properly
- * \note UDP cannot send withdrawal scopes thus when sent all templates with that ID will be on next
- * get_garbage call removed
+ * \note UDP cannot send withdrawal scopes thus when sent all templates with that ID will be on
+ * next get_garbage call removed
  */
 IPX_API int
 ipx_tmpl_template_remove(ipx_tmpl_t* tmpl, uint16_t id);
@@ -300,7 +301,7 @@ ipx_tmpl_options_template_parse(ipx_tmpl_t* tmpl, const struct ipfix_options_tem
  * \brief Find template wit defined ID in a templater
  * \param[in]  tmpl     Templater
  * \param[in]  id       ID of a searched template
- * \param[out] template Founded template
+ * \param[out] dst      Founded template
  * \return IPX_OK when template with defined ID was founded, otherwise IPX_ERR.
  *
  * \warning \p ipx_tmpl_set should be called before to work properly
@@ -341,11 +342,10 @@ ipx_tmpl_snapshot_get(ipx_tmpl_t *tmpl);
 IPX_API ipx_garbage_msg_t *
 ipx_tmpl_garbage_get(ipx_tmpl_t* tmpl);
 
-// TODO move to separate header template.h?
 /**
  * \brief Get the description of a field with a given index in a template
- * \param[in] template Template
- * \param[in] index    Index of the field
+ * \param[in] src   Template
+ * \param[in] index Index of the field
  * \return Field with defined Index on success, otherwise NULL
  */
 IPX_API const struct ipx_tmpl_template_field*
@@ -353,7 +353,7 @@ ipx_tmpl_template_field_get(ipx_tmpl_template_t* src, size_t index);
 
 /**
  * \brief Get template type
- * \param[in] template Template
+ * \param[in] src Template
  * \return Template type
  */
 IPX_API enum IPX_TEMPLATE_TYPE
@@ -361,7 +361,7 @@ ipx_tmpl_template_type_get(const ipx_tmpl_template_t* src);
 
 /**
  * \brief Get option template type
- * \param[in] template Template
+ * \param[in] src Template
  * \return Option template type
  */
 IPX_API enum IPX_OPTS_TEMPLATE_TYPE
@@ -369,13 +369,11 @@ ipx_tmpl_template_opts_type_get(const ipx_tmpl_template_t* src);
 
 /**
  * \brief Get template ID
- * \param[in] template Template
+ * \param[in] src Template
  * \return ID of the template
  */
 IPX_API uint16_t
 ipx_tmpl_template_id_get(const ipx_tmpl_template_t* src);
-
-// TODO More template functions?
 
 #ifdef __cplusplus
 }

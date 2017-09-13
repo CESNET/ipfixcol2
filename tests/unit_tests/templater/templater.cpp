@@ -23,14 +23,18 @@ public:
 protected:
     ipx_tmpl_t *tmpl_udp;
     ipx_tmpl_t *tmpl_tcp;
+    fds_iemgr_t *iemgr;
     void SetUp() override {
         tmpl_udp = ipx_tmpl_create(50, 50, IPX_SESSION_TYPE_UDP);
         tmpl_tcp = ipx_tmpl_create(50, 50, IPX_SESSION_TYPE_TCP);
+        iemgr = fds_iemgr_create();
+        fds_iemgr_read_file(iemgr, "individual.xml", true);
     }
 
     void TearDown() override {
         ipx_tmpl_destroy(tmpl_udp);
         ipx_tmpl_destroy(tmpl_tcp);
+        fds_iemgr_destroy(iemgr);
     }
 };
 
@@ -279,11 +283,15 @@ TEST_F(Records, garbage_valid) {
     EXPECT_EQ(ipx_tmpl_template_get(tmpl_udp, 258, &res), IPX_OK);
     EXPECT_GT(ipx_tmpl_template_parse(tmpl_udp, withdrawal, 4), 0);
     EXPECT_EQ(ipx_tmpl_template_get(tmpl_udp, 258, &res), IPX_NOT_FOUND);
+    EXPECT_GT(ipx_tmpl_template_parse(tmpl_udp, scope, 20), 0);
+    EXPECT_GT(ipx_tmpl_template_parse(tmpl_udp, withdrawal, 4), 0);
 
     EXPECT_GT(ipx_tmpl_template_parse(tmpl_udp, scope259, 20), 0);
     EXPECT_EQ(ipx_tmpl_template_get(tmpl_udp, 259, &res), IPX_OK);
     EXPECT_GT(ipx_tmpl_template_parse(tmpl_udp, withdrawal259, 4), 0);
     EXPECT_EQ(ipx_tmpl_template_get(tmpl_udp, 259, &res), IPX_NOT_FOUND);
+    EXPECT_GT(ipx_tmpl_template_parse(tmpl_udp, scope259, 20), 0);
+    EXPECT_GT(ipx_tmpl_template_parse(tmpl_udp, withdrawal259, 4), 0);
 
     ipx_tmpl_set(tmpl_udp, 90, 90);
     EXPECT_GT(ipx_tmpl_template_parse(tmpl_udp, scope, 20), 0);
@@ -293,6 +301,9 @@ TEST_F(Records, garbage_valid) {
     EXPECT_EQ(ipx_tmpl_garbage_get(tmpl_udp), nullptr);
 
     free(scope);
+    free(scope259);
+    free(withdrawal);
+    free(withdrawal259);
 }
 
 TEST_F(Records, template_valid) {
@@ -317,5 +328,38 @@ TEST_F(Records, template_valid) {
     EXPECT_TRUE(field->last_identical);
     EXPECT_EQ(field->definition, nullptr);
 
+    free(scope);
+}
+
+TEST_F(Records, iemgr_valid) {
+    auto scope = Records::valid_2elem();
+    ipx_tmpl_template_t *res = NULL;
+
+    ipx_tmpl_set(tmpl_tcp, 10, 10);
+    EXPECT_GT(ipx_tmpl_template_parse(tmpl_tcp, scope, 20), 0);
+    EXPECT_EQ(ipx_tmpl_template_get(tmpl_tcp, 258, &res), IPX_OK);
+    EXPECT_EQ(ipx_tmpl_iemgr_load(tmpl_tcp, iemgr), IPX_OK);
+    free(scope);
+}
+
+TEST_F(Records, iemgr_null_valid) {
+    auto scope = Records::valid_2elem();
+    ipx_tmpl_template_t *res = NULL;
+
+    ipx_tmpl_set(tmpl_tcp, 10, 10);
+    EXPECT_GT(ipx_tmpl_template_parse(tmpl_tcp, scope, 20), 0);
+    EXPECT_EQ(ipx_tmpl_template_get(tmpl_tcp, 258, &res), IPX_OK);
+    EXPECT_EQ(ipx_tmpl_iemgr_load(tmpl_tcp, NULL), IPX_OK);
+    free(scope);
+}
+
+TEST_F(Records, identical_redefinition) {
+    auto scope = Records::valid_2elem();
+    ipx_tmpl_template_t *res = NULL;
+
+    ipx_tmpl_set(tmpl_tcp, 10, 10);
+    EXPECT_GT(ipx_tmpl_template_parse(tmpl_tcp, scope, 20), 0);
+    EXPECT_GT(ipx_tmpl_template_parse(tmpl_tcp, scope, 20), 0);
+    EXPECT_EQ(ipx_tmpl_template_get(tmpl_tcp, 258, &res), IPX_OK);
     free(scope);
 }

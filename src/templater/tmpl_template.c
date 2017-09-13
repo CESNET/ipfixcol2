@@ -1,18 +1,56 @@
 /**
+ * \file   src/templater/tmpl_template.c
  * \author Michal Režňák
  * \date   8/28/17
  */
+
+/* Copyright (C) 2016 CESNET, z.s.p.o.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is'', and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
+
 #include <string.h>
 #include <ipfixcol2/templater.h>
 #include <ipfixcol2/converters.h>
 #include "tmpl_common.h"
 
-#define FIRST_BIT(_value_)    ((_value_) &  (0x8000)) // TODO
-#define NO_FIRST_BIT(_value_) ((_value_) & ~(0x8000)) // TODO
+/** Return only first bit from a _value_ */
+#define FIRST_BIT(_value_)    ((_value_) &  (0x8000))
+/** Return _value_ without the first bit */
+#define NO_FIRST_BIT(_value_) ((_value_) & ~(0x8000))
 
 /**
  * \brief Change 'last_identical' to \p false to all previous elements with same ID
- * \param[in,out] field   Field of elements
+ * \param[in,out] field Field of elements
  * \param[in]     index Number of elements
  */
 void
@@ -213,6 +251,11 @@ template_create(size_t count)
     return malloc(sizeof(ipx_tmpl_template_t) + count * sizeof(struct ipx_tmpl_template_field));
 }
 
+/**
+ * \brief Copy template
+ * \param[in] src Source template
+ * \return Copied template on success, otherwise NULL
+ */
 ipx_tmpl_template_t *
 template_copy(ipx_tmpl_template_t *src)
 {
@@ -254,7 +297,7 @@ template_convert(ipx_tmpl_t *tmpl, const struct ipfix_template_record *rec, uint
 /**
  * \brief Replace all previous definitions of elements in a template with new definitions
  * from a new iemgr
- * \param[in,out] tmpl Templater
+ * \param[in,out] temp Template
  * \param[in]     mgr  Iemgr
  */
 void
@@ -323,92 +366,94 @@ templates_null_iemgr(ipx_tmpl_t* tmpl)
 
 /**
  * \brief Check if all fields in template are identical with fields in record
- * \param[in] template Template
- * \param[in] rec      Template record
+ * \param[in] fields   Template fields
+ * \param[in] elems    Record elements
+ * \param[in] count    Number of elements (both fields and elems)
  * \param[in] max_len  Maximal length
  * \return True if are identical, otherwise false
  */
-bool
+int
 fields_identical(const struct ipx_tmpl_template_field *fields, const union template_ie_u *elems,
                  uint16_t count, uint16_t max_len)
 {
+    uint64_t id = 0;
+    uint64_t length = 0;
+    uint64_t en = 0;
+
     int len = 0;
-    for (int i = 0; i < count && len < max_len; ++i) {
+    for (int i = 0, j = 0; i < count && len < max_len; ++i, ++j) {
         len += INT32_SIZE;
-        if (elems[i].ie.id != fields[i].id) {
-            return false;
+        ipx_get_uint_be(&elems[j].ie.id, INT16_SIZE, &id);
+        if (fields[i].id != NO_FIRST_BIT(id)) {
+            return IPX_ERR;
         }
-        if (elems[i].ie.length != fields[i].length) {
-            return false;
+        ipx_get_uint_be(&elems[j].ie.length, INT16_SIZE, &length);
+        if (fields[i].length != length) {
+            return IPX_ERR;
         }
-        if (NO_FIRST_BIT(elems[i].ie.id)) {
+        if (!FIRST_BIT(id)) {
             continue;
         }
 
         len += INT32_SIZE;
-        if (fields[i].en != elems[++i].enterprise_number) {
-            return false;
+        ipx_get_uint_be(&elems[++j].enterprise_number, INT32_SIZE, &en);
+        if (fields[i].en != en) {
+            return IPX_ERR;
         }
     }
 
-    return true;
+    return len;
 }
 
-/**
- * \brief Check if templates are identical
- * \param[in] template Template
- * \param[in] rec      Template record
- * \param[in] max_len  Maximal length
- * \return
- */
-bool
+int
 templates_identical(const ipx_tmpl_template_t *template, const struct ipfix_template_record *rec,
                     uint16_t max_len)
 {
-    if (template->id               != rec->template_id
-     || template->fields_cnt_total != rec->count) {
-        return false;
+    uint64_t count = 0;
+    ipx_get_uint_be(&rec->count , INT16_SIZE, &count);
+    uint64_t id = 0;
+    ipx_get_uint_be(&rec->template_id , INT16_SIZE, &id);
+
+    if (template->id != id || template->fields_cnt_total != count) {
+        return IPX_ERR;
     }
 
-    return fields_identical(template->fields, rec->fields, rec->count, max_len);
+    return fields_identical(template->fields, rec->fields, (uint16_t) count, max_len);
+}
+
+int
+template_replace_index(ipx_tmpl_t *tmpl, ipx_tmpl_template_t *next,
+                       const struct ipfix_template_record *rec, uint16_t max_len, ssize_t index)
+{
+    uint64_t count;
+    ipx_get_uint_be(&rec->count , INT16_SIZE, &count);
+
+    ipx_tmpl_template_t *res = template_create(count);
+    int len = template_convert(tmpl, rec, max_len, res);
+    if (len < 0) {
+        return len;
+    }
+    res->next = next;
+    vectm_set_index(tmpl, tmpl->templates, (size_t) index, res);
+    return len;
 }
 
 int
 template_overwrite(ipx_tmpl_t *tmpl, ipx_tmpl_template_t *template,
-                       const struct ipfix_template_record *rec, uint16_t max_len, ssize_t index)
+                   const struct ipfix_template_record *rec, uint16_t max_len, ssize_t index)
 {
     if (tmpl->current.time < template->time.last) {
         return IPX_ERR;
     }
 
-    int len;
     if (template->time.end > 0) {
-        ipx_tmpl_template_t *res = template_create(rec->count);
-        len = template_convert(tmpl, rec, max_len, res);
-        if (len < 0) {
-            return len;
-        }
-        res->next = template;
-        vectm_set_index(tmpl, tmpl->templates, (size_t) index, res);
-    } else {
-        if (tmpl->flag.can_overwrite) {
-
-            ipx_tmpl_template_t *res = template_create(rec->count);
-            len = template_convert(tmpl, rec, max_len, res);
-            if (len < 0) {
-                return len;
-            }
-
-            res->next = template_copy_end(tmpl, template);
-            vectm_set_index(tmpl, tmpl->templates, (size_t) index, res);
-        } else {
-            if (!templates_identical(template, rec, max_len)) {
-                return IPX_ERR;
-            }
-            return IPX_OK;
-        }
+        return template_replace_index(tmpl, template, rec, max_len, index);
     }
-    return len;
+
+    if (!tmpl->flag.can_overwrite) {
+        return templates_identical(template, rec, max_len);
+    }
+    return template_replace_index(tmpl, template_copy_end(tmpl, template), rec, max_len, index);
 }
 
 int
@@ -541,6 +586,25 @@ template_destroy(ipx_tmpl_template_t *src)
 }
 
 void
+template_remove_previous(ipx_tmpl_template_t* src)
+{
+    ipx_tmpl_template_t *tmp = src->next;
+    ipx_tmpl_template_t *rem = NULL;
+    while(tmp != NULL) {
+        rem = tmp;
+        tmp = tmp->next;
+        template_destroy(rem);
+    }
+}
+
+void
+template_remove_all(ipx_tmpl_template_t* src)
+{
+    template_remove_previous(src);
+    template_destroy(src);
+}
+
+void
 opts_template_save_properties(ipx_tmpl_t *tmpl, ipx_tmpl_template_t *res,
                               const struct ipfix_options_template_record *rec, uint16_t len)
 {
@@ -584,7 +648,7 @@ opts_template_convert(ipx_tmpl_t *tmpl, const struct ipfix_options_template_reco
  * \param[in] max_len  Maximal length
  * \return
  */
-bool
+int
 opts_templates_identical(const ipx_tmpl_template_t *template, const struct ipfix_options_template_record *rec,
                     uint16_t max_len)
 {
@@ -682,4 +746,17 @@ template_remove_all_with_id(ipx_tmpl_t *tmpl, size_t index)
     template_remove(tmpl, index);
     vectm_set_die_time(tmpl->templates, index, 1);
     return IPX_OK;
+}
+
+void
+snapshots_remove(const ipx_tmpl_t* snap)
+{
+    const ipx_tmpl_t *rem;
+    while(snap != NULL) {
+        rem = snap;
+        snap = snap->snapshot;
+
+        vectm_destroy(rem->templates);
+        free((void*) rem);
+    }
 }

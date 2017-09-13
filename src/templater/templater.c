@@ -1,5 +1,5 @@
 /**
- * \file //TODO
+ * \file   src/templater/templater.c
  * \author Michal Režňák
  * \brief  Implementation of the template manager
  * \date   8/21/17
@@ -102,21 +102,18 @@ ipx_tmpl_iemgr_load(ipx_tmpl_t *tmpl, fds_iemgr_t *mgr)
     return templates_reset_iemgr(tmpl, mgr);
 }
 
+/**
+ * \brief Destroy templater
+ * \param[in] tmpl Templater
+ */
 void
-tmpl_destroy(ipx_tmpl_t *tmpl, node_t **deleted)
+tmpl_destroy(ipx_tmpl_t *tmpl)
 {
-    if (tmpl->snapshot != NULL) {
-        tmpl_destroy((ipx_tmpl_t*) tmpl->snapshot, deleted);
-    }
-
-    ipx_tmpl_template_t *tmp;
     for (size_t i = 0; i < vectm_get_count(tmpl->templates); ++i) {
-        tmp = vectm_get_template(tmpl->templates, i);
-        if (tmpl_tree_get(deleted, tmp) == NULL) {
-            template_destroy(tmp);
-        }
+        template_remove_all(vectm_get_template(tmpl->templates, i));
     }
 
+    snapshots_remove(tmpl->snapshot);
     vectm_destroy(tmpl->templates);
     free(tmpl);
 }
@@ -126,9 +123,7 @@ ipx_tmpl_destroy(ipx_tmpl_t *tmpl)
 {
     assert(tmpl != NULL);
 
-    node_t* root = NULL;
-    tmpl_destroy(tmpl, &root);
-    tmpl_tree_destroy(root);
+    tmpl_destroy(tmpl);
 }
 
 void
@@ -140,6 +135,15 @@ ipx_tmpl_set(ipx_tmpl_t *tmpl, uint64_t current_time, uint64_t current_packet)
     tmpl->current.count = current_packet;
 }
 
+/**
+ * \brief Remove template at index
+ *
+ * If flag 'can_truly_remove' is true than function also set die_time to 1 and after
+ * garbage_get call all templates will be destroyed
+ * \param[in] tmpl  Templater
+ * \param[in] index Index
+ * \return
+ */
 int
 template_remove_at_index(ipx_tmpl_t *tmpl, size_t index)
 {
@@ -280,12 +284,10 @@ ipx_tmpl_t *
 snapshot_before_die_time(const ipx_tmpl_t* tmpl)
 {
     const ipx_tmpl_t *res = tmpl;
-    const ipx_tmpl_t *prev = tmpl;
     while (res != NULL) {
         if (res->current.time + tmpl->life.time < tmpl->current.time) {
-            return (ipx_tmpl_t*) prev;
+            return (ipx_tmpl_t*) res;
         }
-        prev = res;
         res = res->snapshot;
     }
     return NULL;
@@ -303,17 +305,10 @@ bool
 garbage_add(garbage_t *gar, const ipx_tmpl_t *tmpl, uint16_t index)
 {
     ipx_tmpl_template_t *res = vectm_get_template(tmpl->templates, index);
-    if (res->time.end + tmpl->life.time < tmpl->current.time && res->time.end != 0) {
-        return tmpl_garbage_template_index_add(gar, index);
-    }
-
-    ipx_tmpl_template_t *prev = res;
-    res = res->next;
     while (res != NULL) {
         if (res->time.end + tmpl->life.time < tmpl->current.time && res->time.end != 0) {
-            return tmpl_garbage_template_add(gar, prev);
+            return tmpl_garbage_template_add(gar, res);
         }
-        prev = res;
         res = res->next;
     }
     return true;
