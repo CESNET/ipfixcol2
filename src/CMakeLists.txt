@@ -4,6 +4,8 @@ configure_file(
 	"${PROJECT_BINARY_DIR}/src/build_config.h"
 )
 
+find_library(FDS_LIB fds)
+
 # Header files for source code building
 include_directories(
 	"${PROJECT_SOURCE_DIR}/include/"
@@ -22,15 +24,25 @@ set(CORE_SOURCE
 	core/message_ipfix.c
 	core/message_session.c
 	core/source.c
-	core/template.c
-)
+        )
+
+set(TEMPLATER
+    templater/templater.c
+    templater/tmpl_common.h
+    templater/tmpl_template.c
+    templater/tmpl_template.h
+        templater/tmpl_algorithms.c
+        templater/tmpl_algorithms.h
+		)
 
 # Create a static library from all source code (useful for building
 # the main application and unit tests separately)
 add_library(
 	ipfixcol2base STATIC
 	${CORE_SOURCE}
+	${TEMPLATER}
 )
+target_link_libraries(ipfixcol2base ${FDS_LIB})
 
 # Build IPFIXCOL2 exacutable with all symbols from the base library
 set(BASE_LIB -Wl,--whole-archive ipfixcol2base -Wl,--no-whole-archive)

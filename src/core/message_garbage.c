@@ -70,7 +70,7 @@ struct ipx_garbage_msg {
 };
 
 // Create a garbage message
-API ipx_garbage_msg_t *
+ipx_garbage_msg_t *
 ipx_garbage_msg_create(void *object, ipx_garbage_msg_cb callback)
 {
 	if (object == NULL || callback == NULL) {

@@ -43,7 +43,7 @@
 #define IPFIXCOL_DATA_RECORD_H
 
 #include <stdint.h>
-#include <ipfixcol2/template.h>
+#include <ipfixcol2/templater.h>
 
 /**
  * \brief Structure for parsed IPFIX Data record
@@ -53,7 +53,7 @@
 struct ipx_drec {
 	uint8_t              *rec;         /**< Start of the record              */
 	unsigned int          size;        /**< Size of the record (in bytes)    */
-	const ipx_template_t *template;    /**< Template (always must be defined)*/
+	const ipx_tmpl_template_t *template;    /**< Template (always must be defined)*/
 	uint8_t               ext_data[1]; /**< Start of extension records       */
 };
 
@@ -88,7 +88,7 @@ struct ipx_drec_field {
  *   \p field and return 0. Otherwise (usually the field is not present in
  *   the record) returns nonzero value and \p field is not filled
  */
-API int
+IPX_API int
 ipx_drec_get_field(struct ipx_drec *rec, uint32_t en, uint16_t id,
 	struct ipx_drec_field *field);
 
@@ -115,7 +115,7 @@ struct ipx_drec_iter {
  * \param[out] iter    Pointer to the iterator to initialize
  * \param[in]  record  Pointer to data record
  */
-API void
+IPX_API void
 ipx_drec_iter_init(struct ipx_drec_iter *iter, struct ipx_drec *record);
 
 /**
@@ -143,14 +143,14 @@ ipx_drec_iter_init(struct ipx_drec_iter *iter, struct ipx_drec *record);
  *   the file (starts from 0). Otherwise (no more field in the record) returns
  *   negative value.
  */
-API int
+IPX_API int
 ipx_drec_iter_next(struct ipx_drec_iter *iter);
 
 /**
  * \brief Destroy an iterator to a data field
  * \param[in] iter Pointer to the iterator
  */
-API void
+IPX_API void
 ipx_drec_iter_destroy(struct ipx_drec_iter *iter);
 
 #endif //IPFIXCOL_DATA_RECORD_H

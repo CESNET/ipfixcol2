@@ -77,7 +77,7 @@ enum IPX_SESSION_EVENT {
  * \param[in] session Pointer to the session
  * \return On success returns a pointer to the message. Otherwise returns NULL.
  */
-API ipx_session_msg_t *
+IPX_API ipx_session_msg_t *
 ipx_session_msg_create(enum IPX_SESSION_EVENT event, const ipx_session_t *session);
 
 /**
@@ -86,7 +86,7 @@ ipx_session_msg_create(enum IPX_SESSION_EVENT event, const ipx_session_t *sessio
  * Only destroy the message. A Source Session is not freed.
  * \param[in] message Pointer to the message
  */
-API void
+IPX_API void
 ipx_session_msg_destroy(ipx_session_msg_t *message);
 
 /**
@@ -94,7 +94,7 @@ ipx_session_msg_destroy(ipx_session_msg_t *message);
  * \param[in] message Pointer to the message
  * \return Event type
  */
-API enum IPX_SESSION_EVENT
+IPX_API enum IPX_SESSION_EVENT
 ipx_session_msg_get_event(const ipx_session_msg_t *message);
 
 /**
@@ -102,7 +102,7 @@ ipx_session_msg_get_event(const ipx_session_msg_t *message);
  * \param[in] message Pointer to the message
  * \return Source Session
  */
-API const ipx_session_t *
+IPX_API const ipx_session_t *
 ipx_session_msg_get_session(const ipx_session_msg_t *message);
 
 /**

@@ -1181,7 +1181,7 @@ enum ipx_convert_time_fmt {
  *   then returns #IPX_CONVERT_ERR_BUFFER and the content written to
  *   the buffer \p str is undefined. Otherwise returns #IPX_CONVERT_ERR_ARG.
  */
-API int
+IPX_API int
 ipx_uint2str_be(const void *field, size_t size, char *str, size_t str_size);
 
 /**
@@ -1198,7 +1198,7 @@ ipx_uint2str_be(const void *field, size_t size, char *str, size_t str_size);
  * \warning The buffer size \p str_size MUST be always greater than zero!
  * \return Same as a return value of ipx_uint2str_be().
  */
-API int
+IPX_API int
 ipx_int2str_be(const void *field, size_t size, char *str, size_t str_size);
 
 /**
@@ -1216,7 +1216,7 @@ ipx_int2str_be(const void *field, size_t size, char *str, size_t str_size);
  * \param[in]  str_size  Size of the output buffer (in bytes)
  * \return Same as a return value of ipx_uint2str_be().
  */
-API int
+IPX_API int
 ipx_float2str_be(const void *field, size_t size, char *str, size_t str_size);
 
 /**
@@ -1242,7 +1242,7 @@ ipx_float2str_be(const void *field, size_t size, char *str, size_t str_size);
  * \warning Wraparound for dates after 8 February 2036 is not implemented.
  * \return Same as a return value of ipx_uint2str_be().
  */
-API int
+IPX_API int
 ipx_datetime2str_be(const void *field, size_t size, enum ipx_element_type type,
     char *str, size_t str_size, enum ipx_convert_time_fmt fmt);
 
@@ -1260,7 +1260,7 @@ ipx_datetime2str_be(const void *field, size_t size, enum ipx_element_type type,
  *   will also return #IPX_CONVERT_ERR_ARG.
  * \return Same as a return value of ipx_uint2str_be().
  */
-API int
+IPX_API int
 ipx_bool2str(const void *field, char *str, size_t str_size);
 
 /**
@@ -1278,7 +1278,7 @@ ipx_bool2str(const void *field, char *str, size_t str_size);
  *   #IPX_CONVERT_STRLEN_IP bytes to guarantee enough size for conversion.
  * \return Same as a return value of ipx_uint2str_be().
  */
-API int
+IPX_API int
 ipx_ip2str(const void *field, size_t size, char *str, size_t str_size);
 
 /**
@@ -1299,7 +1299,7 @@ ipx_ip2str(const void *field, size_t size, char *str, size_t str_size);
  *   #IPX_CONVERT_STRLEN_MAC bytes to guarantee enough size for conversion.
  * \return Same as a return value of ipx_uint2str_be().
  */
-API int
+IPX_API int
 ipx_mac2str(const void *field, size_t size, char *str, size_t str_size);
 
 /**
@@ -1322,7 +1322,7 @@ ipx_mac2str(const void *field, size_t size, char *str, size_t str_size);
  * \return Same as a return value of ipx_uint2str_be(), but value 0 is also
  *   valid because the original array could be also empty.
  */
-API int
+IPX_API int
 ipx_octet_array2str(const void *field, size_t size, char *str, size_t str_size);
 
 /**
@@ -1350,7 +1350,7 @@ ipx_octet_array2str(const void *field, size_t size, char *str, size_t str_size);
  *   null byte) written to the output buffer. It does NOT represents number
  *   of UTF-8 characters!
  */
-API int
+IPX_API int
 ipx_string2str(const void *field, size_t size, char *str, size_t str_size);
 
 /**
@@ -1362,7 +1362,7 @@ ipx_string2str(const void *field, size_t size, char *str, size_t str_size);
  * \return On success returns #IPX_CONVERT_OK.
  *   Otherwise returns #IPX_CONVERT_ERR_ARG.
  */
-API int
+IPX_API int
 ipx_string_utf8check(const void *field, size_t size);
 
 #endif /* _IPX_CONVERTERS_H_ */

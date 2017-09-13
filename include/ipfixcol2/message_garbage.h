@@ -84,7 +84,7 @@ typedef void (*ipx_garbage_msg_cb)(void *object);
  * \param[in]     callback Object destruction function
  * \return On success returns a pointer to the message. Otherwise returns NULL.
  */
-API ipx_garbage_msg_t *
+IPX_API ipx_garbage_msg_t *
 ipx_garbage_msg_create(void *object, ipx_garbage_msg_cb callback);
 
 /**
@@ -93,7 +93,7 @@ ipx_garbage_msg_create(void *object, ipx_garbage_msg_cb callback);
  * First, call the destructor of an internal object and than destroy itself.
  * \param[in,out] message Pointer to the message
  */
-API void
+IPX_API void
 ipx_garbage_msg_destroy(ipx_garbage_msg_t *message);
 
 /**

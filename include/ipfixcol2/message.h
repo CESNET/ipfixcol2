@@ -79,7 +79,7 @@ typedef struct ipx_msg ipx_msg_t;
  * \param[in] message  Message
  * \return Type of the message
  */
-API enum IPX_MSG_TYPE
+IPX_API enum IPX_MSG_TYPE
 ipx_msg_get_type(ipx_msg_t *message);
 
 /**
@@ -89,7 +89,7 @@ ipx_msg_get_type(ipx_msg_t *message);
  * free allocated memory.
  * \param[in] message Pointer to the message
  */
-API void
+IPX_API void
 ipx_msg_destroy(ipx_msg_t *message);
 
 #include <ipfixcol2/message_garbage.h>

@@ -42,7 +42,7 @@
 #ifndef IPFIXCOL_MSG_IPFIX_H
 #define IPFIXCOL_MSG_IPFIX_H
 
-#include <ipfixcol2/template.h>
+#include <ipfixcol2/templater.h>
 #include <stddef.h>
 #include <ipfixcol2.h>
 #include "source.h"
@@ -89,7 +89,7 @@ struct ipx_ipfix_set {
 	 */
 	struct data_set_s {
 		/** Template. Can be NULL, when the template is missing.             */
-		const ipx_template_t *template;
+		const ipx_tmpl_template_t *template;
 
 		/**
 		 * Index of the first data record of this Set in the list of all
@@ -135,7 +135,7 @@ ipx_ipfix_msg_raw(ipx_ipfix_msg_t *msg);
  * \param[in] msg Pointer to the message wrapper
  * \return Pointer to the Source Stream
  */
-API const ipx_stream_t *
+IPX_API const ipx_stream_t *
 ipx_ipfix_msg_stream(const ipx_ipfix_msg_t *msg);
 
 /**
@@ -143,7 +143,7 @@ ipx_ipfix_msg_stream(const ipx_ipfix_msg_t *msg);
  * \param[in] msg Pointer to the message wrapper
  * \return Count
  */
-API size_t
+IPX_API size_t
 ipx_msg_ipfix_set_count(const ipx_ipfix_msg_t *msg);
 
 /**
@@ -153,7 +153,7 @@ ipx_msg_ipfix_set_count(const ipx_ipfix_msg_t *msg);
  * \return On success returns the pointer. Otherwise (usually the index is
  *   out-of-range) returns NULL.
  */
-API struct ipx_ipfix_set *
+IPX_API struct ipx_ipfix_set *
 ipx_ipfix_msg_set_get(ipx_ipfix_msg_t *msg, unsigned int idx);
 
 /**
@@ -161,7 +161,7 @@ ipx_ipfix_msg_set_get(ipx_ipfix_msg_t *msg, unsigned int idx);
  * \param[in] msg Pointer to the message
  * \return Count
  */
-API size_t
+IPX_API size_t
 ipx_ipfix_msg_drec_count(const ipx_ipfix_msg_t *msg);
 
 /**
@@ -171,7 +171,7 @@ ipx_ipfix_msg_drec_count(const ipx_ipfix_msg_t *msg);
  * \return On success returns the pointer. Otherwise (usually the index is
  *   out-of-range) returns NULL.
  */
-API struct ipx_drec *
+IPX_API struct ipx_drec *
 ipx_ipfix_msg_drec_get(ipx_ipfix_msg_t *msg, size_t idx);
 
 /**@}*/

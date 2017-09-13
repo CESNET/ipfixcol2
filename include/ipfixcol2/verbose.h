@@ -147,7 +147,7 @@ enum IPX_VERBOSITY_LEVEL {
  * \brief Get verbosity level of the collector
  * \return Current verbosity level
  */
-API enum IPX_VERBOSITY_LEVEL ipx_verbosity_get_level();
+IPX_API enum IPX_VERBOSITY_LEVEL ipx_verbosity_get_level();
 
 /**
  * \brief Set verbosity level of the collector
@@ -156,18 +156,18 @@ API enum IPX_VERBOSITY_LEVEL ipx_verbosity_get_level();
  * unchaned.
  * \param[in] new_level New verbosity-level
  */
-API void ipx_verbosity_set_level(enum IPX_VERBOSITY_LEVEL new_level);
+IPX_API void ipx_verbosity_set_level(enum IPX_VERBOSITY_LEVEL new_level);
 
 /**
  * \brief Enable reporting to the system log (syslog)
  * \remark By default, reporting is disabled.
  */
-API void ipx_verbosity_syslog_enable();
+IPX_API void ipx_verbosity_syslog_enable();
 
 /**
  * \brief Disable reporting to the system log (syslog)
  */
-API void ipx_verbosity_syslog_disable();
+IPX_API void ipx_verbosity_syslog_disable();
 
 /**
  * \brief Common printing function
@@ -176,7 +176,7 @@ API void ipx_verbosity_syslog_disable();
  * \param[in] format Format string (see manual page for "printf" family)
  * \param[in] ...    Variable number of arguments for the format string
  */
-API void ipx_verbosity_print(enum IPX_VERBOSITY_LEVEL level,
+IPX_API void ipx_verbosity_print(enum IPX_VERBOSITY_LEVEL level,
 		const char *format, ...);
 
 /**@}*/

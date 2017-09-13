@@ -59,7 +59,7 @@
  * objects as hidden and export only objects explicitly marked to be part of
  * the public API.
  */
-#define API __attribute__((visibility("default")))
+#define IPX_API __attribute__((visibility("default")))
 
 /**
  * \def   IPX_API_MAJOR_VERSION
