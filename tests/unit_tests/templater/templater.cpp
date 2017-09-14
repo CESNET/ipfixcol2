@@ -19,7 +19,8 @@ public:
     ipfix_template_record* template257_2elem();
     ipfix_template_record* valid_withdrawal();
     ipfix_template_set* valid_set_2scopes();
-    ipfix_template_set* set_template256_2scopes();
+    ipfix_options_template_record* opts_valid_2elem();
+    ipfix_options_template_set* valid_opts_set_2scopes();
 protected:
     ipx_tmpl_t *tmpl_udp;
     ipx_tmpl_t *tmpl_tcp;
@@ -53,6 +54,22 @@ Records::valid_2elem()
     return res;
 }
 
+ipfix_options_template_record *
+Records::opts_valid_2elem()
+{
+    auto res = static_cast<ipfix_options_template_record*>(malloc(sizeof(struct ipfix_template_record) + 16));
+    ipx_set_uint_be(&res->count,                       2, 2);
+    ipx_set_uint_be(&res->template_id,                 2, 258);
+    ipx_set_uint_be(&res->scope_field_count,           2, 0);
+    ipx_set_uint_be(&res->fields[0].ie.length,         2, 9);
+    ipx_set_uint_be(&res->fields[0].ie.id,             2, 0x8003);
+    ipx_set_uint_be(&res->fields[1].enterprise_number, 4, 1);
+    ipx_set_uint_be(&res->fields[2].ie.length,         2, IPFIX_VAR_IE_LENGTH);
+    ipx_set_uint_be(&res->fields[2].ie.id,             2, 0x8004);
+    ipx_set_uint_be(&res->fields[3].enterprise_number, 4, 1);
+    return res;
+}
+
 ipfix_template_record *
 Records::template257_2elem()
 {
@@ -78,7 +95,8 @@ Records::valid_withdrawal()
 }
 
 ipfix_template_set *
-Records::valid_set_2scopes() {
+Records::valid_set_2scopes()
+{
     auto set = static_cast<ipfix_template_set*>(malloc(sizeof(struct ipfix_template_set) + 2*500));
         ipx_set_uint_be(&set->header.length,     2, 44);
         ipx_set_uint_be(&set->header.flowset_id, 2 ,2);
@@ -104,14 +122,16 @@ Records::valid_set_2scopes() {
     return set;
 }
 
-ipfix_template_set *
-Records::set_template256_2scopes() {
-    auto set = static_cast<ipfix_template_set*>(malloc(sizeof(struct ipfix_template_set) + 2*500));
-        ipx_set_uint_be(&set->header.length,     2, 44);
-        ipx_set_uint_be(&set->header.flowset_id, 2 ,2);
-    ipfix_template_record *rec = &set->first_record;
+ipfix_options_template_set *
+Records::valid_opts_set_2scopes()
+{
+    auto set = static_cast<ipfix_options_template_set*>(malloc(sizeof(struct ipfix_template_set) + 2*500));
+        ipx_set_uint_be(&set->header.flowset_id,           2, 3);
+        ipx_set_uint_be(&set->header.length,               2, 48);
+    ipfix_options_template_record *rec = &set->first_record;
         ipx_set_uint_be(&rec->count,                       2, 2);
-        ipx_set_uint_be(&rec->template_id,                 2, 256);
+        ipx_set_uint_be(&rec->template_id,                 2, 258);
+        ipx_set_uint_be(&rec->scope_field_count,           2, 0);
         ipx_set_uint_be(&rec->fields[0].ie.id,             2, 0x8003);
         ipx_set_uint_be(&rec->fields[0].ie.length,         2, 3);
         ipx_set_uint_be(&rec->fields[1].enterprise_number, 4, 1);
@@ -119,9 +139,10 @@ Records::set_template256_2scopes() {
         ipx_set_uint_be(&rec->fields[2].ie.length,         2, IPFIX_VAR_IE_LENGTH);
         ipx_set_uint_be(&rec->fields[3].enterprise_number, 4, 1);
 
-    rec += 20;
+    rec += 22;
         ipx_set_uint_be(&rec->count,                       2, 2);
         ipx_set_uint_be(&rec->template_id,                 2, 259);
+        ipx_set_uint_be(&rec->scope_field_count,           2, 0);
         ipx_set_uint_be(&rec->fields[0].ie.length,         2, 3);
         ipx_set_uint_be(&rec->fields[0].ie.id,             2, 0x8004);
         ipx_set_uint_be(&rec->fields[1].enterprise_number, 4, 1);
@@ -329,6 +350,66 @@ TEST_F(Records, template_valid) {
     EXPECT_EQ(field->definition, nullptr);
 
     free(scope);
+}
+
+TEST_F(Records, opts_template_valid) {
+    auto scope = Records::opts_valid_2elem();
+    ipx_tmpl_template_t *res = NULL;
+    ipx_tmpl_set(tmpl_tcp, 10, 10);
+    EXPECT_GT(ipx_tmpl_options_template_parse(tmpl_tcp, scope, 20), 0);
+    EXPECT_EQ(ipx_tmpl_template_get(tmpl_tcp, 258, &res), IPX_OK);
+
+    EXPECT_EQ(ipx_tmpl_template_type_get(res), IPX_TEMPLATE_OPTIONS);
+    EXPECT_EQ(ipx_tmpl_template_opts_type_get(res), IPX_OPTS_NO_OPTIONS); // TODO
+    EXPECT_EQ(ipx_tmpl_template_id_get(res), 258);
+
+    const ipx_tmpl_template_field *field = ipx_tmpl_template_field_get(res, 42);
+    EXPECT_EQ(field, nullptr);
+
+    field = ipx_tmpl_template_field_get(res, 0);
+    EXPECT_EQ(field->en, 1);
+    EXPECT_EQ(field->id, 3);
+    EXPECT_EQ(field->length, 9);
+    EXPECT_EQ(field->offset, 0);
+    EXPECT_TRUE(field->last_identical);
+    EXPECT_EQ(field->definition, nullptr);
+
+    free(scope);
+}
+
+TEST_F(Records, opts_template_overwrite) {
+    auto scope = Records::opts_valid_2elem();
+    ipx_tmpl_template_t *res = NULL;
+    ipx_tmpl_set(tmpl_udp, 10, 10);
+
+    // UDP
+    EXPECT_GT(ipx_tmpl_options_template_parse(tmpl_udp, scope, 20), 0);
+    EXPECT_GT(ipx_tmpl_options_template_parse(tmpl_udp, scope, 20), 0);
+    EXPECT_EQ(ipx_tmpl_template_get(tmpl_udp, 258, &res), IPX_OK);
+
+    EXPECT_EQ(ipx_tmpl_template_type_get(res), IPX_TEMPLATE_OPTIONS);
+    EXPECT_EQ(ipx_tmpl_template_opts_type_get(res), IPX_OPTS_NO_OPTIONS);
+    EXPECT_EQ(ipx_tmpl_template_id_get(res), 258);
+
+    // TCP
+    ipx_tmpl_iemgr_load(tmpl_tcp, iemgr);
+    EXPECT_GT(ipx_tmpl_options_template_parse(tmpl_tcp, scope, 20), 0);
+    EXPECT_GT(ipx_tmpl_options_template_parse(tmpl_tcp, scope, 20), 0);
+    EXPECT_EQ(ipx_tmpl_template_get(tmpl_tcp, 258, &res), IPX_OK);
+
+    EXPECT_EQ(ipx_tmpl_template_type_get(res), IPX_TEMPLATE_OPTIONS);
+    EXPECT_EQ(ipx_tmpl_template_opts_type_get(res), IPX_OPTS_NO_OPTIONS);
+    EXPECT_EQ(ipx_tmpl_template_id_get(res), 258);
+
+    free(scope);
+}
+
+TEST_F(Records, opts_set_valid) {
+    auto set = Records::valid_opts_set_2scopes();
+    ipx_tmpl_set(tmpl_tcp, 60, 60);
+    EXPECT_EQ(ipx_tmpl_template_set_parse(tmpl_udp, &set->header), IPX_OK);
+//    EXPECT_EQ(ipx_tmpl_template_set_parse(tmpl_tcp, &set->header), IPX_OK);
+    free(set);
 }
 
 TEST_F(Records, iemgr_valid) {

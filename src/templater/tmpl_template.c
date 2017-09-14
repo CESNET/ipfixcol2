@@ -54,9 +54,9 @@
  * \param[in]     index Number of elements
  */
 void
-change_identical(struct ipx_tmpl_template_field *field, int index)
+change_identical(struct ipx_tmpl_template_field *field, size_t index)
 {
-    for (int i = index -1; i >= 0; --i) {
+    for (size_t i = index -1; i >= 0; --i) {
         if (field[i].id != field[index].id) {
             continue;
         }
@@ -200,7 +200,7 @@ fields_parse(ipx_tmpl_t *tmpl, struct ipx_tmpl_template_field *dst, const templa
     }
 
     set_last_identical(dst, i);
-    return index*INT32_SIZE;
+    return (index-1)*INT32_SIZE;
 }
 
 /**
@@ -237,7 +237,7 @@ template_save_properties(ipx_tmpl_t* tmpl, ipx_tmpl_template_t* res,
     res->time.last                    = tmpl->current.time;
     res->time.end                     = 0;
     res->number_packet                = tmpl->current.count;
-    res->next                     = NULL;
+    res->next                         = NULL;
     res->fields_cnt_scope             = 0;
     res->properties.has_multiple_defs = has_multiple_definitions(res->fields, res->fields_cnt_total);
     res->properties.has_dynamic       = has_dynamic(res->fields, res->fields_cnt_total);
@@ -280,9 +280,11 @@ template_convert(ipx_tmpl_t *tmpl, const struct ipfix_template_record *rec, uint
                  struct ipx_tmpl_template *res)
 {
     uint16_t offset = 0;
-    ipx_get_uint_be(&rec->count , INT16_SIZE, (uint64_t*) &res->fields_cnt_total);
+    uint64_t count = 0;
+    ipx_get_uint_be(&rec->count , INT16_SIZE, &count);
+    res->fields_cnt_total = (uint16_t) count;
     const int len = fields_parse(tmpl, res->fields, rec->fields, res->fields_cnt_total,
-                                 max_len - TEMPL_HEAD_SIZE, &offset);
+                                 max_len - TEMPL_HEAD_SIZE, &offset) + TEMPL_HEAD_SIZE;
     if (len < 0) {
         return len;
     }
@@ -604,24 +606,40 @@ template_remove_all(ipx_tmpl_template_t* src)
     template_destroy(src);
 }
 
-void
+enum IPX_OPTS_TEMPLATE_TYPE
+opts_template_get_type(ipx_tmpl_template_t *res)
+{ // TODO
+
+    return IPX_OPTS_NO_OPTIONS;
+}
+
+bool
 opts_template_save_properties(ipx_tmpl_t *tmpl, ipx_tmpl_template_t *res,
                               const struct ipfix_options_template_record *rec, uint16_t len)
 {
+    uint64_t count = 0;
+    uint64_t id = 0;
+    ipx_get_uint_be(&rec->scope_field_count, INT16_SIZE, &count);
+    ipx_get_uint_be(&rec->template_id, INT16_SIZE, &id);
+    if (id < 258) {
+        return false;
+    }
+
     len += sizeof(rec) - sizeof(rec->fields);
     res->template_type                = IPX_TEMPLATE_OPTIONS;
-    res->options_type                 = IPX_OPTS_NO_OPTIONS; // TODO
-    ipx_get_uint_be(&rec->template_id, INT16_SIZE, (uint64_t*) &res->id);
+    res->options_type                 = opts_template_get_type(res);
+    res->id                           = (uint16_t) id;
     res->raw.data                     = copy((void *) rec, len);
     res->raw.length                   = len;
     res->time.first                   = tmpl->current.time;
     res->time.last                    = tmpl->current.time;
     res->time.end                     = 0;
     res->number_packet                = tmpl->current.count;
-    res->next                     = NULL;
-    ipx_get_uint_be(&rec->scope_field_count, INT16_SIZE, (uint64_t*) &res->fields_cnt_scope);
+    res->next                         = NULL;
+    res->fields_cnt_scope             = (uint16_t) count;
     res->properties.has_multiple_defs = has_multiple_definitions(res->fields, res->fields_cnt_total);
     res->properties.has_dynamic       = has_dynamic(res->fields, res->fields_cnt_total);
+    return true;
 }
 
 int
@@ -629,15 +647,19 @@ opts_template_convert(ipx_tmpl_t *tmpl, const struct ipfix_options_template_reco
                       uint16_t max_len, ipx_tmpl_template_t *res)
 {
     uint16_t offset = 0;
-    ipx_get_uint_be(&rec->count, INT16_SIZE, (uint64_t*) &res->fields_cnt_total);
+    uint64_t count = 0;
+    ipx_get_uint_be(&rec->count , INT16_SIZE, &count);
+    res->fields_cnt_total = (uint16_t) count;
     const int len = fields_parse(tmpl, res->fields, rec->fields, res->fields_cnt_total,
-                                 max_len - OPTS_TEMPL_HEAD_SIZE, &offset);
+                                 max_len - OPTS_TEMPL_HEAD_SIZE, &offset) + OPTS_TEMPL_HEAD_SIZE;
     if (len < 0) {
         return len;
     }
 
     res->data_length = offset;
-    opts_template_save_properties(tmpl, res, rec, (uint16_t) len);
+    if (!opts_template_save_properties(tmpl, res, rec, (uint16_t) len)) {
+        return IPX_ERR;
+    }
     return res->raw.length;
 }
 
@@ -652,47 +674,65 @@ int
 opts_templates_identical(const ipx_tmpl_template_t *template, const struct ipfix_options_template_record *rec,
                     uint16_t max_len)
 {
-    if (template->id               != rec->template_id
-     || template->fields_cnt_total != rec->count
-     || template->fields_cnt_scope != rec->scope_field_count) {
-        return false;
+    uint64_t count = 0;
+    uint64_t id = 0;
+    uint64_t scope_count = 0;
+    ipx_get_uint_be(&rec->count , INT16_SIZE, &count);
+    ipx_get_uint_be(&rec->template_id , INT16_SIZE, &id);
+    ipx_get_uint_be(&rec->scope_field_count , INT16_SIZE, &scope_count);
+
+    if (template->id               != id
+     || template->fields_cnt_total != count
+     || template->fields_cnt_scope != scope_count) {
+        return IPX_ERR;
     }
 
-    return fields_identical(template->fields, rec->fields, rec->count, max_len); // TODO check scopes
+    return fields_identical(template->fields, rec->fields, (uint16_t) count, max_len); // TODO check scopes
+}
+
+int
+opts_template_replace_index(ipx_tmpl_t *tmpl, ipx_tmpl_template_t *next,
+                            const struct ipfix_options_template_record *rec, uint16_t max_len, ssize_t index)
+{
+    uint64_t count;
+    ipx_get_uint_be(&rec->count , INT16_SIZE, &count);
+
+    ipx_tmpl_template_t *res = template_create(count);
+    int len = opts_template_convert(tmpl, rec, max_len, res);
+    if (len < 0) {
+        return len;
+    }
+    res->next = next;
+    vectm_set_index(tmpl, tmpl->templates, (size_t) index, res);
+    return len;
 }
 
 int
 opts_template_overwrite(ipx_tmpl_t *tmpl, ipx_tmpl_template_t *template,
                 const struct ipfix_options_template_record *rec, uint16_t max_len, ssize_t index)
 {
-    if (opts_templates_identical(template, rec, max_len)) {
-        return IPX_OK;
-    }
-
-    if (template->time.end == 0 && !tmpl->flag.can_overwrite) {
-        return IPX_ERR;
-    }
     if (tmpl->current.time < template->time.last) {
         return IPX_ERR;
     }
 
-    ipx_tmpl_template_t *res = template_create(rec->count);
-    int len = opts_template_convert(tmpl, rec, max_len, res);
-    if (len < 0) {
-        return len;
+    if (template->time.end > 0) {
+        return opts_template_replace_index(tmpl, template, rec, max_len, index);
     }
 
-    res->next = template_copy_end(tmpl, template);
-    vectm_set_index(tmpl, tmpl->templates, (size_t) index, res);
-    return len;
+    if (!tmpl->flag.can_overwrite) {
+        return opts_templates_identical(template, rec, max_len);
+    }
+    return opts_template_replace_index(tmpl, template_copy_end(tmpl, template), rec, max_len, index);
 }
 
 int
 opts_template_add(ipx_tmpl_t *tmpl, const struct ipfix_options_template_record *rec,
                   uint16_t max_len)
 {
+    uint64_t id;
+    ipx_get_uint_be(&rec->template_id, INT16_SIZE, &id);
     struct ipx_tmpl_template *res = NULL;
-    ssize_t index = vectm_find_index(tmpl->templates, rec->template_id);
+    ssize_t index = vectm_find_index(tmpl->templates, (uint16_t) id);
     if (index >= 0) {
         res = vectm_get_template(tmpl->templates, (size_t) index);
         return opts_template_overwrite(tmpl, res, rec, max_len, index);
@@ -714,15 +754,16 @@ opts_template_add(ipx_tmpl_t *tmpl, const struct ipfix_options_template_record *
 }
 
 int
-ops_templates_parse(ipx_tmpl_t* tmpl, struct ipfix_options_template_record* recs,
-                    uint16_t max_len)
+opts_templates_parse(ipx_tmpl_t* tmpl, struct ipfix_options_template_record* recs,
+                     uint16_t max_len)
 {
     int tmp = 0;
     for (uint16_t len = TEMPL_SET_HEAD_SIZE; len < max_len; len += tmp) {
-        tmp = ipx_tmpl_options_template_parse(tmpl, recs++, max_len - len);
+        tmp = ipx_tmpl_options_template_parse(tmpl, recs, max_len - len);
         if (tmp < 0) {
             return tmp;
         }
+        recs += tmp;
     }
 
     vectm_sort(tmpl->templates);

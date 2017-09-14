@@ -186,8 +186,8 @@ opts_template_convert(ipx_tmpl_t *tmpl, const struct ipfix_options_template_reco
  * \return IPX_OK if parsed successfully, otherwise IPX_ERR or IPX_NOMEM
  */
 int
-ops_templates_parse(ipx_tmpl_t* tmpl, struct ipfix_options_template_record* recs,
-                    uint16_t max_len);
+opts_templates_parse(ipx_tmpl_t* tmpl, struct ipfix_options_template_record* recs,
+                     uint16_t max_len);
 
 /**
  * \brief Parse template from a template record to the templater
@@ -330,13 +330,5 @@ tmpl_time_find(const ipx_tmpl_t* src, uint64_t time);
  */
 const ipx_tmpl_t *
 tmpl_copy(ipx_tmpl_t *tmpl);
-
-/**
- * \brief Create object which contain field of templates that should be destroyed
- * \param[in] tmpl templater
- * \return Field of templates
- */
-void *
-template_create_garbage(ipx_tmpl_t *tmpl);
 
 #endif //TEMPLATE_H

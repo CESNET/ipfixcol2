@@ -197,7 +197,7 @@ ipx_tmpl_template_set_parse(ipx_tmpl_t *tmpl, struct ipfix_set_header *head)
     }
 
     if (id == IPFIX_SET_OPTIONS_TEMPLATE) {
-        return ops_templates_parse(tmpl, (struct ipfix_options_template_record*)
+        return opts_templates_parse(tmpl, (struct ipfix_options_template_record*)
                 ++head, (uint16_t) len);
     }
 
@@ -229,8 +229,12 @@ ipx_tmpl_options_template_parse(ipx_tmpl_t *tmpl, const struct ipfix_options_tem
     assert(tmpl != NULL);
     assert(rec != NULL);
 
-    if (rec->count == 0) {
-        ipx_tmpl_template_remove(tmpl, rec->template_id);
+    uint64_t count;
+    ipx_get_uint_be(&rec->count, 2, &count);
+    if (count == 0) {
+        uint64_t id;
+        ipx_get_uint_be(&rec->template_id, 2, &id);
+        ipx_tmpl_template_remove(tmpl, (uint16_t) id);
         return OPTS_TEMPL_HEAD_SIZE;
     }
 
