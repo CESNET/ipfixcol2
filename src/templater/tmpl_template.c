@@ -54,9 +54,9 @@
  * \param[in]     index Number of elements
  */
 void
-change_identical(struct ipx_tmpl_template_field *field, size_t index)
+change_identical(struct ipx_tmpl_template_field *field, int index)
 {
-    for (size_t i = index -1; i >= 0; --i) {
+    for (int i = index -1; i >= 0; --i) {
         if (field[i].id != field[index].id) {
             continue;
         }
@@ -74,12 +74,12 @@ change_identical(struct ipx_tmpl_template_field *field, size_t index)
  * \param[in]     count Number of elements
  */
 void
-set_last_identical(struct ipx_tmpl_template_field *dst, size_t count)
+set_last_identical(struct ipx_tmpl_template_field *dst, int count)
 {
     int64_t field = 0;
     int64_t index;
 
-    for (size_t i = 0; i < count; ++i) {
+    for (int i = 0; i < count; ++i) {
         index = (1 << (dst[i].id % 64));
         dst[i].last_identical = true;
 
@@ -186,7 +186,7 @@ fields_parse(ipx_tmpl_t *tmpl, struct ipx_tmpl_template_field *dst, const templa
              uint16_t max_len, uint16_t *offset)
 {
     uint16_t index = 0;
-    size_t i;
+    int i;
     for (i = 0; i < count; ++i, ++index) {
         if (index*INT32_SIZE > max_len) {
             return IPX_ERR;
@@ -556,6 +556,7 @@ snapshot_create(ipx_tmpl_t* tmpl)
     tmpl->flag.modified = false;
 }
 
+// set_time will find snapshot and save to the templater
 ipx_tmpl_template_t *
 template_find_with_time(const ipx_tmpl_t* tmpl, uint16_t id)
 {
@@ -606,11 +607,93 @@ template_remove_all(ipx_tmpl_template_t* src)
     template_destroy(src);
 }
 
+/**
+ * \brief Find if options template is meter process type
+ * \param[in] res Options template
+ * \return True if template is meter process type
+ */
+bool
+type_meter_proc_stat(const ipx_tmpl_template_t *res)
+{
+    if (res->fields_cnt_total != 5) {
+        return false;
+    }
+    if (strcmp(res->fields[0].definition->name, "templateId")) {
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * \brief Find if options template is meter process reliability statistic
+ * \param[in] res Options template
+ * \return True if template is meter process reliability statistic
+ */
+bool
+type_meter_proc_reliability_stat(const ipx_tmpl_template_t *res)
+{
+    if (res->fields_cnt_total != 6) {
+        return false;
+    }
+    return true;
+}
+
+/**
+ * \brief Find if options template is export process reliability statistic
+ * \param[in] res Options template
+ * \return True if template is export process reliability statistic
+ */
+bool
+type_export_proc_reliabily_stat(const ipx_tmpl_template_t *res)
+{
+    if (res->fields_cnt_total != 6) {
+        return false;
+    }
+    return true;
+}
+
+/**
+ * \brief Find if options template is flow keys
+ * \param[in] res Options template
+ * \return True if template is flow keys
+ */
+bool
+type_flow_keys(ipx_tmpl_template_t *res)
+{
+    if (res->fields_cnt_total != 2) {
+        return false;
+    }
+    if (res->fields[0].definition == NULL
+        || strcmp(res->fields[0].definition->name, "templateId")) {
+        return false;
+    }
+    if (res->fields[1].definition == NULL
+        || strcmp(res->fields[1].definition->name, "flowKeyIndicator")) {
+        return false;
+    }
+
+    return true;
+}
+
+// TODO
 enum IPX_OPTS_TEMPLATE_TYPE
 opts_template_get_type(ipx_tmpl_template_t *res)
-{ // TODO
+{
+    if (type_meter_proc_stat(res)) {
+        return IPX_OPTS_METER_PROC_STAT;
+    }
+    if (type_meter_proc_reliability_stat(res)) {
+        return IPX_OPTS_METER_PROC_RELIABILITY_STAT;
+    }
+    if (type_export_proc_reliabily_stat(res)) {
+        return IPX_OPTS_EXPORT_PROC_RELIABILITY_STAT;
+    }
+    if (type_flow_keys(res)) {
+        return IPX_OPTS_FLOW_KEYS;
+    }
 
-    return IPX_OPTS_NO_OPTIONS;
+    return IPX_OPTS_UNKNOWN;
 }
 
 bool
@@ -690,6 +773,15 @@ opts_templates_identical(const ipx_tmpl_template_t *template, const struct ipfix
     return fields_identical(template->fields, rec->fields, (uint16_t) count, max_len); // TODO check scopes
 }
 
+/**
+ * \brief Replace options template on a index
+ * \param[in, out] tmpl    Templater
+ * \param[in]      next    Next options template
+ * \param[in]      rec     Options template record
+ * \param[in]      max_len Maximal length of the template
+ * \param[in]      index   Index of the template
+ * \return Real length of the options template
+ */
 int
 opts_template_replace_index(ipx_tmpl_t *tmpl, ipx_tmpl_template_t *next,
                             const struct ipfix_options_template_record *rec, uint16_t max_len, ssize_t index)

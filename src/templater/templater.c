@@ -133,6 +133,11 @@ ipx_tmpl_set(ipx_tmpl_t *tmpl, uint64_t current_time, uint64_t current_packet)
 
     tmpl->current.time = current_time;
     tmpl->current.count = current_packet;
+
+    if (tmpl->flag.modified) {
+        snapshot_create(tmpl);
+    }
+
 }
 
 /**
@@ -333,7 +338,7 @@ garbage_get(const ipx_tmpl_t *tmpl)
     }
 
     uint64_t die_time = 0;
-    garbage_t *gar = tmpl_garbage_create((ipx_tmpl_t*) tmpl);
+    garbage_t *gar = tmpl_garbage_create();
     for (uint16_t i = 0; i < vectm_get_count(tmpl->templates); ++i) {
         die_time = vectm_get_die_time(tmpl->templates, i);
         if (die_time > tmpl->current.time || die_time == 0) {
@@ -377,17 +382,20 @@ ipx_tmpl_template_field_get(ipx_tmpl_template_t* template, size_t index)
 enum IPX_TEMPLATE_TYPE
 ipx_tmpl_template_type_get(const ipx_tmpl_template_t* template)
 {
+    assert(template != NULL);
     return template->template_type;
 }
 
 enum IPX_OPTS_TEMPLATE_TYPE
 ipx_tmpl_template_opts_type_get(const ipx_tmpl_template_t* template)
 {
+    assert(template != NULL);
     return template->options_type;
 }
 
 uint16_t
 ipx_tmpl_template_id_get(const ipx_tmpl_template_t* template)
 {
+    assert(template != NULL);
     return template->id;
 }

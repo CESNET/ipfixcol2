@@ -70,7 +70,7 @@ enum IPX_OPTS_TEMPLATE_TYPE {
     IPX_OPTS_EXPORT_PROC_RELIABILITY_STAT, /**< The Exporting Process Reliability Statistics   */
     IPX_OPTS_FLOW_KEYS,                    /**< The Flow Keys                                  */
     IPX_OPTS_UNKNOWN                       /**< Unknown type of Options Template               */
-};
+}; // uint32 bit field
 
 /**
  * \brief Structure for parsed IPFIX element in an IPFIX template

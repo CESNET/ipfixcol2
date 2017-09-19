@@ -200,11 +200,10 @@ typedef struct garbage garbage_t;
 
 /**
  * \brief Create garbage
- * \param[in] tmpl Templater
  * \return Garbage on success, otherwise NULL
  */
 garbage_t *
-tmpl_garbage_create(ipx_tmpl_t *tmpl);
+tmpl_garbage_create();
 
 /**
  * \brief Add template to the end of the vector of templates

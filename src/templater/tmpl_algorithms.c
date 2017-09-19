@@ -266,7 +266,7 @@ struct garbage {
 };
 
 struct garbage *
-tmpl_garbage_create(ipx_tmpl_t *tmpl)
+tmpl_garbage_create()
 {
     struct garbage *res = malloc(sizeof(struct garbage));
     res->temps.end      = 0;

@@ -97,9 +97,9 @@ Records::valid_withdrawal()
 ipfix_template_set *
 Records::valid_set_2scopes()
 {
-    auto set = static_cast<ipfix_template_set*>(malloc(sizeof(struct ipfix_template_set) + 2*500));
-        ipx_set_uint_be(&set->header.length,     2, 44);
-        ipx_set_uint_be(&set->header.flowset_id, 2 ,2);
+    auto set = static_cast<ipfix_template_set*>(malloc(sizeof(struct ipfix_template_set) + 480));
+        ipx_set_uint_be(&set->header.length,               2, 44);
+        ipx_set_uint_be(&set->header.flowset_id,           2, 2);
     ipfix_template_record *rec = &set->first_record;
         ipx_set_uint_be(&rec->count,                       2, 2);
         ipx_set_uint_be(&rec->template_id,                 2, 258);
@@ -332,7 +332,7 @@ TEST_F(Records, template_valid) {
     ipx_tmpl_template_t *res = NULL;
     ipx_tmpl_set(tmpl_tcp, 10, 10);
     EXPECT_GT(ipx_tmpl_template_parse(tmpl_tcp, scope, 20), 0);
-    EXPECT_EQ(ipx_tmpl_template_get(tmpl_tcp, 258, &res), IPX_OK);
+    ASSERT_EQ(ipx_tmpl_template_get(tmpl_tcp, 258, &res), IPX_OK);
 
     EXPECT_EQ(ipx_tmpl_template_type_get(res), IPX_TEMPLATE);
     EXPECT_EQ(ipx_tmpl_template_opts_type_get(res), IPX_OPTS_NO_OPTIONS);
@@ -360,7 +360,7 @@ TEST_F(Records, opts_template_valid) {
     EXPECT_EQ(ipx_tmpl_template_get(tmpl_tcp, 258, &res), IPX_OK);
 
     EXPECT_EQ(ipx_tmpl_template_type_get(res), IPX_TEMPLATE_OPTIONS);
-    EXPECT_EQ(ipx_tmpl_template_opts_type_get(res), IPX_OPTS_NO_OPTIONS); // TODO
+    EXPECT_EQ(ipx_tmpl_template_opts_type_get(res), IPX_OPTS_UNKNOWN);
     EXPECT_EQ(ipx_tmpl_template_id_get(res), 258);
 
     const ipx_tmpl_template_field *field = ipx_tmpl_template_field_get(res, 42);
@@ -388,7 +388,7 @@ TEST_F(Records, opts_template_overwrite) {
     EXPECT_EQ(ipx_tmpl_template_get(tmpl_udp, 258, &res), IPX_OK);
 
     EXPECT_EQ(ipx_tmpl_template_type_get(res), IPX_TEMPLATE_OPTIONS);
-    EXPECT_EQ(ipx_tmpl_template_opts_type_get(res), IPX_OPTS_NO_OPTIONS);
+    EXPECT_EQ(ipx_tmpl_template_opts_type_get(res), IPX_OPTS_UNKNOWN);
     EXPECT_EQ(ipx_tmpl_template_id_get(res), 258);
 
     // TCP
@@ -398,7 +398,7 @@ TEST_F(Records, opts_template_overwrite) {
     EXPECT_EQ(ipx_tmpl_template_get(tmpl_tcp, 258, &res), IPX_OK);
 
     EXPECT_EQ(ipx_tmpl_template_type_get(res), IPX_TEMPLATE_OPTIONS);
-    EXPECT_EQ(ipx_tmpl_template_opts_type_get(res), IPX_OPTS_NO_OPTIONS);
+    EXPECT_EQ(ipx_tmpl_template_opts_type_get(res), IPX_OPTS_UNKNOWN);
     EXPECT_EQ(ipx_tmpl_template_id_get(res), 258);
 
     free(scope);
@@ -408,7 +408,7 @@ TEST_F(Records, opts_set_valid) {
     auto set = Records::valid_opts_set_2scopes();
     ipx_tmpl_set(tmpl_tcp, 60, 60);
     EXPECT_EQ(ipx_tmpl_template_set_parse(tmpl_udp, &set->header), IPX_OK);
-//    EXPECT_EQ(ipx_tmpl_template_set_parse(tmpl_tcp, &set->header), IPX_OK);
+    EXPECT_EQ(ipx_tmpl_template_set_parse(tmpl_tcp, &set->header), IPX_OK);
     free(set);
 }
 

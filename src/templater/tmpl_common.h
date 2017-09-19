@@ -168,6 +168,7 @@ struct ipx_tmpl {
     struct tmpl_flags     flag;      /**< Define different behavior                */
     vectm_t              *templates; /**< Vector of parsed templates               */
     const ipx_tmpl_t     *snapshot;  /**< Snapshots 'current time' sorted          */
+    ipx_tmpl_t           *last_tmpl; /**< Last founded templater when set_time     */
 };
 
 #endif // TEMPLATER_COMMON_H
