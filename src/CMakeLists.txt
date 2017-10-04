@@ -24,16 +24,16 @@ set(CORE_SOURCE
 	core/message_ipfix.c
 	core/message_session.c
 	core/source.c
-        )
+)
 
 set(TEMPLATER
     templater/templater.c
     templater/tmpl_common.h
     templater/tmpl_template.c
     templater/tmpl_template.h
-        templater/tmpl_algorithms.c
-        templater/tmpl_algorithms.h
-		)
+    templater/tmpl_algorithms.c
+    templater/tmpl_algorithms.h
+)
 
 # Create a static library from all source code (useful for building
 # the main application and unit tests separately)
