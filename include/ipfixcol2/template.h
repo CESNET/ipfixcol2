@@ -53,12 +53,18 @@ extern "C" {
 /** \brief Template Field features                                                               */
 enum ipx_tfield_features {
     /**
+     * \brief Scope field
+     *
+     * If this state flag is present, this is a scope field.
+     */
+    IPX_TFIELD_IS_SCOPE = (1 << 0),
+        /**
      * \brief Multiple occurrences of this Information Element (IE)
      *
      * If this flag is set, there are multiple occurrences of this IE anywhere in the template
      * to which the field belongs.
      */
-    IPX_TFIELD_MULTI_IE = (1 << 0),
+    IPX_TFIELD_MULTI_IE = (1 << 1),
     /**
      * \brief The last occurrence of this Information Elements (IE)
      *
@@ -68,7 +74,14 @@ enum ipx_tfield_features {
      * and with _higher_ index in the template.
      * \note This flag is also set if there are NOT multiple occurrences of the same IE.
      */
-    IPX_TFIELD_LAST_IE = (1 << 1),
+    IPX_TFIELD_LAST_IE = (1 << 2),
+    /**
+     * \brief Is it a field of structured data
+     *
+     * In other words, if this flag is set, the field is the basicList, subTemplateList, or
+     * subTemplateMultiList Information Element (see RFC 6313).
+     */
+    IPX_TFIELD_IS_STRUCTURED = (1 << 3),
     /**
      * \brief Reverse Information Element
      *
@@ -78,11 +91,11 @@ enum ipx_tfield_features {
      *   used. For example, use the IE manager distributed with libfds. In other words, this
      *   information is not a part of template definition.
      */
-    IPX_TFIELD_REVERSE = (1 << 2),
+    IPX_TFIELD_REVERSE = (1 << 4),
     /**
      * \brief TODO
      */
-    IPX_TFIELD_FLOW_KEY = (1 << 3)
+    IPX_TFIELD_FLOW_KEY = (1 << 5),
 };
 
 /** \brief Structure of a parsed IPFIX element in an IPFIX template                              */
@@ -213,7 +226,10 @@ struct ipx_template {
         uint32_t end_of_life;
     } time;
 
-    /** Total number of fields                                                                   */
+    /**
+     * Total number of fields
+     * If the value is zero, this template is so-called Template Withdrawal.
+     */
     uint16_t fields_cnt_total;
     /** Number of scope fields (first N records of the Options Template)                         */
     uint16_t fields_cnt_scope;
@@ -228,10 +244,10 @@ struct ipx_template {
 /**
  * \brief Parse an IPFIX template
  *
- * Try to parse the template from a memory pointed by \p ptr of at most \p size bytes. Typically
- * during processing of a (Options) Template Set, the parameter \p size is length to the end of
+ * Try to parse the template from a memory pointed by \p ptr of at most \p len bytes. Typically
+ * during processing of a (Options) Template Set, the parameter \p len is length to the end of
  * the (Options) Template Set. After successful parsing, the function will set the value to
- * the real size of the raw template (in octets). The \p size can be, therefore, used to jump to
+ * the real length of the raw template (in octets). The \p len can be, therefore, used to jump to
  * the beginning of the next template definition.
  *
  * Some information of the template structure after parsing the template are still unknown.
@@ -246,16 +262,20 @@ struct ipx_template {
  *
  * \param[in]     type  Type of template (::IPX_TYPE_TEMPLATE or ::IPX_TYPE_TEMPLATE_OPTIONS)
  * \param[in]     ptr   Pointer to the header of the template
- * \param[in,out] size  Maximal size of the raw template / real size of the raw template in octets
- *                      (see notes)
+ * \param[in,out] len   Maximal length of the raw template / real length of the raw template in
+ *                      octets (see notes)
  * \param[out]    tmplt Parsed template (automatically allocated)
- * \return On success, the function will set parameters \p tmplt, \p size and return #IPX_OK.
+ * \return On success, the function will set parameters \p tmplt, \p len and return #IPX_OK.
  *   Otherwise the parameters are unchanged and the function will return #IPX_ERR_FORMAT or
  *   #IPX_ERR_NOMEM.
  */
 IPX_API int
-ipx_template_parse(enum ipx_template_type type, const void *ptr, uint16_t *size,
+ipx_template_parse(enum ipx_template_type type, const void *ptr, uint16_t *len,
     struct ipx_template **tmplt);
+
+// TODO: bude tu i něco jako flag pro zachování ukazatelů na definice nebo ne?
+IPX_API struct ipx_template *
+ipx_template_copy(const struct ipx_template *tmplt);
 
 /**
  * \brief Destroy a template
@@ -266,24 +286,13 @@ ipx_template_destroy(struct ipx_template *tmplt);
 
 /**
  * TODO: dokoncit definici... pokud polozka neni null, bude preskocena
+ * TODO: doplni informace zda je polozka list + zda je reverse
  * \brief
  * \param[in] tmplt
  * \param[in] iemgr
  */
 IPX_API void
-ipx_template_define_ie(struct ipx_template *tmplt, const fds_iemgr_t *iemgr);
-
-// TODO: bude tu i něco jako flag pro zachování ukazatelů na definice nebo ne?
-IPX_API struct ipx_template *
-ipx_template_copy(const struct ipx_template *tmplt);
-
-// TODO: pridat definici... bude to porovnání pouze na úrovni raw zaznamů? nebo něco složitějšího?
-IPX_API int
-ipx_template_cmp(const struct ipx_template *t1, const struct ipx_template *t2);
-
-// TODO: pridat definici
-IPX_API int
-ipx_template_cmp_raw(const struct ipx_template *t1, const void *ptr, uint16_t size);
+ipx_template_define_ies(struct ipx_template *tmplt, const fds_iemgr_t *iemgr);
 
 /**
  * TODO: dokoncit definici
@@ -293,7 +302,15 @@ ipx_template_cmp_raw(const struct ipx_template *t1, const void *ptr, uint16_t si
  * \return
  */
 IPX_API int
-ipx_template_set_flowkey(struct ipx_template *tmplt, uint64_t flowkey);
+ipx_template_define_flowkey(struct ipx_template *tmplt, uint64_t flowkey);
+
+// TODO: pridat definici... bude to porovnání pouze na úrovni raw zaznamů? nebo něco složitějšího?
+IPX_API int
+ipx_template_cmp(const struct ipx_template *t1, const struct ipx_template *t2);
+
+// TODO: pridat definici
+IPX_API int
+ipx_template_cmp_raw(const struct ipx_template *t1, const void *ptr, uint16_t size);
 
 #ifdef __cplusplus
 }

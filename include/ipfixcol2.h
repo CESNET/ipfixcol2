@@ -63,6 +63,9 @@
 #include <ipfixcol2/message_session.h>
 #include <ipfixcol2/source.h>
 #include <ipfixcol2/verbose.h>
+#include <ipfixcol2/template.h>
+
+// TODO: remove
 #include <ipfixcol2/templater.h>
 
 #endif /* IPFIXCOL2_H_ */

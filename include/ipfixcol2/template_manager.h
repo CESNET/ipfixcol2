@@ -176,7 +176,11 @@ ipx_tmgr_template_get(ipx_tmgr_t *tmgr, uint16_t id);
 IPX_API int
 ipx_tmgr_template_add(ipx_tmgr_t *tmgr, struct template *template);
 
-// TODO flow key to template (uint64_t)
+// TODO flow key to template (uint64_t), jak to bude při refreshi
+// TODO: jak to bude s definici vlastních poliček... tj. sekundární správce typů
+
+IPX_API int
+ipx_tmgr_template_withdraw(ipx_tmgr_t *tmgr, uint16_t id, enum ipx_template_type type);
 
 /**
  * \brief
