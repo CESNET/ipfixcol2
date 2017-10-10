@@ -159,15 +159,23 @@ template_parse_fields(struct ipx_template *tmplt, template_ie *field_ptr, uint16
     return IPX_OK;
 }
 
-static void
-template_fields_calc_flags(struct ipx_template *tmplt)
+/**
+ *
+ * \note Only the following flags could be set:
+ *   - ::IPX_TFIELD_SCOPE
+ *   - ::IPX_TFIELD_MULTI_IE
+ *   - ::IPX_TFIELD_LAST_IE
+ * @param tmplt
+ */
+static int
+template_fields_calc_features(struct ipx_template *tmplt)
 {
     const uint16_t fields_total = tmplt->fields_cnt_total;
     const uint16_t fields_scope = tmplt->fields_cnt_scope;
 
     // Label Scope fields
     for (uint16_t i = 0; i < fields_scope; ++i) {
-        tmplt->fields[i].flags |= IPX_TFIELD_IS_SCOPE;
+        tmplt->fields[i].flags |= IPX_TFIELD_SCOPE;
     }
 
     // Label Multiple and Last fields
@@ -204,8 +212,59 @@ template_fields_calc_flags(struct ipx_template *tmplt)
             tfield_ptr->flags |= IPX_TFIELD_LAST_IE;
         }
     }
+
+    return IPX_OK;
 }
 
+
+
+static int
+template_calc_features(struct ipx_template *tmplt)
+{
+    // First, calculate basic flags of each field
+    int ret_code;
+    if ((ret_code = template_fields_calc_features(tmplt)) != IPX_OK) {
+        return ret_code;
+    }
+
+    // Calculate flags of the whole template
+    const uint16_t fields_total = tmplt->fields_cnt_total;
+    uint32_t data_len = 0; // Get (minimum) data length of a record referenced by this template
+
+    for (uint16_t i = 0; i < fields_total; ++i) {
+        const struct ipx_tfield *field_ptr = &tmplt->fields[i];
+        if (field_ptr->flags & IPX_TFIELD_MULTI_IE) {
+            tmplt->flags |= IPX_TEMPLATE_HAS_MULTI_IE;
+        }
+
+        uint16_t field_len = field_ptr->length;
+        if (field_len == IPFIX_VAR_IE_LENGTH) {
+            // Variable length Information Element must be at least 1 byte long
+            tmplt->flags |= IPX_TEMPLATE_HAS_DYNAMIC;
+            data_len += 1;
+            continue;
+        }
+
+        data_len += field_len;
+    }
+
+    // Check if a record described by this templates fits into an IPFIX message
+    const uint16_t max_rec_size = UINT16_MAX // Maximum length of an IPFIX message
+        - sizeof(struct ipfix_header)        // IPFIX message header
+        - sizeof(struct ipfix_set_header);   // IPFIX set header
+    if (max_rec_size < data_len) {
+        // Too long data record
+        return IPX_ERR_FORMAT;
+    }
+
+    // Recognize Options Template
+    if (tmplt->type == IPX_TYPE_TEMPLATE_OPTIONS) {
+        // TODO
+    }
+
+    tmplt->data_length = data_len;
+    return IPX_OK;
+}
 
 int
 ipx_template_parse(enum ipx_template_type type, const void *ptr, uint16_t *len,
@@ -248,12 +307,12 @@ ipx_template_parse(enum ipx_template_type type, const void *ptr, uint16_t *len,
         return IPX_ERR_NOMEM;
     }
 
-    // Calculate features of all fields
-    template_fields_calc_flags(template);
-
-    // Calculate features of whole template
-    // TODO: vypocitat velikost zpravy a overit ze neni vetsi nez maximalne pripusna
-    // TODO: vypocitat flagy
+    // Calculate features of fields and the template
+    ret_code = template_calc_features(template);
+    if (ret_code != IPX_OK) {
+        ipx_template_destroy(template);
+        return ret_code;
+    }
 
     *len = len_real;
     *tmplt = template;

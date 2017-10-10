@@ -55,9 +55,9 @@ enum ipx_tfield_features {
     /**
      * \brief Scope field
      *
-     * If this state flag is present, this is a scope field.
+     * If this state flag is set, this is a scope field.
      */
-    IPX_TFIELD_IS_SCOPE = (1 << 0),
+    IPX_TFIELD_SCOPE = (1 << 0),
         /**
      * \brief Multiple occurrences of this Information Element (IE)
      *
@@ -68,20 +68,24 @@ enum ipx_tfield_features {
     /**
      * \brief The last occurrence of this Information Elements (IE)
      *
-     * If this flags (is set, there are NO more occurrences of the IE with the same combination of
+     * If this flags is set, there are NO more occurrences of the IE with the same combination of
      * an Information Element ID and an Enterprise Number in a template to which the field belongs.
      * In other words, if this flag is NOT set, there is at least one IE with the same definition
      * and with _higher_ index in the template.
      * \note This flag is also set if there are NOT multiple occurrences of the same IE.
-     */
+     */present
     IPX_TFIELD_LAST_IE = (1 << 2),
     /**
      * \brief Is it a field of structured data
      *
      * In other words, if this flag is set, the field is the basicList, subTemplateList, or
      * subTemplateMultiList Information Element (see RFC 6313).
+     * \note To distinguish whether the IE is structured or not, an external database of IEs must
+     *   be used. For example, use the IE manager distributed with libfds. In other words, this
+     *   information is not a part of a template definition. See ipx_template_define_ies() for
+     *   more information.
      */
-    IPX_TFIELD_IS_STRUCTURED = (1 << 3),
+    IPX_TFIELD_STRUCTURED = (1 << 3),
     /**
      * \brief Reverse Information Element
      *
@@ -89,13 +93,18 @@ enum ipx_tfield_features {
      * Element, but associated with the reverse direction of a Biflow.
      * \note To distinguish whether the IE is reverse or not, an external database of IEs must be
      *   used. For example, use the IE manager distributed with libfds. In other words, this
-     *   information is not a part of template definition.
+     *   information is not a part of a template definition. See ipx_template_define_ies() for
+     *   more information.
      */
     IPX_TFIELD_REVERSE = (1 << 4),
     /**
-     * \brief TODO
+     * \brief Flow key Information Element
+     *
+     * \note To distinguish whether the IE is a flow key or not, an exporter must send a special
+     *   record. In other words, this information is not a part of a template definition. See
+     *   ipx_template_define_flowkey() for more information.
      */
-    IPX_TFIELD_FLOW_KEY = (1 << 5),
+    IPX_TFIELD_FLOW_KEY = (1 << 5)
 };
 
 /** \brief Structure of a parsed IPFIX element in an IPFIX template                              */
@@ -165,9 +174,11 @@ enum ipx_template_features {
     /** Template has at least one Information Element of variable length                         */
     IPX_TEMPLATE_HAS_DYNAMIC = (1 << 1),
     /** Is it a Biflow template (has at least one Reverse Information Element)                   */
-    IPX_TEMPLATE_IS_BIFLOW = (1 << 2), // TODO: HAS_REVERSE?
-    /** Template has know the flow key (at least one field is marked as a Flow Key)              */
-    IPX_TEMPLATE_HAS_FKEY = (1 << 3)
+    IPX_TEMPLATE_HAS_REVERSE = (1 << 2),
+    /** Template has at least one structured data type (basicList, subTemplateList, etc.)        */
+    IPX_TEMPLATE_HAS_NESTED = (1 << 3),
+    /** Template has a known flow key (at least one field is marked as a Flow Key)               */
+    IPX_TEMPLATE_HAS_FKEY = (1 << 4),
     // Add new ones here...
 };
 
@@ -254,8 +265,13 @@ struct ipx_template {
  * These fields are set to default values:
  *   - All timestamps (ipx_template#time). Default values are zeros.
  *   - References to IE definition (ipx_tfield#def). Default values are NULL.
- *   - Whether an IE is reverse or not (ipx_tfield#flags, flag ::IPX_TFIELD_REVERSE) as well as
- *     whether the template is Biflow or not (ipx_template#flags, flag ::IPX_TEMPLATE_IS_BIFLOW).
+ *   - Some field (i.e. ipx_tfield#flags) and template (i.e. ipx_template#flags) flags:
+ *     TODO
+ *
+ *
+ *   Whether the template is reverse or not (, flag ::IPX_TFIELD_REVERSE),
+ *     whether the template is Biflow or not (ipx_template#flags, flag ::IPX_TEMPLATE_HAS_REVERSE),
+ *     whether the template is nested or not ()
  *     These flags are unset, by default.
  * These structure's members are filled and managed by a template manager (::ipx_tmgr_t) to which
  * the template is inserted.
