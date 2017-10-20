@@ -73,7 +73,7 @@ enum ipx_tfield_features {
      * In other words, if this flag is NOT set, there is at least one IE with the same definition
      * and with _higher_ index in the template.
      * \note This flag is also set if there are NOT multiple occurrences of the same IE.
-     */present
+     */
     IPX_TFIELD_LAST_IE = (1 << 2),
     /**
      * \brief Is it a field of structured data
@@ -282,14 +282,15 @@ struct ipx_template {
  *                      octets (see notes)
  * \param[out]    tmplt Parsed template (automatically allocated)
  * \return On success, the function will set parameters \p tmplt, \p len and return #IPX_OK.
- *   Otherwise the parameters are unchanged and the function will return #IPX_ERR_FORMAT or
+ *   Otherwise, the parameters will be unchanged and the function will return #IPX_ERR_FORMAT or
  *   #IPX_ERR_NOMEM.
  */
 IPX_API int
 ipx_template_parse(enum ipx_template_type type, const void *ptr, uint16_t *len,
     struct ipx_template **tmplt);
 
-// TODO: bude tu i něco jako flag pro zachování ukazatelů na definice nebo ne?
+// TODO: poznámka, že budou zachovány i ukazatelen na definice... coz muze byt nekdy problem
+// uzivatel by mel nastavit na NULL pokud vi, ze bude sablona prezivat dele
 IPX_API struct ipx_template *
 ipx_template_copy(const struct ipx_template *tmplt);
 
