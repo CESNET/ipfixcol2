@@ -67,7 +67,7 @@
  * \brief Find the first occurrence of a field in a template
  * \param[in] tmplt Template structure
  * \param[in] id    Information Element ID
- * \param[in] en    Enpterprise Number (PEN)
+ * \param[in] en    Enterprise Number (PEN)
  * \return Pointer to the field definition or NULL.
  */
 static const struct ipx_tfield *
@@ -198,7 +198,7 @@ opts_detect_mproc(struct ipx_template *tmplt)
             continue;
         }
 
-        if (ptr->flags & IPX_TFIELD_SCOPE == 0) {
+        if ((ptr->flags & IPX_TFIELD_SCOPE) == 0) {
             // The field found, but not in the scope!
             return;
         }
@@ -299,13 +299,13 @@ opts_detect_flowkey(struct ipx_template *tmptl)
 {
     // Check scope Field
     const uint16_t IPFIX_IE_TEMPLATE_ID = 145;
-    struct ipx_template *id_ptr = opts_find_field(tmptl, IPFIX_IE_TEMPLATE_ID, 0);
+    const struct ipx_tfield *id_ptr = opts_find_field(tmptl, IPFIX_IE_TEMPLATE_ID, 0);
     if (id_ptr == NULL) {
         // Not found
         return;
     }
 
-    if (id_ptr->flags & IPX_TFIELD_SCOPE == 0 || id_ptr->flags & IPX_TFIELD_MULTI_IE) {
+    if ((id_ptr->flags & IPX_TFIELD_SCOPE) == 0 || id_ptr->flags & IPX_TFIELD_MULTI_IE) {
         // Not scope field or multiple definitions
         return;
     }
@@ -344,7 +344,7 @@ opts_detect_ietype(struct ipx_template *tmplt)
             return;
         }
 
-        if (ptr->flags & IPX_TFIELD_SCOPE == 0) {
+        if ((ptr->flags & IPX_TFIELD_SCOPE) == 0) {
             // The field found, but not in the scope!
             return;
         }
@@ -374,7 +374,7 @@ opts_detect_ietype(struct ipx_template *tmplt)
 static void
 opts_detect(struct ipx_template *tmplt)
 {
-    assert(tmplt->type == IPX_TYPE_TEMPLATE_OPTIONS);
+    assert(tmplt->type == IPX_TYPE_TEMPLATE_OPTS);
 
     opts_detect_mproc(tmplt);
     opts_detect_eproc(tmplt);
@@ -412,7 +412,7 @@ static int
 template_parse_header(enum ipx_template_type type, const void *ptr, uint16_t *len,
     struct ipx_template **tmplt)
 {
-    assert(type == IPX_TYPE_TEMPLATE || type == IPX_TYPE_TEMPLATE_OPTIONS);
+    assert(type == IPX_TYPE_TEMPLATE || type == IPX_TYPE_TEMPLATE_OPTS);
     const size_t size_normal = sizeof(struct ipfix_template_record) - sizeof(template_ie);
     const size_t size_opts = sizeof(struct ipfix_options_template_record) - sizeof(template_ie);
 
@@ -436,7 +436,7 @@ template_parse_header(enum ipx_template_type type, const void *ptr, uint16_t *le
     }
 
     fields_total = ntohs(rec->count);
-    if (fields_total != 0 && type == IPX_TYPE_TEMPLATE_OPTIONS) {
+    if (fields_total != 0 && type == IPX_TYPE_TEMPLATE_OPTS) {
         // It is not a withdrawal template, so it must be definitely an Options Template
         if (*len < size_opts) { // the header must be at least 6 bytes long
             return IPX_ERR_FORMAT;
@@ -449,16 +449,16 @@ template_parse_header(enum ipx_template_type type, const void *ptr, uint16_t *le
         }
     }
 
-    struct ipx_template *ptr = template_create_empty(fields_total);
-    if (!ptr) {
+    struct ipx_template *tmplt_ptr = template_create_empty(fields_total);
+    if (!tmplt_ptr) {
         return IPX_ERR_NOMEM;
     }
 
-    ptr->type = type;
-    ptr->id = template_id;
-    ptr->fields_cnt_total = fields_total;
-    ptr->fields_cnt_scope = fields_scope;
-    *tmplt = ptr;
+    tmplt_ptr->type = type;
+    tmplt_ptr->id = template_id;
+    tmplt_ptr->fields_cnt_total = fields_total;
+    tmplt_ptr->fields_cnt_scope = fields_scope;
+    *tmplt = tmplt_ptr;
     *len = header_size;
     return IPX_OK;
 }
@@ -584,28 +584,35 @@ template_fields_calc_flags(struct ipx_template *tmplt)
 static int
 template_calc_features(struct ipx_template *tmplt)
 {
-    // First, calculate basic flags of each field
+    // First, calculate basic flags of each template field
     template_fields_calc_flags(tmplt)
 
-    // Calculate flags of the whole template
+    // Calculate flags of the whole template and each field offset in a data record
     const uint16_t fields_total = tmplt->fields_cnt_total;
     uint32_t data_len = 0; // Get (minimum) data length of a record referenced by this template
+    uint16_t field_offset = 0;
 
     for (uint16_t i = 0; i < fields_total; ++i) {
-        const struct ipx_tfield *field_ptr = &tmplt->fields[i];
+        struct ipx_tfield *field_ptr = &tmplt->fields[i];
+        field_ptr->offset = field_offset;
+
         if (field_ptr->flags & IPX_TFIELD_MULTI_IE) {
             tmplt->flags |= IPX_TEMPLATE_HAS_MULTI_IE;
         }
 
-        uint16_t field_len = field_ptr->length;
+        const uint16_t field_len = field_ptr->length;
         if (field_len == IPFIX_VAR_IE_LENGTH) {
             // Variable length Information Element must be at least 1 byte long
             tmplt->flags |= IPX_TEMPLATE_HAS_DYNAMIC;
             data_len += 1;
+            field_offset = IPFIX_VAR_IE_LENGTH;
             continue;
         }
 
         data_len += field_len;
+        if (field_offset != IPFIX_VAR_IE_LENGTH) {
+            field_offset += field_len; // Overflow is resolved by check of total data length
+        }
     }
 
     // Check if a record described by this templates fits into an IPFIX message
@@ -618,7 +625,7 @@ template_calc_features(struct ipx_template *tmplt)
     }
 
     // Recognize Options Template
-    if (tmplt->type == IPX_TYPE_TEMPLATE_OPTIONS) {
+    if (tmplt->type == IPX_TYPE_TEMPLATE_OPTS) {
         opts_detect(tmplt);
     }
 
@@ -626,11 +633,31 @@ template_calc_features(struct ipx_template *tmplt)
     return IPX_OK;
 }
 
+/**
+ * \brief Create a copy of a raw template and assign the copy to a template structure
+ * \param[in] tmplt Template structure
+ * \param[in] ptr   Pointer to the raw template
+ * \param[in] len   Real length of the raw template
+ * \return #IPX_OK or #IPX_ERR_NOMEM
+ */
+static inline int
+template_raw_copy(struct ipx_template *tmplt, const void *ptr, uint16_t len)
+{
+    tmplt->raw.data = (uint8_t *) malloc(len);
+    if (!tmplt->raw.data) {
+        return IPX_ERR_NOMEM;
+    }
+
+    memcpy(tmplt->raw.data, ptr, len);
+    tmplt->raw.length = len;
+    return IPX_OK;
+}
+
 int
 ipx_template_parse(enum ipx_template_type type, const void *ptr, uint16_t *len,
     struct ipx_template **tmplt)
 {
-    assert(type == IPX_TYPE_TEMPLATE || type == IPX_TYPE_TEMPLATE_OPTIONS);
+    assert(type == IPX_TYPE_TEMPLATE || type == IPX_TYPE_TEMPLATE_OPTS);
     struct ipx_template *template;
     uint16_t len_header, len_fields, len_real;
     int ret_code;
@@ -642,9 +669,14 @@ ipx_template_parse(enum ipx_template_type type, const void *ptr, uint16_t *len,
         return ret_code;
     }
 
-    // TODO: raw?
     if (template->fields_cnt_total == 0) {
-        // No fields
+        // No fields... just copy the raw template
+        ret_code = template_raw_copy(template, ptr, len_header);
+        if (ret_code != IPX_OK) {
+            ipx_template_destroy(template);
+            return ret_code;
+        }
+
         *len = len_header;
         *tmplt = template;
         return IPX_OK;
@@ -659,15 +691,13 @@ ipx_template_parse(enum ipx_template_type type, const void *ptr, uint16_t *len,
         return ret_code;
     }
 
-    // Copy raw
+    // Copy raw template
     len_real = len_header + len_fields;
-    template->raw.length = len_real;
-    template->raw.data = (uint8_t *) malloc(len_real);
-    if (!template->raw.data) {
+    ret_code = template_raw_copy(template, ptr, len_real);
+    if (ret_code != IPX_OK) {
         ipx_template_destroy(template);
-        return IPX_ERR_NOMEM;
+        return ret_code;
     }
-    memcpy(template->raw.data, ptr, len_real);
 
     // Calculate features of fields and the template
     ret_code = template_calc_features(template);
@@ -707,3 +737,154 @@ ipx_template_destroy(struct ipx_template *tmplt)
     free(tmplt->raw.data);
     free(tmplt);
 }
+
+/**
+ * \brief Determine whether an Information Element is structured or not
+ * \note Structured types are defined in RFC 6313
+ * \param[in] elem Information Element
+ * \return True or false
+ */
+static inline bool
+is_structured(const struct fds_iemgr_elem *elem)
+{
+    switch (elem->data_type) {
+    case FDS_ET_BASIC_LIST:
+    case FDS_ET_SUB_TEMPLATE_LIST:
+    case FDS_ET_SUB_TEMPLATE_MULTILIST:
+        return true;
+    default:
+        return false;
+    }
+}
+
+const struct ipx_tfield *
+ipx_template_cfind(const struct ipx_template *tmplt, uint32_t en, uint16_t id)
+{
+    const uint16_t field_cnt = tmplt->fields_cnt_total;
+    for (uint16_t i = 0; i < field_cnt; ++i) {
+        const struct ipx_tfield *ptr = &tmplt->fields[i];
+        if (ptr->id != id || ptr->en != en) {
+            continue;
+        }
+
+        return ptr;
+    }
+
+    return NULL;
+}
+
+struct ipx_tfield *
+ipx_template_find(struct ipx_template *tmplt, uint32_t en, uint16_t id)
+{
+    return (struct ipx_tfield *) ipx_template_cfind(tmplt, en, id);
+}
+
+void
+ipx_template_define_ies(struct ipx_template *tmplt, const fds_iemgr_t *iemgr, bool preserve)
+{
+    if (!iemgr && preserve) {
+        // Nothing to do
+        return;
+    }
+
+    bool has_reverse = false;
+    bool has_struct = false;
+
+    const uint16_t fields_cnt = tmplt->fields_cnt_total;
+    const struct fds_iemgr_elem *def_ptr;
+
+    for (uint16_t i = 0; i < fields_cnt; ++i) {
+        struct ipx_tfield *tfield_ptr = &tmplt->fields[i];
+        if (preserve && tfield_ptr->def != NULL) {
+            // Preserve this definition. Just analyse features...
+            has_reverse = (tfield_ptr->flags & IPX_TFIELD_REVERSE) ? true : has_reverse;
+            has_struct = (tfield_ptr->flags & IPX_TFIELD_STRUCTURED) ? true : has_struct;
+            continue;
+        };
+
+        // Remove previous flags
+        tfield_ptr->flags &= ~(ipx_template_flag_t)(IPX_TFIELD_REVERSE | IPX_TFIELD_STRUCTURED);
+
+        // Try to find new definition
+        def_ptr = (!iemgr) ? NULL : fds_iemgr_elem_find_id(iemgr, tfield_ptr->en, tfield_ptr->id);
+        if (def_ptr == NULL) {
+            // Remove the old definition
+            tfield_ptr->def = NULL;
+            continue;
+        }
+
+        tfield_ptr->def = def_ptr;
+        if (def_ptr->is_reverse) {
+            tfield_ptr->flags |= IPX_TFIELD_REVERSE;
+            has_reverse = true;
+        }
+
+        if (is_structured(def_ptr)) {
+            tfield_ptr->flags |= IPX_TFIELD_STRUCTURED;
+            has_struct = true;
+        }
+    }
+
+    // Add/remove template flags
+    if (has_reverse || has_struct) {
+        ipx_template_flag_t set_mask = 0;
+        set_mask |= (has_reverse) ? IPX_TEMPLATE_HAS_REVERSE : 0;
+        set_mask |= (has_struct) ? IPX_TEMPLATE_HAS_STRUCT : 0;
+        tmplt->flags |= set_mask;
+    }
+
+    if (!has_reverse || !has_struct) {
+        ipx_template_flag_t clear_mask = 0;
+        clear_mask |= (!has_reverse) ? IPX_TEMPLATE_HAS_REVERSE : 0;
+        clear_mask |= (!has_struct) ? IPX_TEMPLATE_HAS_STRUCT : 0;
+        tmplt->flags &= ~clear_mask;
+    }
+}
+
+int
+ipx_template_define_flowkey(struct ipx_template *tmplt, uint64_t flowkey)
+{
+    // Get the highest bit and check the correctness
+    unsigned int bit_highest = 0;
+    uint64_t key_cpy = flowkey;
+    while (key_cpy) {
+        key_cpy >>= 1;
+        bit_highest++;
+    }
+
+    const uint16_t fields_cnt = tmplt->fields_cnt_total;
+    if (bit_highest > fields_cnt) {
+        return IPX_ERR_FORMAT;
+    }
+
+    if (flowkey != 0) {
+        // Set the global flow key flag
+        tmplt->flags |= IPX_TEMPLATE_HAS_FKEY;
+    } else {
+        // Clear the global flow key flag
+        tmplt->flags &= ~(IPX_TEMPLATE_HAS_FKEY);
+    }
+
+    // Set flow key flags
+    for (uint16_t i = 0; i < fields_cnt; ++i, flowkey >>= 1) {
+        // Add flow key flags
+        if (flowkey & 0x1) {
+            tmplt->fields[i].flags |= IPX_TFIELD_FLOW_KEY;
+        } else {
+            tmplt->fields[i].flags &= ~(IPX_TFIELD_FLOW_KEY);
+        }
+    }
+
+    return IPX_OK;
+}
+
+int
+ipx_template_cmp(const struct ipx_template *t1, const struct ipx_template *t2)
+{
+    if (t1->raw.length != t2->raw.length) {
+        return (t1->raw.length > t2->raw.length) ? 1 : (-1);
+    }
+
+    return memcmp(t1, t2, t1->raw.length);
+}
+

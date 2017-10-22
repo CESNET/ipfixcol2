@@ -50,6 +50,9 @@ extern "C" {
 #include <libfds/iemgr.h>
 #include <ipfixcol2/api.h>
 
+/** Unsigned integer type able to hold all template flags */
+typedef uint16_t ipx_template_flag_t;
+
 /** \brief Template Field features                                                               */
 enum ipx_tfield_features {
     /**
@@ -131,7 +134,7 @@ struct ipx_tfield {
      * The flags argument contains a bitwise OR of zero or more of the flags defined in
      * #ipx_tfield_features enumeration.
      */
-    uint16_t flags;
+    ipx_template_flag_t flags;
     /**
      * Detailed definition of the element (data/semantic/unit type).
      * If the definition is missing in the configuration, the values is NULL.
@@ -141,9 +144,9 @@ struct ipx_tfield {
 
 /** Types of IPFIX (Options) Templates                                                           */
 enum ipx_template_type {
-    IPX_TYPE_TEMPLATE,         /**< Definition of Template                                       */
-    IPX_TYPE_TEMPLATE_OPTIONS, /**< Definition of Options Template                               */
-    IPX_TYPE_TEMPLATE_UNDEF    /**< For internal usage                                           */
+    IPX_TYPE_TEMPLATE,       /**< Definition of Template                                         */
+    IPX_TYPE_TEMPLATE_OPTS,  /**< Definition of Options Template                                 */
+    IPX_TYPE_TEMPLATE_UNDEF  /**< For internal usage                                             */
 };
 
 /**
@@ -176,7 +179,7 @@ enum ipx_template_features {
     /** Is it a Biflow template (has at least one Reverse Information Element)                   */
     IPX_TEMPLATE_HAS_REVERSE = (1 << 2),
     /** Template has at least one structured data type (basicList, subTemplateList, etc.)        */
-    IPX_TEMPLATE_HAS_NESTED = (1 << 3),
+    IPX_TEMPLATE_HAS_STRUCT = (1 << 3),
     /** Template has a known flow key (at least one field is marked as a Flow Key)               */
     IPX_TEMPLATE_HAS_FKEY = (1 << 4),
     // Add new ones here...
@@ -186,6 +189,8 @@ enum ipx_template_features {
  * \brief Structure for a parsed IPFIX template
  *
  * This dynamically sized structure wraps a parsed copy of an IPFIX template.
+ * \warning Never modify values directly. Otherwise, consistency of the template cannot be
+ *   guaranteed!
  */
 struct ipx_template {
     /** Type of the template                                                                     */
@@ -204,7 +209,7 @@ struct ipx_template {
      * The flags argument contains a bitwise OR of zero or more of the flags defined in
      * #ipx_template_features enumeration.
      */
-    uint16_t flags;
+    ipx_template_flag_t flags;
 
     /**
      * \brief Length of a data record using this template.
@@ -265,21 +270,18 @@ struct ipx_template {
  * These fields are set to default values:
  *   - All timestamps (ipx_template#time). Default values are zeros.
  *   - References to IE definition (ipx_tfield#def). Default values are NULL.
- *   - Some field (i.e. ipx_tfield#flags) and template (i.e. ipx_template#flags) flags:
- *     TODO
+ *   - Some template field flags (i.e. ipx_tfield#flags): (Default state is not set)
+ *     ::IPX_TFIELD_STRUCTURED, ::IPX_TFIELD_REVERSE and ::IPX_TFIELD_FLOW_KEY
+ *   - Some global template flags (i.e. ipx_template#flags): (Default state is not set)
+ *     ::IPX_TEMPLATE_HAS_REVERSE, ::IPX_TEMPLATE_HAS_STRUCT and ::IPX_TEMPLATE_HAS_FKEY
  *
- *
- *   Whether the template is reverse or not (, flag ::IPX_TFIELD_REVERSE),
- *     whether the template is Biflow or not (ipx_template#flags, flag ::IPX_TEMPLATE_HAS_REVERSE),
- *     whether the template is nested or not ()
- *     These flags are unset, by default.
- * These structure's members are filled and managed by a template manager (::ipx_tmgr_t) to which
- * the template is inserted.
+ * These structure's members are usually filled and managed by a template manager (::ipx_tmgr_t)
+ * to which the template is inserted.
  *
  * \param[in]     type  Type of template (::IPX_TYPE_TEMPLATE or ::IPX_TYPE_TEMPLATE_OPTIONS)
  * \param[in]     ptr   Pointer to the header of the template
- * \param[in,out] len   Maximal length of the raw template / real length of the raw template in
- *                      octets (see notes)
+ * \param[in,out] len   [in] Maximal length of the raw template /
+ *                      [out] real length of the raw template in  octets (see notes)
  * \param[out]    tmplt Parsed template (automatically allocated)
  * \return On success, the function will set parameters \p tmplt, \p len and return #IPX_OK.
  *   Otherwise, the parameters will be unchanged and the function will return #IPX_ERR_FORMAT or
@@ -289,8 +291,15 @@ IPX_API int
 ipx_template_parse(enum ipx_template_type type, const void *ptr, uint16_t *len,
     struct ipx_template **tmplt);
 
-// TODO: poznámka, že budou zachovány i ukazatelen na definice... coz muze byt nekdy problem
-// uzivatel by mel nastavit na NULL pokud vi, ze bude sablona prezivat dele
+/**
+ * \brief Create a copy of a template structure
+ *
+ * \warning Keep in mind that references to the definitions of template fields will be preserved.
+ *   If you do not have control over a corresponding Information Element manager, you should
+ *   remove the references using the ipx_template_define_ies() function.
+ * \param[in] tmplt Original template
+ * \return Pointer to the copy or NULL (in case of memory allocation error).
+ */
 IPX_API struct ipx_template *
 ipx_template_copy(const struct ipx_template *tmplt);
 
@@ -302,32 +311,86 @@ IPX_API void
 ipx_template_destroy(struct ipx_template *tmplt);
 
 /**
- * TODO: dokoncit definici... pokud polozka neni null, bude preskocena
- * TODO: doplni informace zda je polozka list + zda je reverse
- * \brief
- * \param[in] tmplt
- * \param[in] iemgr
+ * \brief Find the first occurence of an Information Element in a template
+ * \param[in] tmplt Template structure
+ * \param[in] en    Enterprise Number
+ * \param[in] id    Information Element ID
+ * \return Pointer to the IE or NULL.
  */
-IPX_API void
-ipx_template_define_ies(struct ipx_template *tmplt, const fds_iemgr_t *iemgr);
+IPX_API struct ipx_tfield *
+ipx_template_find(struct ipx_template *tmplt, uint32_t en, uint16_t id);
 
 /**
- * TODO: dokoncit definici
- * \note For more information, see RFC 7011, Section 4.4
- * \param[in] tmplt
- * \param[in] flowkey
- * \return
+ * \copydoc ipx_template_find()
+ */
+IPX_API const struct ipx_tfield *
+ipx_template_cfind(const struct ipx_template *tmplt, uint32_t en, uint16_t id);
+
+/**
+ * \brief Add references to Information Element definitions and update corresponding flags
+ *
+ * The function will try to find a definition of each template field in a manager of IE definitions
+ * based on Information Element ID and Private Enterprise Number of the template field.
+ * Template flags (i.e. ::IPX_TEMPLATE_HAS_REVERSE and ::IPX_TEMPLATE_HAS_STRUCT) and
+ * field flags (i.e. ::IPX_TFIELD_STRUCTURED and ::IPX_TFIELD_REVERSE) that can be determined
+ * from the definitions will be set appropriately.
+ *
+ * \note If the manager is _not defined_ (i.e. NULL) and preserve mode is _disabled_, all the
+ *   template field references to the definitions will be removed and corresponding flags will be
+ *   cleared.
+ * \note If the manager is _defined_ and preserve mode is _disabled_, all the template field
+ *   references to the definitions will be updated. If any field doesn't have a corresponding
+ *   definition in the user defined manager, the old reference will be removed.
+ * \note If the manager is _defined_ and preserve mode is _enabled_, the function will update only
+ *   template fields without the known references. This allows you to use multiple definition
+ *   managers (for example, primary and secondary) at the same time.
+ * \note If the manager is _not_defined_ and preserve mode is _enabled_, the function does nothing.
+ *
+ * \param[in] tmplt    Template structure
+ * \param[in] iemgr    Manager of Information Elements definitions (can be NULL)
+ * \param[in] preserve If any field already has a reference to a definition, do not replace it with
+ *   a new definition. In other words, add definitions only to undefined fields.
+ */
+IPX_API void
+ipx_template_define_ies(struct ipx_template *tmplt, const fds_iemgr_t *iemgr, bool preserve);
+
+/**
+ * \brief Add a flow key
+ *
+ * Flowkey is a set of bit fields that is used for marking the Information Elements of a Data
+ * Record that serve as Flow Key. Each bit represents an Information Element in the Data Record,
+ * with the n-th least significant bit representing the n-th Information Element. A bit set to
+ * value 1 indicates that the corresponding Information Element is a Flow Key of the reported
+ * Flow. A bit set to value 0 indicates that this is not the case. For more information, see
+ * RFC 7011, Section 4.4
+ *
+ * The function will set flow key flag (i.e.::IPX_TFIELD_FLOW_KEY) to corresponding template
+ * fields and the global template flag ::IPX_TEMPLATE_HAS_FKEY.
+ * \note If the \p flowkey parameter is zero, the flags will be clear from the template and the
+ *   fields.
+ *
+ * \param[in] tmplt   Template structure
+ * \param[in] flowkey Flow key
+ * \return On success, the function will return #IPX_OK. Otherwise, if the \p flowkey tries to
+ *   set non-existent template fields as flow keys, the function will return #IPX_ERR_FORMAT and
+ *   no modification will be performed.
  */
 IPX_API int
 ipx_template_define_flowkey(struct ipx_template *tmplt, uint64_t flowkey);
 
-// TODO: pridat definici... bude to porovnání pouze na úrovni raw zaznamů? nebo něco složitějšího?
+/**
+ * \brief Compare templates (only based on template fields)
+ *
+ * Only raw templates are compared i.e. everything is ignored except Template ID
+ * and template fields (Information Element ID, Private Enterprise Number and length)
+ * \param t1 First template
+ * \param t2 Second template
+ * \return The function returns an integer less than, equal to, or greater than zero if the first
+ *   template is found, respectively, to be less than, to match, or be greater than the second
+ *   template.
+ */
 IPX_API int
 ipx_template_cmp(const struct ipx_template *t1, const struct ipx_template *t2);
-
-// TODO: pridat definici
-IPX_API int
-ipx_template_cmp_raw(const struct ipx_template *t1, const void *ptr, uint16_t size);
 
 #ifdef __cplusplus
 }
