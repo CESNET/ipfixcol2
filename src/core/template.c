@@ -39,13 +39,13 @@
  *
  */
 
-#include <ipfixcol2/template.h>
-#include <ipfixcol2/ipfix_structures.h>
 #include <stddef.h> // size_t
 #include <arpa/inet.h> // ntohs
 #include <string.h> // memcpy
 #include <stdlib.h>
 #include <assert.h>
+#include <ipfixcol2/template.h>
+#include <ipfixcol2/ipfix_structures.h>
 #include <ipfixcol2/message_ipfix.h>
 
 /**
@@ -62,29 +62,6 @@
 #define EN_BIT_MASK(_value_) ((_value_) & (uint16_t )0x7FFF)
 /** Get the length of an array */
 #define ARRAY_SIZE(_arr_) (sizeof(_arr_) / sizeof((_arr_)[0]))
-
-/**
- * \brief Find the first occurrence of a field in a template
- * \param[in] tmplt Template structure
- * \param[in] id    Information Element ID
- * \param[in] en    Enterprise Number (PEN)
- * \return Pointer to the field definition or NULL.
- */
-static const struct ipx_tfield *
-opts_find_field(const struct ipx_template *tmplt, uint16_t id, uint32_t en)
-{
-    const uint16_t field_cnt = tmplt->fields_cnt_total;
-    for (uint16_t i = 0; i < field_cnt; ++i) {
-        const struct ipx_tfield *ptr = &tmplt->fields[i];
-        if (ptr->id != id || ptr->en != en) {
-            continue;
-        }
-
-        return ptr;
-    }
-
-    return NULL;
-}
 
 /** Required field identification            */
 struct opts_req_id {
@@ -182,8 +159,8 @@ opts_detect_mproc(struct ipx_template *tmplt)
     // Metering Process Template
     const uint16_t IPFIX_IE_ODID = 149; // observationDomainId
     const uint16_t IPFIX_IE_MPID = 143; // meteringProcessId
-    const struct ipx_tfield *odid_ptr = opts_find_field(tmplt, IPFIX_IE_ODID, 0);
-    const struct ipx_tfield *mpid_ptr = opts_find_field(tmplt, IPFIX_IE_MPID, 0);
+    const struct ipx_tfield *odid_ptr = ipx_template_find(tmplt, 0, IPFIX_IE_ODID);
+    const struct ipx_tfield *mpid_ptr = ipx_template_find(tmplt, 0, IPFIX_IE_MPID);
     if (odid_ptr == NULL && mpid_ptr == NULL) {
         // At least one field must be defined
         return;
@@ -254,7 +231,7 @@ opts_detect_eproc(struct ipx_template *tmplt)
     bool eid_found = false;
     const uint16_t eid[] = {IPFIX_IE_EXP_IPV4, IPFIX_IE_EXP_IPV6, IPFIX_IE_EXP_PID};
     for (size_t i = 0; i < ARRAY_SIZE(eid); ++i) {
-        const struct ipx_tfield *field_ptr = opts_find_field(tmplt, eid[i], 0);
+        const struct ipx_tfield *field_ptr = ipx_template_find(tmplt, 0, eid[i]);
         if (!field_ptr) {
             // Not found
             continue;
@@ -299,7 +276,7 @@ opts_detect_flowkey(struct ipx_template *tmptl)
 {
     // Check scope Field
     const uint16_t IPFIX_IE_TEMPLATE_ID = 145;
-    const struct ipx_tfield *id_ptr = opts_find_field(tmptl, IPFIX_IE_TEMPLATE_ID, 0);
+    const struct ipx_tfield *id_ptr = ipx_template_find(tmptl, 0, IPFIX_IE_TEMPLATE_ID);
     if (id_ptr == NULL) {
         // Not found
         return;
@@ -332,8 +309,8 @@ opts_detect_ietype(struct ipx_template *tmplt)
 {
     const uint16_t IPX_IE_IE_ID = 303; // informationElementId
     const uint16_t IPX_IE_PEN = 346; // privateEnterpriseNumber
-    const struct ipx_tfield *ie_id_ptr = opts_find_field(tmplt, IPX_IE_IE_ID, 0);
-    const struct ipx_tfield *pen_ptr = opts_find_field(tmplt, IPX_IE_PEN, 0);
+    const struct ipx_tfield *ie_id_ptr = ipx_template_find(tmplt, 0, IPX_IE_IE_ID);
+    const struct ipx_tfield *pen_ptr = ipx_template_find(tmplt, 0, IPX_IE_PEN);
 
     // Check scope fields
     const struct ipx_tfield *ptrs[] = {ie_id_ptr, pen_ptr};
@@ -372,7 +349,7 @@ opts_detect_ietype(struct ipx_template *tmplt)
  * \param[in] tmplt Template structure
  */
 static void
-opts_detect(struct ipx_template *tmplt)
+opts_detector(struct ipx_template *tmplt)
 {
     assert(tmplt->type == IPX_TYPE_TEMPLATE_OPTS);
 
@@ -626,7 +603,7 @@ template_calc_features(struct ipx_template *tmplt)
 
     // Recognize Options Template
     if (tmplt->type == IPX_TYPE_TEMPLATE_OPTS) {
-        opts_detect(tmplt);
+        opts_detector(tmplt);
     }
 
     tmplt->data_length = data_len;
