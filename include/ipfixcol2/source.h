@@ -85,7 +85,7 @@
  */
 
 /** \brief Session type of a flow source                                     */
-enum IPX_SESSION_TYPE {
+enum ipx_session_type {
 	IPX_SESSION_TYPE_UDP,        /**< IPFIX over UDP transfer protocol       */
 	IPX_SESSION_TYPE_TCP,        /**< IPFIX over TCP transfer protocol       */
 	IPX_SESSION_TYPE_SCTP,       /**< IPFIX over SCTP transfer protocol      */
@@ -176,7 +176,7 @@ typedef uint64_t ipx_stream_id_t;
  *   memory allocation error) returns NULL.
  */
 IPX_API ipx_session_t *
-ipx_session_create_from_net(enum IPX_SESSION_TYPE type,
+ipx_session_create_from_net(enum ipx_session_type type,
 		const struct ipx_session_addrs *addrs);
 /**
  * \brief Create a new Source Session based on a local file
@@ -186,7 +186,7 @@ ipx_session_create_from_net(enum IPX_SESSION_TYPE type,
  *   memory allocation error) returns NULL.
  */
 IPX_API ipx_session_t *
-ipx_session_create_from_file(enum IPX_SESSION_TYPE type, const char *name);
+ipx_session_create_from_file(enum ipx_session_type type, const char *name);
 
 /**
  * \brief Destroy a Source Session identification and all
@@ -226,7 +226,7 @@ ipx_session_get_name(const ipx_session_t *session);
  * \param[in] session Pointer to the session
  * \return Type
  */
-IPX_API enum IPX_SESSION_TYPE
+IPX_API enum ipx_session_type
 ipx_session_get_type(const ipx_session_t *session);
 
 /**

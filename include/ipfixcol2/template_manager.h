@@ -74,13 +74,13 @@ typedef struct ipx_tsnapshot ipx_tsnapshot_t;
  * \return Pointer to the manager or NULL (usually memory allocation error)
  */
 IPX_API ipx_tmgr_t *
-ipx_tmgr_create(enum IPX_SESSION_TYPE type);
+ipx_tmgr_create(enum ipx_session_type type);
 
 /**
  * \brief Destroy a template manager
  * \warning The function will also immediately destroy all templates and snapshots that are stored
  *   inside the manager. If there are any references to these templates/snapshot, you must wait
- *   until you can guarantee that no one is referencing them or you can move them into garbage
+ *   until you can guarantee that no one is referencing them OR you can move them into garbage
  *   (see ipx_tmgr_clear()) and then generate a garbage message that must be later destroyed
  *   (see ipx_tmgr_garbage_get()). In the latter case, you can safely destroy the manager, but
  *   the garbage must remain until references exist.
@@ -146,32 +146,77 @@ ipx_tmgr_set_udp_timeouts(ipx_tmgr_t *tmgr, uint16_t template, uint16_t opt_temp
 IPX_API void
 ipx_tmgr_set_snapshot_timeout(ipx_tmgr_t *tmgr, uint16_t timeout);
 
-
+/**
+ * \brief Add a reference to a template manager and redefine all fields
+ *
+ * All templates require the manager to determine a definition (a type, semantic, etc.) of
+ * each template fields. If the manager is not defined or a definition of a field is missing,
+ * the field cannot be properly interpreted and some information about the template are unknown.
+ *
+ * \warning If the manager already contains another manager, all references to definitions will be
+ *   overwritten with new ones. If a definition of an IE was previously available in the older
+ *   manager and the new manager doesn't include the definition, the definition will be removed
+ *   and corresponding fields will not be interpretable.
+ * \param[in] tmgr  Template manager
+ * \param[in] iemgr Manager of Information Elements (IEs)
+ * \return On success returns #IPX_OK. Otherwise returns #IPX_ERR_NOMEM and references are still
+ *   the same.
+ */
 IPX_API int
 ipx_tmgr_set_iemgr(ipx_tmgr_t *tmgr, const fds_iemgr_t *iemgr);
 
-
+/**
+ * \brief Set current time of a processed packet
+ *
+ * In a header of each IPFIX message is present so called "Export time" that helps to determine
+ * a context in which it should be processed.
+ *
+ * In case of unreliable transmission (such as UDP, SCTP-PR), an IPFIX packet could be received
+ * out of order i.e. it may be delayed. Because a scope of validity of template definitions is
+ * directly connected with Export Time and the definitions can change from time to time,
+ * the Export Time of the processing packet is necessary to determine to which template flow
+ * records belong.
+ *
+ * In case of reliable transmission (such as TCP, SCTP), the Export time helps to detect wrong
+ * behavior of an exporting process. For example, a TCP connection must be always reliable, thus
+ * Export Time must be only increasing (i.e. the same or greater).
+ *
+ * \param[in] tmgr     Template manager
+ * \param[in] exp_time Export time
+ * \return On success returns #IPX_OK. In case of invalid behaviour (TCP only), the function will
+ *   return #IPX_ERR_ARG. TODO: what next?
+ */
 IPX_API int
 ipx_tmgr_set_time(ipx_tmgr_t *tmgr, uint32_t exp_time);
 
 /**
- * \brief
+ * \brief Get a reference to a template
  *
  * \warning This operation is related to the current Export Time, see ipx_tmgr_set_time()
- * \param tmgr
- * \param id
- * \return
+ * \param[in] tmgr Template manager
+ * \param[in] id   Identification number of the template
+ * \return Pointer to the template or NULL if the template doesn't exist.
  */
 IPX_API const struct ipx_template *
-ipx_tmgr_template_get(ipx_tmgr_t *tmgr, uint16_t id);
+ipx_tmgr_template_get(const ipx_tmgr_t *tmgr, uint16_t id);
 
 /**
- * \brief
+ * \brief Add a template
  *
+ * First, check if the new template definition doesn't break any rules for
+ *
+ * TODO: co bude dělat v případě toho a tam toho...
+ *
+ * Store the template to the template manager
  * \warning This operation is related to the current Export Time, see ipx_tmgr_set_time()
- * \param tmgr
- * \param template
- * \return
+ * \param tmgr     Template manager
+ * \param template Pointer to the new template
+ * \return #IPX_OK if template has been successfully added/processed. If the template is not
+ *   valid in this context and the session type, the function will return #IPX_ERR_ARG. We highly
+ *   recommend to stop processing data of this source because this indicates invalid implementation
+ *   of the exporting process.
+ *   In case of memory allocation error #IPX_ERR_NOMEM. TODO: is it undefined?
+ *
  */
 IPX_API int
 ipx_tmgr_template_add(ipx_tmgr_t *tmgr, struct template *template);
@@ -181,6 +226,17 @@ ipx_tmgr_template_add(ipx_tmgr_t *tmgr, struct template *template);
 
 IPX_API int
 ipx_tmgr_template_withdraw(ipx_tmgr_t *tmgr, uint16_t id, enum ipx_template_type type);
+
+/**
+ * \brief
+ *
+ * \warning This operation is related to the current Export Time, see ipx_tmgr_set_time()
+ * \param tmgr
+ * \param type
+ * \return
+ */
+IPX_API int
+ipx_tmgr_template_withdraw_all(ipx_tmgr_t *tmgr, enum ipx_template_type type);
 
 /**
  * \brief
@@ -197,14 +253,14 @@ ipx_tmgr_template_remove(ipx_tmgr_t *tmgr, uint16_t id, enum ipx_template_type t
 /**
  * \brief
  *
- * \warning This operation is related to the current Export Time, see ipx_tmgr_set_time()
+ *
  * \param
  * \param tmgr
  * \param type
  * \return
  */
 IPX_API int
-ipx_tmgr_template_remove_group(ipx_tmgr_t *tmgr, enum ipx_template_type type);
+ipx_tmgr_template_remove_all(ipx_tmgr_t *tmgr, enum ipx_template_type type);
 
 /**
  *
@@ -214,10 +270,10 @@ ipx_tmgr_template_remove_group(ipx_tmgr_t *tmgr, enum ipx_template_type type);
  * \return
  */
 IPX_API int
-ipx_tmgr_snapshot_get(ipx_tmgr_t *tmgr, const ipx_tsnapshot_t **out);
+ipx_tmgr_snapshot_get(const ipx_tmgr_t *tmgr, const ipx_tsnapshot_t **out);
 
 
-IPX_API const struct *
+IPX_API const struct ipx_template *
 ipx_tsnapshot_template_get(const ipx_tsnapshot_t *snap);
 
 #ifdef __cplusplus

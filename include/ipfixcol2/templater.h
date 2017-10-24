@@ -122,7 +122,7 @@ typedef struct ipx_tmpl_template ipx_tmpl_template_t;
  * \return Templater on success, otherwise NULL when memory error
  */
 IPX_API ipx_tmpl_t*
-ipx_tmpl_create(uint64_t life_time, uint64_t life_packet, enum IPX_SESSION_TYPE type);
+ipx_tmpl_create(uint64_t life_time, uint64_t life_packet, enum ipx_session_type type);
 
 /**
  * \brief Load iemgr to the templater and set elements from a iemgr to fields in templates
