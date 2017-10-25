@@ -21,8 +21,8 @@ set(SUB_HEADERS
 	ipfixcol2/processor.h
 	ipfixcol2/source.h
 	ipfixcol2/verbose.h
-	ipfixcol2/templater.h
-	ipfixcol2/common.h
+	#ipfixcol2/templater.h
+	#ipfixcol2/common.h
 	"${PROJECT_BINARY_DIR}/include/ipfixcol2/api.h"
 )
 

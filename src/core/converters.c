@@ -49,14 +49,14 @@ ipx_uint2str_be(const void *field, size_t size, char *str, size_t str_size)
 {
     // Get a value
     uint64_t result;
-    if (ipx_get_uint_be(field, size, &result) != IPX_CONVERT_OK) {
-        return IPX_CONVERT_ERR_ARG;
+    if (ipx_get_uint_be(field, size, &result) != IPX_OK) {
+        return IPX_ERR_ARG;
     }
 
     // TODO: use something faster than snprintf
     int str_real_len = snprintf(str, str_size, "%" PRIu64, result);
     if (str_real_len < 0 || (size_t) str_real_len >= str_size) {
-        return IPX_CONVERT_ERR_BUFFER;
+        return IPX_ERR_BUFFER;
     }
 
     return str_real_len;
@@ -67,14 +67,14 @@ ipx_int2str_be(const void *field, size_t size, char *str, size_t str_size)
 {
     // Get a value
     int64_t result;
-    if (ipx_get_int_be(field, size, &result) != IPX_CONVERT_OK) {
-        return IPX_CONVERT_ERR_ARG;
+    if (ipx_get_int_be(field, size, &result) != IPX_OK) {
+        return IPX_ERR_ARG;
     }
 
     // TODO: use something faster than snprintf
     int str_real_len = snprintf(str, str_size, "%" PRIi64, result);
     if (str_real_len < 0 || (size_t) str_real_len >= str_size) {
-        return IPX_CONVERT_ERR_BUFFER;
+        return IPX_ERR_BUFFER;
     }
 
     return str_real_len;
@@ -85,8 +85,8 @@ ipx_float2str_be(const void *field, size_t size, char *str, size_t str_size)
 {
     // Get a value
     double result;
-    if (ipx_get_float_be(field, size, &result) != IPX_CONVERT_OK) {
-        return IPX_CONVERT_ERR_ARG;
+    if (ipx_get_float_be(field, size, &result) != IPX_OK) {
+        return IPX_ERR_ARG;
     }
 
     const char *fmt = (size == sizeof(float))
@@ -94,7 +94,7 @@ ipx_float2str_be(const void *field, size_t size, char *str, size_t str_size)
         : ("%." IPX_CONVERT_STRX(DBL_DIG) "g"); // double precision
     int str_real_len = snprintf(str, str_size, fmt, result);
     if (str_real_len < 0 || (size_t) str_real_len >= str_size) {
-        return IPX_CONVERT_ERR_BUFFER;
+        return IPX_ERR_BUFFER;
     }
 
     return str_real_len;
@@ -105,7 +105,7 @@ ipx_bool2str(const void *field, char *str, size_t str_size)
 {
     bool result;
     if (ipx_get_bool(field, 1, &result) != 0) {
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 
     const char *bool_str;
@@ -122,7 +122,7 @@ ipx_bool2str(const void *field, char *str, size_t str_size)
     }
 
     if (str_size < bool_len) {
-        return IPX_CONVERT_ERR_BUFFER;
+        return IPX_ERR_BUFFER;
     }
 
     memcpy(str, bool_str, bool_len);
@@ -134,8 +134,8 @@ ipx_datetime2str_be(const void *field, size_t size, enum ipx_element_type type,
     char *str, size_t str_size, enum ipx_convert_time_fmt fmt)
 {
     struct timespec ts;
-    if (ipx_get_datetime_hp_be(field, size, type, &ts) != IPX_CONVERT_OK) {
-        return IPX_CONVERT_ERR_ARG;
+    if (ipx_get_datetime_hp_be(field, size, type, &ts) != IPX_OK) {
+        return IPX_ERR_ARG;
     }
 
     // Convert common part
@@ -149,18 +149,18 @@ ipx_datetime2str_be(const void *field, size_t size, enum ipx_element_type type,
     if (utc_time) {
         // Convert to UTC time
         if (!gmtime_r(&ts.tv_sec, &timestamp)) {
-            return IPX_CONVERT_ERR_ARG;
+            return IPX_ERR_ARG;
         }
     } else {
         // Convert to local time
         if (!localtime_r(&ts.tv_sec, &timestamp)) {
-            return IPX_CONVERT_ERR_ARG;
+            return IPX_ERR_ARG;
         }
     }
 
     size_t size_used = strftime(str, str_size, "%FT%T", &timestamp);
     if (size_used == 0) {
-        return IPX_CONVERT_ERR_BUFFER;
+        return IPX_ERR_BUFFER;
     }
 
     size_t size_remain = str_size - size_used;
@@ -187,13 +187,13 @@ ipx_datetime2str_be(const void *field, size_t size, enum ipx_element_type type,
         frac_width = 9;
         break;
     default:
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 
     if (frac_width > 0) {
         int ret = snprintf(str_remain, size_remain, ".%0*" PRIu32, frac_width, frac);
         if (ret >= (int) size_remain || ret < 0) {
-            return IPX_CONVERT_ERR_BUFFER;
+            return IPX_ERR_BUFFER;
         }
 
         size_remain -= ret;
@@ -204,7 +204,7 @@ ipx_datetime2str_be(const void *field, size_t size, enum ipx_element_type type,
     // Add timezone information
     if (utc_time) {
         if (size_remain < 2) { // We need space for 'Z' and '\0'
-            return IPX_CONVERT_ERR_BUFFER;
+            return IPX_ERR_BUFFER;
         }
 
         str_remain[0] = 'Z';
@@ -213,7 +213,7 @@ ipx_datetime2str_be(const void *field, size_t size, enum ipx_element_type type,
     } else {
         size_t ret = strftime(str_remain, size_remain, "%z", &timestamp);
         if (ret == 0) {
-            return IPX_CONVERT_ERR_BUFFER;
+            return IPX_ERR_BUFFER;
         }
         size_used += ret;
     }
@@ -226,19 +226,19 @@ ipx_mac2str(const void *field, size_t size, char *str, size_t str_size)
 {
     // Get a copy of the MAC address
     uint8_t mac[6];
-    if (ipx_get_mac(field, size, &mac) != IPX_CONVERT_OK) {
-        return IPX_CONVERT_ERR_ARG;
+    if (ipx_get_mac(field, size, &mac) != IPX_OK) {
+        return IPX_ERR_ARG;
     }
 
     if (str_size < IPX_CONVERT_STRLEN_MAC) {
-        return IPX_CONVERT_ERR_BUFFER;
+        return IPX_ERR_BUFFER;
     }
 
     // Convert to string
     int ret = snprintf(str, str_size, "%02X:%02X:%02X:%02X:%02X:%02X",
             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     if (ret + 1 != IPX_CONVERT_STRLEN_MAC) { // +1 = '\0'
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 
     return ret;
@@ -249,7 +249,7 @@ ipx_ip2str(const void *field, size_t size, char *str, size_t str_size)
 {
     if (size == 4U) {
         if (!inet_ntop(AF_INET, field, str, str_size)) {
-            return IPX_CONVERT_ERR_BUFFER;
+            return IPX_ERR_BUFFER;
         }
 
         return (int) strlen(str);
@@ -257,13 +257,13 @@ ipx_ip2str(const void *field, size_t size, char *str, size_t str_size)
 
     if (size == 16U) {
         if (!inet_ntop(AF_INET6, field, str, str_size)) {
-            return IPX_CONVERT_ERR_BUFFER;
+            return IPX_ERR_BUFFER;
         }
 
         return (int) strlen(str);
     }
 
-    return IPX_CONVERT_ERR_ARG;
+    return IPX_ERR_ARG;
 }
 
 int
@@ -271,7 +271,7 @@ ipx_octet_array2str(const void *field, size_t size, char *str, size_t str_size)
 {
     size_t real_len = (2 * size) + 1; // 2 characters per byte + '\0'
     if (real_len > str_size) {
-        return IPX_CONVERT_ERR_BUFFER;
+        return IPX_ERR_BUFFER;
     }
 
     const uint8_t *field_ptr = field;
@@ -402,7 +402,7 @@ ipx_string2str(const void *field, size_t size, char *str, size_t str_size)
 {
     if (size + 1 > str_size) { // "+1" for '\0'
         // The output buffer is definitely small
-        return IPX_CONVERT_ERR_BUFFER;
+        return IPX_ERR_BUFFER;
     }
 
     unsigned int step;
@@ -435,7 +435,7 @@ ipx_string2str(const void *field, size_t size, char *str, size_t str_size)
 
         // Copy unchanged characters
         if (copy_len > out_remaining) {
-            return IPX_CONVERT_ERR_BUFFER;
+            return IPX_ERR_BUFFER;
         }
         memcpy(&ptr_out[pos_out], &ptr_in[pos_copy], copy_len);
         out_remaining -= copy_len;
@@ -446,7 +446,7 @@ ipx_string2str(const void *field, size_t size, char *str, size_t str_size)
         if (is_escapable) {
             const size_t subst_len = 2U;
             if (out_remaining < subst_len) {
-                return IPX_CONVERT_ERR_BUFFER;
+                return IPX_ERR_BUFFER;
             }
 
             ptr_out[pos_out] = '\\';
@@ -459,7 +459,7 @@ ipx_string2str(const void *field, size_t size, char *str, size_t str_size)
         if (is_control) {
             const size_t subst_len = 4U;
             if (out_remaining < subst_len) {
-                return IPX_CONVERT_ERR_BUFFER;
+                return IPX_ERR_BUFFER;
             }
 
             uint8_t hex;
@@ -477,7 +477,7 @@ ipx_string2str(const void *field, size_t size, char *str, size_t str_size)
         // Invalid character -> replace with "REPLACEMENT CHARACTER"
         const size_t subst_len = 3U;
         if (out_remaining < subst_len) {
-            return IPX_CONVERT_ERR_BUFFER;
+            return IPX_ERR_BUFFER;
         }
 
         // Character U+FFFD in UTF8 encoding
@@ -492,7 +492,7 @@ ipx_string2str(const void *field, size_t size, char *str, size_t str_size)
     const size_t out_remaining = str_size - pos_out;
 
     if (copy_len + 1 > out_remaining) { // "+1" for '\0'
-        return IPX_CONVERT_ERR_BUFFER;
+        return IPX_ERR_BUFFER;
     }
     memcpy(&ptr_out[pos_out], &ptr_in[pos_copy], copy_len);
     pos_out += copy_len;
@@ -511,11 +511,11 @@ ipx_string_utf8check(const void *field, size_t size)
 
         step = utf8char_is_valid(ptr, remaining);
         if (step == 0) {
-            return IPX_CONVERT_ERR_ARG;
+            return IPX_ERR_ARG;
         }
     }
 
-    return IPX_CONVERT_OK;
+    return IPX_OK;
 }
 
 

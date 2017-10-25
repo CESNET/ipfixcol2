@@ -77,32 +77,6 @@ static_assert(sizeof(double) == sizeof(uint64_t), "Double is not 8 bytes long");
 static_assert(sizeof(float)  == sizeof(uint32_t), "Float is not 4 bytes long");
 
 /**
- * \def IPX_CONVERT_OK
- * \brief Status code for successful conversion
- */
-#define IPX_CONVERT_OK          (0)
-
-/**
- * \def IPX_CONVERT_ERR_ARG
- * \brief Status code for invalid argument(s) of a conversion function
- */
-#define IPX_CONVERT_ERR_ARG     (-1)
-
-/**
- * \def IPX_CONVERT_ERR_TRUNC
- * \brief Status code for a truncation of a value of an argument of a conversion
- *   function.
- */
-#define IPX_CONVERT_ERR_TRUNC   (-2)
-
-/**
- * \def IPX_CONVERT_ERR_BUFFER
- * \brief Status code for insufficient buffer size for a result of a conversion
- *   function
- */
-#define IPX_CONVERT_ERR_BUFFER  (-3)
-
-/**
  * \def IPX_CONVERT_EPOCHS_DIFF
  * \brief Time difference between NTP and UNIX epoch in seconds
  *
@@ -128,11 +102,11 @@ static_assert(sizeof(float)  == sizeof(uint32_t), "Float is not 4 bytes long");
  * \param[out] field  Pointer to the data field
  * \param[in]  size   Size of the data field (min: 1 byte, max: 8 bytes)
  * \param[in]  value  New value
- * \return On success returns #IPX_CONVERT_OK. When the \p value cannot fit
+ * \return On success returns #IPX_OK. When the \p value cannot fit
  *   in the \p field of the defined \p size, stores a saturated value and
- *   returns the value #IPX_CONVERT_ERR_TRUNC. When the \p size is out of
+ *   returns the value #IPX_ERR_TRUNC. When the \p size is out of
  *   range, a value of the \p field is unchanged and returns
- *   #IPX_CONVERT_ERR_ARG.
+ *   #IPX_ERR_ARG.
  */
 static inline int
 ipx_set_uint_be(void *field, size_t size, uint64_t value)
@@ -140,34 +114,34 @@ ipx_set_uint_be(void *field, size_t size, uint64_t value)
     switch (size) {
     case 8:
         *((uint64_t *) field) = htobe64(value);
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     case 4:
         if (value > UINT32_MAX) {
             *((uint32_t *) field) = UINT32_MAX; // byte conversion not required
-            return IPX_CONVERT_ERR_TRUNC;
+            return IPX_ERR_TRUNC;
         }
 
         *((uint32_t *) field) = htonl((uint32_t) value);
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     case 2:
         if (value > UINT16_MAX) {
             *((uint16_t *) field) = UINT16_MAX; // byte conversion not required
-            return IPX_CONVERT_ERR_TRUNC;
+            return IPX_ERR_TRUNC;
         }
 
         *((uint16_t *) field) = htons((uint16_t) value);
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     case 1:
         if (value > UINT8_MAX) {
             *((uint8_t *) field) = UINT8_MAX;
-            return IPX_CONVERT_ERR_TRUNC;
+            return IPX_ERR_TRUNC;
         }
 
         *((uint8_t *) field) = (uint8_t) value;
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     default:
         // Other sizes (3,5,6,7)
@@ -175,19 +149,19 @@ ipx_set_uint_be(void *field, size_t size, uint64_t value)
     }
 
     if (size == 0 || size > 8U) {
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 
     const uint64_t over_limit = 1ULL << (size * 8U);
     if (value >= over_limit) {
         value = UINT64_MAX; // byte conversion not required (all bits set)
         memcpy(field, &value, size);
-        return IPX_CONVERT_ERR_TRUNC;
+        return IPX_ERR_TRUNC;
     }
 
     value = htobe64(value);
     memcpy(field, &(((uint8_t *) &value)[8U - size]), size);
-    return IPX_CONVERT_OK;
+    return IPX_OK;
 }
 
 /**
@@ -199,11 +173,11 @@ ipx_set_uint_be(void *field, size_t size, uint64_t value)
  * \param[out] field  Pointer to the data field
  * \param[in]  size   Size of the data field (min: 1 byte, max: 8 bytes)
  * \param[in]  value  New value
- * \return On success returns #IPX_CONVERT_OK. When the \p value cannot fit
+ * \return On success returns #IPX_OK. When the \p value cannot fit
  *   in the \p field of the defined \p size, stores a saturated value and
- *   returns the value #IPX_CONVERT_ERR_TRUNC. When the \p size is out of
+ *   returns the value #IPX_ERR_TRUNC. When the \p size is out of
  *   range, a value of the \p field is unchanged and returns
- *   #IPX_CONVERT_ERR_ARG.
+ *   #IPX_ERR_ARG.
  */
 static inline int
 ipx_set_int_be(void *field, size_t size, int64_t value)
@@ -211,49 +185,49 @@ ipx_set_int_be(void *field, size_t size, int64_t value)
     switch (size) {
     case 8:
         *((int64_t *) field) = (int64_t) htobe64((uint64_t) value);
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     case 4:
         if (value > INT32_MAX) {
             *((int32_t *) field) = (int32_t) htonl((int32_t) INT32_MAX);
-            return IPX_CONVERT_ERR_TRUNC;
+            return IPX_ERR_TRUNC;
         }
 
         if (value < INT32_MIN) {
             *((int32_t *) field) = (int32_t) htonl((int32_t) INT32_MIN);
-            return IPX_CONVERT_ERR_TRUNC;
+            return IPX_ERR_TRUNC;
         }
 
         *((int32_t *) field) = (int32_t) htonl((int32_t) value);
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     case 2:
         if (value > INT16_MAX) {
             *((int16_t *) field) = (int16_t) htons((int16_t) INT16_MAX);
-            return IPX_CONVERT_ERR_TRUNC;
+            return IPX_ERR_TRUNC;
         }
 
         if (value < INT16_MIN) {
             *((int16_t *) field) = (int16_t) htons((int16_t) INT16_MIN);
-            return IPX_CONVERT_ERR_TRUNC;
+            return IPX_ERR_TRUNC;
         }
 
         *((int16_t *) field) = (int16_t) htons((int16_t) value);
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     case 1:
         if (value > INT8_MAX) {
             *((int8_t *) field) = INT8_MAX;
-            return IPX_CONVERT_ERR_TRUNC;
+            return IPX_ERR_TRUNC;
         }
 
         if (value < INT8_MIN) {
             *((int8_t *) field) = INT8_MIN;
-            return IPX_CONVERT_ERR_TRUNC;
+            return IPX_ERR_TRUNC;
         }
 
         *((int8_t *) field) = (int8_t) value;
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     default:
         // Other sizes (3,5,6,7)
@@ -261,7 +235,7 @@ ipx_set_int_be(void *field, size_t size, int64_t value)
     }
 
     if (size == 0 || size > 8U) {
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 
     const int64_t over_limit = (((int64_t) INT64_MAX) >> ((8U - size) * 8U));
@@ -278,7 +252,7 @@ ipx_set_int_be(void *field, size_t size, int64_t value)
     }
 
     memcpy(field, &(((int8_t *) &value)[8U - size]), size);
-    return over ? IPX_CONVERT_ERR_TRUNC : IPX_CONVERT_OK;
+    return over ? IPX_ERR_TRUNC : IPX_OK;
 }
 
 /**
@@ -292,10 +266,10 @@ ipx_set_int_be(void *field, size_t size, int64_t value)
  * \param[out] field  Pointer to the data field
  * \param[in]  size   Size of tha data field (4 or 8 bytes)
  * \param[in]  value  New value
- * \return On success returns #IPX_CONVERT_OK. When the \p value cannot fit
+ * \return On success returns #IPX_OK. When the \p value cannot fit
  *   in the \p field of the defined \p size, stores a saturated value and
- *   returns the value #IPX_CONVERT_ERR_TRUNC. When the \p size of the field
- *   is not valid, returns #IPX_CONVERT_ERR_ARG and an original value of
+ *   returns the value #IPX_ERR_TRUNC. When the \p size of the field
+ *   is not valid, returns #IPX_ERR_ARG and an original value of
  *   the \p field is unchanged.
  */
 static inline int
@@ -310,7 +284,7 @@ ipx_set_float_be(void *field, size_t size, double value)
 
         cast_helper.dbl = value;
         *(uint64_t *) field = htobe64(cast_helper.u64);
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     } else if (size == sizeof(uint32_t)) {
         // 32 bits, we have static assert for sizeof(float) == sizeof(uint32_t)
@@ -331,10 +305,10 @@ ipx_set_float_be(void *field, size_t size, double value)
         }
 
         *(uint32_t *) field = htonl(cast_helper.u32);
-        return over ? IPX_CONVERT_ERR_TRUNC : IPX_CONVERT_OK;
+        return over ? IPX_ERR_TRUNC : IPX_OK;
 
     } else {
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 }
 
@@ -355,8 +329,8 @@ ipx_set_float_be(void *field, size_t size, double value)
  *   (#IPX_ET_DATE_TIME_SECONDS) or 8 bytes (#IPX_ET_DATE_TIME_MILLISECONDS,
  *   #IPX_ET_DATE_TIME_MICROSECONDS, #IPX_ET_DATE_TIME_NANOSECONDS)
  * \warning Wraparound for dates after 8 February 2036 is not implemented.
- * \return On success returns #IPX_CONVERT_OK. Otherwise (usually
- *   incorrect \p size of the field) returns #IPX_CONVERT_ERR_ARG and an
+ * \return On success returns #IPX_OK. Otherwise (usually
+ *   incorrect \p size of the field) returns #IPX_ERR_ARG and an
  *   original value of the \p field is unchanged.
  */
 static inline int
@@ -368,17 +342,17 @@ ipx_set_datetime_lp_be(void *field, size_t size, enum ipx_element_type type,
 
     if ((size != sizeof(uint64_t) || type == IPX_ET_DATE_TIME_SECONDS)
             && (size != sizeof(uint32_t) || type != IPX_ET_DATE_TIME_SECONDS)) {
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 
     switch (type) {
     case IPX_ET_DATE_TIME_SECONDS:
         *(uint32_t *) field = htonl(value / S1E3); // To seconds
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     case IPX_ET_DATE_TIME_MILLISECONDS:
         *(uint64_t *) field = htobe64(value);
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     case IPX_ET_DATE_TIME_MICROSECONDS:
     case IPX_ET_DATE_TIME_NANOSECONDS: {
@@ -405,9 +379,9 @@ ipx_set_datetime_lp_be(void *field, size_t size, enum ipx_element_type type,
         (*part)[1] = htonl(fraction);
         }
 
-        return IPX_CONVERT_OK;
+        return IPX_OK;
     default:
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 }
 
@@ -424,8 +398,8 @@ ipx_set_datetime_lp_be(void *field, size_t size, enum ipx_element_type type,
  * \warning Wraparound for dates after 8 February 2036 is not implemented.
  * \warning The value of the nanoseconds field MUST be in the range 0
  *   to 999999999. Otherwise behavior is undefined.
- * \return On success returns #IPX_CONVERT_OK. Otherwise (usually
- *   incorrect \p size of the field) returns #IPX_CONVERT_ERR_ARG and an
+ * \return On success returns #IPX_OK. Otherwise (usually
+ *   incorrect \p size of the field) returns #IPX_ERR_ARG and an
  *   original value of the \p field is unchanged.
  */
 static inline int
@@ -438,17 +412,17 @@ ipx_set_datetime_hp_be(void *field, size_t size, enum ipx_element_type type,
 
     if ((size != sizeof(uint64_t) || type == IPX_ET_DATE_TIME_SECONDS)
             && (size != sizeof(uint32_t) || type != IPX_ET_DATE_TIME_SECONDS)) {
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 
     switch (type) {
     case IPX_ET_DATE_TIME_SECONDS:
         *(uint32_t *) field = htonl(ts.tv_sec); // To seconds
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     case IPX_ET_DATE_TIME_MILLISECONDS:
         *(uint64_t *) field = htobe64((ts.tv_sec * S1E3) + (ts.tv_nsec / S1E6));
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     case IPX_ET_DATE_TIME_MICROSECONDS:
     case IPX_ET_DATE_TIME_NANOSECONDS: {
@@ -473,9 +447,9 @@ ipx_set_datetime_hp_be(void *field, size_t size, enum ipx_element_type type,
         (*parts)[1] = htonl(fraction);
         }
 
-        return IPX_CONVERT_OK;
+        return IPX_OK;
     default:
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 }
 
@@ -487,20 +461,20 @@ ipx_set_datetime_hp_be(void *field, size_t size, enum ipx_element_type type,
  * \note This function is byte order independent because it stores the value
  *   only to one byte.
  * \remark A size of the field is always consider as 1 byte.
- * \return On success returns #IPX_CONVERT_OK. Otherwise (usually
- *   incorrect \p size of the field) returns #IPX_CONVERT_ERR_ARG and an
+ * \return On success returns #IPX_OK. Otherwise (usually
+ *   incorrect \p size of the field) returns #IPX_ERR_ARG and an
  *   original value of the \p field is unchanged.
  */
 static inline int
 ipx_set_bool(void *field, size_t size, bool value)
 {
     if (size != 1U) {
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 
     //According to the RFC 7011, section 6.1.5. "true" == 1 and "false" == 2
     *(uint8_t *) field = value ? 1U : 2U;
-    return IPX_CONVERT_OK;
+    return IPX_OK;
 }
 
 /**
@@ -514,19 +488,19 @@ ipx_set_bool(void *field, size_t size, bool value)
  * \param[in]  size   Size of the data field (MUST be 4 or 16 bytes!)
  * \param[in]  value  Pointer to a new value of the field
  * \warning The \p value MUST be at least \p size bytes long.
- * \return On success returns #IPX_CONVERT_OK. Otherwise (usually
- *   incorrect \p size of the field) returns #IPX_CONVERT_ERR_ARG and an
+ * \return On success returns #IPX_OK. Otherwise (usually
+ *   incorrect \p size of the field) returns #IPX_ERR_ARG and an
  *   original value of the \p field is unchanged.
  */
 static inline int
 ipx_set_ip(void *field, size_t size, const void *value)
 {
     if (size != 4U && size != 16U) {
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 
     memcpy(field, value, size);
-    return IPX_CONVERT_OK;
+    return IPX_OK;
 }
 
 /**
@@ -541,19 +515,19 @@ ipx_set_ip(void *field, size_t size, const void *value)
  * \param[in]  value  Pointer to a new value of the field
  * \warning The \p value is left in the original byte order
  * \warning The \p value MUST be at least \p size bytes long.
- * \return On success returns #IPX_CONVERT_OK. Otherwise (usually
- *   incorrect \p size of the field) returns #IPX_CONVERT_ERR_ARG and an
+ * \return On success returns #IPX_OK. Otherwise (usually
+ *   incorrect \p size of the field) returns #IPX_ERR_ARG and an
  *   original value of the \p field is unchanged.
  */
 static inline int
 ipx_set_mac(void *field, size_t size, const void *value)
 {
     if (size != 6U) {
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 
     memcpy(field, value, 6U);
-    return IPX_CONVERT_OK;
+    return IPX_OK;
 }
 
 /**
@@ -569,18 +543,18 @@ ipx_set_mac(void *field, size_t size, const void *value)
  * \remark The function can be implemented as a wrapper over memcpy.
  * \warning The \p value is left in the original byte order
  * \warning The \p value MUST be at least \p size bytes long.
- * \return On success returns #IPX_CONVERT_OK. Otherwise returns
- *   #IPX_CONVERT_ERR_ARG.
+ * \return On success returns #IPX_OK. Otherwise returns
+ *   #IPX_ERR_ARG.
  */
 static inline int
 ipx_set_octet_array(void *field, size_t size, const void *value)
 {
     if (size == 0U) {
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 
     memcpy(field, value, size);
-    return IPX_CONVERT_OK;
+    return IPX_OK;
 }
 
 /**
@@ -594,18 +568,18 @@ ipx_set_octet_array(void *field, size_t size, const void *value)
  * \remark The function can be implemented as a wrapper over memcpy.
  * \warning The \p value MUST be at least \p size bytes long.
  * \warning The \p value MUST be a valid UTF-8 string!
- * \return On success returns #IPX_CONVERT_OK. Otherwise returns
- *   #IPX_CONVERT_ERR_ARG.
+ * \return On success returns #IPX_OK. Otherwise returns
+ *   #IPX_ERR_ARG.
  */
 static inline int
 ipx_set_string(void *field, size_t size, const char *value)
 {
     if (size == 0U) {
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 
     memcpy(field, value, size);
-    return IPX_CONVERT_OK;
+    return IPX_OK;
 }
 
 /**
@@ -626,9 +600,9 @@ ipx_set_string(void *field, size_t size, const char *value)
  * \param[in]  field  Pointer to the data field (in "network byte order")
  * \param[in]  size   Size of the data field (min: 1 byte, max: 8 bytes)
  * \param[out] value  Pointer to a variable for the result
- * \return On success returns #IPX_CONVERT_OK and fills the \p value.
+ * \return On success returns #IPX_OK and fills the \p value.
  *   Otherwise (usually the incorrect \p size of the field) returns
- *   #IPX_CONVERT_ERR_ARG and the \p value is not filled.
+ *   #IPX_ERR_ARG and the \p value is not filled.
  */
 static inline int
 ipx_get_uint_be(const void *field, size_t size, uint64_t *value)
@@ -636,19 +610,19 @@ ipx_get_uint_be(const void *field, size_t size, uint64_t *value)
     switch (size) {
     case 8:
         *value = be64toh(*(const uint64_t *) field);
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     case 4:
         *value = ntohl(*(const uint32_t *) field);
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     case 2:
         *value = ntohs(*(const uint16_t *) field);
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     case 1:
         *value = *(const uint8_t *) field;
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     default:
         // Other sizes (3,5,6,7)
@@ -656,14 +630,14 @@ ipx_get_uint_be(const void *field, size_t size, uint64_t *value)
     }
 
     if (size == 0 || size > 8) {
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 
     uint64_t new_value = 0;
     memcpy(&(((uint8_t *) &new_value)[8U - size]), field, size);
 
     *value = be64toh(new_value);
-    return IPX_CONVERT_OK;
+    return IPX_OK;
 }
 
 /**
@@ -675,9 +649,9 @@ ipx_get_uint_be(const void *field, size_t size, uint64_t *value)
  * \param[in]  field  Pointer to the data field (in "network byte order")
  * \param[in]  size   Size of the data field (min: 1 byte, max: 8 bytes)
  * \param[out] value  Pointer to a variable for the result
- * \return On success returns #IPX_CONVERT_OK and fills the \p value.
+ * \return On success returns #IPX_OK and fills the \p value.
  *   Otherwise (usually the incorrect \p size of the field) returns
- *   #IPX_CONVERT_ERR_ARG and the \p value is not filled.
+ *   #IPX_ERR_ARG and the \p value is not filled.
  */
 static inline int
 ipx_get_int_be(const void *field, size_t size, int64_t *value)
@@ -685,19 +659,19 @@ ipx_get_int_be(const void *field, size_t size, int64_t *value)
     switch (size) {
     case 8:
         *value = (int64_t) be64toh(*(const uint64_t *) field);
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     case 4:
         *value = (int32_t) ntohl(*(const uint32_t *) field);
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     case 2:
         *value = (int16_t) ntohs(*(const uint16_t *) field);
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     case 1:
         *value = *(const int8_t *) field;
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     default:
         // Other sizes (3,5,6,7)
@@ -705,7 +679,7 @@ ipx_get_int_be(const void *field, size_t size, int64_t *value)
     }
 
     if (size == 0U || size > 8U) {
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 
     /*
@@ -718,7 +692,7 @@ ipx_get_int_be(const void *field, size_t size, int64_t *value)
     memcpy(&(((int8_t *) &new_value)[8U - size]), field, size);
 
     *value = be64toh(new_value);
-    return IPX_CONVERT_OK;
+    return IPX_OK;
 }
 
 /**
@@ -730,8 +704,8 @@ ipx_get_int_be(const void *field, size_t size, int64_t *value)
  * \param[in]  field  Pointer to the data field (in "network byte order")
  * \param[in]  size   Size of the data field (4 or 8 bytes)
  * \param[out] value  Pointer to a variable for the result
- * \return On success returns #IPX_CONVERT_OK and fills the \p value. Otherwise
- *   (usually the incorrect \p size of the field) returns #IPX_CONVERT_ERR_ARG
+ * \return On success returns #IPX_OK and fills the \p value. Otherwise
+ *   (usually the incorrect \p size of the field) returns #IPX_ERR_ARG
  *   and the \p value is not filled.
  */
 static inline int
@@ -746,7 +720,7 @@ ipx_get_float_be(const void *field, size_t size, double *value)
 
         cast_helper.u64 = be64toh(*(const uint64_t *) field);
         *value = cast_helper.dbl;
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     } else if (size == sizeof(uint32_t)) {
         // 32bit, we have static assert for sizeof(float) == sizeof(uint32_t)
@@ -757,10 +731,10 @@ ipx_get_float_be(const void *field, size_t size, double *value)
 
         cast_helper.u32 = ntohl(*(const uint32_t *) field);
         *value = cast_helper.flt;
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     } else {
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 }
 
@@ -783,9 +757,9 @@ ipx_get_float_be(const void *field, size_t size, double *value)
  *   (#IPX_ET_DATE_TIME_SECONDS) or 8 bytes (#IPX_ET_DATE_TIME_MILLISECONDS,
  *   #IPX_ET_DATE_TIME_MICROSECONDS, #IPX_ET_DATE_TIME_NANOSECONDS)
  * \warning Wraparound for dates after 8 February 2036 is not implemented.
- * \return On success returns #IPX_CONVERT_OK and fills the \p value.
+ * \return On success returns #IPX_OK and fills the \p value.
  *   Otherwise (usually the incorrect \p size of the field) returns
- *   #IPX_CONVERT_ERR_ARG and the \p value is not filled.
+ *   #IPX_ERR_ARG and the \p value is not filled.
  */
 static inline int
 ipx_get_datetime_lp_be(const void *field, size_t size, enum ipx_element_type type,
@@ -796,17 +770,17 @@ ipx_get_datetime_lp_be(const void *field, size_t size, enum ipx_element_type typ
 
     if ((size != sizeof(uint64_t) || type == IPX_ET_DATE_TIME_SECONDS)
             && (size != sizeof(uint32_t) || type != IPX_ET_DATE_TIME_SECONDS)) {
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 
     switch (type) {
     case IPX_ET_DATE_TIME_SECONDS:
         *value = ntohl(*(const uint32_t *) field) * S1E3;
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     case IPX_ET_DATE_TIME_MILLISECONDS:
         *value = be64toh(*(const uint64_t *) field);
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     case IPX_ET_DATE_TIME_MICROSECONDS:
     case IPX_ET_DATE_TIME_NANOSECONDS: {
@@ -833,9 +807,9 @@ ipx_get_datetime_lp_be(const void *field, size_t size, enum ipx_element_type typ
         *value = result;
         }
 
-        return IPX_CONVERT_OK;
+        return IPX_OK;
     default:
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 }
 
@@ -851,9 +825,9 @@ ipx_get_datetime_lp_be(const void *field, size_t size, enum ipx_element_type typ
  * \param[in]  type   Type of the timestamp (see ipx_get_datetime_lp_be())
  * \param[out] ts     Pointer to a variable for the result (see time.h)
  * \warning Wraparound for dates after 8 February 2036 is not implemented.
- * \return On success returns #IPX_CONVERT_OK and fills the \p value.
+ * \return On success returns #IPX_OK and fills the \p value.
  *   Otherwise (usually the incorrect \p size of the field) returns
- *   #IPX_CONVERT_ERR_ARG and the \p value is not filled.
+ *   #IPX_ERR_ARG and the \p value is not filled.
  */
 static inline int
 ipx_get_datetime_hp_be(const void *field, size_t size, enum ipx_element_type type,
@@ -865,14 +839,14 @@ ipx_get_datetime_hp_be(const void *field, size_t size, enum ipx_element_type typ
 
     if ((size != sizeof(uint64_t) || type == IPX_ET_DATE_TIME_SECONDS)
             && (size != sizeof(uint32_t) || type != IPX_ET_DATE_TIME_SECONDS)) {
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 
     switch (type) {
     case IPX_ET_DATE_TIME_SECONDS:
         ts->tv_sec = ntohl(*(const uint32_t *) field);
         ts->tv_nsec = 0;
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     case IPX_ET_DATE_TIME_MILLISECONDS: {
         const uint64_t new_value = be64toh(*(const uint64_t *) field);
@@ -880,7 +854,7 @@ ipx_get_datetime_hp_be(const void *field, size_t size, enum ipx_element_type typ
         ts->tv_nsec = (new_value % S1E3) * S1E6;
         }
 
-        return IPX_CONVERT_OK;
+        return IPX_OK;
 
     case IPX_ET_DATE_TIME_MICROSECONDS:
     case IPX_ET_DATE_TIME_NANOSECONDS: {
@@ -921,9 +895,9 @@ ipx_get_datetime_hp_be(const void *field, size_t size, enum ipx_element_type typ
         ts->tv_nsec = fraction >> 1; // Perform the last shift
         }
 
-        return IPX_CONVERT_OK;
+        return IPX_OK;
     default:
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 }
 
@@ -936,27 +910,27 @@ ipx_get_datetime_hp_be(const void *field, size_t size, enum ipx_element_type typ
  * \note This function is byte order independent because it assumes the value
  *   is only one byte long.
  * \remark A size of the field is always consider as 1 byte.
- * \return On success returns #IPX_CONVERT_OK and fills the \p value.
+ * \return On success returns #IPX_OK and fills the \p value.
  *   Otherwise (usually invalid boolean value - see the definition of the
- *   boolean for IPFIX, RFC 7011, Section 6.1.5.) returns #IPX_CONVERT_ERR_ARG
+ *   boolean for IPFIX, RFC 7011, Section 6.1.5.) returns #IPX_ERR_ARG
  *   and the \p value is not filled.
  */
 static inline int
 ipx_get_bool(const void *field, size_t size, bool *value)
 {
     if (size != 1U) {
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 
     switch (*(const uint8_t *) field) {
     case 1U: // True
         *value = true;
-        return IPX_CONVERT_OK;
+        return IPX_OK;
     case 2U: // False (according to the RFC 7011, section 6.1.5. "false" == 2)
         *value = false;
-        return IPX_CONVERT_OK;
+        return IPX_OK;
     default:
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 }
 
@@ -972,19 +946,19 @@ ipx_get_bool(const void *field, size_t size, bool *value)
  * \param[in]  size   Size of the data field (MUST be 4 or 16 bytes!)
  * \param[out] value  Pointer to a variable for the result
  * \warning The \p value MUST be at least \p size bytes long.
- * \return On success returns #IPX_CONVERT_OK and fills the \p value.
+ * \return On success returns #IPX_OK and fills the \p value.
  *   Otherwise (usually the incorrect \p size of the field) returns
- *   #IPX_CONVERT_ERR_ARG and the \p value is not filled.
+ *   #IPX_ERR_ARG and the \p value is not filled.
  */
 static inline int
 ipx_get_ip(const void *field, size_t size, void *value)
 {
     if (size != 4U && size != 16U) {
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 
     memcpy(value, field, size);
-    return IPX_CONVERT_OK;
+    return IPX_OK;
 }
 
 /**
@@ -999,19 +973,19 @@ ipx_get_ip(const void *field, size_t size, void *value)
  * \param[in]  size   Size of the data field (MUST be always 6 bytes!)
  * \param[out] value  Pointer to a variable for the result
  * \warning The \p value MUST be at least \p size bytes long.
- * \return On success returns #IPX_CONVERT_OK and fills the \p value.
+ * \return On success returns #IPX_OK and fills the \p value.
  *   Otherwise (usually the incorrect \p size of the field) returns
- *   #IPX_CONVERT_ERR_ARG and the \p value is not filled.
+ *   #IPX_ERR_ARG and the \p value is not filled.
  */
 static inline int
 ipx_get_mac(const void *field, size_t size, void *value)
 {
     if (size != 6U) {
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 
     memcpy(value, field, 6U);
-    return IPX_CONVERT_OK;
+    return IPX_OK;
 }
 
 /**
@@ -1026,18 +1000,18 @@ ipx_get_mac(const void *field, size_t size, void *value)
  * \param[out] value  Pointer to the output buffer
  * \remark Can be implemented as a wrapper over memcpy.
  * \warning The \p value MUST be at least \p size bytes long.
- * \return On success returns #IPX_CONVERT_OK. Otherwise returns
- *   #IPX_CONVERT_ERR_ARG.
+ * \return On success returns #IPX_OK. Otherwise returns
+ *   #IPX_ERR_ARG.
  */
 static inline int
 ipx_get_octet_array(const void *field, size_t size, void *value)
 {
     if (size == 0) {
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 
     memcpy(value, field, size);
-    return IPX_CONVERT_OK;
+    return IPX_OK;
 }
 
 /**
@@ -1050,18 +1024,18 @@ ipx_get_octet_array(const void *field, size_t size, void *value)
  * \param[out] value  Pointer to the output buffer
  * \remark Can be implemented as a wrapper over memcpy.
  * \warning The \p value MUST be at least \p size bytes long.
- * \return On success returns #IPX_CONVERT_OK. Otherwise returns
- *   #IPX_CONVERT_ERR_ARG.
+ * \return On success returns #IPX_OK. Otherwise returns
+ *   #IPX_ERR_ARG.
  */
 static inline int
 ipx_get_string(const void *field, size_t size, char *value)
 {
     if (size == 0) {
-        return IPX_CONVERT_ERR_ARG;
+        return IPX_ERR_ARG;
     }
 
     memcpy(value, field, size);
-    return IPX_CONVERT_OK;
+    return IPX_OK;
 }
 
 /**
@@ -1178,8 +1152,8 @@ enum ipx_convert_time_fmt {
  *   null byte) placed into the buffer \p str. Therefore, if the result is
  *   greater than zero, conversion was successful. If the length of the result
  *   string (including the termination null byte) would exceed \p str_size,
- *   then returns #IPX_CONVERT_ERR_BUFFER and the content written to
- *   the buffer \p str is undefined. Otherwise returns #IPX_CONVERT_ERR_ARG.
+ *   then returns #IPX_ERR_BUFFER and the content written to
+ *   the buffer \p str is undefined. Otherwise returns #IPX_ERR_ARG.
  */
 IPX_API int
 ipx_uint2str_be(const void *field, size_t size, char *str, size_t str_size);
@@ -1257,7 +1231,7 @@ ipx_datetime2str_be(const void *field, size_t size, enum ipx_element_type type,
  * \remark Output strings are "true" and "false".
  * \remark A size of the \p field is always consider as 1 byte.
  * \remark If the content of the \p field is invalid value, the function
- *   will also return #IPX_CONVERT_ERR_ARG.
+ *   will also return #IPX_ERR_ARG.
  * \return Same as a return value of ipx_uint2str_be().
  */
 IPX_API int
@@ -1359,8 +1333,7 @@ ipx_string2str(const void *field, size_t size, char *str, size_t str_size);
  *   was open to a canonicalization exploit (see Unicode Technical Report #36)
  * \param[in] field Pointer to the UTF-8 string
  * \param[in] size  Size of the string (in bytes)
- * \return On success returns #IPX_CONVERT_OK.
- *   Otherwise returns #IPX_CONVERT_ERR_ARG.
+ * \return On success returns #IPX_OK. Otherwise returns #IPX_ERR_ARG.
  */
 IPX_API int
 ipx_string_utf8check(const void *field, size_t size);

@@ -85,7 +85,7 @@ uint2strNormal_check(size_t data_size, uint64_t value)
     std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[data_size]};
     std::unique_ptr<char[]> res_ptr{new char[res_size]};
 
-    ASSERT_EQ(ipx_set_uint_be(data_ptr.get(), data_size, value), IPX_CONVERT_OK);
+    ASSERT_EQ(ipx_set_uint_be(data_ptr.get(), data_size, value), IPX_OK);
     ASSERT_EQ(ipx_uint2str_be(data_ptr.get(), data_size, res_ptr.get(), res_size),
         static_cast<int>(res_size - 1));
     EXPECT_EQ(res_str, res_ptr.get());
@@ -112,9 +112,9 @@ uint2strSmallBuffer_check(size_t data_size, uint64_t value)
     std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[data_size]};
     std::unique_ptr<char[]> str_ptr{new char[res_size]};
 
-    ASSERT_EQ(ipx_set_uint_be(data_ptr.get(), data_size, value), IPX_CONVERT_OK);
+    ASSERT_EQ(ipx_set_uint_be(data_ptr.get(), data_size, value), IPX_OK);
     EXPECT_EQ(ipx_uint2str_be(data_ptr.get(), data_size, str_ptr.get(), res_size),
-        IPX_CONVERT_ERR_BUFFER);
+        IPX_ERR_BUFFER);
 }
 
 TEST(ConverterToStrings, uint2strSmallBuffer)
@@ -132,14 +132,14 @@ TEST(ConverterToStrings, uint2strFormatErr)
     std::unique_ptr<char[]> str_ptr{new char[size]};
 
     // Test invalid size of the field
-    EXPECT_EQ(ipx_uint2str_be(data_ptr.get(), 0, str_ptr.get(), size), IPX_CONVERT_ERR_ARG);
-    EXPECT_EQ(ipx_uint2str_be(data_ptr.get(), 9, str_ptr.get(), size), IPX_CONVERT_ERR_ARG);
+    EXPECT_EQ(ipx_uint2str_be(data_ptr.get(), 0, str_ptr.get(), size), IPX_ERR_ARG);
+    EXPECT_EQ(ipx_uint2str_be(data_ptr.get(), 9, str_ptr.get(), size), IPX_ERR_ARG);
 
     // Test that memory is not accessed if invalid size is defined.
     EXPECT_EQ(ipx_uint2str_be(NULL, 0, str_ptr.get(), size),
-            IPX_CONVERT_ERR_ARG);
+            IPX_ERR_ARG);
     EXPECT_EQ(ipx_uint2str_be(NULL, 9, str_ptr.get(), size),
-            IPX_CONVERT_ERR_ARG);
+            IPX_ERR_ARG);
 }
 
 // -----------------------------------------------------------------------------
@@ -158,7 +158,7 @@ int2strNormal_check(size_t data_size, int64_t value)
     std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[data_size]};
     std::unique_ptr<char[]> res_ptr{new char[res_size]};
 
-    ASSERT_EQ(ipx_set_int_be(data_ptr.get(), data_size, value), IPX_CONVERT_OK);
+    ASSERT_EQ(ipx_set_int_be(data_ptr.get(), data_size, value), IPX_OK);
     ASSERT_EQ(ipx_int2str_be(data_ptr.get(), data_size, res_ptr.get(), res_size),
         static_cast<int>(res_size - 1));
     EXPECT_EQ(res_str, res_ptr.get());
@@ -186,9 +186,9 @@ int2strSmallBuffer_check(size_t data_size, int64_t value)
     std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[data_size]};
     std::unique_ptr<char[]> str_ptr{new char[res_size]};
 
-    ASSERT_EQ(ipx_set_int_be(data_ptr.get(), data_size, value), IPX_CONVERT_OK);
+    ASSERT_EQ(ipx_set_int_be(data_ptr.get(), data_size, value), IPX_OK);
     EXPECT_EQ(ipx_int2str_be(data_ptr.get(), data_size, str_ptr.get(), res_size),
-        IPX_CONVERT_ERR_BUFFER);
+        IPX_ERR_BUFFER);
 }
 
 TEST(ConverterToStrings, int2strSmallBuffer)
@@ -207,12 +207,12 @@ TEST(ConverterToStrings, int2strFormatErr)
     std::unique_ptr<char[]> str_ptr{new char[size]};
 
     // Test invalid size of the field
-    EXPECT_EQ(ipx_int2str_be(data_ptr.get(), 0, str_ptr.get(), size), IPX_CONVERT_ERR_ARG);
-    EXPECT_EQ(ipx_int2str_be(data_ptr.get(), 9, str_ptr.get(), size), IPX_CONVERT_ERR_ARG);
+    EXPECT_EQ(ipx_int2str_be(data_ptr.get(), 0, str_ptr.get(), size), IPX_ERR_ARG);
+    EXPECT_EQ(ipx_int2str_be(data_ptr.get(), 9, str_ptr.get(), size), IPX_ERR_ARG);
 
     // Test that memory is not accessed if invalid size is defined.
-    EXPECT_EQ(ipx_int2str_be(NULL, 0, str_ptr.get(), size), IPX_CONVERT_ERR_ARG);
-    EXPECT_EQ(ipx_int2str_be(NULL, 9, str_ptr.get(), size), IPX_CONVERT_ERR_ARG);
+    EXPECT_EQ(ipx_int2str_be(NULL, 0, str_ptr.get(), size), IPX_ERR_ARG);
+    EXPECT_EQ(ipx_int2str_be(NULL, 9, str_ptr.get(), size), IPX_ERR_ARG);
 }
 
 // -----------------------------------------------------------------------------
@@ -233,7 +233,7 @@ float2strNormal_32check(float value)
     std::unique_ptr<char[]> res_ptr{new char[res_size]};
 
     // Store and convert data using converters
-    ASSERT_EQ(ipx_set_float_be(data_ptr.get(), data_size, value), IPX_CONVERT_OK);
+    ASSERT_EQ(ipx_set_float_be(data_ptr.get(), data_size, value), IPX_OK);
     ret_code = ipx_float2str_be(data_ptr.get(), data_size, res_ptr.get(), res_size);
     ASSERT_GT(ret_code, 0);
     EXPECT_EQ(strlen(res_ptr.get()), static_cast<size_t>(ret_code));
@@ -306,7 +306,7 @@ float2strNormal_64check(double value)
     std::unique_ptr<char[]> res_ptr{new char[res_size]};
 
     // Store and convert data using converters
-    ASSERT_EQ(ipx_set_float_be(data_ptr.get(), data_size, value), IPX_CONVERT_OK);
+    ASSERT_EQ(ipx_set_float_be(data_ptr.get(), data_size, value), IPX_OK);
     ret_code = ipx_float2str_be(data_ptr.get(), data_size, res_ptr.get(), res_size);
     ASSERT_GT(ret_code, 0);
     EXPECT_EQ(strlen(res_ptr.get()), static_cast<size_t>(ret_code));
@@ -389,7 +389,7 @@ TEST(ConverterToStrings, float2strInvalidInput)
         std::unique_ptr<char[]> res_ptr{new char[res_size]};
 
         EXPECT_EQ(ipx_float2str_be(data_ptr.get(), i, res_ptr.get(), res_size),
-            IPX_CONVERT_ERR_ARG);
+            IPX_ERR_ARG);
     }
 }
 
@@ -413,9 +413,9 @@ float2strSmallBuffer_32check(float value)
     size_t out_len = res_str.length(); // Not enough space for '\0'
     std::unique_ptr<char[]> out_ptr{new char[out_len]};
 
-    EXPECT_EQ(ipx_set_float_be(data_ptr.get(), data_size, value), IPX_CONVERT_OK);
+    EXPECT_EQ(ipx_set_float_be(data_ptr.get(), data_size, value), IPX_OK);
     EXPECT_EQ(ipx_float2str_be(data_ptr.get(), data_size, out_ptr.get(), out_len),
-        IPX_CONVERT_ERR_BUFFER);
+        IPX_ERR_BUFFER);
 }
 
 void
@@ -435,9 +435,9 @@ float2strSmallBuffer_64check(double value)
     size_t out_len = res_str.length(); // Not enough space for '\0'
     std::unique_ptr<char[]> out_ptr{new char[out_len]};
 
-    EXPECT_EQ(ipx_set_float_be(data_ptr.get(), data_size, value), IPX_CONVERT_OK);
+    EXPECT_EQ(ipx_set_float_be(data_ptr.get(), data_size, value), IPX_OK);
     EXPECT_EQ(ipx_float2str_be(data_ptr.get(), data_size, out_ptr.get(), out_len),
-            IPX_CONVERT_ERR_BUFFER);
+            IPX_ERR_BUFFER);
 }
 
 TEST(ConverterToStrings, float2strSmallBuffer)
@@ -469,7 +469,7 @@ TEST(ConverterToStrings, bool2strNormal)
     size_t res_size = true_str.length() + 1; // 1 == '\0'
     std::unique_ptr<char[]> res_ptr{new char[res_size]};
 
-    ASSERT_EQ(ipx_set_bool(data_ptr.get(), data_size, true), IPX_CONVERT_OK);
+    ASSERT_EQ(ipx_set_bool(data_ptr.get(), data_size, true), IPX_OK);
     ret_code = ipx_bool2str(data_ptr.get(), res_ptr.get(), res_size);
     ASSERT_GT(ret_code, 0);
     EXPECT_EQ(strlen(res_ptr.get()), static_cast<size_t>(ret_code));
@@ -480,7 +480,7 @@ TEST(ConverterToStrings, bool2strNormal)
     res_size = false_str.length() + 1; // 1 == '\0'
     res_ptr.reset(new char[res_size]);
 
-    ASSERT_EQ(ipx_set_bool(data_ptr.get(), data_size, false), IPX_CONVERT_OK);
+    ASSERT_EQ(ipx_set_bool(data_ptr.get(), data_size, false), IPX_OK);
     ret_code = ipx_bool2str(data_ptr.get(), res_ptr.get(), res_size);
     ASSERT_GT(ret_code, 0);
     EXPECT_EQ(strlen(res_ptr.get()), static_cast<size_t>(ret_code));
@@ -502,7 +502,7 @@ TEST(ConverterToStrings, bool2strInvalidInput)
         }
 
         data = i;
-        EXPECT_EQ(ipx_bool2str(&data, res_ptr.get(), res_size), IPX_CONVERT_ERR_ARG);
+        EXPECT_EQ(ipx_bool2str(&data, res_ptr.get(), res_size), IPX_ERR_ARG);
     }
 }
 
@@ -519,16 +519,16 @@ TEST(ConverterToStrings, bool2strSmallBuffer)
     size_t res_size = true_str.length(); // Not enough space for '\0'
     std::unique_ptr<char[]> res_ptr{new char[res_size]};
 
-    EXPECT_EQ(ipx_set_bool(data_ptr.get(), data_size, true), IPX_CONVERT_OK);
-    EXPECT_EQ(ipx_bool2str(data_ptr.get(), res_ptr.get(), res_size), IPX_CONVERT_ERR_BUFFER);
+    EXPECT_EQ(ipx_set_bool(data_ptr.get(), data_size, true), IPX_OK);
+    EXPECT_EQ(ipx_bool2str(data_ptr.get(), res_ptr.get(), res_size), IPX_ERR_BUFFER);
 
     // Test "False"
     std::string false_str{"false"};
     res_size = false_str.length(); // Not enough space for '\0'
     res_ptr.reset(new char[res_size]);
 
-    EXPECT_EQ(ipx_set_bool(data_ptr.get(), data_size, false), IPX_CONVERT_OK);
-    EXPECT_EQ(ipx_bool2str(data_ptr.get(), res_ptr.get(), res_size), IPX_CONVERT_ERR_BUFFER);
+    EXPECT_EQ(ipx_set_bool(data_ptr.get(), data_size, false), IPX_OK);
+    EXPECT_EQ(ipx_bool2str(data_ptr.get(), res_ptr.get(), res_size), IPX_ERR_BUFFER);
 }
 
 // -----------------------------------------------------------------------------
@@ -673,7 +673,7 @@ datetime2str_check(struct timespec ts, size_t data_size, enum ipx_element_type t
 
     // Store the timestamp to a field
     std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[data_size]};
-    ASSERT_EQ(ipx_set_datetime_hp_be(data_ptr.get(), data_size, type, ts), IPX_CONVERT_OK);
+    ASSERT_EQ(ipx_set_datetime_hp_be(data_ptr.get(), data_size, type, ts), IPX_OK);
 
     auto test_func_success = [&](enum ipx_convert_time_fmt fmt) {
         // Prepare the expected result and an output buffer
@@ -728,7 +728,7 @@ datetime2str_check(struct timespec ts, size_t data_size, enum ipx_element_type t
         for (size_t i = 0; i < res_size; ++i) {
             std::unique_ptr<char[]> res_ptr{new char[i]};
             EXPECT_EQ(ipx_datetime2str_be(data_ptr.get(), data_size, type, res_ptr.get(), i, fmt),
-                IPX_CONVERT_ERR_BUFFER);
+                IPX_ERR_BUFFER);
         }
     };
 
@@ -807,17 +807,17 @@ datetime2str_invalid_size(enum ipx_convert_time_fmt fmt)
         if (i != BYTES_4) {
             // 4 bytes are correct -> we want only failures
             EXPECT_EQ(ipx_datetime2str_be(data_ptr.get(), i, IPX_ET_DATE_TIME_SECONDS,
-                res_ptr.get(), res_size, fmt), IPX_CONVERT_ERR_ARG);
+                res_ptr.get(), res_size, fmt), IPX_ERR_ARG);
         }
 
         if (i != BYTES_8) {
             // 8 bytes are correct -> we want only failures
             EXPECT_EQ(ipx_datetime2str_be(data_ptr.get(), i, IPX_ET_DATE_TIME_MILLISECONDS,
-                res_ptr.get(), res_size, fmt), IPX_CONVERT_ERR_ARG);
+                res_ptr.get(), res_size, fmt), IPX_ERR_ARG);
             EXPECT_EQ(ipx_datetime2str_be(data_ptr.get(), i, IPX_ET_DATE_TIME_MICROSECONDS,
-                res_ptr.get(), res_size, fmt), IPX_CONVERT_ERR_ARG);
+                res_ptr.get(), res_size, fmt), IPX_ERR_ARG);
             EXPECT_EQ(ipx_datetime2str_be(data_ptr.get(), i, IPX_ET_DATE_TIME_NANOSECONDS,
-                res_ptr.get(), res_size, fmt), IPX_CONVERT_ERR_ARG);
+                res_ptr.get(), res_size, fmt), IPX_ERR_ARG);
         }
     }
 }
@@ -838,9 +838,9 @@ datetime2str_invalid_type(enum ipx_element_type type)
     for (ipx_convert_time_fmt fmt : fmt_vec) {
         SCOPED_TRACE("Test format: " + std::to_string(fmt));
         EXPECT_EQ(ipx_datetime2str_be(data_ptr.get(), BYTES_4, type, res_ptr.get(), res_size, fmt),
-            IPX_CONVERT_ERR_ARG);
+            IPX_ERR_ARG);
         EXPECT_EQ(ipx_datetime2str_be(data_ptr.get(), BYTES_8, type, res_ptr.get(), res_size, fmt),
-            IPX_CONVERT_ERR_ARG);
+            IPX_ERR_ARG);
     }
 }
 
@@ -904,7 +904,7 @@ mac2strNormal_check(const std::string &mac)
 
     // Set data array
     std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[data_size]};
-    ASSERT_EQ(ipx_set_mac(data_ptr.get(), data_size, input_arr), IPX_CONVERT_OK);
+    ASSERT_EQ(ipx_set_mac(data_ptr.get(), data_size, input_arr), IPX_OK);
 
     // Get the array as a formatted string
     const size_t res_size = IPX_CONVERT_STRLEN_MAC;
@@ -940,7 +940,7 @@ TEST(ConverterToStrings, mac2strInvalidInput)
     for (size_t i = 0; i < IPX_CONVERT_STRLEN_MAC; ++i) {
         SCOPED_TRACE("i = " + std::to_string(i));
         std::unique_ptr<char[]> res_ptr{new char[i]};
-        EXPECT_EQ(ipx_mac2str(mac_data, mac_size, res_ptr.get(), i), IPX_CONVERT_ERR_BUFFER);
+        EXPECT_EQ(ipx_mac2str(mac_data, mac_size, res_ptr.get(), i), IPX_ERR_BUFFER);
     }
 
     // Invalid size of the field
@@ -955,7 +955,7 @@ TEST(ConverterToStrings, mac2strInvalidInput)
 
         SCOPED_TRACE("i = " + std::to_string(i));
         std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[i]};
-        EXPECT_EQ(ipx_mac2str(data_ptr.get(), i, res_ptr.get(), res_size), IPX_CONVERT_ERR_ARG);
+        EXPECT_EQ(ipx_mac2str(data_ptr.get(), i, res_ptr.get(), res_size), IPX_ERR_ARG);
     }
 }
 
@@ -987,7 +987,7 @@ ip2strNormal_check(std::string addr_str)
     // Store IP to a field
     size_t data_size = addr_size;
     std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[data_size]};
-    ASSERT_EQ(ipx_set_ip(data_ptr.get(), data_size, &addr_bin), IPX_CONVERT_OK);
+    ASSERT_EQ(ipx_set_ip(data_ptr.get(), data_size, &addr_bin), IPX_OK);
 
     // Convert it back into string
     size_t res_size = IPX_CONVERT_STRLEN_IP;
@@ -1060,7 +1060,7 @@ ip2strInvalid_small_buffer(std::string addr_str)
     // Store IP to a field
     size_t data_size = addr_size;
     std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[data_size]};
-    ASSERT_EQ(ipx_set_ip(data_ptr.get(), data_size, &addr_bin), IPX_CONVERT_OK);
+    ASSERT_EQ(ipx_set_ip(data_ptr.get(), data_size, &addr_bin), IPX_OK);
 
     // Convert it back into string
     size_t res_size = IPX_CONVERT_STRLEN_IP;
@@ -1073,7 +1073,7 @@ ip2strInvalid_small_buffer(std::string addr_str)
     size_t max_len = static_cast<size_t>(ret_code) + 1; // +1 == '\0'
     for (size_t i = 0; i < max_len; ++i) {
         std::unique_ptr<char[]> tmp_ptr{new char[i]};
-        EXPECT_EQ(ipx_ip2str(data_ptr.get(), data_size, tmp_ptr.get(), i), IPX_CONVERT_ERR_BUFFER);
+        EXPECT_EQ(ipx_ip2str(data_ptr.get(), data_size, tmp_ptr.get(), i), IPX_ERR_BUFFER);
     }
 }
 
@@ -1094,7 +1094,7 @@ TEST(ConverterToStrings, ip2strInvalid)
 
         SCOPED_TRACE("Size: " + std::to_string(i));
         std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[i]};
-        EXPECT_EQ(ipx_ip2str(data_ptr.get(), i, res_ptr.get(), res_size), IPX_CONVERT_ERR_ARG);
+        EXPECT_EQ(ipx_ip2str(data_ptr.get(), i, res_ptr.get(), res_size), IPX_ERR_ARG);
     }
 
     // Try insufficient size of output buffer
@@ -1167,7 +1167,7 @@ TEST(ConverterToStrings, octet_array2strInvalid)
     const size_t required_size = (2 * oa_size) + 1;
     for (size_t i = 0; i < required_size; ++i) {
         std::unique_ptr<char[]> res_ptr{new char[i]};
-        EXPECT_EQ(ipx_octet_array2str(oa_data, oa_size, res_ptr.get(), i), IPX_CONVERT_ERR_BUFFER);
+        EXPECT_EQ(ipx_octet_array2str(oa_data, oa_size, res_ptr.get(), i), IPX_ERR_BUFFER);
     }
 }
 
@@ -1237,7 +1237,7 @@ TEST(ConverterToStrings, ipx_string2strNormal)
         std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[data_size]};
 
         // Store string to the buffer (without '\0')
-        ASSERT_EQ(ipx_set_string(data_ptr.get(), data_size, str.c_str()), IPX_CONVERT_OK);
+        ASSERT_EQ(ipx_set_string(data_ptr.get(), data_size, str.c_str()), IPX_OK);
 
         // Try to read the value
         const size_t res_size = (4 * data_size) + 1; // Max. size based on the documentation
@@ -1297,7 +1297,7 @@ TEST(ConverterToStrings, ipx_string2strEscapeChar)
         const size_t data_size = arr_in.size();
         std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[data_size]};
         const char *input = reinterpret_cast<const char *>(arr_in.data());
-        ASSERT_EQ(ipx_set_string(data_ptr.get(), data_size, input), IPX_CONVERT_OK);
+        ASSERT_EQ(ipx_set_string(data_ptr.get(), data_size, input), IPX_OK);
 
         // Try to convert the value
         const size_t res_size = (4 * data_size) + 1; // Max. size based on the documentation
@@ -1383,7 +1383,7 @@ TEST(ConverterToStrings, ipx_string2strInvalidChar)
         const size_t data_size = input_struct.buffer_size;
         std::unique_ptr<uint8_t[]> data_ptr{new uint8_t[data_size]};
         const char *input_data = reinterpret_cast<const char *>(input_struct.buffer_data);
-        ASSERT_EQ(ipx_set_string(data_ptr.get(), data_size, input_data), IPX_CONVERT_OK);
+        ASSERT_EQ(ipx_set_string(data_ptr.get(), data_size, input_data), IPX_OK);
 
         // Try to convert the value
         const size_t res_size = (4 * data_size) + 1; // Max. size based on the documentation

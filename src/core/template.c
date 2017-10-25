@@ -168,7 +168,7 @@ opts_detect_mproc(struct ipx_template *tmplt)
 
     // Check scope fields
     const struct ipx_tfield *ptrs[] = {odid_ptr, mpid_ptr};
-    for (int i = 0; i < ARRAY_SIZE(ptrs); ++i) {
+    for (size_t i = 0; i < ARRAY_SIZE(ptrs); ++i) {
         const struct ipx_tfield *ptr = ptrs[i];
         if (ptr == NULL) {
             // Item not found, skip
@@ -314,7 +314,7 @@ opts_detect_ietype(struct ipx_template *tmplt)
 
     // Check scope fields
     const struct ipx_tfield *ptrs[] = {ie_id_ptr, pen_ptr};
-    for (int i = 0; i < ARRAY_SIZE(ptrs); ++i) {
+    for (size_t i = 0; i < ARRAY_SIZE(ptrs); ++i) {
         const struct ipx_tfield *ptr = ptrs[i];
         if (ptr == NULL) {
             // Required item not found
@@ -406,7 +406,7 @@ template_parse_header(enum ipx_template_type type, const void *ptr, uint16_t *le
      * Because Options Template header is superstructure of "Normal" Template header we can use it
      * also for parsing "Normal" Template. Just use only shared fields...
      */
-    struct ipfix_options_template_record *rec = ptr;
+    const struct ipfix_options_template_record *rec = ptr;
     template_id = ntohs(rec->template_id);
     if (template_id < IPFIX_SET_MIN_DATA_SET_ID) {
         return IPX_ERR_FORMAT;
@@ -562,7 +562,7 @@ static int
 template_calc_features(struct ipx_template *tmplt)
 {
     // First, calculate basic flags of each template field
-    template_fields_calc_flags(tmplt)
+    template_fields_calc_flags(tmplt);
 
     // Calculate flags of the whole template and each field offset in a data record
     const uint16_t fields_total = tmplt->fields_cnt_total;

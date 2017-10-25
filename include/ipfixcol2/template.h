@@ -197,7 +197,7 @@ struct ipx_template {
     enum ipx_template_type type;
     /**
      * \brief Type of the Option Template
-     * \note Valid only when #type == ::IPX_TYPE_TEMPLATE_OPTIONS
+     * \note Valid only when #type == ::IPX_TYPE_TEMPLATE_OPTS
      * \see #ipx_template_opts_type
      */
     uint32_t opts_types;

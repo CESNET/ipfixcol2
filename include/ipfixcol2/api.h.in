@@ -112,6 +112,10 @@
 #define IPX_ERR_FORMAT  (-2)
 /** Status code for an invalid argument or a combination of arguments */
 #define IPX_ERR_ARG     (-3)
+/** Status code for a truncation of a value                           */
+#define IPX_ERR_TRUNC   (-4)
+/** Status code for insufficient buffer size for a result             */
+#define IPX_ERR_BUFFER  (-5)
 
 /**@}*/
 
