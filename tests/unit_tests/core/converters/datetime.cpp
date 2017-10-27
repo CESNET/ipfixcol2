@@ -89,14 +89,14 @@ protected:
 	nanosec2fraction(uint32_t nsec);
 
 	void
-	SetInvalidSizeLP_test(enum ipx_element_type type, size_t except);
+	SetInvalidSizeLP_test(enum fds_iemgr_element_type type, size_t except);
 	void
-	SetInvalidSizeHP_test(enum ipx_element_type type, size_t except);
+	SetInvalidSizeHP_test(enum fds_iemgr_element_type type, size_t except);
 
 	void
-	GetInvalidSizeLP_test(enum ipx_element_type type, size_t except);
+	GetInvalidSizeLP_test(enum fds_iemgr_element_type type, size_t except);
 	void
-	GetInvalidSizeHP_test(enum ipx_element_type type, size_t except);
+	GetInvalidSizeHP_test(enum fds_iemgr_element_type type, size_t except);
 
 	void
 	DatetimeSetTestLowPrecision(uint64_t in_sec, uint64_t in_nsec);
@@ -145,7 +145,7 @@ ConverterDateTime::nanosec2fraction(uint32_t nsec)
  * memory size are used
  */
 void
-ConverterDateTime::SetInvalidSizeLP_test(enum ipx_element_type type, size_t except)
+ConverterDateTime::SetInvalidSizeLP_test(enum fds_iemgr_element_type type, size_t except)
 {
 	const uint64_t timestamp = 1499668301123ULL;
 	for (size_t i = 0; i < mem_size; ++i) {
@@ -162,7 +162,7 @@ ConverterDateTime::SetInvalidSizeLP_test(enum ipx_element_type type, size_t exce
 }
 
 void
-ConverterDateTime::SetInvalidSizeHP_test(enum ipx_element_type type, size_t except)
+ConverterDateTime::SetInvalidSizeHP_test(enum fds_iemgr_element_type type, size_t except)
 {
 	const struct timespec timestamp = {1499668301123ULL, 123456789U};
 	for (size_t i = 0; i < mem_size; ++i) {
@@ -183,19 +183,19 @@ TEST_F(ConverterDateTime, SetInvalidSizeLowPrecision)
 	// Low precision API
 	{
 		SCOPED_TRACE("Element type: seconds");
-		SetInvalidSizeLP_test(IPX_ET_DATE_TIME_SECONDS,	BYTES_4);
+		SetInvalidSizeLP_test(FDS_ET_DATE_TIME_SECONDS,	BYTES_4);
 	}
 	{
 		SCOPED_TRACE("Element type: milliseconds");
-		SetInvalidSizeLP_test(IPX_ET_DATE_TIME_MILLISECONDS, BYTES_8);
+		SetInvalidSizeLP_test(FDS_ET_DATE_TIME_MILLISECONDS, BYTES_8);
 	}
 	{
 		SCOPED_TRACE("Element type: microseconds");
-		SetInvalidSizeLP_test(IPX_ET_DATE_TIME_MICROSECONDS, BYTES_8);
+		SetInvalidSizeLP_test(FDS_ET_DATE_TIME_MICROSECONDS, BYTES_8);
 	}
 	{
 		SCOPED_TRACE("Element type: nanoseconds");
-		SetInvalidSizeLP_test(IPX_ET_DATE_TIME_NANOSECONDS, BYTES_8);
+		SetInvalidSizeLP_test(FDS_ET_DATE_TIME_NANOSECONDS, BYTES_8);
 	}
 }
 
@@ -204,19 +204,19 @@ TEST_F(ConverterDateTime, SetInvalidSizeHighPrecision)
 	// High precision API
 	{
 		SCOPED_TRACE("Element type: seconds");
-		SetInvalidSizeHP_test(IPX_ET_DATE_TIME_SECONDS, BYTES_4);
+		SetInvalidSizeHP_test(FDS_ET_DATE_TIME_SECONDS, BYTES_4);
 	}
 	{
 		SCOPED_TRACE("Element type: milliseconds");
-		SetInvalidSizeHP_test(IPX_ET_DATE_TIME_MILLISECONDS, BYTES_8);
+		SetInvalidSizeHP_test(FDS_ET_DATE_TIME_MILLISECONDS, BYTES_8);
 	}
 	{
 		SCOPED_TRACE("Element type: microseconds");
-		SetInvalidSizeHP_test(IPX_ET_DATE_TIME_MICROSECONDS, BYTES_8);
+		SetInvalidSizeHP_test(FDS_ET_DATE_TIME_MICROSECONDS, BYTES_8);
 	}
 	{
 		SCOPED_TRACE("Element type: nanoseconds");
-		SetInvalidSizeHP_test(IPX_ET_DATE_TIME_NANOSECONDS, BYTES_8);
+		SetInvalidSizeHP_test(FDS_ET_DATE_TIME_NANOSECONDS, BYTES_8);
 	}
 }
 
@@ -244,25 +244,25 @@ TEST_F(ConverterDateTime, SetMinMaxLowPrecision)
 	const uint64_t nsec_min = 0; // API uses Unix timestamp i.e. 1.1.1970
 	const uint64_t nsec_max = ntp_era_end_as_unix + 999;
 
-	enum ipx_element_type type;
+	enum fds_iemgr_element_type type;
 	uint32_t fraction;
 
 	// Seconds
-	type = IPX_ET_DATE_TIME_SECONDS;
+	type = FDS_ET_DATE_TIME_SECONDS;
 	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_4, type, sec_min), IPX_OK);
 	EXPECT_EQ(*(uint32_t *) mem, htonl(sec_min / 1000U));
 	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_4, type, sec_max), IPX_OK);
 	EXPECT_EQ(*(uint32_t *) mem, htonl(sec_max / 1000U));
 
 	// Milliseconds
-	type = IPX_ET_DATE_TIME_MILLISECONDS;
+	type = FDS_ET_DATE_TIME_MILLISECONDS;
 	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, msec_min), IPX_OK);
 	EXPECT_EQ(*(uint64_t *) mem, htobe64(msec_min));
 	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, msec_max), IPX_OK);
 	EXPECT_EQ(*(uint64_t *) mem, htobe64(msec_max));
 
 	// Microseconds
-	type = IPX_ET_DATE_TIME_MICROSECONDS;
+	type = FDS_ET_DATE_TIME_MICROSECONDS;
 	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, usec_min), IPX_OK);
 	EXPECT_EQ(*(uint32_t *) &mem[0], htonl(unix_epoch_as_ntp / 1000U)); // Seconds
 	EXPECT_EQ(*(uint32_t *) &mem[4], 0U); // Fraction
@@ -274,7 +274,7 @@ TEST_F(ConverterDateTime, SetMinMaxLowPrecision)
 	EXPECT_EQ(*(uint32_t *) &mem[4], htonl(fraction)); // Fraction
 
 	// Nanoseconds
-	type = IPX_ET_DATE_TIME_NANOSECONDS;
+	type = FDS_ET_DATE_TIME_NANOSECONDS;
 	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, nsec_min), IPX_OK);
 	EXPECT_EQ(*(uint32_t *) &mem[0], htonl(unix_epoch_as_ntp / 1000U)); // Seconds
 	EXPECT_EQ(*(uint32_t *) &mem[4], 0U); // Fraction
@@ -310,11 +310,11 @@ TEST_F(ConverterDateTime, SetMinMaxHighPrecision)
 	const timespec nsec_min = {0, 0}; // API uses Unix timestamp i.e. 1.1.1970
 	const timespec nsec_max = {ntp_era_end_as_unix, nano_max};
 
-	enum ipx_element_type type;
+	enum fds_iemgr_element_type type;
 	uint32_t fraction;
 
 	// Seconds
-	type = IPX_ET_DATE_TIME_SECONDS;
+	type = FDS_ET_DATE_TIME_SECONDS;
 	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_4, type, sec_min), IPX_OK);
 	EXPECT_EQ(*(uint32_t *) mem, htonl(sec_min.tv_sec));
 	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_4, type, sec_max), IPX_OK);
@@ -322,7 +322,7 @@ TEST_F(ConverterDateTime, SetMinMaxHighPrecision)
 
 	// Milliseconds
 	uint64_t result;
-	type = IPX_ET_DATE_TIME_MILLISECONDS;
+	type = FDS_ET_DATE_TIME_MILLISECONDS;
 	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, msec_min), IPX_OK);
 	result = (msec_min.tv_sec * 1000U) + (msec_min.tv_nsec / 1000000U);
 	EXPECT_EQ(*(uint64_t *) mem, htobe64(result));
@@ -331,7 +331,7 @@ TEST_F(ConverterDateTime, SetMinMaxHighPrecision)
 	EXPECT_EQ(*(uint64_t *) mem, htobe64(result));
 
 	// Microseconds
-	type = IPX_ET_DATE_TIME_MICROSECONDS;
+	type = FDS_ET_DATE_TIME_MICROSECONDS;
 	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, usec_min), IPX_OK);
 	EXPECT_EQ(*(uint32_t *) &mem[0], htonl(unix_epoch_as_ntp)); // Seconds
 	EXPECT_EQ(*(uint32_t *) &mem[4], 0U); // Fraction
@@ -343,7 +343,7 @@ TEST_F(ConverterDateTime, SetMinMaxHighPrecision)
 	EXPECT_EQ(*(uint32_t *) &mem[4], htonl(fraction)); // Fraction
 
 	// Nanoseconds
-	type = IPX_ET_DATE_TIME_NANOSECONDS;
+	type = FDS_ET_DATE_TIME_NANOSECONDS;
 	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, nsec_min), IPX_OK);
 	EXPECT_EQ(*(uint32_t *) &mem[0], htonl(unix_epoch_as_ntp)); // Seconds
 	EXPECT_EQ(*(uint32_t *) &mem[4], 0U); // Fraction
@@ -359,13 +359,13 @@ TEST_F(ConverterDateTime, SetMinMaxHighPrecision)
  */
 TEST_F(ConverterDateTime, SetInvalidDataTypeLowPrecision)
 {
-	for (int i = 0; i < IPX_ET_UNASSIGNED; ++i) {
+	for (int i = 0; i < FDS_ET_UNASSIGNED; ++i) {
 		SCOPED_TRACE("Type ID: " + std::to_string(i));
 		switch (i) {
-		case IPX_ET_DATE_TIME_SECONDS:
-		case IPX_ET_DATE_TIME_MILLISECONDS:
-		case IPX_ET_DATE_TIME_MICROSECONDS:
-		case IPX_ET_DATE_TIME_NANOSECONDS:
+		case FDS_ET_DATE_TIME_SECONDS:
+		case FDS_ET_DATE_TIME_MILLISECONDS:
+		case FDS_ET_DATE_TIME_MICROSECONDS:
+		case FDS_ET_DATE_TIME_NANOSECONDS:
 			// Skip valid types
 			continue;
 		default:
@@ -373,7 +373,7 @@ TEST_F(ConverterDateTime, SetInvalidDataTypeLowPrecision)
 			break;
 		}
 
-		enum ipx_element_type type = static_cast<enum ipx_element_type>(i);
+		enum fds_iemgr_element_type type = static_cast<enum fds_iemgr_element_type>(i);
 
 		// Check that the return code is correct and the memory is not changed
 		memcpy(mem, mem_const, mem_size);
@@ -393,13 +393,13 @@ TEST_F(ConverterDateTime, SetInvalidDataTypeHighPrecision)
 {
 	const struct timespec ts = {0, 0};
 
-	for (int i = 0; i < IPX_ET_UNASSIGNED; ++i) {
+	for (int i = 0; i < FDS_ET_UNASSIGNED; ++i) {
 		SCOPED_TRACE("Type ID: " + std::to_string(i));
 		switch (i) {
-		case IPX_ET_DATE_TIME_SECONDS:
-		case IPX_ET_DATE_TIME_MILLISECONDS:
-		case IPX_ET_DATE_TIME_MICROSECONDS:
-		case IPX_ET_DATE_TIME_NANOSECONDS:
+		case FDS_ET_DATE_TIME_SECONDS:
+		case FDS_ET_DATE_TIME_MILLISECONDS:
+		case FDS_ET_DATE_TIME_MICROSECONDS:
+		case FDS_ET_DATE_TIME_NANOSECONDS:
 			// Skip valid types
 			continue;
 		default:
@@ -407,7 +407,7 @@ TEST_F(ConverterDateTime, SetInvalidDataTypeHighPrecision)
 			break;
 		}
 
-		enum ipx_element_type type = static_cast<enum ipx_element_type>(i);
+		enum fds_iemgr_element_type type = static_cast<enum fds_iemgr_element_type>(i);
 
 		// Check that the return code is correct and the memory is not changed
 		memcpy(mem, mem_const, mem_size);
@@ -443,20 +443,20 @@ ConverterDateTime::DatetimeSetTestLowPrecision(uint64_t in_sec, uint64_t in_nsec
 	const uint32_t res_nsec[2] = {htonl(in_sec + EPOCH_DIFF), htonl(aux_frac)};
 
 	// Test seconds, milliseconds, etc.
-	enum ipx_element_type type;
-	type = IPX_ET_DATE_TIME_SECONDS;
+	enum fds_iemgr_element_type type;
+	type = FDS_ET_DATE_TIME_SECONDS;
 	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_4, type, input_lp), IPX_OK);
 	EXPECT_EQ(*(uint32_t *) mem, res_sec);
 
-	type = IPX_ET_DATE_TIME_MILLISECONDS;
+	type = FDS_ET_DATE_TIME_MILLISECONDS;
 	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, input_lp), IPX_OK);
 	EXPECT_EQ(*(uint64_t *) mem, res_msec);
 
-	type = IPX_ET_DATE_TIME_MICROSECONDS;
+	type = FDS_ET_DATE_TIME_MICROSECONDS;
 	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, input_lp), IPX_OK);
 	EXPECT_EQ(*(uint64_t *) mem, *(uint64_t *) res_usec);
 
-	type = IPX_ET_DATE_TIME_NANOSECONDS;
+	type = FDS_ET_DATE_TIME_NANOSECONDS;
 	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, input_lp), IPX_OK);
 	EXPECT_EQ(*(uint64_t *) mem, *(uint64_t *) res_nsec);
 }
@@ -478,20 +478,20 @@ ConverterDateTime::DatetimeSetTestHighPrecision(uint64_t in_sec, uint64_t in_nse
 	const uint32_t res_nsec[2] = {htonl(in_sec + EPOCH_DIFF), htonl(aux_frac)};
 
 	// Test seconds, milliseconds, etc.
-	enum ipx_element_type type;
-	type = IPX_ET_DATE_TIME_SECONDS;
+	enum fds_iemgr_element_type type;
+	type = FDS_ET_DATE_TIME_SECONDS;
 	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_4, type, input_hp), IPX_OK);
 	EXPECT_EQ(*(uint32_t *) mem, res_sec);
 
-	type = IPX_ET_DATE_TIME_MILLISECONDS;
+	type = FDS_ET_DATE_TIME_MILLISECONDS;
 	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, input_hp), IPX_OK);
 	EXPECT_EQ(*(uint64_t *) mem, res_msec);
 
-	type = IPX_ET_DATE_TIME_MICROSECONDS;
+	type = FDS_ET_DATE_TIME_MICROSECONDS;
 	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, input_hp), IPX_OK);
 	EXPECT_EQ(*(uint64_t *) mem, *(uint64_t *) res_usec);
 
-	type = IPX_ET_DATE_TIME_NANOSECONDS;
+	type = FDS_ET_DATE_TIME_NANOSECONDS;
 	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, input_hp), IPX_OK);
 	EXPECT_EQ(*(uint64_t *) mem, *(uint64_t *) res_nsec);
 }
@@ -526,7 +526,7 @@ TEST_F(ConverterDateTime, SetRandomValue)
  * memory size are used
  */
 void
-ConverterDateTime::GetInvalidSizeLP_test(enum ipx_element_type type, size_t except)
+ConverterDateTime::GetInvalidSizeLP_test(enum fds_iemgr_element_type type, size_t except)
 {
 	const uint64_t timestamp_const = 9876543210ULL;
 	uint64_t timestamp_out;
@@ -550,7 +550,7 @@ ConverterDateTime::GetInvalidSizeLP_test(enum ipx_element_type type, size_t exce
 }
 
 void
-ConverterDateTime::GetInvalidSizeHP_test(enum ipx_element_type type, size_t except)
+ConverterDateTime::GetInvalidSizeHP_test(enum fds_iemgr_element_type type, size_t except)
 {
 	const struct timespec timestamp_const = {1499668301123ULL, 123456789U};
 	struct timespec timestamp_out;
@@ -580,19 +580,19 @@ TEST_F(ConverterDateTime, GetInvalidSizeLowPrecision)
 	// Low precision API
 	{
 		SCOPED_TRACE("Element type: seconds");
-		GetInvalidSizeLP_test(IPX_ET_DATE_TIME_SECONDS,	BYTES_4);
+		GetInvalidSizeLP_test(FDS_ET_DATE_TIME_SECONDS,	BYTES_4);
 	}
 	{
 		SCOPED_TRACE("Element type: milliseconds");
-		GetInvalidSizeLP_test(IPX_ET_DATE_TIME_MILLISECONDS, BYTES_8);
+		GetInvalidSizeLP_test(FDS_ET_DATE_TIME_MILLISECONDS, BYTES_8);
 	}
 	{
 		SCOPED_TRACE("Element type: microseconds");
-		GetInvalidSizeLP_test(IPX_ET_DATE_TIME_MICROSECONDS, BYTES_8);
+		GetInvalidSizeLP_test(FDS_ET_DATE_TIME_MICROSECONDS, BYTES_8);
 	}
 	{
 		SCOPED_TRACE("Element type: nanoseconds");
-		GetInvalidSizeLP_test(IPX_ET_DATE_TIME_NANOSECONDS, BYTES_8);
+		GetInvalidSizeLP_test(FDS_ET_DATE_TIME_NANOSECONDS, BYTES_8);
 	}
 }
 
@@ -601,19 +601,19 @@ TEST_F(ConverterDateTime, GetInvalidSizeHighPrecision)
 	// High precision API
 	{
 		SCOPED_TRACE("Element type: seconds");
-		GetInvalidSizeHP_test(IPX_ET_DATE_TIME_SECONDS, BYTES_4);
+		GetInvalidSizeHP_test(FDS_ET_DATE_TIME_SECONDS, BYTES_4);
 	}
 	{
 		SCOPED_TRACE("Element type: milliseconds");
-		GetInvalidSizeHP_test(IPX_ET_DATE_TIME_MILLISECONDS, BYTES_8);
+		GetInvalidSizeHP_test(FDS_ET_DATE_TIME_MILLISECONDS, BYTES_8);
 	}
 	{
 		SCOPED_TRACE("Element type: microseconds");
-		GetInvalidSizeHP_test(IPX_ET_DATE_TIME_MICROSECONDS, BYTES_8);
+		GetInvalidSizeHP_test(FDS_ET_DATE_TIME_MICROSECONDS, BYTES_8);
 	}
 	{
 		SCOPED_TRACE("Element type: nanoseconds");
-		GetInvalidSizeHP_test(IPX_ET_DATE_TIME_NANOSECONDS, BYTES_8);
+		GetInvalidSizeHP_test(FDS_ET_DATE_TIME_NANOSECONDS, BYTES_8);
 	}
 }
 
@@ -641,11 +641,11 @@ TEST_F(ConverterDateTime, GetMinMaxLowPrecision)
 	const uint64_t nsec_min = 0; // API uses Unix timestamp i.e. 1.1.1970
 	const uint64_t nsec_max = ntp_era_end_as_unix + 999;
 
-	enum ipx_element_type type;
+	enum fds_iemgr_element_type type;
 	uint64_t result;
 
 	// Seconds
-	type = IPX_ET_DATE_TIME_SECONDS;
+	type = FDS_ET_DATE_TIME_SECONDS;
 	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_4, type, sec_min), IPX_OK);
 	EXPECT_EQ(ipx_get_datetime_lp_be(mem, BYTES_4, type, &result), IPX_OK);
 	EXPECT_EQ(result, sec_min);
@@ -655,7 +655,7 @@ TEST_F(ConverterDateTime, GetMinMaxLowPrecision)
 	EXPECT_EQ(result, (sec_max / 1000) * 1000);
 
 	// Milliseconds
-	type = IPX_ET_DATE_TIME_MILLISECONDS;
+	type = FDS_ET_DATE_TIME_MILLISECONDS;
 	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, msec_min), IPX_OK);
 	EXPECT_EQ(ipx_get_datetime_lp_be(mem, BYTES_8, type, &result), IPX_OK);
 	EXPECT_EQ(result, msec_min);
@@ -664,7 +664,7 @@ TEST_F(ConverterDateTime, GetMinMaxLowPrecision)
 	EXPECT_EQ(result, msec_max);
 
 	// Microseconds
-	type = IPX_ET_DATE_TIME_MICROSECONDS;
+	type = FDS_ET_DATE_TIME_MICROSECONDS;
 	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, usec_min), IPX_OK);
 	EXPECT_EQ(ipx_get_datetime_lp_be(mem, BYTES_8, type, &result), IPX_OK);
 	EXPECT_EQ(result, usec_min);
@@ -674,7 +674,7 @@ TEST_F(ConverterDateTime, GetMinMaxLowPrecision)
 	EXPECT_NEAR(result, usec_max, 1);
 
 	// Nanoseconds
-	type = IPX_ET_DATE_TIME_NANOSECONDS;
+	type = FDS_ET_DATE_TIME_NANOSECONDS;
 	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, nsec_min), IPX_OK);
 	EXPECT_EQ(ipx_get_datetime_lp_be(mem, BYTES_8, type, &result), IPX_OK);
 	EXPECT_EQ(result, nsec_min);
@@ -705,11 +705,11 @@ TEST_F(ConverterDateTime, GetMinMaxHighPrecision)
 	const timespec nsec_min = {0, 0}; // API uses Unix timestamp i.e. 1.1.1970
 	const timespec nsec_max = {ntp_era_end_as_unix, nano_max};
 
-	enum ipx_element_type type;
+	enum fds_iemgr_element_type type;
 	struct timespec result;
 
 	// Seconds
-	type = IPX_ET_DATE_TIME_SECONDS;
+	type = FDS_ET_DATE_TIME_SECONDS;
 	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_4, type, sec_min), IPX_OK);
 	EXPECT_EQ(ipx_get_datetime_hp_be(mem, BYTES_4, type, &result), IPX_OK);
 	EXPECT_EQ(result.tv_sec, sec_min.tv_sec);
@@ -720,7 +720,7 @@ TEST_F(ConverterDateTime, GetMinMaxHighPrecision)
 	EXPECT_EQ(result.tv_nsec, 0); // Fraction is lost!
 
 	// Milliseconds
-	type = IPX_ET_DATE_TIME_MILLISECONDS;
+	type = FDS_ET_DATE_TIME_MILLISECONDS;
 	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, msec_min), IPX_OK);
 	EXPECT_EQ(ipx_get_datetime_hp_be(mem, BYTES_8, type, &result), IPX_OK);
 	EXPECT_EQ(result.tv_sec, msec_min.tv_sec);
@@ -732,7 +732,7 @@ TEST_F(ConverterDateTime, GetMinMaxHighPrecision)
 	EXPECT_NEAR(result.tv_nsec, msec_max.tv_nsec, 1000000);
 
 	// Microseconds
-	type = IPX_ET_DATE_TIME_MICROSECONDS;
+	type = FDS_ET_DATE_TIME_MICROSECONDS;
 	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, usec_min), IPX_OK);
 	EXPECT_EQ(ipx_get_datetime_hp_be(mem, BYTES_8, type, &result), IPX_OK);
 	EXPECT_EQ(result.tv_sec, usec_min.tv_sec);
@@ -744,7 +744,7 @@ TEST_F(ConverterDateTime, GetMinMaxHighPrecision)
 	EXPECT_NEAR(result.tv_nsec, usec_max.tv_nsec, 1000);
 
 	// Nanoseconds
-	type = IPX_ET_DATE_TIME_NANOSECONDS;
+	type = FDS_ET_DATE_TIME_NANOSECONDS;
 	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, nsec_min), IPX_OK);
 	EXPECT_EQ(ipx_get_datetime_hp_be(mem, BYTES_8, type, &result), IPX_OK);
 	EXPECT_EQ(result.tv_sec, nsec_min.tv_sec);
@@ -767,23 +767,23 @@ ConverterDateTime::DatetimeGetTestLowPrecision(uint64_t in_sec, uint64_t in_nsec
 	const uint64_t input_lp = (in_sec * 1000) + (in_nsec / 1000000);   // [ms]
 
 	// Test seconds, milliseconds, etc.
-	enum ipx_element_type type;
-	type = IPX_ET_DATE_TIME_SECONDS;
+	enum fds_iemgr_element_type type;
+	type = FDS_ET_DATE_TIME_SECONDS;
 	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_4, type, input_lp), IPX_OK);
 	EXPECT_EQ(ipx_get_datetime_lp_be(mem, BYTES_4, type, &result), IPX_OK);
 	EXPECT_EQ(in_sec * 1000, result);
 
-	type = IPX_ET_DATE_TIME_MILLISECONDS;
+	type = FDS_ET_DATE_TIME_MILLISECONDS;
 	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, input_lp), IPX_OK);
 	EXPECT_EQ(ipx_get_datetime_lp_be(mem, BYTES_8, type, &result), IPX_OK);
 	EXPECT_NEAR(input_lp, result, 1);
 
-	type = IPX_ET_DATE_TIME_MICROSECONDS;
+	type = FDS_ET_DATE_TIME_MICROSECONDS;
 	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, input_lp), IPX_OK);
 	EXPECT_EQ(ipx_get_datetime_lp_be(mem, BYTES_8, type, &result), IPX_OK);
 	EXPECT_NEAR(input_lp, result, 1);
 
-	type = IPX_ET_DATE_TIME_NANOSECONDS;
+	type = FDS_ET_DATE_TIME_NANOSECONDS;
 	EXPECT_EQ(ipx_set_datetime_lp_be(mem, BYTES_8, type, input_lp), IPX_OK);
 	EXPECT_EQ(ipx_get_datetime_lp_be(mem, BYTES_8, type, &result), IPX_OK);
 	EXPECT_NEAR(input_lp, result, 1);
@@ -797,26 +797,26 @@ ConverterDateTime::DatetimeGetTestHighPrecision(uint64_t in_sec, uint64_t in_nse
 	const struct timespec input_hp = {static_cast<time_t>(in_sec), static_cast<long>(in_nsec)};
 
 	// Test seconds, milliseconds, etc.
-	enum ipx_element_type type;
-	type = IPX_ET_DATE_TIME_SECONDS;
+	enum fds_iemgr_element_type type;
+	type = FDS_ET_DATE_TIME_SECONDS;
 	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_4, type, input_hp), IPX_OK);
 	EXPECT_EQ(ipx_get_datetime_hp_be(mem, BYTES_4, type, &result), IPX_OK);
 	EXPECT_EQ(input_hp.tv_sec, result.tv_sec);
 	EXPECT_EQ(input_hp.tv_nsec, 0); // Fraction is lost!
 
-	type = IPX_ET_DATE_TIME_MILLISECONDS;
+	type = FDS_ET_DATE_TIME_MILLISECONDS;
 	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, input_hp), IPX_OK);
 	EXPECT_EQ(ipx_get_datetime_hp_be(mem, BYTES_8, type, &result), IPX_OK);
 	EXPECT_EQ(input_hp.tv_sec, result.tv_sec);
 	EXPECT_NEAR(input_hp.tv_nsec, result.tv_nsec, 1000000);
 
-	type = IPX_ET_DATE_TIME_MICROSECONDS;
+	type = FDS_ET_DATE_TIME_MICROSECONDS;
 	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, input_hp), IPX_OK);
 	EXPECT_EQ(ipx_get_datetime_hp_be(mem, BYTES_8, type, &result), IPX_OK);
 	EXPECT_EQ(input_hp.tv_sec, result.tv_sec);
 	EXPECT_NEAR(input_hp.tv_nsec, result.tv_nsec, 1000);
 
-	type = IPX_ET_DATE_TIME_NANOSECONDS;
+	type = FDS_ET_DATE_TIME_NANOSECONDS;
 	EXPECT_EQ(ipx_set_datetime_hp_be(mem, BYTES_8, type, input_hp), IPX_OK);
 	EXPECT_EQ(ipx_get_datetime_hp_be(mem, BYTES_8, type, &result), IPX_OK);
 	EXPECT_EQ(input_hp.tv_sec, result.tv_sec);
@@ -853,13 +853,13 @@ TEST_F(ConverterDateTime, GetRandomValue)
  */
 TEST_F(ConverterDateTime, GetInvalidDataTypeLowPrecision)
 {
-	for (int i = 0; i < IPX_ET_UNASSIGNED; ++i) {
+	for (int i = 0; i < FDS_ET_UNASSIGNED; ++i) {
 		SCOPED_TRACE("Type ID: " + std::to_string(i));
 		switch (i) {
-		case IPX_ET_DATE_TIME_SECONDS:
-		case IPX_ET_DATE_TIME_MILLISECONDS:
-		case IPX_ET_DATE_TIME_MICROSECONDS:
-		case IPX_ET_DATE_TIME_NANOSECONDS:
+		case FDS_ET_DATE_TIME_SECONDS:
+		case FDS_ET_DATE_TIME_MILLISECONDS:
+		case FDS_ET_DATE_TIME_MICROSECONDS:
+		case FDS_ET_DATE_TIME_NANOSECONDS:
 			// Skip valid types
 			continue;
 		default:
@@ -867,7 +867,7 @@ TEST_F(ConverterDateTime, GetInvalidDataTypeLowPrecision)
 			break;
 		}
 
-		enum ipx_element_type type = static_cast<enum ipx_element_type>(i);
+		enum fds_iemgr_element_type type = static_cast<enum fds_iemgr_element_type>(i);
 		uint64_t result;
 		memcpy(mem, mem_const, mem_size);
 
@@ -883,13 +883,13 @@ TEST_F(ConverterDateTime, GetInvalidDataTypeLowPrecision)
 
 TEST_F(ConverterDateTime, GetInvalidDataTypeHighPrecision)
 {
-	for (int i = 0; i < IPX_ET_UNASSIGNED; ++i) {
+	for (int i = 0; i < FDS_ET_UNASSIGNED; ++i) {
 		SCOPED_TRACE("Type ID: " + std::to_string(i));
 		switch (i) {
-		case IPX_ET_DATE_TIME_SECONDS:
-		case IPX_ET_DATE_TIME_MILLISECONDS:
-		case IPX_ET_DATE_TIME_MICROSECONDS:
-		case IPX_ET_DATE_TIME_NANOSECONDS:
+		case FDS_ET_DATE_TIME_SECONDS:
+		case FDS_ET_DATE_TIME_MILLISECONDS:
+		case FDS_ET_DATE_TIME_MICROSECONDS:
+		case FDS_ET_DATE_TIME_NANOSECONDS:
 			// Skip valid types
 			continue;
 		default:
@@ -897,7 +897,7 @@ TEST_F(ConverterDateTime, GetInvalidDataTypeHighPrecision)
 			break;
 		}
 
-		enum ipx_element_type type = static_cast<enum ipx_element_type>(i);
+		enum fds_iemgr_element_type type = static_cast<enum fds_iemgr_element_type>(i);
 		struct timespec result;
 		memcpy(mem, mem_const, mem_size);
 

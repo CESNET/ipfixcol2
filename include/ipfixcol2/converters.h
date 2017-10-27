@@ -53,7 +53,7 @@
 #include <endian.h>    // htobe64, be64toh
 #include <math.h>      // isnormal
 
-#include <ipfixcol2/ipfix_element.h>
+#include <libfds/iemgr.h>
 #include <ipfixcol2/api.h>
 
 /**
@@ -334,28 +334,28 @@ ipx_set_float_be(void *field, size_t size, double value)
  *   original value of the \p field is unchanged.
  */
 static inline int
-ipx_set_datetime_lp_be(void *field, size_t size, enum ipx_element_type type,
+ipx_set_datetime_lp_be(void *field, size_t size, enum fds_iemgr_element_type type,
     uint64_t value)
 {
     // One second to milliseconds
     const uint64_t S1E3 = 1000ULL;
 
-    if ((size != sizeof(uint64_t) || type == IPX_ET_DATE_TIME_SECONDS)
-            && (size != sizeof(uint32_t) || type != IPX_ET_DATE_TIME_SECONDS)) {
+    if ((size != sizeof(uint64_t) || type == FDS_ET_DATE_TIME_SECONDS)
+            && (size != sizeof(uint32_t) || type != FDS_ET_DATE_TIME_SECONDS)) {
         return IPX_ERR_ARG;
     }
 
     switch (type) {
-    case IPX_ET_DATE_TIME_SECONDS:
+    case FDS_ET_DATE_TIME_SECONDS:
         *(uint32_t *) field = htonl(value / S1E3); // To seconds
         return IPX_OK;
 
-    case IPX_ET_DATE_TIME_MILLISECONDS:
+    case FDS_ET_DATE_TIME_MILLISECONDS:
         *(uint64_t *) field = htobe64(value);
         return IPX_OK;
 
-    case IPX_ET_DATE_TIME_MICROSECONDS:
-    case IPX_ET_DATE_TIME_NANOSECONDS: {
+    case FDS_ET_DATE_TIME_MICROSECONDS:
+    case FDS_ET_DATE_TIME_NANOSECONDS: {
         // Conversion from UNIX timestamp to NTP 64bit timestamp
         uint32_t (*part)[2] = (uint32_t (*)[2]) field;
 
@@ -372,7 +372,7 @@ ipx_set_datetime_lp_be(void *field, size_t size, enum ipx_element_type type,
          * Warning: Calculation must use 64bit variable!!!
          */
         uint32_t fraction = ((value % S1E3) << 32) / S1E3;
-        if (type == IPX_ET_DATE_TIME_MICROSECONDS) {
+        if (type == FDS_ET_DATE_TIME_MICROSECONDS) {
             fraction &= 0xFFFFF800UL; // Make sure that last 11 bits are zeros
         }
 
@@ -403,29 +403,29 @@ ipx_set_datetime_lp_be(void *field, size_t size, enum ipx_element_type type,
  *   original value of the \p field is unchanged.
  */
 static inline int
-ipx_set_datetime_hp_be(void *field, size_t size, enum ipx_element_type type,
+ipx_set_datetime_hp_be(void *field, size_t size, enum fds_iemgr_element_type type,
     struct timespec ts)
 {
     const uint64_t S1E3 = 1000ULL;       // One second to milliseconds
     const uint64_t S1E6 = 1000000ULL;    // One second to microseconds
     const uint64_t S1E9 = 1000000000ULL; // One second to nanoseconds
 
-    if ((size != sizeof(uint64_t) || type == IPX_ET_DATE_TIME_SECONDS)
-            && (size != sizeof(uint32_t) || type != IPX_ET_DATE_TIME_SECONDS)) {
+    if ((size != sizeof(uint64_t) || type == FDS_ET_DATE_TIME_SECONDS)
+            && (size != sizeof(uint32_t) || type != FDS_ET_DATE_TIME_SECONDS)) {
         return IPX_ERR_ARG;
     }
 
     switch (type) {
-    case IPX_ET_DATE_TIME_SECONDS:
+    case FDS_ET_DATE_TIME_SECONDS:
         *(uint32_t *) field = htonl(ts.tv_sec); // To seconds
         return IPX_OK;
 
-    case IPX_ET_DATE_TIME_MILLISECONDS:
+    case FDS_ET_DATE_TIME_MILLISECONDS:
         *(uint64_t *) field = htobe64((ts.tv_sec * S1E3) + (ts.tv_nsec / S1E6));
         return IPX_OK;
 
-    case IPX_ET_DATE_TIME_MICROSECONDS:
-    case IPX_ET_DATE_TIME_NANOSECONDS: {
+    case FDS_ET_DATE_TIME_MICROSECONDS:
+    case FDS_ET_DATE_TIME_NANOSECONDS: {
         // Conversion from UNIX timestamp to NTP 64bit timestamp
         uint32_t (*parts)[2] = (uint32_t (*)[2]) field;
 
@@ -440,7 +440,7 @@ ipx_set_datetime_hp_be(void *field, size_t size, enum ipx_element_type type,
          * Warning: Calculation must use 64bit variable!!!
          */
         uint32_t fraction = (((uint64_t) ts.tv_nsec) << 32) / S1E9;
-        if (type == IPX_ET_DATE_TIME_MICROSECONDS) {
+        if (type == FDS_ET_DATE_TIME_MICROSECONDS) {
             fraction &= 0xFFFFF800UL; // Make sure that last 11 bits are zeros
         }
 
@@ -762,28 +762,28 @@ ipx_get_float_be(const void *field, size_t size, double *value)
  *   #IPX_ERR_ARG and the \p value is not filled.
  */
 static inline int
-ipx_get_datetime_lp_be(const void *field, size_t size, enum ipx_element_type type,
+ipx_get_datetime_lp_be(const void *field, size_t size, enum fds_iemgr_element_type type,
     uint64_t *value)
 {
     // One second to milliseconds
     const uint64_t S1E3 = 1000ULL;
 
-    if ((size != sizeof(uint64_t) || type == IPX_ET_DATE_TIME_SECONDS)
-            && (size != sizeof(uint32_t) || type != IPX_ET_DATE_TIME_SECONDS)) {
+    if ((size != sizeof(uint64_t) || type == FDS_ET_DATE_TIME_SECONDS)
+            && (size != sizeof(uint32_t) || type != FDS_ET_DATE_TIME_SECONDS)) {
         return IPX_ERR_ARG;
     }
 
     switch (type) {
-    case IPX_ET_DATE_TIME_SECONDS:
+    case FDS_ET_DATE_TIME_SECONDS:
         *value = ntohl(*(const uint32_t *) field) * S1E3;
         return IPX_OK;
 
-    case IPX_ET_DATE_TIME_MILLISECONDS:
+    case FDS_ET_DATE_TIME_MILLISECONDS:
         *value = be64toh(*(const uint64_t *) field);
         return IPX_OK;
 
-    case IPX_ET_DATE_TIME_MICROSECONDS:
-    case IPX_ET_DATE_TIME_NANOSECONDS: {
+    case FDS_ET_DATE_TIME_MICROSECONDS:
+    case FDS_ET_DATE_TIME_NANOSECONDS: {
         // Conversion from NTP 64bit timestamp to UNIX timestamp
         const uint32_t (*parts)[2] = (const uint32_t (*)[2]) field;
         uint64_t result;
@@ -799,7 +799,7 @@ ipx_get_datetime_lp_be(const void *field, size_t size, enum ipx_element_type typ
          * Warning: Calculation must use 64bit variable!!!
          */
         uint64_t fraction = ntohl((*parts)[1]);
-        if (type == IPX_ET_DATE_TIME_MICROSECONDS) {
+        if (type == FDS_ET_DATE_TIME_MICROSECONDS) {
             fraction &= 0xFFFFF800UL; // Make sure that last 11 bits are zeros
         }
 
@@ -830,25 +830,25 @@ ipx_get_datetime_lp_be(const void *field, size_t size, enum ipx_element_type typ
  *   #IPX_ERR_ARG and the \p value is not filled.
  */
 static inline int
-ipx_get_datetime_hp_be(const void *field, size_t size, enum ipx_element_type type,
+ipx_get_datetime_hp_be(const void *field, size_t size, enum fds_iemgr_element_type type,
     struct timespec *ts)
 {
     const uint64_t S1E3 = 1000ULL;       // One second to milliseconds
     const uint64_t S1E6 = 1000000ULL;    // One second to microseconds
     const uint64_t S1E9 = 1000000000ULL; // One second to nanoseconds
 
-    if ((size != sizeof(uint64_t) || type == IPX_ET_DATE_TIME_SECONDS)
-            && (size != sizeof(uint32_t) || type != IPX_ET_DATE_TIME_SECONDS)) {
+    if ((size != sizeof(uint64_t) || type == FDS_ET_DATE_TIME_SECONDS)
+            && (size != sizeof(uint32_t) || type != FDS_ET_DATE_TIME_SECONDS)) {
         return IPX_ERR_ARG;
     }
 
     switch (type) {
-    case IPX_ET_DATE_TIME_SECONDS:
+    case FDS_ET_DATE_TIME_SECONDS:
         ts->tv_sec = ntohl(*(const uint32_t *) field);
         ts->tv_nsec = 0;
         return IPX_OK;
 
-    case IPX_ET_DATE_TIME_MILLISECONDS: {
+    case FDS_ET_DATE_TIME_MILLISECONDS: {
         const uint64_t new_value = be64toh(*(const uint64_t *) field);
         ts->tv_sec =  new_value / S1E3;
         ts->tv_nsec = (new_value % S1E3) * S1E6;
@@ -856,8 +856,8 @@ ipx_get_datetime_hp_be(const void *field, size_t size, enum ipx_element_type typ
 
         return IPX_OK;
 
-    case IPX_ET_DATE_TIME_MICROSECONDS:
-    case IPX_ET_DATE_TIME_NANOSECONDS: {
+    case FDS_ET_DATE_TIME_MICROSECONDS:
+    case FDS_ET_DATE_TIME_NANOSECONDS: {
         // Conversion from NTP 64bit timestamp to UNIX timestamp
         const uint32_t (*parts)[2] = (const uint32_t (*)[2]) field;
 
@@ -872,7 +872,7 @@ ipx_get_datetime_hp_be(const void *field, size_t size, enum ipx_element_type typ
          * Warning: Calculation must use 64bit variable!!!
          */
         uint64_t fraction = ntohl((*parts)[1]);
-        if (type == IPX_ET_DATE_TIME_MICROSECONDS) {
+        if (type == FDS_ET_DATE_TIME_MICROSECONDS) {
             fraction &= 0xFFFFF800UL; // Make sure that last 11 bits are zeros
         }
 
@@ -1217,7 +1217,7 @@ ipx_float2str_be(const void *field, size_t size, char *str, size_t str_size);
  * \return Same as a return value of ipx_uint2str_be().
  */
 IPX_API int
-ipx_datetime2str_be(const void *field, size_t size, enum ipx_element_type type,
+ipx_datetime2str_be(const void *field, size_t size, enum fds_iemgr_element_type type,
     char *str, size_t str_size, enum ipx_convert_time_fmt fmt);
 
 /**

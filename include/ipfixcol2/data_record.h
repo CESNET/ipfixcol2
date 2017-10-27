@@ -43,7 +43,7 @@
 #define IPFIXCOL_DATA_RECORD_H
 
 #include <stdint.h>
-#include <ipfixcol2/templater.h>
+#include <ipfixcol2/template.h>
 
 /**
  * \brief Structure for parsed IPFIX Data record
@@ -51,10 +51,10 @@
  * Represents a one parsed data record in the IPFIX packet.
  */
 struct ipx_drec {
-	uint8_t              *rec;         /**< Start of the record              */
-	unsigned int          size;        /**< Size of the record (in bytes)    */
-	const ipx_tmpl_template_t *template;    /**< Template (always must be defined)*/
-	uint8_t               ext_data[1]; /**< Start of extension records       */
+	uint8_t                   *rec;         /**< Start of the record              */
+	unsigned int               size;        /**< Size of the record (in bytes)    */
+	const struct ipx_template *template;    /**< Template (always must be defined)*/
+	uint8_t                    ext_data[1]; /**< Start of extension records       */
 };
 
 /**
@@ -72,7 +72,7 @@ struct ipx_drec_field {
 	/** Real length of the field                                             */
 	unsigned int real_length;
 	/** Pointer to the field description (IDs, data types, etc.)             */
-	struct ipx_template_field *info;
+	struct ipx_tfield *info;
 };
 
 /**

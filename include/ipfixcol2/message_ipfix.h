@@ -42,7 +42,7 @@
 #ifndef IPFIXCOL_MSG_IPFIX_H
 #define IPFIXCOL_MSG_IPFIX_H
 
-#include <ipfixcol2/templater.h>
+#include <ipfixcol2/template.h>
 #include <stddef.h>
 #include <ipfixcol2.h>
 #include "source.h"
@@ -89,7 +89,7 @@ struct ipx_ipfix_set {
 	 */
 	struct data_set_s {
 		/** Template. Can be NULL, when the template is missing.             */
-		const ipx_tmpl_template_t *template;
+		const struct ipx_template *template;
 
 		/**
 		 * Index of the first data record of this Set in the list of all

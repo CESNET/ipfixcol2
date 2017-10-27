@@ -583,7 +583,7 @@ datetime2str_compare(const std::string &str1, const std::string &str2,
 
 // Compute expected result
 void
-datetime2str_get_expectation(struct timespec ts, enum ipx_element_type type,
+datetime2str_get_expectation(struct timespec ts, enum fds_iemgr_element_type type,
     enum ipx_convert_time_fmt fmt, std::string &result)
 {
     SCOPED_TRACE("Test value: " + std::to_string(ts.tv_sec) + " seconds, "
@@ -592,15 +592,15 @@ datetime2str_get_expectation(struct timespec ts, enum ipx_element_type type,
 
     // Change the timestamp based on expected precision
     switch (type) {
-    case IPX_ET_DATE_TIME_SECONDS:
+    case FDS_ET_DATE_TIME_SECONDS:
         ts.tv_nsec = 0;
         break;
-    case IPX_ET_DATE_TIME_MILLISECONDS:
+    case FDS_ET_DATE_TIME_MILLISECONDS:
         ts.tv_nsec /= 1000000;
         ts.tv_nsec *= 1000000;
         break;
-    case IPX_ET_DATE_TIME_MICROSECONDS:
-    case IPX_ET_DATE_TIME_NANOSECONDS:
+    case FDS_ET_DATE_TIME_MICROSECONDS:
+    case FDS_ET_DATE_TIME_NANOSECONDS:
         // Nothing to do, because these both types use the same encoding
         break;
     default:
@@ -665,7 +665,7 @@ datetime2str_get_expectation(struct timespec ts, enum ipx_element_type type,
 }
 
 void
-datetime2str_check(struct timespec ts, size_t data_size, enum ipx_element_type type)
+datetime2str_check(struct timespec ts, size_t data_size, enum fds_iemgr_element_type type)
 {
     SCOPED_TRACE("Test value: " + std::to_string(ts.tv_sec) + " seconds, "
         + std::to_string(ts.tv_nsec) + " nanoseconds, type " + std::to_string(type)
@@ -696,7 +696,7 @@ datetime2str_check(struct timespec ts, size_t data_size, enum ipx_element_type t
          *   See https://tools.ietf.org/html/rfc7011#section-6.1.9
          */
         if ((fmt == IPX_CONVERT_TF_NSEC_LOCAL || fmt == IPX_CONVERT_TF_NSEC_UTC)
-            && type == IPX_ET_DATE_TIME_MICROSECONDS) {
+            && type == FDS_ET_DATE_TIME_MICROSECONDS) {
             const uint64_t max_diff = 477;
             datetime2str_compare(exp_value, std::string(res_ptr.get()), max_diff);
         } else {
@@ -752,42 +752,42 @@ TEST(ConverterToStrings, datetime2strNormalAndSmallBuffer)
 
     // Epoch start
     struct timespec t1 = {0, 0};
-    datetime2str_check(t1, BYTES_4, IPX_ET_DATE_TIME_SECONDS);
-    datetime2str_check(t1, BYTES_8, IPX_ET_DATE_TIME_MILLISECONDS);
-    datetime2str_check(t1, BYTES_8, IPX_ET_DATE_TIME_MICROSECONDS);
-    datetime2str_check(t1, BYTES_8, IPX_ET_DATE_TIME_NANOSECONDS);
+    datetime2str_check(t1, BYTES_4, FDS_ET_DATE_TIME_SECONDS);
+    datetime2str_check(t1, BYTES_8, FDS_ET_DATE_TIME_MILLISECONDS);
+    datetime2str_check(t1, BYTES_8, FDS_ET_DATE_TIME_MICROSECONDS);
+    datetime2str_check(t1, BYTES_8, FDS_ET_DATE_TIME_NANOSECONDS);
 
     struct timespec t2 = {1501161713, 123456789};
-    datetime2str_check(t2, BYTES_4, IPX_ET_DATE_TIME_SECONDS);
-    datetime2str_check(t2, BYTES_8, IPX_ET_DATE_TIME_MILLISECONDS);
-    datetime2str_check(t2, BYTES_8, IPX_ET_DATE_TIME_MICROSECONDS);
-    datetime2str_check(t2, BYTES_8, IPX_ET_DATE_TIME_NANOSECONDS);
+    datetime2str_check(t2, BYTES_4, FDS_ET_DATE_TIME_SECONDS);
+    datetime2str_check(t2, BYTES_8, FDS_ET_DATE_TIME_MILLISECONDS);
+    datetime2str_check(t2, BYTES_8, FDS_ET_DATE_TIME_MICROSECONDS);
+    datetime2str_check(t2, BYTES_8, FDS_ET_DATE_TIME_NANOSECONDS);
 
     // Maximum possible date of nanosecond and microsecond precision
     struct timespec t3 = {ntp_era_end_as_unix, 999999999};
-    datetime2str_check(t3, BYTES_4, IPX_ET_DATE_TIME_SECONDS);
-    datetime2str_check(t3, BYTES_8, IPX_ET_DATE_TIME_MILLISECONDS);
-    datetime2str_check(t3, BYTES_8, IPX_ET_DATE_TIME_MICROSECONDS);
-    datetime2str_check(t3, BYTES_8, IPX_ET_DATE_TIME_NANOSECONDS);
+    datetime2str_check(t3, BYTES_4, FDS_ET_DATE_TIME_SECONDS);
+    datetime2str_check(t3, BYTES_8, FDS_ET_DATE_TIME_MILLISECONDS);
+    datetime2str_check(t3, BYTES_8, FDS_ET_DATE_TIME_MICROSECONDS);
+    datetime2str_check(t3, BYTES_8, FDS_ET_DATE_TIME_NANOSECONDS);
 
     // Maximum possible date of second precision
     struct timespec t4 = {UINT32_MAX, 999999999};
-    datetime2str_check(t4, BYTES_4, IPX_ET_DATE_TIME_SECONDS);
-    datetime2str_check(t4, BYTES_8, IPX_ET_DATE_TIME_MILLISECONDS);
+    datetime2str_check(t4, BYTES_4, FDS_ET_DATE_TIME_SECONDS);
+    datetime2str_check(t4, BYTES_8, FDS_ET_DATE_TIME_MILLISECONDS);
     /*
      * Following tests are disabled, because time wraparound is not implemented
-     * datetime2str_check(t4, BYTES_8, IPX_ET_DATE_TIME_MICROSECONDS);
-     * datetime2str_check(t4, BYTES_8, IPX_ET_DATE_TIME_NANOSECONDS);
+     * datetime2str_check(t4, BYTES_8, FDS_ET_DATE_TIME_MICROSECONDS);
+     * datetime2str_check(t4, BYTES_8, FDS_ET_DATE_TIME_NANOSECONDS);
     */
 
     // Maximum possible date of millisecond precision
     struct timespec t5 = {msec_max_val, 999999999};
-    datetime2str_check(t5, BYTES_8, IPX_ET_DATE_TIME_MILLISECONDS);
+    datetime2str_check(t5, BYTES_8, FDS_ET_DATE_TIME_MILLISECONDS);
     /*
      * Following tests are disabled, because time wraparound is not implemented
-     * datetime2str_check(t5, BYTES_4, IPX_ET_DATE_TIME_SECONDS);
-     * datetime2str_check(t5, BYTES_8, IPX_ET_DATE_TIME_MICROSECONDS);
-     * datetime2str_check(t5, BYTES_8, IPX_ET_DATE_TIME_NANOSECONDS);
+     * datetime2str_check(t5, BYTES_4, FDS_ET_DATE_TIME_SECONDS);
+     * datetime2str_check(t5, BYTES_8, FDS_ET_DATE_TIME_MICROSECONDS);
+     * datetime2str_check(t5, BYTES_8, FDS_ET_DATE_TIME_NANOSECONDS);
     */
 }
 
@@ -806,24 +806,24 @@ datetime2str_invalid_size(enum ipx_convert_time_fmt fmt)
 
         if (i != BYTES_4) {
             // 4 bytes are correct -> we want only failures
-            EXPECT_EQ(ipx_datetime2str_be(data_ptr.get(), i, IPX_ET_DATE_TIME_SECONDS,
+            EXPECT_EQ(ipx_datetime2str_be(data_ptr.get(), i, FDS_ET_DATE_TIME_SECONDS,
                 res_ptr.get(), res_size, fmt), IPX_ERR_ARG);
         }
 
         if (i != BYTES_8) {
             // 8 bytes are correct -> we want only failures
-            EXPECT_EQ(ipx_datetime2str_be(data_ptr.get(), i, IPX_ET_DATE_TIME_MILLISECONDS,
+            EXPECT_EQ(ipx_datetime2str_be(data_ptr.get(), i, FDS_ET_DATE_TIME_MILLISECONDS,
                 res_ptr.get(), res_size, fmt), IPX_ERR_ARG);
-            EXPECT_EQ(ipx_datetime2str_be(data_ptr.get(), i, IPX_ET_DATE_TIME_MICROSECONDS,
+            EXPECT_EQ(ipx_datetime2str_be(data_ptr.get(), i, FDS_ET_DATE_TIME_MICROSECONDS,
                 res_ptr.get(), res_size, fmt), IPX_ERR_ARG);
-            EXPECT_EQ(ipx_datetime2str_be(data_ptr.get(), i, IPX_ET_DATE_TIME_NANOSECONDS,
+            EXPECT_EQ(ipx_datetime2str_be(data_ptr.get(), i, FDS_ET_DATE_TIME_NANOSECONDS,
                 res_ptr.get(), res_size, fmt), IPX_ERR_ARG);
         }
     }
 }
 
 void
-datetime2str_invalid_type(enum ipx_element_type type)
+datetime2str_invalid_type(enum fds_iemgr_element_type type)
 {
     const size_t res_size = IPX_CONVERT_STRLEN_DATE;
     std::unique_ptr<char[]> res_ptr{new char[res_size]};
@@ -859,15 +859,15 @@ TEST(ConverterToStrings, datetime2strInvalidInput)
     }
 
     // Invalid field type test
-    std::vector<enum ipx_element_type> type_vec = { // Does not include valid datetime types)
-        IPX_ET_OCTET_ARRAY, IPX_ET_UNSIGNED_8, IPX_ET_UNSIGNED_16, IPX_ET_UNSIGNED_32,
-        IPX_ET_UNSIGNED_64, IPX_ET_SIGNED_8, IPX_ET_SIGNED_16, IPX_ET_SIGNED_32,
-        IPX_ET_SIGNED_64, IPX_ET_FLOAT_32, IPX_ET_FLOAT_64, IPX_ET_BOOLEAN, IPX_ET_MAC_ADDRESS,
-        IPX_ET_STRING, IPX_ET_IPV4_ADDRESS, IPX_ET_IPV6_ADDRESS, IPX_ET_BASIC_LIST,
-        IPX_ET_SUB_TEMPLATE_LIST, IPX_ET_SUB_TEMPLATE_MULTILIST
+    std::vector<enum fds_iemgr_element_type> type_vec = { // Does not include valid datetime types)
+        FDS_ET_OCTET_ARRAY, FDS_ET_UNSIGNED_8, FDS_ET_UNSIGNED_16, FDS_ET_UNSIGNED_32,
+        FDS_ET_UNSIGNED_64, FDS_ET_SIGNED_8, FDS_ET_SIGNED_16, FDS_ET_SIGNED_32,
+        FDS_ET_SIGNED_64, FDS_ET_FLOAT_32, FDS_ET_FLOAT_64, FDS_ET_BOOLEAN, FDS_ET_MAC_ADDRESS,
+        FDS_ET_STRING, FDS_ET_IPV4_ADDRESS, FDS_ET_IPV6_ADDRESS, FDS_ET_BASIC_LIST,
+        FDS_ET_SUB_TEMPLATE_LIST, FDS_ET_SUB_TEMPLATE_MULTILIST
     };
 
-    for (ipx_element_type type : type_vec) {
+    for (fds_iemgr_element_type type : type_vec) {
         SCOPED_TRACE("Test type: " + std::to_string(type));
         datetime2str_invalid_type(type);
     }

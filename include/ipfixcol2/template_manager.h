@@ -122,13 +122,13 @@ ipx_tmgr_garbage_get(ipx_tmgr_t *tmgr);
  * \note To disable timeout, use value 0. In this case, templates exists throughout the whole
  *   existence of the manager or until they are redefined/updated by another template with the
  *   same ID.
- * \param[in] tmgr         Template manager
- * \param[in] template     Timeout of "normal" Templates (in seconds)
- * \param[in] opt_template Timeout of Optional Templates (in seconds)
+ * \param[in] tmgr    Template manager
+ * \param[in] tl_norm Timeout of "normal" Templates (in seconds)
+ * \param[in] tl_opts Timeout of Optional Templates (in seconds)
  * \return On success returns #IPX_OK. Otherwise (invalid session type) returns #IPX_ERR_ARG.
  */
 IPX_API int
-ipx_tmgr_set_udp_timeouts(ipx_tmgr_t *tmgr, uint16_t template, uint16_t opt_template);
+ipx_tmgr_set_udp_timeouts(ipx_tmgr_t *tmgr, uint16_t tl_norm, uint16_t tl_opts);
 
 /**
  * \brief Set timeout of template snapshots
@@ -219,7 +219,7 @@ ipx_tmgr_template_get(const ipx_tmgr_t *tmgr, uint16_t id);
  *
  */
 IPX_API int
-ipx_tmgr_template_add(ipx_tmgr_t *tmgr, struct template *template);
+ipx_tmgr_template_add(ipx_tmgr_t *tmgr, struct ipx_template *tmplt);
 
 // TODO flow key to template (uint64_t), jak to bude při refreshi
 // TODO: jak to bude s definici vlastních poliček... tj. sekundární správce typů
@@ -263,6 +263,15 @@ IPX_API int
 ipx_tmgr_template_remove_all(ipx_tmgr_t *tmgr, enum ipx_template_type type);
 
 /**
+ * TODO: lze aplikovat i na options sablony?
+ * @param tmgr
+ * @param id
+ * @return
+ */
+IPX_API int
+ipx_tmgr_template_set_fkey(ipx_tmgr_t *tmgr, uint16_t id);
+
+/**
  *
  * \warning This operation is related to the current Export Time, see ipx_tmgr_set_time()
  * \param tmgr
@@ -271,7 +280,6 @@ ipx_tmgr_template_remove_all(ipx_tmgr_t *tmgr, enum ipx_template_type type);
  */
 IPX_API int
 ipx_tmgr_snapshot_get(const ipx_tmgr_t *tmgr, const ipx_tsnapshot_t **out);
-
 
 IPX_API const struct ipx_template *
 ipx_tsnapshot_template_get(const ipx_tsnapshot_t *snap);

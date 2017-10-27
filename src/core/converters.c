@@ -130,7 +130,7 @@ ipx_bool2str(const void *field, char *str, size_t str_size)
 }
 
 int
-ipx_datetime2str_be(const void *field, size_t size, enum ipx_element_type type,
+ipx_datetime2str_be(const void *field, size_t size, enum fds_iemgr_element_type type,
     char *str, size_t str_size, enum ipx_convert_time_fmt fmt)
 {
     struct timespec ts;

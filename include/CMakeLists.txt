@@ -12,7 +12,6 @@ set(TOP_HEADERS
 set(SUB_HEADERS
 	ipfixcol2/converters.h
 	ipfixcol2/data_record.h
-	ipfixcol2/ipfix_element.h
 	ipfixcol2/ipfix_structures.h
 	ipfixcol2/message.h
 	ipfixcol2/message_garbage.h
@@ -21,8 +20,6 @@ set(SUB_HEADERS
 	ipfixcol2/processor.h
 	ipfixcol2/source.h
 	ipfixcol2/verbose.h
-	#ipfixcol2/templater.h
-	#ipfixcol2/common.h
 	"${PROJECT_BINARY_DIR}/include/ipfixcol2/api.h"
 )
 

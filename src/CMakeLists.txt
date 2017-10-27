@@ -24,27 +24,22 @@ set(CORE_SOURCE
 	core/message_ipfix.c
 	core/message_session.c
 	core/source.c
-	core/template.c
 )
 
-#set(TEMPLATER
-#    templater/templater.c
-#    templater/tmpl_common.h
-#    templater/tmpl_template.c
-#    templater/tmpl_template.h
-#    templater/tmpl_algorithms.c
-#    templater/tmpl_algorithms.h
-#
-#		# TODO: remove
-#		"${CMAKE_SOURCE_DIR}/include/ipfixcol2/"
-#)
+set(TEMPLATE_MGR
+	template_manager/template.c
+	#template_manager/template_manager.c
+
+	#TODO: remove (just for CLion)
+	#"${PROJECT_SOURCE_DIR}/include/ipfixcol2/"
+)
 
 # Create a static library from all source code (useful for building
 # the main application and unit tests separately)
 add_library(
 	ipfixcol2base STATIC
 	${CORE_SOURCE}
-#	${TEMPLATER}
+	${TEMPLATE_MGR}
 )
 target_link_libraries(ipfixcol2base ${FDS_LIB})
 
