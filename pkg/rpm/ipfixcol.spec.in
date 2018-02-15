@@ -11,8 +11,9 @@ Vendor:         @CPACK_PACKAGE_VENDOR@
 Packager:       @CPACK_PACKAGE_CONTACT@
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}
-BuildRequires:  gcc, gcc-c++, cmake >= 2.8.8, make, doxygen
-#Requires:       
+BuildRequires:  gcc, gcc-c++, cmake >= 2.8.8, make, doxygen, pkg-config
+BuildRequires:  libfds-devel, gtest >= 1.6.0, gtest-devel
+Requires:       libfds >= 0.1.0
 
 %description
 IPFIXcol is a flexible IPFIX (RFC 7011) flow data collector designed to
@@ -22,7 +23,7 @@ be extensible by plugins.
 %package        devel
 Summary:        IPFIX Collector development package
 Group:          Liberouter
-Requires:       %{name}%{?_isa} = %{version}-%{release}
+Requires:       %{name}%{?_isa} = %{version}-%{release}, libfds-devel
 
 %description devel
 IPFIXcol is a flexible IPFIX (RFC 7011) flow data collector designed to
@@ -65,4 +66,4 @@ make install DESTDIR=%{buildroot}
 
 %changelog
 * Tue Jun  6 2017 Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
-- 
+-

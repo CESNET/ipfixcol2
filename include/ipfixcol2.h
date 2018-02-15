@@ -55,7 +55,6 @@
  */
 
 #include <ipfixcol2/api.h>
-#include <ipfixcol2/converters.h>
 #include <ipfixcol2/ipfix_structures.h>
 
 #include <ipfixcol2/message.h>
@@ -65,7 +64,5 @@
 #include <ipfixcol2/source.h>
 #include <ipfixcol2/verbose.h>
 
-#include <ipfixcol2/template.h>
-#include <ipfixcol2/template_manager.h>
 
 #endif /* IPFIXCOL2_H_ */

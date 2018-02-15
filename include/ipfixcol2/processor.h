@@ -55,14 +55,14 @@ typedef struct ipx_processor ipx_processor_t;
  * \brief Create a new IPFIX packet processor
  * \return On success returns pointer to the
  */
-API ipx_processor_t *
+IPX_API ipx_processor_t *
 ipx_processor_create();
 
 /**
  * \brief Destroy a IPFIX packet processor
  * \param[in] processor Pointer to the processor to destoy
  */
-API void
+IPX_API void
 ipx_processor_destroy(ipx_processor_t *processor);
 
 /**
@@ -88,7 +88,7 @@ ipx_processor_destroy(ipx_processor_t *processor);
  *   packet or memory allocation error) returns NULL, but the garbage message
  *   can be still created.
  */
-API ipx_ipfix_msg_t *
+IPX_API ipx_ipfix_msg_t *
 ipx_processor_parse_ipfix(ipx_processor_t *proc, uint8_t *msg,
 	uint16_t size, ipx_garbage_msg_t **garbage);
 
@@ -104,7 +104,7 @@ ipx_processor_parse_ipfix(ipx_processor_t *proc, uint8_t *msg,
  * \return Returns pointer to the garbage message. If the is no garbage binded
  *   to the session, returns NULL.
  */
-API ipx_garbage_msg_t *
+IPX_API ipx_garbage_msg_t *
 ipx_processor_remove_session(ipx_processor_t *proc, ipx_session_id_t session);
 
 #endif //IPFIXCOL_PROCESSOR_H

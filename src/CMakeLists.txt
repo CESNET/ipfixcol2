@@ -4,34 +4,29 @@ configure_file(
 	"${PROJECT_BINARY_DIR}/src/build_config.h"
 )
 
-find_library(FDS_LIB fds)
+# Find libfds
+find_package(LibFds 0.1.0 REQUIRED)
 
 # Header files for source code building
 include_directories(
 	"${PROJECT_SOURCE_DIR}/include/"
 	"${PROJECT_BINARY_DIR}/include/"  # for api.h
 	"${PROJECT_BINARY_DIR}/src/"      # for build_config.h
+	"${FDS_INCLUDE_DIRS}"             # libfds header files
 )
 
 # Core source files
 set(CORE_SOURCE
 	"${PROJECT_BINARY_DIR}/src/build_config.h"
 	core/verbose.c
-	core/converters.c
 	core/message.c
 	core/message_garbage.c
 	core/message_internal.h
 	core/message_ipfix.c
 	core/message_session.c
 	core/source.c
-)
 
-set(TEMPLATE_MGR
-	template_manager/template.c
-	#template_manager/template_manager.c
-
-	#TODO: remove (just for CLion)
-	#"${PROJECT_SOURCE_DIR}/include/ipfixcol2/"
+	"${PROJECT_SOURCE_DIR}/include/ipfixcol2/"
 )
 
 # Create a static library from all source code (useful for building
@@ -39,9 +34,8 @@ set(TEMPLATE_MGR
 add_library(
 	ipfixcol2base STATIC
 	${CORE_SOURCE}
-	${TEMPLATE_MGR}
 )
-target_link_libraries(ipfixcol2base ${FDS_LIB})
+target_link_libraries(ipfixcol2base ${FDS_LIBRARIES})
 
 # Build IPFIXCOL2 exacutable with all symbols from the base library
 set(BASE_LIB -Wl,--whole-archive ipfixcol2base -Wl,--no-whole-archive)

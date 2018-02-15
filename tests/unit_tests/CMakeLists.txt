@@ -7,9 +7,6 @@ include_directories(
 )
 
 # List of tests
-unit_tests_register_test("core/converters/numbers_be.cpp")
-unit_tests_register_test("core/converters/datetime.cpp")
-unit_tests_register_test("core/converters/to_string.cpp")
 unit_tests_register_test("core/verbose.cpp")
 #add_subdirectory(templater)
 # >> Add your new tests or test subdirectories HERE <<

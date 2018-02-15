@@ -10,8 +10,6 @@ set(TOP_HEADERS
 )
 
 set(SUB_HEADERS
-	ipfixcol2/converters.h
-	ipfixcol2/data_record.h
 	ipfixcol2/ipfix_structures.h
 	ipfixcol2/message.h
 	ipfixcol2/message_garbage.h

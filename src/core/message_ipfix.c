@@ -40,7 +40,7 @@
  */
 
 #include <ipfixcol2/message_ipfix.h>
-#include <ipfixcol2/data_record.h>
+#include <libfds.h>
 #include <ipfixcol2/source.h>
 #include "message_internal.h"
 
@@ -91,7 +91,7 @@ struct ipx_ipfix_msg {
 	 * This MUST be the last element in this structure. To access individual
 	 * records MUST use function TODO
 	 */
-	struct ipx_drec rec_data[1];
+	struct fds_drec rec_data[1];
 };
 
 // Get a number of IPFIX sets in the message

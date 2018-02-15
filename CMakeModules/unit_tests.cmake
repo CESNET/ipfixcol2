@@ -3,34 +3,8 @@
 
 # GTest required threads support
 find_package(Threads REQUIRED)
-
-include(ExternalProject)
-
-# Set default ExternalProject root directory
-set_directory_properties(PROPERTIES EP_PREFIX ${CMAKE_BINARY_DIR}/third_party)
-
-# Add GTest
-ExternalProject_Add(
-	gtest
-	GIT_REPOSITORY  "https://github.com/google/googletest.git"
-	GIT_TAG         "release-1.7.0"
-	# Disable install step
-	INSTALL_COMMAND ""
-	LOG_DOWNLOAD    ON
-	LOG_CONFIGURE   ON
-	LOG_BUILD       ON
-)
-
-# Create a libtest target to be used as a dependency by test programs
-add_library(libgtest STATIC IMPORTED GLOBAL)
-add_dependencies(libgtest gtest)
-
-ExternalProject_Get_Property(gtest source_dir binary_dir)
-set_target_properties(libgtest PROPERTIES
-	IMPORTED_LOCATION "${binary_dir}/libgtest.a"
-	IMPORTED_LINK_INTERFACE_LIBRARIES "${CMAKE_THREAD_LIBS_INIT}"
-)
-include_directories("${source_dir}/include")
+find_package(GTest 1.6.0 REQUIRED)
+include_directories(${GTEST_INCLUDE_DIRS})
 
 # ------------------------------------------------------------------------------
 # Valgrind
@@ -49,7 +23,7 @@ if (ENABLE_TESTS_VALGRIND)
 		"--quiet"
 		"--error-exitcode=1"
 		"--num-callers=32"
-	)
+		)
 endif()
 
 # ------------------------------------------------------------------------------
@@ -58,14 +32,15 @@ endif()
 #       If extra libraries are required, create your own custom target and
 #       register it using unit_tests_register_target() function.
 # Param: _file   File with a test case
+# Param: ...     Extra files can be added as dependences
 function(unit_tests_register_test _file)
 	# Get a test name
 	get_filename_component(CASE_NAME "${_file}" NAME_WE)
 	set(CASE_NAME "test_${CASE_NAME}")
 
 	# Add executable
-	add_executable(${CASE_NAME} ${_file})
-	target_link_libraries(${CASE_NAME} PUBLIC libgtest ipfixcol2base)
+	add_executable(${CASE_NAME} ${ARGV})
+	target_link_libraries(${CASE_NAME} PUBLIC ${GTEST_LIBRARIES} ipfixcol2base)
 
 	# Add the test
 	add_test(NAME ${CASE_NAME} COMMAND "$<TARGET_FILE:${CASE_NAME}>")
@@ -85,7 +60,7 @@ endfunction()
 function(unit_tests_register_target _target)
 	# Get a test name
 	set(CASE_NAME "test_${_target}")
-	target_link_libraries(${_target} PUBLIC libgtest)
+	target_link_libraries(${_target} PUBLIC ${GTEST_LIBRARIES})
 
 	# Add test(s)
 	add_test(NAME ${CASE_NAME} COMMAND "$<TARGET_FILE:${_target}>")
@@ -142,6 +117,7 @@ function(coverage_add_target)
 		COMMAND "${PATH_LCOV}"
 			--directory .
 			--rc lcov_branch_coverage=1
+			--rc 'lcov_excl_line=assert'
 			--capture --quiet
 			--output-file "${COVERAGE_FILE_RAW}"
 		# Remove coverage of Google Test files, system headers, etc.
@@ -157,13 +133,14 @@ function(coverage_add_target)
 		# Delete the counters
 		COMMAND "${CMAKE_COMMAND}" -E remove
 			${COVERAGE_FILE_RAW} ${COVERAGE_FILE_CLEAN}
-	)
+		)
 
 	add_custom_command(TARGET coverage POST_BUILD
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
 		COMMENT "To see the coverage report, open ${COVERAGE_DIR}index.html"
 		COMMAND ;
-	)
+		)
+
 endfunction()
 
 

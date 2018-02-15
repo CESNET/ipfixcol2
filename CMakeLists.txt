@@ -25,6 +25,9 @@ include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(GNUInstallDirs)
 
+# Include custom FindXXX modules
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMakeModules")
+
 CHECK_C_COMPILER_FLAG(-std=gnu11 COMPILER_SUPPORT_GNU11)
 if (NOT COMPILER_SUPPORT_GNU11)
 	message(FATAL_ERROR "Compiler does NOT support C11 with GNU extension")
