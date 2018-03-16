@@ -21,7 +21,18 @@ find_library(
 	PATH_SUFFIXES lib lib64
 )
 
-set(FDS_VERSION_STRING ${PC_FDS_VERSION})
+if (PC_FDS_VERSION)
+    # Version extracted from pkg-config
+    set(FDS_VERSION_STRING ${PC_FDS_VERSION})
+elseif(FDS_INCLUDE_DIR AND EXISTS "${FDS_INCLUDE_DIR}/libfds/api.h")
+    # Try to extract library version from a header file
+    file(STRINGS "${FDS_INCLUDE_DIR}/libfds/api.h" libfds_version_str
+         REGEX "^#define[\t ]+FDS_VERSION_STR[\t ]+\".*\"")
+
+    string(REGEX REPLACE "^#define[\t ]+FDS_VERSION_STR[\t ]+\"([^\"]*)\".*" "\\1"
+           FDS_VERSION_STRING "${libfds_version_str}")
+    unset(libfds_version_str)
+endif()
 
 # handle the QUIETLY and REQUIRED arguments and set LIBFDS_FOUND to TRUE
 # if all listed variables are TRUE

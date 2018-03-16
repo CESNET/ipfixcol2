@@ -7,7 +7,9 @@ include_directories(
 )
 
 # List of tests
-unit_tests_register_test("core/verbose.cpp")
+unit_tests_register_test(session.cpp)
+
+# FIXME: unit_tests_register_test("core/verbose.cpp")
 #add_subdirectory(templater)
 # >> Add your new tests or test subdirectories HERE <<
 

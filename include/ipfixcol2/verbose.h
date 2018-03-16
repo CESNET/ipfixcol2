@@ -1,12 +1,11 @@
 /**
  * \file include/ipfixcol2/verbose.h
- * \author Petr Velan <petr.velan@cesnet.cz>
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief Functions for printing status messages (public API)
  * \date 2016
  */
 
-/* Copyright (C) 2016 CESNET, z.s.p.o.
+/* Copyright (C) 2016-2018 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,10 +39,16 @@
  *
  */
 
-#ifndef VERBOSE_H_
-#define VERBOSE_H_
+#ifndef IPX_VERBOSE_H
+#define IPX_VERBOSE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <stdarg.h>
 #include <ipfixcol2/api.h>
+#include <ipfixcol2/plugins.h>
 
 /**
  * \defgroup ipxVerboseAPI Status messages
@@ -51,8 +56,7 @@
  * \brief Public functions for printing status messages
  *
  * By default, verbosity-level is set to report only errors
- * i.e. #IPX_VERBOSITY_ERROR and reporting to the system logger (syslog) is
- * disabled.
+ * i.e. #IPX_VERB_ERROR and reporting to the system logger (syslog) is disabled.
  *
  * @{
  */
@@ -60,124 +64,106 @@
 /**
  * \brief Verbosity level of a message
  *
- * For detailed description of each verbosity level see #MSG_ERROR,
- * #MSG_WARNING, #MSG_INFO and #MSG_DEBUG
+ * For detailed description of each verbosity level see #IPX_ERROR, #IPX_WARNING, #IPX_INFO and
+ * #IPX_DEBUG.
  */
-enum IPX_VERBOSITY_LEVEL {
-	IPX_VERBOSITY_ERROR = 0,   /**< Error message (default)        */
-	IPX_VERBOSITY_WARNING,     /**< Warning message                */
-	IPX_VERBOSITY_INFO,        /**< Informational message          */
-	IPX_VERBOSITY_DEBUG        /**< Debug message                  */
+enum ipx_verb_level {
+    IPX_VERB_ERROR = 0,   /**< Error message (default)        */
+    IPX_VERB_WARNING,     /**< Warning message                */
+    IPX_VERB_INFO,        /**< Informational message          */
+    IPX_VERB_DEBUG        /**< Debug message                  */
 };
 
 /**
- * \brief Macro for printing error message
+ * \def IPX_ERROR
+ * \brief Macro for printing an error message
  *
  * Use this when something went really wrong, e.g., memory errors or disk full.
- * \param[in] module Identification of program component that generated this
- *   message
- * \param[in] format Format string (see manual page for "printf" family)
- * \param[in] ...    Variable number of arguments for the format string
+ * \param[in] ctx Identification of a plugin that generates this message
+ * \param[in] fmt Format string (see manual page for "printf" family)
+ * \param[in] ...   Variable number of arguments for the format string
  */
-#define MSG_ERROR(module, format, ...) \
-	if (ipx_verbosity_get_level() >= IPX_VERBOSITY_ERROR) { \
-		ipx_verbosity_print(IPX_VERBOSITY_ERROR, "ERROR: %s: " format "\n", \
-			module, ## __VA_ARGS__); \
-	}
+#define IPX_ERROR(ctx, fmt, ...)                                        \
+    if (ipx_ctx_verbosity(ctx) >= IPX_VERB_ERROR) {                     \
+        ipx_verb_print(IPX_VERB_ERROR, (ctx), (fmt), ## __VA_ARGS__);   \
+    }
 
 /**
- * \brief Macro for printing warning message
+ * \def IPX_WARNING
+ * \brief Macro for printing a warning message
  *
  * Use this when something is not right, but an action can continue.
- * \param[in] module Identification of program component that generated this
- *   message
- * \param[in] format Format string (see manual page for "printf" family)
- * \param[in] ...    Variable number of arguments for the format string
+ * \param[in] ctx Identification of a plugin that generates this message.
+ * \param[in] fmt Format string (see manual page for "printf" family)
+ * \param[in] ... Variable number of arguments for the format string
  */
-#define MSG_WARNING(module, format, ...) \
-	if (ipx_verbosity_get_level() >= IPX_VERBOSITY_WARNING) { \
-		ipx_verbosity_print(IPX_VERBOSITY_WARNING, "WARNING: %s: " format "\n", \
-			module, ## __VA_ARGS__); \
-	}
+#define IPX_WARNING(ctx, fmt, ...)                                      \
+    if (ipx_ctx_verbosity(ctx) >= IPX_VERB_WARNING) {                   \
+        ipx_verb_print(IPX_VERB_WARNING, (ctx), (fmt), ## __VA_ARGS__); \
+    }
 
 /**
- * \brief Macro for printing informational message
+ * \def IPX_INFO
+ * \brief Macro for printing an informational message
  *
  * Use this when you have something to say, but you don't expect anyone to care.
- * \param[in] module Identification of program component that generated this
- *   message
- * \param[in] format Format string (see manual page for "printf" family)
- * \param[in] ...    Variable number of arguments for the format string
+ * \param[in] ctx Identification of a plugin that generates this message
+ * \param[in] fmt Format string (see manual page for "printf" family)
+ * \param[in] ... Variable number of arguments for the format string
  */
-#define MSG_INFO(module, format, ...) \
-	if (ipx_verbosity_get_level() >= IPX_VERBOSITY_INFO) { \
-		ipx_verbosity_print(IPX_VERBOSITY_INFO, "INFO: %s: " format "\n", \
-			module, ## __VA_ARGS__); \
-	}
+#define IPX_INFO(ctx, fmt, ...)                                         \
+    if (ipx_ctx_verbosity(ctx) >= IPX_VERB_INFO) {                      \
+        ipx_verb_print(IPX_VERB_INFO, (ctx), (fmt), ## __VA_ARGS__);    \
+    }
 
 /**
- * \brief Macro for printing debug message
+ * \def IPX_DEBUG
+ * \brief Macro for printing a debug message
  *
- *
- * \param[in] module Identification of program component that generated this
- *   message
- * \param[in] format Format string (see manual page for "printf" family)
- * \param[in] ...    Variable number of arguments for the format string
+ * All information that is only interesting for developers.
+ * \param[in] ctx Identification of a plugin that generates this message.
+ * \param[in] fmt Format string (see manual page for "printf" family)
+ * \param[in] ... Variable number of arguments for the format string
  */
-#define MSG_DEBUG(module, format, ...) \
-	if (ipx_verbosity_get_level() >= IPX_VERBOSITY_DEBUG) { \
-		ipx_verbosity_print(IPX_VERBOSITY_DEBUG, "DEBUG: %s: " format "\n", \
-			module, ## __VA_ARGS__); \
-	}
+#define IPX_DEBUG(ctx, fmt, ...)                                        \
+    if (ipx_ctx_verbosity(ctx) >= IPX_VERB_DEBUG) {                     \
+        ipx_verb_print(IPX_VERB_DEBUG, (ctx), (fmt), ## __VA_ARGS__);   \
+    }
 
 /**
- * \brief Macro for printing common messages, without severity prefix.
- *
- * In syslog, all of these messages will have LOG_INFO severity.
- * \param[in] level  The verbosity level at which this message should be printed
- * \param[in] format Format string (see manual page for "printf" family)
- * \param[in] ...    Variable number of arguments for the format string
- */
-#define MSG_COMMON(level, format, ...) \
-	if (ipx_verbosity_get_level() >= level) { \
-		ipx_verbosity_print(IPX_VERBOSITY_INFO, format"\n", ## __VA_ARGS__); \
-	}
-
-/**
- * \brief Get verbosity level of the collector
- * \return Current verbosity level
- */
-IPX_API enum IPX_VERBOSITY_LEVEL ipx_verbosity_get_level();
-
-/**
- * \brief Set verbosity level of the collector
- *
- * When invalid value is used as \p new_level, the verbosity level will stay
- * unchaned.
- * \param[in] new_level New verbosity-level
- */
-IPX_API void ipx_verbosity_set_level(enum IPX_VERBOSITY_LEVEL new_level);
-
-/**
- * \brief Enable reporting to the system log (syslog)
+ * \brief Enable/disable reporting to the system log (syslog)
  * \remark By default, reporting is disabled.
  */
-IPX_API void ipx_verbosity_syslog_enable();
+IPX_API void
+ipx_verb_syslog(bool enable);
 
 /**
- * \brief Disable reporting to the system log (syslog)
+ * \brief Get default verbosity level of the collector
+ * \return Current verbosity level
  */
-IPX_API void ipx_verbosity_syslog_disable();
+IPX_API enum ipx_verb_level
+ipx_verb_level_get();
+
+/**
+ * \brief Set default verbosity level of the collector
+ * \param[in] level New verbosity-level
+ */
+IPX_API void
+ipx_verb_level_set(enum ipx_verb_level level);
 
 /**
  * \brief Common printing function
  *
  * \param[in] level  Verbosity level of the message (for syslog severity)
- * \param[in] format Format string (see manual page for "printf" family)
+ * \param[in] ctx    Plugin context
+ * \param[in] fmt    Format string (see manual page for "printf" family)
  * \param[in] ...    Variable number of arguments for the format string
  */
-IPX_API void ipx_verbosity_print(enum IPX_VERBOSITY_LEVEL level,
-		const char *format, ...);
+IPX_API void
+ipx_verb_print(enum ipx_verb_level level, const ipx_ctx_t *ctx, const char *fmt, ...);
 
 /**@}*/
-#endif /* VERBOSE_H_ */
+#ifdef __cplusplus
+}
+#endif
+#endif // IPX_VERBOSE_H

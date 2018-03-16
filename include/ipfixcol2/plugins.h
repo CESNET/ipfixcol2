@@ -1,0 +1,637 @@
+/**
+ * \file include/ipfixcol2/plugins.h
+ * \author Lukas Hutak <lukas.hutak@cesnet.cz>
+ * \brief IPFIXcol plugin interface and functions (header file)
+ * \date 2018
+ */
+
+/* Copyright (C) 2018 CESNET, z.s.p.o.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is'', and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
+
+#ifndef IPX_PLUGINS_H
+#define IPX_PLUGINS_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** Internal plugin context  */
+typedef struct ipx_ctx ipx_ctx_t;
+
+#include <ipfixcol2/api.h>
+#include <ipfixcol2/verbose.h>
+#include <ipfixcol2/session.h>
+#include <ipfixcol2/message.h>
+
+/**
+ * \defgroup pluginAPI Plugin API
+ * \ingroup publicAPIs
+ * \brief Plugin interface and configuration functions
+ *
+ * @{
+ */
+
+/**
+ * \defgroup pluginIFC Plugin Interface
+ * \ingroup pluginAPI
+ * \brief Functions to be implemented by a plugin.
+ *
+ * These functions specifies a communication interface between IPFIXcol core and external plugins.
+ * The IPFIXcol core uses following functions to control processing messages by plugins. An author
+ * of the plugin can count on the fact that for an instance of the plugin the functions are never
+ * called concurrently. On the other hand, multiple instances of the same plugin could exists
+ * inside the collector at the same time and run concurrently (by different threads), therefore,
+ * an author of the plugin MUST avoid using non-constant global and static variables, system
+ * signals and other resources that can potentially cause data race.
+ *
+ * This module contains the plugin identification structure and function that MUST be
+ * implemented so a plugin can be loaded and used by the collector. Not all function mentioned
+ * in this section must be implemented.
+ *
+ * Input plugins (::IPX_PT_INPUT) MUST implement at least these functions:
+ * - plugin_init()
+ * - plugin_destroy()
+ * - plugin_get()
+ * Optionally, if supported, the function plugin_session_close() should be implemented as well.
+ *
+ * Intermediate (::IPX_PT_INTERMEDIATE) and output (::IPX_PT_OUTPUT) plugins MUST implement at
+ * least these functions:
+ * - plugin_init()
+ * - plugin_destroy()
+ * - plugin_process()
+ *
+ * Optionally, each plugin should also implement runtime reconfiguration functions (all or none):
+ * - plugin_update_prepare()
+ * - plugin_update_apply()
+ * - plugin_update_abort()
+ * If a plugin doesn't implement these reconfiguration functions and a configuration of the plugin
+ * is changed and the runtime reconfiguration procedure of the collector is triggered, the process
+ * will be aborted.
+ *
+ * \note
+ *   The plugin identification structure and all implemented functions MUST be defined as external
+ *   symbols of the plugin's library (i.e. shared object) and MUST have public visibility.
+ * @{
+ */
+
+/** Type of plugin */
+enum ipx_plugin_type {
+    /**
+     * \brief Input plugin
+     *
+     * Input plugins pass data to the IPFIXcol in a form of the IPFIX or NetFlow messages. The
+     * source of data is completely independent and it's up to the plugin input to maintain
+     * a connection with the source. Generally, we distinguish two kinds of sources - network and
+     * file. Together with the messages also an information about the data source is passed.
+     * Parsing of the message is provided by the IPFIXcol core.
+     */
+    IPX_PT_INPUT,
+    /**
+     * \brief Intermediate plugin
+     *
+     * Intermediate plugins get IPFIX messages and are allowed to modify, create and drop the
+     * messages. The intermediate plugins are connected in series by ring buffers, therefore,
+     * each message from an Input plugin goes through all plugins one by one, unless some plugin
+     * discards it.
+     */
+    IPX_PT_INTERMEDIATE,
+    /**
+     * \brief Output plugin
+     *
+     * Output plugins get IPFIX messages from the last intermediate plugin or directly from
+     * input plugin, if no intermediate plugins are enabled. It's up to the output plugins what
+     * they do with the messages. Records could be, for example, stored to a hard drive, forwarded
+     * to another collector or analysis tool, converted to different data format, etc.
+     * IPFIX messages MUST NOT be modified by the plugins.
+     */
+    IPX_PT_OUTPUT,
+    /**
+     * \brief Configuration plugin
+     *
+     * Input plugins provides information about plugins that should be loaded during the collector
+     * startup and handles and processes reconfiguration requests. Only one plugin can be used
+     * at the same time. By default, IPFIXcol core uses it's own internal plugin for processing
+     * configuration from a file.
+     */
+    IPX_PT_CONFIG
+};
+
+/**
+ * \brief Identification of a plugin
+ *
+ * This structure MUST be defined as global non-static variable called "plugin_info". In other
+ * words, the variable MUST be an exported symbol of the plugin's library. Use IPX_API macro
+ * to enable visibility of definition.
+ */
+struct ipx_plugin_info {
+    /** Plugin type                                      */
+    enum ipx_plugin_type type;
+    /** Plugin identification name                       */
+    const char *name;
+    /** Brief description of plugin                      */
+    const char *dsc;
+    /** Configuration flags (reserved for future use)    */
+    uint16_t flags;
+    /** Plugin version string (like "1.2.3")             */
+    const char *version;
+    /** Minimal IPFIXcol version string (like "1.2.3")   */
+    const char *ipx_min;
+};
+
+/**
+ * \brief Plugin instance initialization
+ *
+ * For each instance the function is called just once before any other interface function
+ * is called by IPFIXcol core. During initialization the plugin should parsed user configuration,
+ * prepare internal data structure for processing messages (if required) and store private instance
+ * data to the context using ipx_ctx_private_set().
+ *
+ * \note
+ *   Only successfully initialized plugins will be destroyed by plugin_destroy().
+ * \note
+ *   During initialization process, the internal pipeline connection between plugins has not been
+ *   established yet and the plugin, therefore, cannot pass any messages.
+ * \param[in] ctx    Plugin context
+ * \param[in] params XML string with specific parameters for the plugin
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_NOMEM if a memory allocation error has occurred.
+ * \return #IPX_ERR_ARG if the configuration \p params is not valid and the plugin is not
+ *   initialized.
+ */
+IPX_API int
+ipx_plugin_init(ipx_ctx_t *ctx, const char *params);
+
+/**
+ * \brief Plugin instance destruction
+ *
+ * For each instance the function is called just once as the last interface function call. During
+ * destruction the plugin MUST return all resources and destroy its private instance data.
+ *
+ * \note
+ *   It's still possible to pass messages to the internal pipeline. For example, output plugins
+ *   MUST pass Transport Session messages (event type ::IPX_MSG_SESSION_CLOSE) to notify all
+ *   remaining plugins that no more messages will be received from Transport Sessions which the
+ *   plugin is maintaining.
+ * \note Destruction should not fail.
+ * \param[in] ctx Plugin context
+ * \param[in] cfg Private data of the instance prepared by initialization function
+ */
+IPX_API void
+ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg);
+
+/**
+ * \brief Get an IPFIX or NetFlow message from a data source (Input plugins ONLY)
+ *
+ * Each input plugin HAS to pass data to the IPFIXcol pipeline in the form of memory block
+ * containing IPFIX or NetFlow message. It means that if an input plugin reads data in different
+ * format than mentioned, the data must be transformed into the IPFIX (or NetFlow) message format.
+ * Memory allocated by the input plugin for the messages data is freed later by IPFIXcol core
+ * automatically. The messages must be wrapped inside \ref ipxMsgIPFIX "IPFIX Messages" and
+ * passed using ipx_ctx_msg_pass(). At most one "data" message should be passed during
+ * execution of this function.
+ *
+ * Together with the data, input plugin further passes information about Transport Session,
+ * Observation Domain ID and Stream ID. The plugin can count on the fact that this information data
+ * are read only for other plugins that works with messages and are not changed by IPFIXcol core.
+ *
+ * Moreover, the first message with the data from each Transport Session MUST precede a Transport
+ * Session message (event type ::IPX_MSG_SESSION_OPEN) that holds information about new connection.
+ * After termination of each Transport Session (i.e. no more data will be received from a specific
+ * Transport Session) the plugin MUST send another Transport Session message (event type
+ * ::IPX_MSG_SESSION_CLOSE) to inform all plugins that the Session has been closed.
+ *
+ * \warning
+ *   This interface is only for Input plugins! In case of the other types, the IPFIXcol core
+ *   ignores this function.
+ * \param[in] ctx Plugin context
+ * \param[in] cfg Private data of the instance prepared by initialization function
+ * \return #IPX_OK on success (or if a non-fatal error has occurred and the plugin can continue to
+ *   work)
+ * \return #IPX_ERR_NOMEM if a fatal memory allocation error has occurred and the plugin cannot
+ *   continue to work properly (the plugin will be destroyed immediately).
+ * \return #IPX_ERR_EOF if the end of file/stream has been reached and the plugin cannot provide
+ *   more data from any sources. The plugin will be destroyed immediately and if this is also the
+ *   last running input plugin, the collector will exit.
+ */
+IPX_API int
+ipx_plugin_get(ipx_ctx_t *ctx, void *cfg);
+
+/**
+ * \brief Process a message from the IPFIXcol core (Intermediate and Output plugins ONLY)
+ *
+ * This function is called for each message (from a pipeline predecessor) the instance subscribes
+ * to. The way of data processing is completely up to the specific plugin.
+ *
+ * In case of _Intermediate plugins_, the function can modify, for example, IPFIX messages (change
+ * value of record fields, add or remove fields, etc.). After processing each message the plugin
+ * should pass the message to a successor plugin (a next intermediate plugin in the pipeline or
+ * output plugins) using ipx_ctx_msg_pass(). It's not done automatically because any message can
+ * be even dropped, but author of the plugin MUST be sure that there are not other references
+ * to data.
+ *
+ * In case of _Output plugins_, the function MUST NOT modify received messages because they can
+ * be concurrently used by other plugins. Read the previous sentence again, slowly, one more time
+ * please. The basic usage of Output plugins is to store or forward all data in a specific format,
+ * but also various processing (statistics, etc.) can be done.
+ *
+ * \warning
+ *   This interface is only for Intermediate and Output plugins! In case of the other types,
+ *   the IPFIXcol core ignores this function.
+ * \note
+ *   By default, the plugin receives only IPFIX Messages. To change what kind of messages the
+ *   plugin wants to receive use ipx_ctx_subscribe().
+ * \param[in] ctx Plugin context
+ * \param[in] cfg Private data of the instance prepared by initialization function
+ * \param[in] msg Message to process
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_NOMEM if a fatal memory allocation error has occurred and the plugin cannot
+ *   continue to work properly (the collector will exit).
+ */
+IPX_API int
+ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg);
+
+/**
+ * \brief Request to close a Transport Session (Input plugins only!)
+ *
+ * If possible, all input plugins should implement this function. It can be used by the IPFIXcol
+ * core to close a Transport Session if a malformed message has been received to restart the
+ * Session. If the input cannot close the Transport Session (e.g. UDP sessions, etc.), this
+ * function should not be implemented at all.
+ * \warning
+ *   This interface is only for Input plugins! In case of the other types, the IPFIXcol core
+ *   ignores this function.
+ * \param[in] ctx     Plugin context
+ * \param[in] cfg     Private data of the instance prepared by initialization function
+ * \param[in] session Pointer to the Transport Session to close
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_NOTFOUND if the Transport Session cannot be found
+ */
+IPX_API int
+ipx_plugin_session_close(ipx_ctx_t *ctx, void *cfg, const struct ipx_session *session);
+
+/** \brief Type of plugin's instance update  */
+enum ipx_plugin_update {
+    /**
+     * \brief Configuration of the instance will be possibly changed
+     *
+     * Because configuration is always plugin specific, the IPFIXcol core is not able to
+     * distinguish whether it was changed or not.
+     */
+    IPX_PU_CFG   = (1 << 0),
+    /**
+     * \brief Manager of Information Elements will be updated
+     *
+     * If the instance holds references to Information Elements from the previous manager. This
+     * references will not be valid after the update is complete.
+     */
+    IPX_PU_IEMGR = (1 << 1),
+    /**
+     * \brief Record extension(s) will be changed
+     *
+     * A new record extension will be added or an old extension will be removed. The plugin should
+     * check if the it uses the required extension and abort update, if necessary.
+     */
+    IPX_PU_REXT  = (1 << 2),
+};
+
+/**
+ * \brief Prepare an instance of a plugin for reconfiguration
+ *
+ * When reconfiguration process of the collector is triggered, the function is called on all
+ * affected plugins. An author of plugin should implement parsing configurations and checking
+ * if anything has been changed. Reconfiguration can also change the IE manager and list of
+ * available Information Elements (can be added/removed/redefined). Furthermore, record extensions
+ * can be also added/removed or size of the record can be modified. If anything has changed,
+ * the plugin should prepare update data (structure is up to the plugin) and store them
+ * using ipx_ctx_update_set(), pointer to this data will be later passed by IPFIXcol core to
+ * ipx_plugin_update_commit() or ipx_plugin_update_abort() functions.
+ *
+ * If the implementation is not provided by the plugin, it means that runtime modification of
+ * it's instance configuration is not allowed and moreover, the instance is not notified when
+ * an IE manager or record extensions will be changed.
+ *
+ * During execution of this function the plugin context is temporarily modified to represent future
+ * changes, therefore, following functions returns potentially updated resources:
+ * - ipx_ctx_subscribe()
+ * - ipx_ctx_iemgr_get()
+ * - ipx_ctx_rext_register()
+ * - ipx_ctx_rext_deregister()
+ * - ipx_ctx_rext_subscribe()
+ * - ipx_ctx_rext_unsubscribe()
+ *
+ * \note It is NOT possible to pass any messages from update functions.
+ * \warning
+ *   Original configuration MUST stay unmodified! Plugin MUST NOT expect that
+ *   ipx_plugin_update_apply() or ipx_plugin_update_abort() is called immediately after return
+ *   from this function. There are usually multiple calls of ipx_plugin_get() or
+ *   ipx_plugin_process() (depends on type of the plugin) between update commit or abort. These
+ *   calls MUST be unaffected by the pending update!
+ * \param[in] ctx    Plugin context
+ * \param[in] cfg    Private data of the instance prepared by initialization function
+ * \param[in] what   Bitwise OR of ::ipx_plugin_update flags
+ * \param[in] params XML string with specific parameters for the plugin
+ * \return #IPX_OK if no changes are necessary (commit or abort will NOT be called)
+ * \return #IPX_READY if a new configuration has been parsed
+ * \return #IPX_ERR_DENIED if it's NOT possible to perform reconfiguration or any other type
+ *   of failure has occurred (commit or abort will NOT be called)
+ */
+IPX_API int
+ipx_plugin_update_prepare(ipx_ctx_t *ctx, void *cfg, uint16_t what, const char *params);
+
+/**
+ * \brief Apply update of an instance
+ *
+ * After all plugins are ready to update, this function is called by IPFIXcol core. The plugin
+ * MUST apply modifications and free the update data.
+ *
+ * \note After return, the update data (set by ipx_ctx_update_set()) is set to NULL.
+ * \note It is NOT possible to pass any messages from update functions.
+ * \param[in] ctx     Plugin context
+ * \param[in] cfg     Private data of the instance prepared by initialization function
+ * \param[in] update  Update data of the instance prepared by update function
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_NOMEM on a fatal memory allocation error (the collector will exit)
+ */
+IPX_API int
+ipx_plugin_update_commit(ipx_ctx_t *ctx, void *cfg, void *update);
+
+/**
+ * \brief Abort update of an instance
+ *
+ * If at least one plugin refused new update configuration, this function is called by IPFIXcol
+ * core. The plugin MUST abort prepared modifications and free update data.
+ *
+ * \note After return, the update data (set by ipx_ctx_update_set()) is set to NULL.
+ * \note  It is NOT possible to pass any messages from update functions.
+ * \param[in] ctx     Plugin context
+ * \param[in] cfg     Private data of the instance prepared by initialization function
+ * \param[in] update  Update data of the instance prepared by update function
+ */
+IPX_API void
+ipx_plugin_update_abort(ipx_ctx_t *ctx, void *cfg, void *update);
+
+/**
+ * @}
+ *
+ * \defgroup ContextAPI Context API
+ * \ingroup pluginAPI
+ * \brief Instance configuration and contextual data
+ *
+ * @{
+ */
+
+/**
+ * \brief Set private data of the instance
+ *
+ * Private data is used to distinguish individual instance of the same plugin and is passed by
+ * the IPFIXcol to the plugin function every time it is called. A form of data is always up to
+ * the plugin, however, usually it is represented as a plugin specific structure.
+ *
+ * \note By default, private data of the instance is NULL.
+ * \param[in] ctx  Current plugin context
+ * \param[in] data Pointer to private data (can be NULL).
+ */
+IPX_API void
+ipx_ctx_private_set(ipx_ctx_t *ctx, void *data);
+
+/**
+ * \brief Set update data of the instance
+ *
+ * Update data is used to change runtime configuration of the instance. Form of data is up to
+ * the author of the plugin.
+ * \note By default, private data of the instance is NULL.
+ * \param[in] ctx  Current plugin context
+ * \param[in] data Pointer to update data (can be NULL)
+ */
+IPX_API void
+ipx_ctx_update_set(ipx_ctx_t *ctx, void *data);
+
+/**
+ * \brief Get verbosity level of the instance
+ * \param[in] ctx Current plugin context
+ * \return Verbosity level
+ */
+IPX_API enum ipx_verb_level
+ipx_ctx_verb_get(const ipx_ctx_t *ctx);
+
+/**
+ * \brief Pass a message to a successor of the plugin
+ *
+ * The message is pushed into an output queue of the instance and will be later processed by
+ * a successor. When the message does not fit into the queue of messages, the function blocks.
+ * The message can be of any type supported by the collector. Therefore, the plugin can use it
+ * to pass processed IPFIX messages, information about Transport Sessions, garbage that cannot
+ * be freed because  someone is still using it, etc.
+ *
+ * During plugin instance initialization, messages cannot be passed because connection between
+ * plugins haven't been established yet.
+ *
+ * \warning
+ *   This interface is only for Input and Intermediate plugins. Moreover, inside update functions
+ *   (i.e. ipx_plugin_update_* ) it is not possible to pass any messages.
+ * \param[in] ctx Current plugin context
+ * \param[in] msg Message to send
+ * \return #IPX_OK on success.
+ * \return #IPX_ERR_ARG if the \p msg is NULL, the plugin doesn't have the successor or permissions.
+ */
+IPX_API int
+ipx_ctx_msg_pass(ipx_ctx_t *ctx, ipx_msg_t *msg);
+
+/**
+ * \brief Change message subscription (Intermediate and Output plugins ONLY!)
+ *
+ * Each instance can modify types of messages that are passed into ipx_plugin_process().
+ * \p mask_new and \p mask_old specifies a set of message types as bitwise OR of zero or more
+ * of the flags defined by ::ipx_msg_type. Usually plugin can only subscribe to the following
+ * types of messages:
+ * - ::IPX_MSG_IPFIX (IPFIX Message)
+ * - ::IPX_MSG_SESSION (Transport Session Message)
+ *
+ * If \p mask_new is non-NULL, the new subscription mask is installed from \p mask_new.
+ * If \p mask_old is non-NULL, the previous mask is saved in \p mask_old.
+ *
+ * \note By default, each plugin is subscribed only to receive IPFIX Messages.
+ * \warning
+ *   This interface is only for Intermediate and Output plugins! In case of the other types.
+ * \param[in] ctx      Plugin context
+ * \param[in] mask_new New message mask (can be NULL)
+ * \param[in] mask_old Old message mask (can be NULL)
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_FORMAT if the \p mask_new contains unknown message type or the instance doesn't
+ *   have permission to subscribe these types of messages (the new mask is not installed)
+ * \return #IPX_ERR_ARG if the plugin is not of proper type (i.e. not Intermediate or Output)
+ */
+IPX_API int
+ipx_ctx_subscribe(ipx_ctx_t *ctx, const uint16_t *mask_new, uint16_t *mask_old);
+
+/**
+ * \brief Get a manager of Information Elements
+ *
+ * \warning
+ *   It IS recommended to avoid storing references to definitions of the manager, because the
+ *   manager can be updated during reconfiguration.
+ * \param[in] ctx Plugin context
+ * \return Pointer to the manager (never NULL)
+ */
+IPX_API const fds_iemgr_t *
+ipx_ctx_iemgr_get(ipx_ctx_t *ctx);
+
+/**
+ * @}
+ *
+ * \defgroup rextAPI Record extension API
+ * \ingroup pluginAPI
+ * \brief Registration and configuration of Data Record extensions
+ *
+ * Extensions allow effectively enrich IPFIX Data Records processed by plugins without expensive
+ * modifications of IPFIX Messages. During plugin initialization or update preparation, any
+ * Intermediate plugin can register a new extension and any Intermediate or Output plugin can
+ * subscribe to data of the extension. Content of the extension is always up to the author.
+ * Registration and subscription allows the IPFIXcol core to make sure that dependencies of all
+ * plugins are satisfied even during reconfiguration.
+ *
+ * Each extension is identified by "type" and "id" strings. The type makes sure that a plugin is
+ * subscribed to expected extension and its version. The ID identifies concrete occurrence
+ * of the extension. In other words, a Data Record can be enriched by multiple different extension
+ * of the same type at the same time.
+ *
+ * @{
+ */
+
+/** Internal data structure that represents IPFIXcol record extension                            */
+typedef struct ipx_ctx_rext ipx_ctx_rext_t;
+
+/**
+ * \brief Register a new Data Record extension (Intermediate Plugins ONLY!)
+ *
+ * The instance is responsible to fill the extension of all Data Records with data that make sense.
+ * If an instance wants to redefine existing extension, for example, size. It MUST deregister
+ * the extension first and register it again!
+ *
+ * \warning
+ *   This function is only for Intermediate plugins and can be called only from ipx_plugin_init()
+ *   or ipx_plugin_update_prepare() functions.
+ *
+ * \param[in]  ctx  Current plugin context
+ * \param[in]  type Unique identification of data format (to prevent plugins subscribe to
+ *   unexpected data type, for example, "profiler-0.1-data")
+ * \param[in]  id   Identification of the extension
+ * \param[in]  size Static size of the extension (in bytes, non-zero)
+ * \param[out] key  Pointer to an extension access key
+ * \return #IPX_OK on success and \p key is filled
+ * \return #IPX_ERR_ARG on invalid function arguments (empty \p type or \p id, zero \p size, etc.)
+ * \return #IPX_ERR_DENIED if the instance doesn't have permission to register an extension
+ * \return #IPX_ERR_EXISTS if an extension with the same name already exists
+ */
+IPX_API int
+ipx_ctx_rext_register(ipx_ctx_t *ctx, const char *type, const char *id, uint16_t size,
+    ipx_ctx_rext_t **key);
+
+/**
+ * \brief Deregister a Data Record extension (Intermediate Plugins ONLY!)
+ *
+ * Only previously successfully registered extension by this instance can be deregistered.
+ * \note If the instance is destroyed, the extension is automatically deregistered.
+ * \warning
+ *   This function is only for Intermediate plugins and can be called only from ipx_plugin_init(),
+ *   ipx_plugin_destroy() or ipx_plugin_update_prepare() functions.
+ * \param[in] ctx Current plugin context
+ * \param[in] key Pointer to an extension access key
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_DENIED if the instance doesn't have permission to deregister the extension or
+ *   its not owner of the extension
+ * \return #IPX_ERR_NOTFOUND if the extension doesn't exist
+ */
+IPX_API int
+ipx_ctx_rext_deregister(ipx_ctx_t *ctx, ipx_ctx_rext_t *key);
+
+/**
+ * \brief Subscribe to a Data Record extension (Intermediate and Output Plugins ONLY!)
+ *
+ * Indicates dependency on a Data Record extension provided by another plugin that is placed
+ * earlier in the pipeline.
+ * \warning
+ *   This function is only for Intermediate and Output plugins and can be called only from
+ *   ipx_plugin_init() or ipx_plugin_update_prepare() functions.
+ *
+ * \param[in]  ctx  Current plugin context
+ * \param[in]  type Unique identification of data format (to prevent plugins subscribe to
+ *   unexpected data type, for example, "profiler-0.1-data")
+ * \param[in]  id   Identification of the extension
+ * \param[out] key  Pointer to an extension access key
+ * \return #IPX_OK on success and \p key is filled
+ * \return #IPX_ERR_DENIED if the instance doesn't have permission to subscribe the extension
+ * \return #IPX_ERR_FORMAT if the type doesn't match
+ * \return #IPX_ERR_NOTFOUND if the extension wasn't found
+ */
+IPX_API int
+ipx_ctx_rext_subscribe(ipx_ctx_t *ctx, const char *type, const char *id, ipx_ctx_rext_t **key);
+
+/**
+ * \brief Unsubscribe to a Data Record extension (Intermediate and Output Plugins ONLY!)
+ *
+ * Only previously successfully subscribed extensions by this instance can be unsubscribed.
+ * \note If the instance is destroyed, the extension is automatically unsubscribed.
+ * \warning
+ *   This function is only for Intermediate and Output plugins and can be called only from
+ *   ipx_plugin_init(), ipx_plugin_destroy or ipx_plugin_update_prepare() functions.
+ *
+ * \param[in] ctx Current plugin context
+ * \param[in] key Pointer to an extension access key
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_DENIED if the instance doesn't have permission to unsubscribe to the extension
+ * \return #IPX_ERR_NOTFOUND if the extension doesn't exists
+ */
+IPX_API int
+ipx_ctx_rext_unsubscribe(ipx_ctx_t *ctx, ipx_ctx_rext_t *key);
+
+/**
+ * \brief Get data of a Data Record extension
+ * \param[in]  rec  Data Record
+ * \param[in]  key  Access key
+ * \param[out] data Pointer to the start of data
+ * \return Size of data (in bytes)
+ */
+IPX_API uint16_t
+ipx_ctx_rext_get(struct ipx_record *rec, const ipx_ctx_rext_t *key, uint8_t **data);
+
+/**
+ * @}
+ * @}
+ */
+
+#ifdef __cplusplus
+}
+#endif
+#endif // IPX_PLUGINS_H

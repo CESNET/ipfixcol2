@@ -1,7 +1,7 @@
 /**
- * \file src/core/message_garbage.c
+ * \file src/core/message_base.h
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
- * \brief Garbage message (source file)
+ * \brief General specification of messages for the IPFIXcol pipeline (internal header file)
  * \date 2016-2018
  */
 
@@ -39,66 +39,64 @@
  *
  */
 
-#include <stddef.h>
-#include <stdlib.h>
-#include <assert.h>
+#ifndef IPFIXCOL_MESSAGE_BASE_H
+#define IPFIXCOL_MESSAGE_BASE_H
 
 #include <ipfixcol2.h>
-#include "message_base.h"
+#include <assert.h>
 
 /**
  * \internal
- * \addtogroup ipxGarbageMessage
+ * \defgroup ipxInternalGeneralMessage Collector internal messages
+ * \ingroup internalAPIs
+ * \brief General specification of messages for the collector pipeline
+ * \warning This structure and functions are only for internal use!
  * @{
  */
 
 /**
- * \brief Structure of a garbage message
+ * \brief Header of all messages for the collector pipeline.
+ *
+ * \remark Never use this structure directly, instead use API functions, because internal elements
+ *   can be changed.
+ * \warning This structure MUST always be the first element of any message structure for the
+ *   collector pipeline, because it serves as an identification of the message type.
  */
-struct ipx_msg_garbage {
-    /**
-     * Identification of this message.
-     * \warning This MUST be always first in this structure and the "type" MUST be #IPX_MSG_GARBAGE.
-     */
-    struct ipx_msg msg_header;
+struct ipx_msg {
+    /** Type of the message */
+    enum ipx_msg_type type;
 
-    /** Object to be destroyed     */
-    void *object_ptr;
-    /** Object destruction function */
-    ipx_msg_garbage_cb object_destructor;
+    /*
+     * TODO: add number of references to this message only for output manager!
+     * atomic_uint ref_cnt;
+     */
 };
 
-static_assert(offsetof(struct ipx_msg_garbage, msg_header.type) == 0,
-    "Message header must be the first element of each IPFIXcol message.");
+static_assert(offsetof(struct ipx_msg, type) == 0,
+    "Message type must be the first element of each IPFIXcol message.");
 
-// Create a garbage message
-ipx_msg_garbage_t *
-ipx_msg_garbage_create(void *object, ipx_msg_garbage_cb callback)
+/**
+ * \brief Initialize the header of a general message
+ * \param[in] header  Pointer to the header of the message
+ * \param[in]  type   Type of the header
+ * \return On success returns #IPX_OK. Otherwise returns non-zero value.
+ */
+static inline void
+ipx_msg_header_init(struct ipx_msg *header, enum ipx_msg_type type)
 {
-    assert(callback != NULL);
-    struct ipx_msg_garbage *msg;
-
-    msg = malloc(sizeof(*msg));
-    if (!msg) {
-        return NULL;
-    }
-
-    ipx_msg_header_init(&msg->msg_header, IPX_MSG_GARBAGE);
-    msg->object_ptr = object;
-    msg->object_destructor = callback;
-    return msg;
+    header->type = type;
 }
 
-// Destroy a garbage message
-void
-ipx_msg_garbage_destroy(ipx_msg_garbage_t *msg)
+/**
+ * \brief Destroy the header of a general message
+ *
+ * This functions is now just a placeholder for possible future implementation.
+ * \param[in] header Pointer to the header of the mesage
+ */
+static inline void
+ipx_msg_header_destroy(struct ipx_msg *header)
 {
-    // Destroy garbage
-    msg->object_destructor(msg->object_ptr);
-
-    // Destroy message itself
-    ipx_msg_header_destroy((ipx_msg_t *) msg);
-    free(msg);
+    (void) header;
 }
 
-/**@}*/
+#endif //IPFIXCOL_MESSAGE_BASE_H

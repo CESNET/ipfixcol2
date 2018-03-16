@@ -10,13 +10,11 @@ set(TOP_HEADERS
 )
 
 set(SUB_HEADERS
-	ipfixcol2/ipfix_structures.h
 	ipfixcol2/message.h
 	ipfixcol2/message_garbage.h
 	ipfixcol2/message_ipfix.h
 	ipfixcol2/message_session.h
-	ipfixcol2/processor.h
-	ipfixcol2/source.h
+	ipfixcol2/session.h
 	ipfixcol2/verbose.h
 	"${PROJECT_BINARY_DIR}/include/ipfixcol2/api.h"
 )

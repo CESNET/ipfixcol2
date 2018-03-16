@@ -18,13 +18,18 @@ include_directories(
 # Core source files
 set(CORE_SOURCE
 	"${PROJECT_BINARY_DIR}/src/build_config.h"
-	core/verbose.c
-	core/message.c
+	core/message_base.c
+	core/message_base.h
 	core/message_garbage.c
-	core/message_internal.h
 	core/message_ipfix.c
+	core/message_ipfix.h
 	core/message_session.c
-	core/source.c
+	#core/parser.c
+	#core/parser.h
+	core/plugin.c
+	core/plugin.h
+	core/session.c
+	core/verbose.c
 
 	"${PROJECT_SOURCE_DIR}/include/ipfixcol2/"
 )

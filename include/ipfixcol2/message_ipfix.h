@@ -2,10 +2,10 @@
  * \file include/ipfixcol2/message_ipfix.h
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief IPFIX message (header file)
- * \date 2016
+ * \date 2018
  */
 
-/* Copyright (C) 2016 CESNET, z.s.p.o.
+/* Copyright (C) 2018 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,16 +39,21 @@
  *
  */
 
-#ifndef IPFIXCOL_MSG_IPFIX_H
-#define IPFIXCOL_MSG_IPFIX_H
+#ifndef IPX_MESSSAGE_IPFIX_H
+#define IPX_MESSSAGE_IPFIX_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <libfds.h>
 #include <stddef.h>
-#include <ipfixcol2.h>
-#include "source.h"
+
+#include <ipfixcol2/api.h>
+#include "session.h"
+#include "plugins.h"
 
 /**
- * \endinternal
  * \defgroup ipxMsgIPFIX IPFIX message
  * \ingroup ipxInternalCommonMessage
  * \brief Specification of IPFIX message wrapper for the collector pipeline
@@ -56,123 +61,138 @@
  * @{
  */
 
+/** Data type for IPFIX message wrapper                                       */
+typedef struct ipx_msg_ipfix ipx_msg_ipfix_t;
+/** Unsigned integer able to hold Stream ID                                   */
+typedef uint16_t ipx_stream_t;
+
 /** Type of IPFIX message sets */
-enum IPX_SET_TYPE {
-	IPX_SET_DATA,              /**< Data set                                */
-	IPX_SET_TEMPLATE,          /**< Template set (definitions)              */
-	IPX_SET_OPT_TEMPLATE       /**< Options template set                    */
+enum ipx_set_type {
+    IPX_SET_DATA,              /**< Data set                                  */
+    IPX_SET_TEMPLATE,          /**< Template set (definitions)                */
+    IPX_SET_OPT_TEMPLATE       /**< Options template set                      */
+};
+
+/** \brief Packet context                                                     */
+struct ipx_msg_ctx {
+    /** Transport session                      */
+    const struct ipx_session *session;
+    /** Observation Domain ID                  */
+    uint32_t odid;
+    /**
+     * \brief Stream ID
+     * \note
+     *   This value is useful only for SCTP sessions to distinguish individual streams.
+     *   For other session the value is set to 0.
+     */
+    ipx_stream_t stream;
 };
 
 /**
- * \brief Parsed IPFIX (Data/Template/Option Template) Set
- *
- * In a case of Data set and unknown template, the number of records in the set
- * is always set to "0", because without the corresponding template cannot be
- * calculated.
+ * \brief IPFIX (Data/Template/Option Template) Set information
  */
 struct ipx_ipfix_set {
-	/** Type of the set                                                      */
-	enum IPX_SET_TYPE type;
-
-	/**
+    /**
 	 * Pointer to a raw IPFIX set (starts with a header)
 	 * To get real length of the set, you can read value from its header.
 	 * i.e. \code{.c} uint16_t real_len = ntohs(raw_set->length); \endcode
 	 */
-	struct ipfix_set_header *raw_set;
-	/** Number of (data or template) records in the set                      */
-	unsigned int rec_cnt;
+    struct ipfix_set_header *ptr;
 
-	/**
-	 * Properties only for Data sets i.e. type == #IPX_SET_DATA.
-	 * Otherwise the fields have undefined values!
-	 */
-	struct data_set_s {
-		/** Template. Can be NULL, when the template is missing.             */
-		const struct fds_template *template;
-
-		/**
-		 * Index of the first data record of this Set in the list of all
-		 * data records (among all data sets) of the IPFIX message.
-		 * For example to access first function
-		 */
-		unsigned int first_rec_idx;
-	} data_set;
+    // New parameters could be added here...
 };
 
-/** \brief Datatype for IPFIX message wrapper                                */
-typedef struct ipx_ipfix_msg ipx_ipfix_msg_t;
+/**
+ * \brief Data record (record + extensions)
+ */
+struct ipx_record {
+    /** Data record information                                               */
+    struct fds_drec rec;
+    /** Start of reserved space for registered extensions (filled by plugins) */
+    uint8_t ext[1];
+};
+
+/**
+ * \brief Create an empty wrapper around IPFIX Message
+ *
+ * Newly create doesn't have filled information about IPFIX Data/Template/Options Template records
+ * and IPFIX Sets in the IPFIX Message. This information must be filled separately using IPFIX
+ * parser. TODO: reference
+ *
+ * \param[in] plugin_ctx Context of the plugin
+ * \param[in] msg_ctx    Message context (info about Transport Session, ODID, etc.)
+ * \param[in] msg_data   Raw IPFIX Message
+ * \return Pointer or NULL (memory allocation error)
+ */
+IPX_API ipx_msg_ipfix_t *
+ipx_msg_ipfix_create(const ipx_ctx_t *plugin_ctx, const struct ipx_msg_ctx *msg_ctx,
+    struct fds_ipfix_msg_hdr *msg_data); // TODO: use uint8_t .. we can pass NetFlow and IPFIX
 
 /**
  * \brief Destroy a message wrapper with a parsed IPFIX packet
  * \param[out] msg Pointer to the message
  */
-void
-ipx_ipfix_msg_destroy(ipx_ipfix_msg_t *msg);
+IPX_API void
+ipx_msg_ipfix_destroy(ipx_msg_ipfix_t *msg);
 
 /**
- * \brief Get pointer to the raw message
+ * \brief Get a pointer to the raw message
  *
  * \warning
- * This function allow to directly access and modify the wrapped massage.
- * It is recommended to use the raw packet only read-only, because inappropriate
- * modifications (e.g. removing/adding sets/records/fields) can cause undefined
- * behavior of API functions.
+ * This function allow to directly access and modify the wrapped massage. It is recommended to
+ * use the raw packet only read-only, because inappropriate modifications (e.g. removing/adding
+ * sets/records/fields) can cause undefined behavior of API functions.
  *
  * \note Size of the message is stored directly in the header (network byte
  *   order) i.e. \code{.c} uint16_t real_len = ntohs(header->length); \endcode
- * \param[in] msg Pointer to the message wrapper
+ * \param[in] msg Message
  * \return
  */
-struct ipfix_header *
-ipx_ipfix_msg_raw(ipx_ipfix_msg_t *msg);
+IPX_API struct fds_ipfix_msg_hdr *
+ipx_msg_ipfix_get_packet(ipx_msg_ipfix_t *msg);
 
-/**)
- * \brief Get the Source Stream of an IPFIX packet
+/**
+ * \brief Get the message context
  *
- * This all you to get information about the Source Stream and Source Session
- * that uniquely describes Exporting Process.
- * \param[in] msg Pointer to the message wrapper
- * \return Pointer to the Source Stream
+ * The context consists of Transport Session, ODID and Stream identification
+ * \param[in] msg Message
+ * \return Pointer to the context
  */
-IPX_API const ipx_stream_t *
-ipx_ipfix_msg_stream(const ipx_ipfix_msg_t *msg);
+IPX_API struct ipx_msg_ctx *
+ipx_msg_ipfix_get_ctx(ipx_msg_ipfix_t *msg);
 
 /**
- * \brief Get a number of IPFIX Sets in the message
- * \param[in] msg Pointer to the message wrapper
+ * \brief Get reference to all (Data/Template/Options Template) sets in the message
+ * \param msg  Message
+ * \param sets Pointer to the array of sets
+ * \param size Number of sets in the array
+ */
+IPX_API void
+ipx_msg_ipfix_get_sets(ipx_msg_ipfix_t *msg, struct ipx_ipfix_set **sets, size_t *size);
+
+/**
+ * \brief Get a number of parsed IPFIX Data records in the message
+ * \note Data records that a preprocessor failed to interpret are not counted!
+ * \param[in] msg Message
  * \return Count
  */
-IPX_API size_t
-ipx_msg_ipfix_set_count(const ipx_ipfix_msg_t *msg);
-
-/**
- * \brief Get a pointer to the Set (specified by an index) in a message
- * \param[in] packet Pointer to the message wrapper with the requrired set
- * \param[in] idx    Index of the set (index starts at 0)
- * \return On success returns the pointer. Otherwise (usually the index is
- *   out-of-range) returns NULL.
- */
-IPX_API struct ipx_ipfix_set *
-ipx_ipfix_msg_set_get(ipx_ipfix_msg_t *msg, unsigned int idx);
-
-/**
- * \brief Get a number of IPFIX Data records in the message
- * \param[in] msg Pointer to the message
- * \return Count
- */
-IPX_API size_t
-ipx_ipfix_msg_drec_count(const ipx_ipfix_msg_t *msg);
+IPX_API uint16_t
+ipx_msg_ipfix_get_drec_cnt(const ipx_msg_ipfix_t *msg);
 
 /**
  * \brief Get a pointer to the data record (specified by an index) in the packet
- * \param[in] packet Packet message with records
- * \param[in] idx    Index of the record (index starts at 0)
- * \return On success returns the pointer. Otherwise (usually the index is
- *   out-of-range) returns NULL.
+ *
+ * \note Data records that a preprocessor failed to interpret are not listed!
+ * \param[in] msg Message
+ * \param[in] idx Index of the record (index starts at 0)
+ * \return On success returns the pointer.
+ *   Otherwise (usually the index is out-of-range) returns NULL.
  */
-IPX_API struct ipx_drec *
-ipx_ipfix_msg_drec_get(ipx_ipfix_msg_t *msg, size_t idx);
+IPX_API struct ipx_record *
+ipx_msg_ipfix_get_drec(ipx_msg_ipfix_t *msg, uint16_t idx);
 
 /**@}*/
-#endif //IPFIXCOL_MSG_IPFIX_H
+#ifdef __cplusplus
+}
+#endif
+#endif // IPX_MESSSAGE_IPFIX_H

@@ -1,11 +1,11 @@
 /**
- * \file src/message_session.c
+ * \file src/core/message_session.c
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief Source session status messages (source file)
- * \date 2016
+ * \date 2016-2018
  */
 
-/* Copyright (C) 2016 CESNET, z.s.p.o.
+/* Copyright (C) 2016-2018 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,20 +39,65 @@
  *
  */
 
+#include <stddef.h> // offsetof
+#include <assert.h>
+#include <stdlib.h> // malloc
+
 #include <ipfixcol2.h>
-#include "message_internal.h"
+#include "message_base.h"
 
 /**
  * \brief Structure of a session message
  */
-struct ipx_session_msg {
-	/**
- 	 * Identification of this message. This MUST be always first in this
-	 * structure and the "type" MUST be #IPX_MSG_SESSION.
- 	 */
-	struct ipx_msg msg_header;
+struct ipx_msg_session {
+    /**
+     * Identification of this message. This MUST be always first in this
+     * structure and the "type" MUST be #IPX_MSG_SESSION.
+     */
+    struct ipx_msg msg_header;
 
-	// TODO
-	//enum {IPX_SRC_STATUS_CONNECTED, IPX_SRC_STATUS_CLOSED, ?RECONNECT?} src_status;
-	// const ipx_src_t *src_info; // pointer to the source
+    /** Event type */
+    enum ipx_msg_session_event event;
+    /** Session info */
+    const struct ipx_session *session;
 };
+
+static_assert(offsetof(struct ipx_msg_session, msg_header.type) == 0,
+    "Message header must be the first element of each IPFIXcol message.");
+
+ipx_msg_session_t *
+ipx_msg_session_create(const struct ipx_session *session, enum ipx_msg_session_event event)
+{
+    assert(session != NULL);
+    struct ipx_msg_session *msg;
+
+    msg = malloc(sizeof(*msg));
+    if (!msg) {
+        return NULL;
+    }
+
+    ipx_msg_header_init(&msg->msg_header, IPX_MSG_SESSION);
+    msg->event = event;
+    msg->session = session;
+    return msg;
+}
+
+void
+ipx_msg_session_destroy(ipx_msg_session_t *msg)
+{
+    ipx_msg_header_destroy((ipx_msg_t *) msg);
+    free(msg);
+}
+
+enum ipx_msg_session_event
+ipx_msg_session_get_event(const ipx_msg_session_t *msg)
+{
+    return msg->event;
+}
+
+const struct ipx_session *
+ipx_msg_session_get_session(const ipx_msg_session_t *msg)
+{
+    return msg->session;
+}
+

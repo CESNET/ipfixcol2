@@ -1,12 +1,11 @@
 /**
- * \file src/message_internal.h
+ * \file src/core/message_base.c
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
- * \brief General specification of messages for the IPFIXcol pipeline
- *   (internal header file)
- * \date 2016
+ * \brief Common specification of messages for the IPFIXcol pipeline (source file)
+ * \date 2016-2018
  */
 
-/* Copyright (C) 2016 CESNET, z.s.p.o.
+/* Copyright (C) 2016-2018 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,64 +39,30 @@
  *
  */
 
-#ifndef IPFIXCOL_MESSAGE_INTERNAL_H
-#define IPFIXCOL_MESSAGE_INTERNAL_H
-
 #include <ipfixcol2.h>
-#include <assert.h>
+#include "message_base.h"
 
-/**
- * \internal
- * \defgroup ipxInternalGeneralMessage Collector internal messages
- * \ingroup internalAPIs
- * \brief General specification of messages for the collector pipeline
- * \warning This structure and functions are only for internal use!
- * @{
- */
-
-/**
- * \brief Header of all messages for the collector pipeline.
- *
- * \remark Never use this structure directly, instead use API funcitons,
- *   because internal elements can change.
- * \warning This structure MUST always be the first element of any message
- *   structure for the collector pipeline, because it serves as
- *   an identification of the message type.
- */
-struct ipx_msg {
-	/** Type of the message */
-	enum IPX_MSG_TYPE type;
-
-	/*
-	 * TODO: add number of references to this message only for output manager!
-	 * atomic_uint ref_cnt;
-	 */
-};
-
-/**
- * \brief Initialize the header of a general message
- * \param[in] header  Pointer to the header of the message
- * \param[in]  type   Type of the header
- * \return On success returns 0. Otherwise returns non-zero value.
- */
-static inline int
-ipx_msg_header_init(struct ipx_msg *header, enum IPX_MSG_TYPE type)
+// Get the type of a message for the collector pipeline
+enum ipx_msg_type
+ipx_msg_get_type(ipx_msg_t *msg)
 {
-	assert(header != NULL);
-	header->type = type;
-	return 0;
+	return msg->type;
 }
 
-/**
- * \brief Destroy the header of a general message
- *
- * This functions is now just a placeholder for possible future implementation.
- * \param[in] header Pointer to the header of the mesage
- */
-static inline void
-ipx_msg_header_destroy(struct ipx_msg *header)
+// Destroy a message for the collector pipeline
+void
+ipx_msg_destroy(ipx_msg_t *msg)
 {
-	(void) header;
+	switch (msg->type) {
+	case IPX_MSG_IPFIX:
+		ipx_msg_ipfix_destroy((ipx_msg_ipfix_t *) msg);
+		break;
+	case IPX_MSG_SESSION:
+		ipx_msg_session_destroy((ipx_msg_session_t *) msg);
+		break;
+	case IPX_MSG_GARBAGE:
+		// Destroy a garbage msg
+		ipx_msg_garbage_destroy((ipx_msg_garbage_t *) msg);
+		break;
+	}
 }
-
-#endif //IPFIXCOL_MESSAGE_INTERNAL_H

@@ -39,8 +39,12 @@
  *
  */
 
-#ifndef IPFIXCOL_MESSAGE_GARBAGE_H
-#define IPFIXCOL_MESSAGE_GARBAGE_H
+#ifndef IPX_MESSAGE_GARBAGE_H
+#define IPX_MESSAGE_GARBAGE_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * \defgroup ipxGarbageMessage Garbage message
@@ -48,15 +52,13 @@
  *
  * \brief Garbage message interface
  *
- * A message for destruction of objects that are intended to be destroyed, but
- * can be referenced by other still existing objects farther down in
- * the collector's pipeline.
+ * A message for destruction of objects that are intended to be destroyed, but can be referenced
+ * by other still existing objects farther down in the collector's pipeline.
  *
- * For example, a withdrawn template that can be referenced by still existing
- * packets >>farther down<< in the pipeline. This message will call a callback
- * to destroy the object before the destruction of this message. It ensures
- * that there are no objects >>farther down<< in the pipeline with references
- * to this object, because that objects have been already destroyed.
+ * For example, a withdrawn template that can be referenced by still existing packets
+ * _farther down_ in the pipeline. This message will call a callback to destroy the object before
+ * the destruction of this message. It ensures that there are no objects _farther down_ in the
+ * pipeline with references to this object, because that objects have been already destroyed.
  *
  * \warning Already destroyed objects MUST never be used again.
  * \remark Identification type of this message is #IPX_MSG_GARBAGE.
@@ -65,47 +67,51 @@
  */
 
 /** \brief The type of garbage message                                      */
-typedef struct ipx_garbage_msg ipx_garbage_msg_t;
+typedef struct ipx_msg_garbage ipx_msg_garbage_t;
 
 #include <ipfixcol2/message.h>
 
 /**
- * \typedef ipx_garbage_msg_cb
+ * \typedef ipx_msg_garbage_cb
  * \brief Object destruction callback for a garbage message type
  * \param[in,out] object Object to be destroyed
  */
-typedef void (*ipx_garbage_msg_cb)(void *object);
+typedef void (*ipx_msg_garbage_cb)(void *object);
 
 /**
  * \brief Create a garbage message
  *
- * An \p object and a callback \p cb must be defined.
- * \param[in,out] object   Pointer to the object to be destroyed
+ * At least callback must be always defined.
+ * \param[in,out] object   Pointer to the object to be destroyed (can be NULL)
  * \param[in]     callback Object destruction function
  * \return On success returns a pointer to the message. Otherwise returns NULL.
  */
-IPX_API ipx_garbage_msg_t *
-ipx_garbage_msg_create(void *object, ipx_garbage_msg_cb callback);
+IPX_API ipx_msg_garbage_t *
+ipx_msg_garbage_create(void *object, ipx_msg_garbage_cb callback);
 
 /**
  * \brief Destroy a garbage message
  *
  * First, call the destructor of an internal object and than destroy itself.
- * \param[in,out] message Pointer to the message
+ * \param[in,out] msg Pointer to the message
  */
 IPX_API void
-ipx_garbage_msg_destroy(ipx_garbage_msg_t *message);
+ipx_msg_garbage_destroy(ipx_msg_garbage_t *msg);
 
 /**
- * \brief Cast from a garbage message to a general message
- * \param[in] message Pointer to the garbage message
- * \return Pointer to the general message.
+ * \brief Cast from a garbage message to a base message
+ * \param[in] msg Pointer to the garbage message
+ * \return Pointer to the base message.
  */
 static inline ipx_msg_t *
-ipx_garbage_msg_cast2general(ipx_garbage_msg_t *message)
+ipx_msg_garbage2base(ipx_msg_garbage_t *msg)
 {
-	return (ipx_msg_t *) message;
+    return (ipx_msg_t *) msg;
 }
 
 /**@}*/
-#endif //IPFIXCOL_MESSAGE_DESTRUCTIVE_H
+
+#ifdef __cplusplus
+}
+#endif
+#endif // IPX_MESSAGE_GARBAGE_H

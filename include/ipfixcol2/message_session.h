@@ -39,8 +39,12 @@
  *
  */
 
-#ifndef IPFIXCOL_MESSAGE_SESSION_H
-#define IPFIXCOL_MESSAGE_SESSION_H
+#ifndef IPX_MESSAGE_SESSION_H
+#define IPX_MESSAGE_SESSION_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * \defgroup ipxSourceSessionMessage Source session status message
@@ -58,63 +62,66 @@
  */
 
 /** \brief The type of source session message                                */
-typedef struct ipx_session_msg ipx_session_msg_t;
+typedef struct ipx_msg_session ipx_msg_session_t;
 
 #include <ipfixcol2/message.h>
-#include <ipfixcol2/source.h>
+#include <ipfixcol2/session.h>
 
 /**
  * \brief Type of a session event of a flow source
  */
-enum IPX_SESSION_EVENT {
-	IPX_SESSION_EVENT_NEW,   /**< New source connected (new Source Session)  */
-	IPX_SESSION_EVENT_CLOSED /**< Source disconnected or connection timeout  */
+enum ipx_msg_session_event {
+    IPX_MSG_SESSION_OPEN,   /**< New source connected (new Source Session)  */
+    IPX_MSG_SESSION_CLOSE   /**< Source disconnected or connection timeout  */
 };
 
 /**
  * \brief Create a new status message about a Source Session
- * \param[in] status  Type of a session event
+ * \param[in] event   Type of a session event
  * \param[in] session Pointer to the session
  * \return On success returns a pointer to the message. Otherwise returns NULL.
  */
-IPX_API ipx_session_msg_t *
-ipx_session_msg_create(enum IPX_SESSION_EVENT event, const ipx_session_t *session);
+IPX_API ipx_msg_session_t *
+ipx_msg_session_create(const struct ipx_session *session, enum ipx_msg_session_event event);
 
 /**
  * \brief Destroy a status message
  *
  * Only destroy the message. A Source Session is not freed.
- * \param[in] message Pointer to the message
+ * \param[in] msg Pointer to the message
  */
 IPX_API void
-ipx_session_msg_destroy(ipx_session_msg_t *message);
+ipx_msg_session_destroy(ipx_msg_session_t *msg);
 
 /**
  * \brief Get the event type of a Source Session
- * \param[in] message Pointer to the message
+ * \param[in] msg Pointer to the message
  * \return Event type
  */
-IPX_API enum IPX_SESSION_EVENT
-ipx_session_msg_get_event(const ipx_session_msg_t *message);
+IPX_API enum ipx_msg_session_event
+ipx_msg_session_get_event(const ipx_msg_session_t *msg);
 
 /**
  * \brief Get the Source Session referenced in a message
- * \param[in] message Pointer to the message
+ * \param[in] msg Pointer to the message
  * \return Source Session
  */
-IPX_API const ipx_session_t *
-ipx_session_msg_get_session(const ipx_session_msg_t *message);
+IPX_API const struct ipx_session *
+ipx_msg_session_get_session(const ipx_msg_session_t *msg);
 
 /**
- * \brief Cast from a source session message to a general message
- * \param[in] message Pointer to the session message
- * \return Pointer to the general message.
+ * \brief Cast from a source session message to a base message
+ * \param[in] msg Pointer to the session message
+ * \return Pointer to the base message.
  */
 static inline ipx_msg_t *
-ipx_session_msg_cast2general(ipx_session_msg_t *message)
+ipx_msg_session2base(ipx_msg_session_t *msg)
 {
-	return (ipx_msg_t *) message;
+    return (ipx_msg_t *) msg;
 }
 
 /**@}*/
-#endif //IPFIXCOL_MESSAGE_SESSION_H
+#ifdef __cplusplus
+}
+#endif
+#endif // IPX_MESSAGE_SESSION_H

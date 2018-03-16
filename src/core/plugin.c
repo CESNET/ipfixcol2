@@ -1,11 +1,11 @@
 /**
- * \file src/source.h
+ * \file src/core/plugin.c
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
- * \brief Identification of a flow source (source file)
- * \date 2016
+ * \brief Plugin context (source file)
+ * \date 2018
  */
 
-/* Copyright (C) 2016 CESNET, z.s.p.o.
+/* Copyright (C) 2018 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,6 +39,10 @@
  *
  */
 
-#include <stdint.h>
-#include <ipfixcol2.h>
+#include "plugin.h"
 
+enum ipx_verb_level
+ipx_ctx_verbosity(const ipx_ctx_t *ctx)
+{
+    return ctx->cfg_system.vlevel;
+}

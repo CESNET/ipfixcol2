@@ -43,8 +43,12 @@
 #ifndef IPX_API_H
 #define IPX_API_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
- * \defgroup ipxAPIDefinition API defintions
+ * \defgroup ipxAPIDefinition API definitions
  * \ingroup publicAPIs
  * \brief Definitions for API functions
  *
@@ -52,7 +56,7 @@
  */
 
 /**
- * \def API
+ * \def IPX_API
  * \brief Make an interface public outsite
  *
  * If the compiler supports attribute to mark objects as hidden, mark all
@@ -100,24 +104,38 @@
  * verify compatibility when loading the plugin into the IPFIXcol.
  */
 #define IPX_API_VERSION \
-	IPX_API static const uint16_t ipx_api_major_version __attribute__((used)) = IPX_API_MAJOR_VERSION; \
-	IPX_API static const uint16_t ipx_api_minor_version __attribute__((used)) = IPX_API_MINOR_VERSION; \
-	IPX_API static const uint16_t ipx_api_patch_version __attribute__((used)) = IPX_API_PATCH_VERSION;
+    IPX_API static const uint16_t ipx_api_major_version __attribute__((used)) = IPX_API_MAJOR_VERSION; \
+    IPX_API static const uint16_t ipx_api_minor_version __attribute__((used)) = IPX_API_MINOR_VERSION; \
+    IPX_API static const uint16_t ipx_api_patch_version __attribute__((used)) = IPX_API_PATCH_VERSION;
 
-/** Status code for success */
-#define IPX_OK          (0)
-/** Status code for memory allocation error */
-#define IPX_ERR_NOMEM   (-1)
-/** Status code for invalid format of data  */
-#define IPX_ERR_FORMAT  (-2)
-/** Status code for an invalid argument or a combination of arguments */
-#define IPX_ERR_ARG     (-3)
-/** Status code for a truncation of a value                           */
-#define IPX_ERR_TRUNC   (-4)
-/** Status code for insufficient buffer size for a result             */
-#define IPX_ERR_BUFFER  (-5)
+// Note: Following codes preservers the same numbering as libfds
+/** Status code for success                                               */
+#define IPX_OK             (0)
+/** Status code for ready operation                                       */
+#define IPX_READY          (-11)
+/** Status code for memory allocation error                               */
+#define IPX_ERR_NOMEM      (-2)
+/** Status code for invalid format of data                                */
+#define IPX_ERR_FORMAT     (-3)
+/** Status code for an invalid argument or a combination of arguments     */
+#define IPX_ERR_ARG        (-4)
+/** Status code for not found                                             */
+#define IPX_ERR_NOTFOUND   (-5)
+/** Status code for a truncation of a value                               */
+#define IPX_ERR_TRUNC      (-6)
+/** Status code for insufficient buffer size for a result                 */
+#define IPX_ERR_BUFFER     (-7)
+/** Status code for denied operation                                      */
+#define IPX_ERR_DENIED     (-8)
+/** Status code for end of file/stream                                    */
+#define IPX_ERR_EOF        (-10)
+/** Status code for resource already exists                               */
+#define IPX_ERR_EXISTS     (-11)
 
 /**@}*/
 
-#endif	/* IPX_API_H */
+#ifdef __cplusplus
+}
+#endif
+#endif	// IPX_API_H
 

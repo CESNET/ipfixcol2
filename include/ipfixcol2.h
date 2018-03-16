@@ -46,22 +46,23 @@
  * \mainpage IPFIX Collector Developer's Documentation
  *
  * This documents provides documentation of IPFIX Collector (IPFIXcol). We
- * provides public API of the collector's plugins.
+ * provide public API of the collector's plugins.
  */
 
 /**
- * \defgroup publicAPIs Public ipfixcol's APIs
- * \brief APIs for connecting plugins into the ipfixcol.
+ * \defgroup publicAPIs Public IPFIXcol's APIs
+ * \brief IPFIXcol API for plugins.
  */
 
 #include <ipfixcol2/api.h>
-#include <ipfixcol2/ipfix_structures.h>
 
 #include <ipfixcol2/message.h>
 #include <ipfixcol2/message_garbage.h>
 #include <ipfixcol2/message_session.h>
+#include <ipfixcol2/message_ipfix.h>
 
-#include <ipfixcol2/source.h>
+#include <ipfixcol2/plugins.h>
+#include <ipfixcol2/session.h>
 #include <ipfixcol2/verbose.h>
 
 

@@ -1,5 +1,5 @@
 /**
- * \file src/ipfixcol.c
+ * \file src/main.c
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief Main body of IPFIXcol
  */
