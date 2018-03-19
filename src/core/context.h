@@ -142,6 +142,11 @@ struct ipx_ctx {
     struct ipx_ctx_rext rext[IPX_REXT_MAX];
 };
 
+void
+ipx_ctx_fpipe_get();
+
+void
+ipx_ctx_fpipe_send();
 
 
 // Is transport session "close request" available

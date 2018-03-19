@@ -607,7 +607,6 @@ ipx_ctx_rext_subscribe(ipx_ctx_t *ctx, const char *type, const char *id, ipx_ctx
 IPX_API int
 ipx_ctx_rext_unsubscribe(ipx_ctx_t *ctx, ipx_ctx_rext_t *key);
 
-
 /**
  * @}
  * @}

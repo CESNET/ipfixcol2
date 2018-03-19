@@ -39,7 +39,7 @@
  *
  */
 
-#include "plugin.h"
+#include "context.h"
 
 enum ipx_verb_level
 ipx_ctx_verbosity(const ipx_ctx_t *ctx)

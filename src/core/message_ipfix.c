@@ -43,7 +43,7 @@
 #include <libfds.h>
 #include "message_base.h"
 #include "message_ipfix.h"
-#include "plugin.h"
+#include "context.h"
 
 #include <stddef.h> // offsetof
 #include <stdlib.h> // free

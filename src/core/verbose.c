@@ -46,7 +46,7 @@
 
 #include <ipfixcol2.h>
 #include "build_config.h"
-#include "plugin.h"  // Internal header
+#include "context.h"  // Internal header
 
 
 /** Default verbosity level                      */

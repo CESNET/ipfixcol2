@@ -6,6 +6,10 @@ configure_file(
 
 # Find libfds
 find_package(LibFds 0.1.0 REQUIRED)
+# Find pthreads
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+find_package(Threads REQUIRED)
 
 # Header files for source code building
 include_directories(
@@ -26,8 +30,10 @@ set(CORE_SOURCE
 	core/message_session.c
 	#core/parser.c
 	#core/parser.h
-	core/plugin.c
-	core/plugin.h
+	core/ring.c
+	core/ring.h
+	core/context.c
+	core/context.h
 	core/session.c
 	core/verbose.c
 
@@ -40,7 +46,10 @@ add_library(
 	ipfixcol2base STATIC
 	${CORE_SOURCE}
 )
-target_link_libraries(ipfixcol2base ${FDS_LIBRARIES})
+target_link_libraries(ipfixcol2base
+	${FDS_LIBRARIES}           # libfds
+	${CMAKE_THREAD_LIBS_INIT}  # libpthread
+)
 
 # Build IPFIXCOL2 exacutable with all symbols from the base library
 set(BASE_LIB -Wl,--whole-archive ipfixcol2base -Wl,--no-whole-archive)

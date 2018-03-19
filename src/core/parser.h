@@ -50,106 +50,87 @@
 #include "ipfixcol2/plugins.h"
 
 // TODO: what IPFIX parser provedes... parse messages, provides templates management,
-// TODO: add note about removigin inactive/closed sessions...
 
-// TODO: create a dummy plugin context...
-
-
-/** The data type of the general message                                      */
+/** Internal data type of parser                                                                 */
 typedef struct ipx_parser ipx_parser_t;
 
 /**
- * \brief Create a new IPFIX packet parser
+ * \brief Create a IPFIX parser
  *
- * // TODO: param + subscription...
- * \return On success returns pointer to the
+ * Context is used for proper identification of the plugin in case of any errors. Moreover, the
+ * parser automatically generates garbage messages and sends them.
+ * \param[in] ctx Plugin context
+ * \param[in] fb  Feedback pipe (only for Input plugins to receive a request to close particular
+ *   Transport Session)
+ * \return Pointer the parser or NULL (memory allocation error)
  */
 IPX_API ipx_parser_t *
-ipx_parser_create(ipx_ctx_t *plugin_ctx);
+ipx_parser_create(ipx_ctx_t *ctx, ipx_fpipe *fb);
 
-/**You can also try below command to find whether the package is relocatable
- * \brief Destroy a IPFIX packet parser
+/**
+ * \brief Destroy an IPFIX parser
  *
  * \warning All template managers and their templates will be also immediately destroyed.
- * \param[in] parser Pointer to the processor to destroy
+ * \param[in] parser Message parser
  */
 IPX_API void
 ipx_parser_destroy(ipx_parser_t *parser);
 
 /**
- * \brief Parse an IPFIX packet
+ * \brief Process IPFIX (or NetFlow) Message
  *
- * Parse and check validity of all (Data/Template Options Template) Sets in the packet. As a result
- * of this functions is returned a wrapper structure over the packet with API functions for access
- * to parsed template and data records. Because the preprocessor also manages templates and other
- * auxiliary structures, sometimes a garbage message can be created (for example, after a template
- * withdrawal request in the packet). In this case, the garbage message is allocated and user of
- * this function must send it down to an IPFIX pipeline where it will be destroyed in appropriate
- * time. The order of insertion of (IPFIX vs garbage) messages doesn't matter. If no garbage
- * message is created, the \p garbage parameter, will be filled with NULL.
+ * If the message is in the form of NetFlow, it is converted to IPFIX first. Parse and check
+ * validity of all (Data/Template Options Template) Sets in the IPFIX Message. The function
+ * takes "clear" IPFIX Message wrapper (see ipx_msg_ipfix_create()) and fills reference to all Data
+ * Records and Sets. Moreover, the processor also manages (Options) Templates and other auxiliary
+ * structures.
  *
- * // TODO: poradil zalezi/nezalezi,
- *
- * \param[in]  parser    Pointer to the packet processor
- * \param[in]  msg     Pointer to a raw IPFIX message // TODO: must be at least 16 bytes long (full header)
- * \param[in]  size    Size of the IPFIX message
- * \param[out] garbage Pointer to the garbage message (must NOT be NULL)
- * // TODO: prepsat...
- * \return On success returns a pointer to the wrapper structure with the parsed
- *   packet and possibly generated garbage message. Otherwise (usually malformed
- *   packet or memory allocation error) returns NULL, but the garbage message
- *   can be still created.
+ * \note
+ *   If a garbage message is automatically generated (for example, while an (Options) Template is
+ *   removed/replaced, etc), garbage will be send during next subsequent call.
+ * \note
+ *   NetFlow Messages are converted to IPFIX Messages first and than processed the same way
+ *   as IPFIX Messages.
+ * \note
+ *   Wrapper \p msg could be reallocated if it is not able to handle required amount of IPFIX Data
+ *   Records.
+ * \param[in]     parser Message parser
+ * \param[in,out] msg    Pointer to the IPFIX Message wrapper to process (can be reallocated)
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_FORMAT if the message is malformed and cannot be processed. User MUST
+ *   destroy the message immediately.
+ * \return #IPX_ERR_NOMEM if a memory allocation error has occurred
  */
 IPX_API int
-ipx_parser_process(ipx_parser_t *parser, ipx_msg_ipfix_t *ipfix_msg);
-
+ipx_parser_process(ipx_parser_t *parser, ipx_msg_ipfix_t **msg);
 
 /**
- * \brief Remove a transport session from a parser
+ * \brief Reload references to Information Elements (IE)
  *
- * For each Observation Domain ID, the parser maintains template managers that are useless after
- * closing the session. Therefore, these managers (with their templates) will be moved into
- * a garbage message \p grb. Destruction of the message is up to user - the destructor should be
- * called when no one uses templates.
+ * Replace the current manager of IE with a new one.
+ * \warning All templates will be replaced by new ones with references to the \p iemgr. This
+ *   operation is very expensive!
+ * \param[in] parser Message parser
+ * \param[in] iemgr  Pointer to the new IE manager
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_NOMEM if a memory allocation error has occurred
+ */
+IPX_API int
+ipx_parser_reload_ie(ipx_parser_t *parser, fds_iemgr_t *iemgr);
+
+/**
+ * \brief Remove information about a Transport Session (TS)
  *
- * // TODO: ze byla vygenerovana garbage message a automaticky odeslana...
+ * For each Observation Domain ID, the parser maintains Template Managers that are useless after
+ * closing the TS. Therefore, these managers (with their templates) will be moved into
+ * a garbage message that will be send immediately.
  *
- * \note If the garbage is ready, parameter \p grb will filled. If no garbage is generated
- *   \p grb will be set to NULL.
- * \param[in]  parser  Parser
- * \param[in]  session Transport Session to remove
- * \param[out] grb     Generated garbage message
- * \return On success returns #IPX_OK and fills \p grb garbage (see notes).   .
+ * \param[in] parser  Message parser
+ * \param[in] session Transport Session to remove
+ * \return #IPX_OK if the TS has been found and removed
+ * \return #IPX_ERR_NOTFOUND if the TS doesn't exist in the parser
  */
 IPX_API int
 ipx_parser_session_remove(ipx_parser_t *parser, const struct ipx_session *session);
-
-/**
- * \brief Block further messages from a specific Transport Session
- *
- *
- * \param[in] parser
- * \param[in] session
- * \return
- */
-IPX_API int
-ipx_parser_session_block(ipx_parser_t *parser, const struct ipx_session *session);
-
-
-
-/**
- * \brief Remove internal structures binded to a specific Source Session
- *
- * This function is useful for cleanup after after source disconnection.
- * Information such as templates, etc. are removed and inserted into a newly
- * created garbage message.
- *
- * \param[in] proc    Packet processor
- * \param[in] session Source Session ID
- * \return Returns pointer to the garbage message. If the is no garbage binded
- *   to the session, returns NULL.
- */
-//IPX_API ipx_msg_garbage_t *
-//ipx_parser_session_remove(ipx_parser_t *proc, ipx_session_id_t session);
 
 #endif //IPFIXCOL_PROCESSOR_H

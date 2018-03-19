@@ -129,6 +129,7 @@ ipx_record_rext_get(struct ipx_record *rec, const ipx_ctx_rext_t *key, uint8_t *
  * and IPFIX Sets in the IPFIX Message. This information must be filled separately using IPFIX
  * parser. In case of NetFlow, the parser transforms message to IPFIX.
  *
+ * \warning User MUST make sure that \p msg_data represents valid Message header
  * \param[in] plugin_ctx Context of the plugin
  * \param[in] msg_ctx    Message context (info about Transport Session, ODID, etc.)
  * \param[in] msg_data   Pointer to the IPFIX (or NetFlow) Message header
