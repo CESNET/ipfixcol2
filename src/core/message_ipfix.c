@@ -52,13 +52,35 @@
 static_assert(offsetof(struct ipx_msg_ipfix, msg_header.type) == 0,
     "Message header must be the first element of each IPFIXcol message.");
 
+/**
+ * \brief Size of IPFIX Message wrapper structure
+ *
+ * For structure able to hold up to \p rec_cnt where each record is \p rec_size bytes.
+ * \param[in] rec_cnt  Number of pre-allocated Data Records
+ * \param[in] rec_size Size of a Data Record
+ * \return Size of the structure
+ */
+static inline size_t
+ipx_msg_ipfix_size(uint16_t rec_cnt, size_t rec_size)
+{
+    return sizeof(struct ipx_msg_ipfix)
+        - sizeof(struct ipx_record)
+        + (rec_cnt * rec_size);
+}
+
+uint16_t
+ipx_record_rext_get(struct ipx_record *rec, const ipx_ctx_rext_t *key, uint8_t **data)
+{
+    (*data) = &rec->ext[key->offset];
+    return key->size;
+}
 
 ipx_msg_ipfix_t *
 ipx_msg_ipfix_create(const ipx_ctx_t *plugin_ctx, const struct ipx_msg_ctx *msg_ctx,
-    struct fds_ipfix_msg_hdr *msg_data)
+    uint8_t *msg_data)
 {
     const size_t rec_size = plugin_ctx->cfg_system.rec_size;
-    const size_t new_size = IPX_MSG_IPFIX_SIZE(REC_DEF_CNT, rec_size);
+    const size_t new_size = ipx_msg_ipfix_size(REC_DEF_CNT, rec_size);
     struct ipx_msg_ipfix *wrapper = calloc(1, new_size);
     if (!wrapper) {
         return NULL;
@@ -87,7 +109,7 @@ ipx_msg_ipfix_destroy(ipx_msg_ipfix_t *msg)
     free(msg);
 }
 
-struct fds_ipfix_msg_hdr *
+uint8_t *
 ipx_msg_ipfix_get_packet(ipx_msg_ipfix_t *msg)
 {
     return msg->raw_pkt;
@@ -170,7 +192,7 @@ ipx_msg_ipfix_add_drec_ref(struct ipx_msg_ipfix **msg_ref)
     if (msg->rec_info.cnt_valid == msg->rec_info.cnt_alloc) {
         // Reallocation of the message is necessary
         const size_t alloc_new = 2 * msg->rec_info.cnt_valid;
-        const size_t alloc_size = IPX_MSG_IPFIX_SIZE(alloc_new, msg->rec_info.rec_size);
+        const size_t alloc_size = ipx_msg_ipfix_size(alloc_new, msg->rec_info.rec_size);
         struct ipx_msg_ipfix *msg_new = realloc(msg, alloc_size);
         if (!msg_new) {
             return NULL;

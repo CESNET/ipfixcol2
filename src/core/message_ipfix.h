@@ -65,12 +65,12 @@ struct ipx_msg_ipfix {
     /** Packet context  */
     struct ipx_msg_ctx ctx;
     /** Raw IPFIX packet from a source (in Network Byte Order)               */
-    struct fds_ipfix_msg_hdr *raw_pkt;
+    uint8_t *raw_pkt;
 
     struct {
-        /** Array of sets (valid only when #cnt_valid <= #SET_DEF_CNT)       */
+        /** Array of sets (valid only when #cnt_valid <= SET_DEF_CNT)       */
         struct ipx_ipfix_set  base[SET_DEF_CNT];
-        /** Array of sets (valid only when #cnt_valid > #SET_DEF_CNT)        */
+        /** Array of sets (valid only when #cnt_valid > SET_DEF_CNT)        */
         struct ipx_ipfix_set *extended;
 
         /** Number of the Sets in the message                                */
@@ -95,17 +95,6 @@ struct ipx_msg_ipfix {
      */
     struct ipx_record recs[1];
 };
-
-/**
- * \def IPX_MSG_IPFIX_SIZE
- * \brief Get size of IPFIX message structure suitable
- *
- * For structure able to hold up to \p rec_cnt where each record is \p rec_size bytes.
- */
-#define IPX_MSG_IPFIX_SIZE(rec_cnt, rec_size) \
-    sizeof(struct ipx_msg_ipfix) \
-    - sizeof(struct ipx_record) \
-    + (rec_cnt * rec_size);
 
 /**
  * \brief Add a new IPFIX Set

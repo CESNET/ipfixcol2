@@ -135,16 +135,7 @@ enum ipx_plugin_type {
      * to another collector or analysis tool, converted to different data format, etc.
      * IPFIX messages MUST NOT be modified by the plugins.
      */
-    IPX_PT_OUTPUT,
-    /**
-     * \brief Configuration plugin
-     *
-     * Input plugins provides information about plugins that should be loaded during the collector
-     * startup and handles and processes reconfiguration requests. Only one plugin can be used
-     * at the same time. By default, IPFIXcol core uses it's own internal plugin for processing
-     * configuration from a file.
-     */
-    IPX_PT_CONFIG
+    IPX_PT_OUTPUT
 };
 
 /**
@@ -616,15 +607,6 @@ ipx_ctx_rext_subscribe(ipx_ctx_t *ctx, const char *type, const char *id, ipx_ctx
 IPX_API int
 ipx_ctx_rext_unsubscribe(ipx_ctx_t *ctx, ipx_ctx_rext_t *key);
 
-/**
- * \brief Get data of a Data Record extension
- * \param[in]  rec  Data Record
- * \param[in]  key  Access key
- * \param[out] data Pointer to the start of data
- * \return Size of data (in bytes)
- */
-IPX_API uint16_t
-ipx_ctx_rext_get(struct ipx_record *rec, const ipx_ctx_rext_t *key, uint8_t **data);
 
 /**
  * @}

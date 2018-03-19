@@ -113,20 +113,30 @@ struct ipx_record {
 };
 
 /**
- * \brief Create an empty wrapper around IPFIX Message
+ * \brief Get data of a Data Record extension
+ * \param[in]  rec  Data Record
+ * \param[in]  key  Access key
+ * \param[out] data Pointer to the start of data
+ * \return Size of data (in bytes)
+ */
+IPX_API uint16_t
+ipx_record_rext_get(struct ipx_record *rec, const ipx_ctx_rext_t *key, uint8_t **data);
+
+/**
+ * \brief Create an empty wrapper around IPFIX (or NetFlow) Message
  *
  * Newly create doesn't have filled information about IPFIX Data/Template/Options Template records
  * and IPFIX Sets in the IPFIX Message. This information must be filled separately using IPFIX
- * parser. TODO: reference
+ * parser. In case of NetFlow, the parser transforms message to IPFIX.
  *
  * \param[in] plugin_ctx Context of the plugin
  * \param[in] msg_ctx    Message context (info about Transport Session, ODID, etc.)
- * \param[in] msg_data   Raw IPFIX Message
+ * \param[in] msg_data   Pointer to the IPFIX (or NetFlow) Message header
  * \return Pointer or NULL (memory allocation error)
  */
 IPX_API ipx_msg_ipfix_t *
 ipx_msg_ipfix_create(const ipx_ctx_t *plugin_ctx, const struct ipx_msg_ctx *msg_ctx,
-    struct fds_ipfix_msg_hdr *msg_data); // TODO: use uint8_t .. we can pass NetFlow and IPFIX
+    uint8_t *msg_data);
 
 /**
  * \brief Destroy a message wrapper with a parsed IPFIX packet
@@ -146,9 +156,9 @@ ipx_msg_ipfix_destroy(ipx_msg_ipfix_t *msg);
  * \note Size of the message is stored directly in the header (network byte
  *   order) i.e. \code{.c} uint16_t real_len = ntohs(header->length); \endcode
  * \param[in] msg Message
- * \return
+ * \return Pointer to the IPFIX (or NetFlow) Message header
  */
-IPX_API struct fds_ipfix_msg_hdr *
+IPX_API uint8_t *
 ipx_msg_ipfix_get_packet(ipx_msg_ipfix_t *msg);
 
 /**
