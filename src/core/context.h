@@ -54,6 +54,43 @@ struct ipx_ctx_rext {
     uint16_t size;
 };
 
+/** List of plugin callbacks  */
+struct ipx_ctx_callbacks {
+    /** Plugin constructor                                                      */
+    int  (*init)    (ipx_ctx_t *, const char *);
+    /** Plugin destructor                                                       */
+    void (*destroy) (ipx_ctx_t *, void *);
+
+    /** Getter function (INPUT plugins only)                                    */
+    int  (*get)     (ipx_ctx_t *, void *);
+    /** Process function (INTERMEDIATE and OUTPUT plugins only)                 */
+    int  (*process) (ipx_ctx_t *, void *, ipx_msg_t *);
+    /** Close session request (INPUT plugins only, can be NULL)                 */
+    int  (*ts_close)(ipx_ctx_t *, void *, const struct ipx_session *);
+
+    /** Update prepare (can be NULL)                                            */
+    int  (*update_prepare)(ipx_ctx_t *, void *, uint16_t, const char *);
+    /** Update commit (can be NULL)                                             */
+    int  (*update_commit) (ipx_ctx_t *, void *, void *);
+    /** Update abort (can be NULL)                                              */
+    void (*update_abort)  (ipx_ctx_t *, void *, void *);
+};
+
+IPX_API ipx_ctx_t *
+ipx_ctx_create(const char *name, enum ipx_plugin_type type, const struct ipx_ctx_callbacks *cbs);
+
+IPX_API void
+ipx_ctx_destroy(ipx_ctx_t *ctx);
+
+IPX_API int
+ipx_ctx_initialize(ipx_ctx_t *ctx);
+
+IPX_API void
+ipx_ctx_initialize(ipx_ctx_t *ctx);
+
+IPX_API int
+ipx_ctx_run(ipx_ctx_t *ctx);
+
 /**
  * \brief Get size of one IPFIX record with registered extensions (in bytes)
  * \param[in] ctx Plugin context
@@ -75,6 +112,7 @@ ipx_ctx_recsize_get(const ipx_ctx_t *ctx);
  */
 IPX_API ipx_fpipe_t *
 ipx_ctx_fpipe_get(ipx_ctx_t *ctx);
+
 
 
 
