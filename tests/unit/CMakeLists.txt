@@ -4,12 +4,12 @@ include(${CMAKE_SOURCE_DIR}/CMakeModules/unit_tests.cmake)
 include_directories(
 	"${PROJECT_SOURCE_DIR}/include/"
 	"${PROJECT_BINARY_DIR}/include/"
+	"${PROJECT_SOURCE_DIR}/src/"     # make internal function available for testing
 )
 
 # List of tests
 unit_tests_register_test(session.cpp)
-
-# FIXME: unit_tests_register_test("core/verbose.cpp")
+unit_tests_register_test("core/verbose.cpp")
 #add_subdirectory(templater)
 # >> Add your new tests or test subdirectories HERE <<
 

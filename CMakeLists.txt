@@ -82,7 +82,7 @@ add_subdirectory(pkg)
 
 if (ENABLE_TESTS)
 	enable_testing()
-	add_subdirectory(tests/unit_tests)
+	add_subdirectory(tests/unit)
 endif()
 
 # ------------------------------------------------------------------------------

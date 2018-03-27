@@ -48,7 +48,6 @@ extern "C" {
 
 #include <stdarg.h>
 #include <ipfixcol2/api.h>
-#include <ipfixcol2/plugins.h>
 
 /**
  * \defgroup ipxVerboseAPI Status messages
@@ -129,6 +128,9 @@ enum ipx_verb_level {
     if (ipx_ctx_verb_get(ctx) >= IPX_VERB_DEBUG) {                          \
         ipx_verb_ctx_print(IPX_VERB_DEBUG, (ctx), (fmt), ## __VA_ARGS__);   \
     }
+
+// Forward declaration
+typedef struct ipx_ctx ipx_ctx_t;
 
 /**
  * \brief Common printing function
