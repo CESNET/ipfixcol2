@@ -103,45 +103,42 @@ ipx_msg_destroy(ipx_msg_t *msg);
 #include <ipfixcol2/message_session.h>
 
 /**
- * \brief Try to cast from a base message to a session message
+ * \brief Cast from a base message to a session message
+ * \warning If the base message is not a session message, the result is undefined!
  * \param[in] msg Pointer to the base message
- * \return If the base \p msg can be casted to the session message, returns a valid pointer to
- *   the session message. Otherwise returns NULL.
+ * \return Pointer to the session message.
  */
 static inline ipx_msg_session_t *
 ipx_msg_base2session(ipx_msg_t *msg)
 {
-    return (ipx_msg_get_type(msg) == IPX_MSG_SESSION)
-        ? ((ipx_msg_session_t *) msg)
-        : NULL;
+    assert(ipx_msg_get_type(msg) == IPX_MSG_SESSION);
+    return (ipx_msg_session_t *) msg;
 }
 
 /**
- * \brief Try to cast from a base message to a garbage message
+ * \brief Cast from a base message to a garbage message
+ * \warning If the base message is not a garbage message, the result is undefined!
  * \param[in] msg Pointer to the base message
- * \return If the base \p msg can be casted to the garbage message, returns a valid pointer to
- *   the garbage message. Otherwise returns NULL.
+ * \return Pointer to the garbage message
  */
 static inline ipx_msg_garbage_t *
 ipx_msg_base2garbage(ipx_msg_t *msg)
 {
-    return (ipx_msg_get_type(msg) == IPX_MSG_GARBAGE)
-        ? ((ipx_msg_garbage_t *) msg)
-        : NULL;
+    assert(ipx_msg_get_type(msg) == IPX_MSG_GARBAGE);
+    return (ipx_msg_garbage_t *) msg;
 }
 
 /**
- * \brief Try to cast from a base message to an IPFIX message
+ * \brief Cast from a base message to an IPFIX message
  * \param[in] msg Pointer to the base message
- * \return If the base \p msg can be casted to the IPFIX message, returns a valid pointer to
- *   the IPFIX message. Otherwise returns NULL.
+ * \warning If the base message is not an IPFIX message, the result is undefined!
+ * \return Pointer to the IPFIX message
  */
 static inline ipx_msg_ipfix_t *
 ipx_msg_base2ipfix(ipx_msg_t *msg)
 {
-    return (ipx_msg_get_type(msg) == IPX_MSG_IPFIX)
-        ? ((ipx_msg_ipfix_t *) msg)
-        : NULL;
+    assert(ipx_msg_get_type(msg) == IPX_MSG_IPFIX);
+    return (ipx_msg_ipfix_t *) msg;
 }
 
 /**@}*/

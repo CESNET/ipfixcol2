@@ -127,10 +127,14 @@ extern "C" {
 #define IPX_ERR_BUFFER     (-7)
 /** Status code for denied operation                                      */
 #define IPX_ERR_DENIED     (-8)
+/** Status code for modification error                                    */
+#define IPX_ERR_DIFF       (-9)
 /** Status code for end of file/stream                                    */
 #define IPX_ERR_EOF        (-10)
 /** Status code for resource already exists                               */
-#define IPX_ERR_EXISTS     (-11)
+#define IPX_ERR_EXISTS     (-12)
+/** Status code for reaching maximum capacity                             */
+#define IPX_ERR_LIMIT      (-13)
 
 /**@}*/
 

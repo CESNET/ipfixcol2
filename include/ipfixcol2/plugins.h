@@ -46,8 +46,10 @@
 extern "C" {
 #endif
 
-/** Internal plugin context  */
+/** Internal plugin context                                                                    */
 typedef struct ipx_ctx ipx_ctx_t;
+/** Internal data structure that represents IPFIXcol record extension                          */
+typedef struct ipx_ctx_rext ipx_ctx_rext_t;
 
 #include <ipfixcol2/api.h>
 #include <ipfixcol2/verbose.h>
@@ -190,7 +192,7 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params);
  * destruction the plugin MUST return all resources and destroy its private instance data.
  *
  * \note
- *   It's still possible to pass messages to the internal pipeline. For example, output plugins
+ *   It's still possible to pass messages to the internal pipeline. For example, input plugins
  *   MUST pass Transport Session messages (event type ::IPX_MSG_SESSION_CLOSE) to notify all
  *   remaining plugins that no more messages will be received from Transport Sessions which the
  *   plugin is maintaining.
@@ -229,7 +231,7 @@ ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg);
  * \param[in] cfg Private data of the instance prepared by initialization function
  * \return #IPX_OK on success (or if a non-fatal error has occurred and the plugin can continue to
  *   work)
- * \return #IPX_ERR_NOMEM if a fatal memory allocation error has occurred and the plugin cannot
+ * \return #IPX_ERR_NOMEM if a fatal memory allocation error has occurred and/or the plugin cannot
  *   continue to work properly (the plugin will be destroyed immediately).
  * \return #IPX_ERR_EOF if the end of file/stream has been reached and the plugin cannot provide
  *   more data from any sources. The plugin will be destroyed immediately and if this is also the
@@ -266,7 +268,7 @@ ipx_plugin_get(ipx_ctx_t *ctx, void *cfg);
  * \param[in] cfg Private data of the instance prepared by initialization function
  * \param[in] msg Message to process
  * \return #IPX_OK on success
- * \return #IPX_ERR_NOMEM if a fatal memory allocation error has occurred and the plugin cannot
+ * \return #IPX_ERR_NOMEM if a fatal memory allocation error has occurred and/or the plugin cannot
  *   continue to work properly (the collector will exit).
  */
 IPX_API int
@@ -367,7 +369,7 @@ ipx_plugin_update_prepare(ipx_ctx_t *ctx, void *cfg, uint16_t what, const char *
  * MUST apply modifications and free the update data.
  *
  * \note After return, the update data (set by ipx_ctx_update_set()) is set to NULL.
- * \note It is NOT possible to pass any messages from update functions.
+ * \note It is possible to pass any messages from this update function.
  * \param[in] ctx     Plugin context
  * \param[in] cfg     Private data of the instance prepared by initialization function
  * \param[in] update  Update data of the instance prepared by update function
@@ -384,7 +386,7 @@ ipx_plugin_update_commit(ipx_ctx_t *ctx, void *cfg, void *update);
  * core. The plugin MUST abort prepared modifications and free update data.
  *
  * \note After return, the update data (set by ipx_ctx_update_set()) is set to NULL.
- * \note  It is NOT possible to pass any messages from update functions.
+ * \note  It is NOT possible to pass any messages from this update function.
  * \param[in] ctx     Plugin context
  * \param[in] cfg     Private data of the instance prepared by initialization function
  * \param[in] update  Update data of the instance prepared by update function
@@ -437,6 +439,14 @@ IPX_API enum ipx_verb_level
 ipx_ctx_verb_get(const ipx_ctx_t *ctx);
 
 /**
+ * \brief Get name of the instance (as mention in the runtime configuration)
+ * \param[in] ctx Current plugin context
+ * \return Name
+ */
+IPX_API const char *
+ipx_ctx_name_get(const ipx_ctx_t *ctx);
+
+/**
  * \brief Pass a message to a successor of the plugin
  *
  * The message is pushed into an output queue of the instance and will be later processed by
@@ -450,11 +460,11 @@ ipx_ctx_verb_get(const ipx_ctx_t *ctx);
  *
  * \warning
  *   This interface is only for Input and Intermediate plugins. Moreover, inside update functions
- *   (i.e. ipx_plugin_update_* ) it is not possible to pass any messages.
+ *   except ipx_plugin_update_commit() it is not possible to pass any messages.
  * \param[in] ctx Current plugin context
  * \param[in] msg Message to send
  * \return #IPX_OK on success.
- * \return #IPX_ERR_ARG if the \p msg is NULL, the plugin doesn't have the successor or permissions.
+ * \return #IPX_ERR_ARG if the \p msg is NULL, the plugin doesn't have permissions.
  */
 IPX_API int
 ipx_ctx_msg_pass(ipx_ctx_t *ctx, ipx_msg_t *msg);
@@ -491,7 +501,8 @@ ipx_ctx_subscribe(ipx_ctx_t *ctx, const uint16_t *mask_new, uint16_t *mask_old);
  *
  * \warning
  *   It IS recommended to avoid storing references to definitions of the manager, because the
- *   manager can be updated during reconfiguration.
+ *   manager can be updated during reconfiguration. If you need to store a reference to the manager,
+ *   you MUST implement update function and react to IE manager modifications!
  * \param[in] ctx Plugin context
  * \return Pointer to the manager (never NULL)
  */
@@ -520,9 +531,6 @@ ipx_ctx_iemgr_get(ipx_ctx_t *ctx);
  * @{
  */
 
-/** Internal data structure that represents IPFIXcol record extension                            */
-typedef struct ipx_ctx_rext ipx_ctx_rext_t;
-
 /**
  * \brief Register a new Data Record extension (Intermediate Plugins ONLY!)
  *
@@ -541,6 +549,7 @@ typedef struct ipx_ctx_rext ipx_ctx_rext_t;
  * \param[in]  size Static size of the extension (in bytes, non-zero)
  * \param[out] key  Pointer to an extension access key
  * \return #IPX_OK on success and \p key is filled
+ * \return #IPX_ERR_NOMEM if a memory allocation error has occurred
  * \return #IPX_ERR_ARG on invalid function arguments (empty \p type or \p id, zero \p size, etc.)
  * \return #IPX_ERR_DENIED if the instance doesn't have permission to register an extension
  * \return #IPX_ERR_EXISTS if an extension with the same name already exists
@@ -582,9 +591,9 @@ ipx_ctx_rext_deregister(ipx_ctx_t *ctx, ipx_ctx_rext_t *key);
  * \param[in]  id   Identification of the extension
  * \param[out] key  Pointer to an extension access key
  * \return #IPX_OK on success and \p key is filled
+ * \return #IPX_ERR_NOMEM  if a memory allocation error has occurred
  * \return #IPX_ERR_DENIED if the instance doesn't have permission to subscribe the extension
- * \return #IPX_ERR_FORMAT if the type doesn't match
- * \return #IPX_ERR_NOTFOUND if the extension wasn't found
+ * \return #IPX_ERR_LIMIT  if the limit of extensions has been reached.
  */
 IPX_API int
 ipx_ctx_rext_subscribe(ipx_ctx_t *ctx, const char *type, const char *id, ipx_ctx_rext_t **key);

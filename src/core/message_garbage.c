@@ -101,4 +101,121 @@ ipx_msg_garbage_destroy(ipx_msg_garbage_t *msg)
     free(msg);
 }
 
+// ------------------------------------------------------------------------------------------------
+
+/** Garbage container record */
+struct ipx_gc_rec {
+    /** Data to destroy      */
+    void *data;
+    /** Callback function    */
+    ipx_msg_garbage_cb cb;
+};
+
+/** Default number of elements in an empty container */
+#define IPX_GC_DEF_SIZE 8
+
+/** Garbage container         */
+struct ipx_gc {
+    /** Pre-allocated records */
+    size_t alloc;
+    /** Valid records         */
+    size_t valid;
+    /** Garbage array         */
+    struct ipx_gc_rec *array;
+};
+
+ipx_gc_t *
+ipx_gc_create()
+{
+    struct ipx_gc *gc = calloc(1, sizeof(*gc));
+    if (!gc) {
+        return NULL;
+    }
+
+    return gc;
+}
+
+void
+ipx_gc_destroy(ipx_gc_t *gc)
+{
+    if (!gc) {
+        return;
+    }
+
+    for (size_t i = 0; i < gc->valid; i++) {
+        struct ipx_gc_rec *rec = &gc->array[i];
+        rec->cb(rec->data);
+    }
+
+    free(gc->array);
+    free(gc);
+}
+
+void
+ipx_gc_release(ipx_gc_t *gc)
+{
+    gc->valid = 0;
+}
+
+int
+ipx_gc_add(ipx_gc_t *gc, void *data, ipx_msg_garbage_cb cb)
+{
+    if (cb == NULL) {
+        return IPX_ERR_ARG;
+    }
+
+    if (data == NULL) {
+        // Nothing to add
+        return IPX_OK;
+    }
+
+    if (gc->valid == gc->alloc) {
+        const size_t new_alloc = (gc->alloc != 0) ? (2 * gc->alloc) : (IPX_GC_DEF_SIZE);
+        struct ipx_gc_rec *new_array = realloc(gc->array, new_alloc * sizeof(*gc->array));
+        if (!new_array) {
+            // Failed
+            return IPX_ERR_NOMEM;
+        }
+
+        gc->alloc = new_alloc;
+        gc->array = new_array;
+    }
+
+    struct ipx_gc_rec *rec = &gc->array[gc->valid++];
+    rec->data = data;
+    rec->cb = cb;
+    return IPX_OK;
+}
+
+int
+ipx_gc_reserve(ipx_gc_t *gc, size_t n)
+{
+    if (gc->alloc >= n) {
+        return IPX_OK;
+    }
+
+    struct ipx_gc_rec *new_array = realloc(gc->array, n * sizeof(*gc->array));
+    if (!new_array) {
+        // Failed
+        return IPX_ERR_NOMEM;
+    }
+
+    gc->alloc = n;
+    gc->array = new_array;
+    return IPX_OK;
+}
+
+bool
+ipx_gc_empty(const ipx_gc_t *gc)
+{
+    return (gc->valid == 0);
+}
+
+ipx_msg_garbage_t *
+ipx_gc_to_msg(ipx_gc_t *gc)
+{
+    ipx_msg_garbage_cb cb = (ipx_msg_garbage_cb) &ipx_gc_destroy;
+    return ipx_msg_garbage_create(gc, cb);
+}
+
 /**@}*/

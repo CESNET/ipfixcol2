@@ -64,12 +64,12 @@ static inline size_t
 ipx_msg_ipfix_size(uint16_t rec_cnt, size_t rec_size)
 {
     return sizeof(struct ipx_msg_ipfix)
-        - sizeof(struct ipx_record)
+        - sizeof(struct ipx_ipfix_record)
         + (rec_cnt * rec_size);
 }
 
 uint16_t
-ipx_record_rext_get(struct ipx_record *rec, const ipx_ctx_rext_t *key, uint8_t **data)
+ipx_record_rext_get(struct ipx_ipfix_record *rec, const ipx_ctx_rext_t *key, uint8_t **data)
 {
     (*data) = &rec->ext[key->offset];
     return key->size;
@@ -79,7 +79,7 @@ ipx_msg_ipfix_t *
 ipx_msg_ipfix_create(const ipx_ctx_t *plugin_ctx, const struct ipx_msg_ctx *msg_ctx,
     uint8_t *msg_data)
 {
-    const size_t rec_size = plugin_ctx->cfg_system.rec_size;
+    const size_t rec_size = ipx_ctx_recsize_get(plugin_ctx);
     const size_t new_size = ipx_msg_ipfix_size(REC_DEF_CNT, rec_size);
     struct ipx_msg_ipfix *wrapper = calloc(1, new_size);
     if (!wrapper) {
@@ -144,7 +144,7 @@ ipx_msg_ipfix_get_drec_cnt(const ipx_msg_ipfix_t *msg)
     return msg->rec_info.cnt_valid;
 }
 
-struct ipx_record *
+struct ipx_ipfix_record *
 ipx_msg_ipfix_get_drec(ipx_msg_ipfix_t *msg, uint16_t idx)
 {
     if (idx >= msg->rec_info.cnt_valid) {
@@ -153,7 +153,7 @@ ipx_msg_ipfix_get_drec(ipx_msg_ipfix_t *msg, uint16_t idx)
 
     const size_t offset = idx * msg->rec_info.rec_size;
     uint8_t *rec_start = ((uint8_t *) msg->recs) + offset;
-    return (struct ipx_record *) rec_start;
+    return (struct ipx_ipfix_record *) rec_start;
 }
 
 struct ipx_ipfix_set *
@@ -176,7 +176,6 @@ ipx_msg_ipfix_add_set_ref(struct ipx_msg_ipfix *msg)
         if (msg->sets.cnt_valid == SET_DEF_CNT) {
             const size_t copy_size = msg->sets.cnt_valid * sizeof(struct ipx_ipfix_set);
             memcpy(msg->sets.extended, msg->sets.base, copy_size);
-
         }
         msg->sets.cnt_alloc = alloc_new;
     }
@@ -185,7 +184,7 @@ ipx_msg_ipfix_add_set_ref(struct ipx_msg_ipfix *msg)
     return &msg->sets.extended[msg->sets.cnt_valid++];
 }
 
-struct ipx_record *
+struct ipx_ipfix_record *
 ipx_msg_ipfix_add_drec_ref(struct ipx_msg_ipfix **msg_ref)
 {
     struct ipx_msg_ipfix *msg = *msg_ref;
@@ -205,5 +204,6 @@ ipx_msg_ipfix_add_drec_ref(struct ipx_msg_ipfix **msg_ref)
 
     assert(msg->rec_info.cnt_valid < msg->rec_info.cnt_alloc);
     const size_t offset = msg->rec_info.cnt_valid * msg->rec_info.rec_size;
-    return ((struct ipx_record *) (((uint8_t *) msg->recs) + offset));
+    msg->rec_info.cnt_valid++;
+    return ((struct ipx_ipfix_record *) (((uint8_t *) msg->recs) + offset));
 }

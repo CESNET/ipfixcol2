@@ -109,6 +109,86 @@ ipx_msg_garbage2base(ipx_msg_garbage_t *msg)
     return (ipx_msg_t *) msg;
 }
 
+// ------------------------------------------------------------------------------------------------
+
+/** Garbage container */
+typedef struct ipx_gc ipx_gc_t;
+
+/**
+ * \brief Create a garbage container
+ * \return Pointer to the container or NULL (memory allocation failure)
+ */
+IPX_API ipx_gc_t *
+ipx_gc_create();
+
+/**
+ * \brief Destroy a garbage container
+ *
+ * Before the container is destroyed, all internal garbage is destroyed by calling appropriate
+ * callback function.
+ * \param[in] gc Container
+ */
+IPX_API void
+ipx_gc_destroy(ipx_gc_t *gc);
+
+/**
+ * \brief Release garbage
+ *
+ * The container is marked as empty.
+ * \warning Garbage is NOT destroyed! No callback function is called!
+ * \param[in] gc Container
+ */
+IPX_API void
+ipx_gc_release(ipx_gc_t *gc);
+
+/**
+ * \brief Add garbage to a container
+ *
+ * There are no changes in the container in case of error.
+ * \note If \p data is NULL, nothing is added and success is returned.
+ * \param[in] gc   Container
+ * \param[in] data Data to destroy (can be NULL)
+ * \param[in] cb   Callback function that will destroy \p data (can NOT be NULL)
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_NOMEM if a memory allocation has occurred
+ * \return #IPX_ERR_ARG if \p cb function is undefined
+ */
+IPX_API int
+ipx_gc_add(ipx_gc_t *gc, void *data, ipx_msg_garbage_cb cb);
+
+/**
+ * \brief Request that a container capacity be at least enough to contain N elements
+ *
+ * There are no changes in the container in case of error.
+ * \param[in] gc Container
+ * \param[in] n  Minimum capacity of the container
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_NOMEM if a memory allocation has occurred
+ */
+IPX_API int
+ipx_gc_reserve(ipx_gc_t *gc, size_t n);
+
+/**
+ * \brief Is the container empty?
+ * \param[in] gc Container
+ * \return True or false
+ */
+IPX_API bool
+ipx_gc_empty(const ipx_gc_t *gc);
+
+/**
+ * \brief Convert a container to a garbage message
+ * \warning
+ *   Do NOT destroy the container after the message is successfully generated. However, there are
+ *   no changes in the container in case of error and you have to free it manually, if possible.
+ * \param[in] gc Container
+ * \return Pointer to a newly created garbage message on success and the container doesn't exists
+ *   anymore.
+ * \return NULL in case of memory allocation error
+ */
+IPX_API ipx_msg_garbage_t *
+ipx_gc_to_msg(ipx_gc_t *gc);
+
 /**@}*/
 
 #ifdef __cplusplus

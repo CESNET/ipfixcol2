@@ -55,14 +55,13 @@ ipx_msg_destroy(ipx_msg_t *msg)
 {
 	switch (msg->type) {
 	case IPX_MSG_IPFIX:
-		ipx_msg_ipfix_destroy((ipx_msg_ipfix_t *) msg);
+		ipx_msg_ipfix_destroy(ipx_msg_base2ipfix(msg));
 		break;
 	case IPX_MSG_SESSION:
-		ipx_msg_session_destroy((ipx_msg_session_t *) msg);
+		ipx_msg_session_destroy(ipx_msg_base2session(msg));
 		break;
 	case IPX_MSG_GARBAGE:
-		// Destroy a garbage msg
-		ipx_msg_garbage_destroy((ipx_msg_garbage_t *) msg);
+		ipx_msg_garbage_destroy(ipx_msg_base2garbage(msg));
 		break;
 	}
 }

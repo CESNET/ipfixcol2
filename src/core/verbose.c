@@ -47,6 +47,7 @@
 #include <ipfixcol2.h>
 #include "build_config.h"
 #include "context.h"  // Internal header
+#include "verbose.h"
 
 
 /** Default verbosity level                      */
@@ -91,8 +92,27 @@ ipx_verb_syslog(bool enable)
     use_syslog = enable;
 }
 
+/**
+ * \brief Convert internal message type to syslog type
+ * \param level IPFIXcol message type
+ * \return Syslog type
+ */
+static inline int
+ipx_verb_level2syslog(const enum ipx_verb_level level)
+{
+    switch (level) {
+    case IPX_VERB_ERROR:   return LOG_ERR;
+    case IPX_VERB_WARNING: return LOG_WARNING;
+    case IPX_VERB_INFO:    return LOG_INFO;
+    case IPX_VERB_DEBUG:   return LOG_DEBUG;
+    }
+
+    // Unhandled type
+    return LOG_ERR;
+}
+
 void
-ipx_verb_print(enum ipx_verb_level level, const ipx_ctx_t *ctx, const char *fmt, ...)
+ipx_verb_ctx_print(enum ipx_verb_level level, const ipx_ctx_t *ctx, const char *fmt, ...)
 {
     static const char *err_inter = "<internal error - failed to format a message>\n";
     static const char *fmt_pattern[] = {
@@ -102,7 +122,7 @@ ipx_verb_print(enum ipx_verb_level level, const ipx_ctx_t *ctx, const char *fmt,
         [IPX_VERB_DEBUG]   = "DEBUG: %s: %s\n"
     };
 
-    const char *plugin = ctx->name;
+    const char *plugin = ipx_ctx_name_get(ctx);
     const size_t fmt_size = 512;
     char fmt_buffer[fmt_size];
 
@@ -119,14 +139,7 @@ ipx_verb_print(enum ipx_verb_level level, const ipx_ctx_t *ctx, const char *fmt,
     }
 
     if (use_syslog) {
-        int prio;
-        switch (level) {
-        case IPX_VERB_ERROR:   prio = LOG_ERR;     break;
-        case IPX_VERB_WARNING: prio = LOG_WARNING; break;
-        case IPX_VERB_INFO:    prio = LOG_INFO;    break;
-        case IPX_VERB_DEBUG:   prio = LOG_DEBUG;   break;
-        }
-
+        int prio = ipx_verb_level2syslog(level);
         if (rv < 0 || ((size_t) rv) >= fmt_size) {
             // Error
             syslog(prio, fmt_pattern[level], plugin, err_inter);
@@ -136,5 +149,22 @@ ipx_verb_print(enum ipx_verb_level level, const ipx_ctx_t *ctx, const char *fmt,
             vsyslog(prio, fmt_buffer, ap);
             va_end(ap);
         }
+    }
+}
+
+void
+ipx_verb_print(enum ipx_verb_level level, const char *fmt, ...)
+{
+    va_list ap;
+
+    va_start(ap, fmt);
+    vprintf(fmt, ap);
+    va_end(ap);
+
+    if (use_syslog) {
+        int prio = ipx_verb_level2syslog(level);
+        va_start(ap, fmt);
+        vsyslog(prio, fmt, ap);
+        va_end(ap);
     }
 }

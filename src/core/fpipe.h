@@ -1,7 +1,7 @@
 /**
- * \file src/core/context.h
+ * \file src/core/fpipe.h
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
- * \brief Plugin context (internal header file)
+ * \brief Feedback pipe(internal header file)
  * \date 2018
  */
 
@@ -39,43 +39,52 @@
  *
  */
 
-#ifndef IPFIXCOL_CONTEXT_INTERNAL_H
-#define IPFIXCOL_CONTEXT_INTERNAL_H
+#ifndef IPFIXCOL_FPIPE_H
+#define IPFIXCOL_FPIPE_H
 
 #include <ipfixcol2.h>
-#include <libfds.h>
-#include "fpipe.h"
 
-/** Extension record of Data Record  */
-struct ipx_ctx_rext {
-    /** Extension offset      */
-    uint16_t offset;
-    /** Data size             */
-    uint16_t size;
-};
+/** Internal data type for feedback type */
+typedef struct ipx_fpipe ipx_fpipe_t;
 
 /**
- * \brief Get size of one IPFIX record with registered extensions (in bytes)
- * \param[in] ctx Plugin context
- * \return Size (always non-zero)
- */
-IPX_API size_t
-ipx_ctx_recsize_get(const ipx_ctx_t *ctx);
-
-/**
- * \brief Get a feedback pipe
- *
- * Purpose of the pipe is to send a request to close a Transport Session. An IPFIX parser
- * generates requests and an input plugin accepts and process request. If the input plugin
- * doesn't support feedback (for example, a stream cannot be closed), the pipe is not available.
- *
- * \note Only available for input plugins and IPFIX parser
- * \param[in] ctx Plugin context
- * \return
+ * \brief Create a feedback pipe
+ * \return Pointer to the pipe or NULL
  */
 IPX_API ipx_fpipe_t *
-ipx_ctx_fpipe_get(ipx_ctx_t *ctx);
+ipx_fpipe_create();
 
+/**
+ * \brief Destroy a feedback pipe
+ * \param[in] fpipe Pipe to destroy
+ */
+IPX_API void
+ipx_fpipe_destroy(ipx_fpipe_t *fpipe);
 
+/**
+ * \brief Send a request to close a Transport Session
+ *
+ * \param[in] fpipe   Feedback pipe
+ * \param[in] ts Transport Session to close
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_ARG if a fatal internal error has occurred
+ */
+IPX_API int
+ipx_fpipe_write(ipx_fpipe_t *fpipe, const struct ipx_session *ts);
 
-#endif // IPFIXCOL_CONTEXT_INTERNAL_H
+/**
+ * \brief Get a request to close a Transport Session
+ *
+ * The function tries is non-blocking.
+ * \warning Do not try to access data in the pointer! It could be already freed! Always use
+ *   only value of the pointer.
+ * \param[in]  fpipe Feedback pipe
+ * \param[out] ts    Transport Session to close
+ * \return #IPX_OK if the session is prepared
+ * \return #IPX_ERR_NOTFOUND if no session is available
+ * \return #IPX_ERR_ARG if a fatal internal error has occurred
+ */
+IPX_API int
+ipx_fpipe_read(ipx_fpipe_t *fpipe, const struct ipx_session **ts);
+
+#endif // IPFIXCOL_FPIPE_H

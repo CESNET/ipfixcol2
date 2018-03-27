@@ -1,3 +1,5 @@
+cmake_policy(SET CMP0063 NEW)
+
 # Configure a header file to pass some CMake variables
 configure_file(
 	"${PROJECT_SOURCE_DIR}/src/build_config.h.in"
@@ -22,20 +24,26 @@ include_directories(
 # Core source files
 set(CORE_SOURCE
 	"${PROJECT_BINARY_DIR}/src/build_config.h"
+	core/context.c
+	core/context.h
+	core/fpipe.c
+	core/fpipe.h
 	core/message_base.c
 	core/message_base.h
 	core/message_garbage.c
 	core/message_ipfix.c
 	core/message_ipfix.h
 	core/message_session.c
-	#core/parser.c
-	#core/parser.h
+	core/parser.c
+	core/parser.h
 	core/ring.c
 	core/ring.h
 	core/context.c
 	core/context.h
 	core/session.c
 	core/verbose.c
+	core/verbose.h
+	core/utils.h
 
 	"${PROJECT_SOURCE_DIR}/include/ipfixcol2/"
 )
@@ -55,6 +63,10 @@ target_link_libraries(ipfixcol2base
 set(BASE_LIB -Wl,--whole-archive ipfixcol2base -Wl,--no-whole-archive)
 add_executable(ipfixcol2 main.c)
 target_link_libraries(ipfixcol2 ${BASE_LIB})
+set_target_properties(ipfixcol2 PROPERTIES  # by default, hide all symbols
+	C_VISIBILITY_PRESET hidden
+	CXX_VISIBILITY_PRESET hidden
+)
 
 # Installation targets
 install(

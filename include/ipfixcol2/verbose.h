@@ -75,7 +75,7 @@ enum ipx_verb_level {
 };
 
 /**
- * \def IPX_ERROR
+ * \def IPX_CTX_ERROR
  * \brief Macro for printing an error message
  *
  * Use this when something went really wrong, e.g., memory errors or disk full.
@@ -83,13 +83,13 @@ enum ipx_verb_level {
  * \param[in] fmt Format string (see manual page for "printf" family)
  * \param[in] ...   Variable number of arguments for the format string
  */
-#define IPX_ERROR(ctx, fmt, ...)                                        \
-    if (ipx_ctx_verbosity(ctx) >= IPX_VERB_ERROR) {                     \
-        ipx_verb_print(IPX_VERB_ERROR, (ctx), (fmt), ## __VA_ARGS__);   \
+#define IPX_CTX_ERROR(ctx, fmt, ...)                                        \
+    if (ipx_ctx_verb_get(ctx) >= IPX_VERB_ERROR) {                          \
+        ipx_verb_ctx_print(IPX_VERB_ERROR, (ctx), (fmt), ## __VA_ARGS__);   \
     }
 
 /**
- * \def IPX_WARNING
+ * \def IPX_CTX_WARNING
  * \brief Macro for printing a warning message
  *
  * Use this when something is not right, but an action can continue.
@@ -97,13 +97,13 @@ enum ipx_verb_level {
  * \param[in] fmt Format string (see manual page for "printf" family)
  * \param[in] ... Variable number of arguments for the format string
  */
-#define IPX_WARNING(ctx, fmt, ...)                                      \
-    if (ipx_ctx_verbosity(ctx) >= IPX_VERB_WARNING) {                   \
-        ipx_verb_print(IPX_VERB_WARNING, (ctx), (fmt), ## __VA_ARGS__); \
+#define IPX_CTX_WARNING(ctx, fmt, ...)                                      \
+    if (ipx_ctx_verb_get(ctx) >= IPX_VERB_WARNING) {                        \
+        ipx_verb_ctx_print(IPX_VERB_WARNING, (ctx), (fmt), ## __VA_ARGS__); \
     }
 
 /**
- * \def IPX_INFO
+ * \def IPX_CTX_INFO
  * \brief Macro for printing an informational message
  *
  * Use this when you have something to say, but you don't expect anyone to care.
@@ -111,13 +111,13 @@ enum ipx_verb_level {
  * \param[in] fmt Format string (see manual page for "printf" family)
  * \param[in] ... Variable number of arguments for the format string
  */
-#define IPX_INFO(ctx, fmt, ...)                                         \
-    if (ipx_ctx_verbosity(ctx) >= IPX_VERB_INFO) {                      \
-        ipx_verb_print(IPX_VERB_INFO, (ctx), (fmt), ## __VA_ARGS__);    \
+#define IPX_CTX_INFO(ctx, fmt, ...)                                         \
+    if (ipx_ctx_verb_get(ctx) >= IPX_VERB_INFO) {                           \
+        ipx_verb_ctx_print(IPX_VERB_INFO, (ctx), (fmt), ## __VA_ARGS__);    \
     }
 
 /**
- * \def IPX_DEBUG
+ * \def IPX_CTX_DEBUG
  * \brief Macro for printing a debug message
  *
  * All information that is only interesting for developers.
@@ -125,31 +125,10 @@ enum ipx_verb_level {
  * \param[in] fmt Format string (see manual page for "printf" family)
  * \param[in] ... Variable number of arguments for the format string
  */
-#define IPX_DEBUG(ctx, fmt, ...)                                        \
-    if (ipx_ctx_verbosity(ctx) >= IPX_VERB_DEBUG) {                     \
-        ipx_verb_print(IPX_VERB_DEBUG, (ctx), (fmt), ## __VA_ARGS__);   \
+#define IPX_CTX_DEBUG(ctx, fmt, ...)                                        \
+    if (ipx_ctx_verb_get(ctx) >= IPX_VERB_DEBUG) {                          \
+        ipx_verb_ctx_print(IPX_VERB_DEBUG, (ctx), (fmt), ## __VA_ARGS__);   \
     }
-
-/**
- * \brief Enable/disable reporting to the system log (syslog)
- * \remark By default, reporting is disabled.
- */
-IPX_API void
-ipx_verb_syslog(bool enable);
-
-/**
- * \brief Get default verbosity level of the collector
- * \return Current verbosity level
- */
-IPX_API enum ipx_verb_level
-ipx_verb_level_get();
-
-/**
- * \brief Set default verbosity level of the collector
- * \param[in] level New verbosity-level
- */
-IPX_API void
-ipx_verb_level_set(enum ipx_verb_level level);
 
 /**
  * \brief Common printing function
@@ -160,7 +139,7 @@ ipx_verb_level_set(enum ipx_verb_level level);
  * \param[in] ...    Variable number of arguments for the format string
  */
 IPX_API void
-ipx_verb_print(enum ipx_verb_level level, const ipx_ctx_t *ctx, const char *fmt, ...);
+ipx_verb_ctx_print(enum ipx_verb_level level, const ipx_ctx_t *ctx, const char *fmt, ...);
 
 /**@}*/
 #ifdef __cplusplus

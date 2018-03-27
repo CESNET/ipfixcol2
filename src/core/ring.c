@@ -45,11 +45,11 @@
 #include <time.h>
 
 #include "ring.h"
+#include "verbose.h"
 
 
 // START TODO: move into header files
 #include <stdalign.h>
-#include <stdio.h>
 #include <assert.h>
 
 #ifndef IPX_CLINE_SIZE
@@ -63,6 +63,8 @@
 #define __ipx_cache_aligned __ipx_aligned(IPX_CLINE_SIZE)
 // END
 
+/** Internal identification of the ring buffer */
+static const char *module = "Ring buffer";
 
 /** \brief Data structure for a reader only */
 struct ring_reader {
@@ -97,7 +99,7 @@ struct ring_reader {
     uint32_t div_block;
 
     /** Previously read messages - only 0 or 1 */
-    uint32_t last; // TODO: remove??
+    uint32_t last;
 };
 
 /** \brief Data structure for writers only */
@@ -181,48 +183,49 @@ ipx_ring_init(uint32_t size, bool mw_mode)
     // Prepare data structures
     ring = aligned_alloc(alignof(struct ipx_ring), sizeof(struct ipx_ring));
     if (!ring) {
-        fprintf(stderr, "aligned_alloc() failed! (%s:%d)", __FILE__, __LINE__);
+        IPX_ERROR(module, "aligned_alloc() failed! (%s:%d)", __FILE__, __LINE__);
         return NULL;
     }
 
     ring->data = aligned_alloc(alignof(*ring->data), sizeof(*ring->data) * size);
     if (!ring->data) {
-        fprintf(stderr, "aligned_alloc() failed! (%s:%d)", __FILE__, __LINE__);
+        IPX_ERROR(module, "aligned_alloc() failed! (%s:%d)", __FILE__, __LINE__);
         goto exit_A;
     }
 
     // Initialize writers' spin lock
     int rc;
     if ((rc = pthread_spin_init(&ring->writer_lock, PTHREAD_PROCESS_PRIVATE)) != 0) {
-        fprintf(stderr, "pthread_spin_init() failed! (%s:%d, err: %d)", __FILE__, __LINE__, rc);
+        IPX_ERROR(module, "pthread_spin_init() failed! (%s:%d, err: %d)", __FILE__, __LINE__, rc);
         goto exit_B;
     }
 
     // Initialize sync mutex and conditional variables
     if ((rc = pthread_mutex_init(&ring->sync.mutex, NULL)) != 0) {
-        fprintf(stderr, "pthread_mutex_init() failed! (%s:%d, err: %d)", __FILE__, __LINE__, rc);
+        IPX_ERROR(module, "pthread_mutex_init() failed! (%s:%d, err: %d)", __FILE__, __LINE__, rc);
         goto exit_C;
     }
 
     pthread_condattr_t cond_attr;
     if ((rc = pthread_condattr_init(&cond_attr)) != 0) {
-        fprintf(stderr, "pthread_condattr_init() failed! (%s:%d, err: %d)", __FILE__, __LINE__, rc);
+        IPX_ERROR(module, "pthread_condattr_init() failed! (%s:%d, err: %d)", __FILE__, __LINE__,
+            rc);
         goto exit_D;
     }
 
     if ((rc = pthread_condattr_setclock(&cond_attr, CLOCK_MONOTONIC)) != 0) {
-        fprintf(stderr, "pthread_condattr_setclock() failed! (%s:%d, err: %d)", __FILE__, __LINE__,
-            rc);
+        IPX_ERROR(module, "pthread_condattr_setclock() failed! (%s:%d, err: %d)", __FILE__,
+            __LINE__, rc);
         goto exit_E;
     }
 
     if ((rc = pthread_cond_init(&ring->sync.cond_reader, &cond_attr)) != 0) {
-        fprintf(stderr, "pthread_cond_init() failed! (%s:%d, err: %d)", __FILE__, __LINE__, rc);
+        IPX_ERROR(module, "pthread_cond_init() failed! (%s:%d, err: %d)", __FILE__, __LINE__, rc);
         goto exit_E;
     }
 
     if ((rc = pthread_cond_init(&ring->sync.cond_writer, &cond_attr)) != 0) {
-        fprintf(stderr, "pthread_cond_init() failed! (%s:%d, err: %d)", __FILE__, __LINE__, rc);
+        IPX_ERROR(module, "pthread_cond_init() failed! (%s:%d, err: %d)", __FILE__, __LINE__, rc);
         goto exit_F;
     }
     pthread_condattr_destroy(&cond_attr);

@@ -45,6 +45,7 @@
 /** Default maximum number of IPFIX sets per message */
 #include <ipfixcol2.h>
 #include <stdlib.h>
+#include "message_base.h"
 
 /** Default number of pre-allocated structures for parser IPFIX Sets         */
 #define SET_DEF_CNT (32)
@@ -93,13 +94,13 @@ struct ipx_msg_ipfix {
      * This MUST be the last element in this structure. To access individual
      * records MUST use function ipx_msg_ipfix_get_drec().
      */
-    struct ipx_record recs[1];
+    struct ipx_ipfix_record recs[1];
 };
 
 /**
  * \brief Add a new IPFIX Set
  *
- * The record is uninitialized and user must fill it!
+ * The record is uninitialized and user MUST fill it!
  * \param[in] msg IPFIX Message wrapper
  * \return Pointer to the record or NULL (memory allocation error)
  */
@@ -109,11 +110,12 @@ ipx_msg_ipfix_add_set_ref(struct ipx_msg_ipfix *msg);
 /**
  * \brief Add a new IPFIX Data Record
  *
+ * The record is uninitialized and user MUST fill it!
  * \warning The wrapper \p msg_ref can be reallocated and different pointer can be returned!
  * \param[in,out] msg_ref IPFIX Message wrapper
- * \return Pointer to the record of NULL (memory allocation error)
+ * \return Pointer to the record or NULL (memory allocation error)
  */
-struct ipx_record *
+struct ipx_ipfix_record *
 ipx_msg_ipfix_add_drec_ref(struct ipx_msg_ipfix **msg_ref);
 
 

@@ -76,14 +76,14 @@ typedef struct ipx_ring ipx_ring_t;
  * \param[in] mw_mode Multi-writer mode (multiple writers can writer into the buffer)
  * \return A pointer to the buffer or NULL (in case of an error).
  */
-ipx_ring_t *
+IPX_API ipx_ring_t *
 ipx_ring_init(uint32_t size, bool mw_mode);
 
 /**
  * \brief A ring buffer to destroy
  * \param[in] ring
  */
-void
+IPX_API void
 ipx_ring_destroy(ipx_ring_t *ring);
 
 /**
@@ -96,7 +96,7 @@ ipx_ring_destroy(ipx_ring_t *ring);
  * \param[in] ring Ring buffer
  * \param[in] msg  Message to be added into the ring buffer
  */
-void
+IPX_API void
 ipx_ring_push(ipx_ring_t *ring, ipx_msg_t *msg);
 
 /**
@@ -107,7 +107,7 @@ ipx_ring_push(ipx_ring_t *ring, ipx_msg_t *msg);
  * \param[in] ring Ring buffer
  * \return Pointer to the message
  */
-ipx_msg_t *
+IPX_API ipx_msg_t *
 ipx_ring_pop(ipx_ring_t *ring);
 
 /**

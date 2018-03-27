@@ -66,13 +66,6 @@ typedef struct ipx_msg_ipfix ipx_msg_ipfix_t;
 /** Unsigned integer able to hold Stream ID                                   */
 typedef uint16_t ipx_stream_t;
 
-/** Type of IPFIX message sets */
-enum ipx_set_type {
-    IPX_SET_DATA,              /**< Data set                                  */
-    IPX_SET_TEMPLATE,          /**< Template set (definitions)                */
-    IPX_SET_OPT_TEMPLATE       /**< Options template set                      */
-};
-
 /** \brief Packet context                                                     */
 struct ipx_msg_ctx {
     /** Transport session                      */
@@ -94,10 +87,10 @@ struct ipx_msg_ctx {
 struct ipx_ipfix_set {
     /**
 	 * Pointer to a raw IPFIX set (starts with a header)
-	 * To get real length of the set, you can read value from its header.
-	 * i.e. \code{.c} uint16_t real_len = ntohs(raw_set->length); \endcode
+	 * To get real length of the Set, you can read value from its header.
+	 * i.e. \code{.c} uint16_t real_len = ntohs(ptr->length); \endcode
 	 */
-    struct ipfix_set_header *ptr;
+    struct fds_ipfix_set_hdr *ptr;
 
     // New parameters could be added here...
 };
@@ -105,7 +98,7 @@ struct ipx_ipfix_set {
 /**
  * \brief Data record (record + extensions)
  */
-struct ipx_record {
+struct ipx_ipfix_record {
     /** Data record information                                               */
     struct fds_drec rec;
     /** Start of reserved space for registered extensions (filled by plugins) */
@@ -120,7 +113,7 @@ struct ipx_record {
  * \return Size of data (in bytes)
  */
 IPX_API uint16_t
-ipx_record_rext_get(struct ipx_record *rec, const ipx_ctx_rext_t *key, uint8_t **data);
+ipx_record_rext_get(struct ipx_ipfix_record *rec, const ipx_ctx_rext_t *key, uint8_t **data);
 
 /**
  * \brief Create an empty wrapper around IPFIX (or NetFlow) Message
@@ -199,8 +192,19 @@ ipx_msg_ipfix_get_drec_cnt(const ipx_msg_ipfix_t *msg);
  * \return On success returns the pointer.
  *   Otherwise (usually the index is out-of-range) returns NULL.
  */
-IPX_API struct ipx_record *
+IPX_API struct ipx_ipfix_record *
 ipx_msg_ipfix_get_drec(ipx_msg_ipfix_t *msg, uint16_t idx);
+
+/**
+ * \brief Cast from a source session message to a base message
+ * \param[in] msg Pointer to the session message
+ * \return Pointer to the base message.
+ */
+static inline ipx_msg_t *
+ipx_msg_ipfix2base(ipx_msg_ipfix_t *msg)
+{
+    return (ipx_msg_t *) msg;
+}
 
 /**@}*/
 #ifdef __cplusplus
