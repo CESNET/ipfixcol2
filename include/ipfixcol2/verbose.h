@@ -49,6 +49,9 @@ extern "C" {
 #include <stdarg.h>
 #include <ipfixcol2/api.h>
 
+/** Forward declaration of a plugin context */
+typedef struct ipx_ctx ipx_ctx_t;
+
 /**
  * \defgroup ipxVerboseAPI Status messages
  * \ingroup publicAPIs
@@ -128,9 +131,6 @@ enum ipx_verb_level {
     if (ipx_ctx_verb_get(ctx) >= IPX_VERB_DEBUG) {                          \
         ipx_verb_ctx_print(IPX_VERB_DEBUG, (ctx), (fmt), ## __VA_ARGS__);   \
     }
-
-// Forward declaration
-typedef struct ipx_ctx ipx_ctx_t;
 
 /**
  * \brief Common printing function

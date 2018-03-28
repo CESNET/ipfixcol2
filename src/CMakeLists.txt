@@ -36,6 +36,8 @@ set(CORE_SOURCE
 	core/message_session.c
 	core/parser.c
 	core/parser.h
+	core/parser_plugin.c
+	core/parser_plugin.h
 	core/ring.c
 	core/ring.h
 	core/context.c

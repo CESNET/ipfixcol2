@@ -76,6 +76,7 @@ struct ipx_ctx_callbacks {
     void (*update_abort)  (ipx_ctx_t *, void *, void *);
 };
 
+/*
 IPX_API ipx_ctx_t *
 ipx_ctx_create(const char *name, enum ipx_plugin_type type, const struct ipx_ctx_callbacks *cbs);
 
@@ -90,6 +91,7 @@ ipx_ctx_initialize(ipx_ctx_t *ctx);
 
 IPX_API int
 ipx_ctx_run(ipx_ctx_t *ctx);
+*/
 
 /**
  * \brief Get size of one IPFIX record with registered extensions (in bytes)

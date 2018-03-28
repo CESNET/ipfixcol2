@@ -374,7 +374,8 @@ ipx_plugin_update_prepare(ipx_ctx_t *ctx, void *cfg, uint16_t what, const char *
  * \param[in] cfg     Private data of the instance prepared by initialization function
  * \param[in] update  Update data of the instance prepared by update function
  * \return #IPX_OK on success
- * \return #IPX_ERR_NOMEM on a fatal memory allocation error (the collector will exit)
+ * \return #IPX_ERR_DENIED on a fatal error (such as memory allocation error, etc) The collector
+ *   will exit!
  */
 IPX_API int
 ipx_plugin_update_commit(ipx_ctx_t *ctx, void *cfg, void *update);

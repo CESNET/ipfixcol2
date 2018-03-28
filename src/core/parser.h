@@ -45,7 +45,21 @@
 #include <stdint.h>
 #include <ipfixcol2.h>
 
-// TODO: what IPFIX parser provides... parse messages, provides templates management,
+/**
+ * \defgroup ipxParser IPFIX Message parser
+ * \brief Parse IPFIX Messages and handle Template managers of Transport Sessions
+ *
+ * The parser takes clear IPFIX Message wrapper, checks consistency, parser Data and (Options)
+ * Template Sets and and fills position of Data Records and references to particular templates
+ * necessary to interpret them. For each combination of a Transport Session and an ODID,
+ * the parser manages a Template manger and expected sequence numbers.
+ *
+ * Keep on mind that all referenced templates are part of Template Managers and they are part of
+ * the parser. In other words, the parser MUST not be destroyed until all records (that have
+ * references to its templates) no longer exist.
+ *
+ * @{
+ */
 
 /** Internal data type of parser                                                                 */
 typedef struct ipx_parser ipx_parser_t;
@@ -60,7 +74,7 @@ typedef struct ipx_parser ipx_parser_t;
  * \return Pointer the parser or NULL (memory allocation error)
  */
 IPX_API ipx_parser_t *
-ipx_parser_create(ipx_ctx_t *ctx);
+ipx_parser_create(ipx_ctx_t *ctx); // TODO: remove context, replace with a name?
 
 /**
  * \brief Destroy an IPFIX parser
@@ -74,11 +88,14 @@ ipx_parser_destroy(ipx_parser_t *parser);
 /**
  * \brief Process IPFIX (or NetFlow) Message
  *
- * If the message is in the form of NetFlow, it is converted to IPFIX first. Parse and check
- * validity of all (Data/Template Options Template) Sets in the IPFIX Message. The function
- * takes "clear" IPFIX Message wrapper (see ipx_msg_ipfix_create()) and fills reference to all Data
- * Records and Sets. Moreover, the processor also manages (Options) Templates and other auxiliary
- * structures.
+ * The function takes "clear" IPFIX Message wrapper (see ipx_msg_ipfix_create()) and fills
+ * reference to all Data Records and Sets.
+ * First, the functions tries to find information about a Transport Session (TS) and ODID of
+ * the Message which holds a Template manager and expected sequence number of the Message.
+ * If this is the first record from the TS and ODID, new info is created.
+ * Second, if the message is in the form of NetFlow, it is converted to IPFIX.
+ * Finally, parse and check validity of all (Data/Template Options Template) Sets in the
+ * IPFIX Message.
  *
  * \note
  *   If old or no more accessible templates/template snapshots are part of a template manager,
@@ -86,9 +103,6 @@ ipx_parser_destroy(ipx_parser_t *parser);
  *   of the Message is successful. Keep on mind, that garbage message could include templates
  *   that are referenced from the Message. Therefore, parsed message \p msg MUST be destroyed
  *   BEFORE the \p garbage.
- * \note
- *   NetFlow Messages are converted to IPFIX Messages first and than processed the same way
- *   as IPFIX Messages.
  * \note
  *   Wrapper \p msg could be reallocated if it is not able to handle required amount of IPFIX Data
  *   Records.
@@ -117,12 +131,19 @@ ipx_parser_process(ipx_parser_t *parser, ipx_msg_ipfix_t **ipfix, ipx_msg_garbag
  * \warning
  *   All templates will be replaced by new ones with references to the \p iemgr. Therefore, this
  *   operation is very expensive if the parser is not empty!
+ * \warning
+ *   In case of memory allocation error, state of internal template managers is undefined.
+ *   Connection with Transport Sessions MUST be immediately closed or removed! By default, all
+ *   Transport Sessions are blocked (equivalent to calling ipx_parser_session_block() on all
+ *   Transport Sessions). User MUST destroy the parser or remove all Transport Sessions
+ *   using ipx_parser_session_remove() within ipx_parser_session_for().
+ *
  * \param[in]  parser  Message parser
  * \param[in]  iemgr   Pointer to the new IE manager
  * \param[out] garbage Garbage message
  * \return #IPX_OK on success and \p garbage is defined (can be NULL, if there is no garbage)
  * \return #IPX_ERR_NOMEM if a memory allocation error has occurred, \p garbage is undefined and
- *   user MUST stop using the parser immediately! Only allowed operation is ipx_parser_destroy().
+ *   user MUST stop using the parser immediately! See notes.
  */
 IPX_API int
 ipx_parser_ie_source(ipx_parser_t *parser, const fds_iemgr_t *iemgr, ipx_msg_garbage_t **garbage);
@@ -159,75 +180,29 @@ ipx_parser_session_remove(ipx_parser_t *parser, const struct ipx_session *sessio
 IPX_API int
 ipx_parser_session_block(ipx_parser_t *parser, const struct ipx_session *session);
 
-// Internal plugin functions -----------------------------------------------------------------------
-
 /**
- * \brief Initialize an IPFIX parser (internal plugin)
- * \param[in] ctx    Plugin context
- * \param[in] params Ignored (should be NULL)
- * \return #IPX_OK on success
- * \return #IPX_ERR_NOMEM if a memory allocation error has occurred
- * \return #IPX_ERR_ARG in case of an internal error
- */
-int
-parser_plugin_init(ipx_ctx_t *ctx, const char *params);
-/**
- * \brief Destroy an IPFIX parser (internal plugin)
- * \note The parser is send as a garbage message before destruction.
- * \param[in] ctx Plugin context
- * \param[in] cfg Private instance data
- */
-void
-parser_plugin_destroy(ipx_ctx_t *ctx, void *cfg);
-/**
- * \brief Process an IPFIX or a Transport Session Message
- * \param[in] ctx Plugin context
- * \param[in] cfg Private instance data
- * \param[in] msg IPFIX or Transport Session Message to process
- * \return Always #IPX_OK or #IPX_ERR_NOMEM
- */
-int
-parser_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg);
-
-/**
- * \brief Prepare for an update
+ * \brief For loop callback function
  *
- * Update of Information Elements will be performed during commit. It is not possible to
- * prepare a new parser because the current one can be changed before commit or abort is called.
- * \param[in] ctx    Plugin context
- * \param[in] cfg    Private instance data
- * \param[in] what   Bitwise OR of ::ipx_plugin_update flags
- * \param[in] params Ignored (should be NULL)
- * \return #IPX_READY, if the IE manager has been changed (\p what is used)
- * \return #IPX_OK otherwise
+ * It's safe to call ipx_parser_session_block() and ipx_parser_session_remove() functions in
+ * the callback function on current Transport Session.
+ * \param[in] parser Parser
+ * \param[in] ts     Transport Session
+ * \param[in] data   User defined data
  */
-int
-parser_plugin_update_prepare(ipx_ctx_t *ctx, void *cfg, uint16_t what, const char *params);
+typedef void (*ipx_parser_for_cb)(ipx_parser_t *parser, const struct ipx_session *ts, void *data);
+
 /**
- * \brief Commit a modifications
+ * \brief Call a function for each Transport Session in the parser
  *
- * Update all (Options) Template. References to the old IE manager are replaced with new ones.
- * Old (Options) Templates are send as garbage messages.
- * \note Update can partially fail if a memory allocation error occurs during updating Template
- *   managers of Transport Sessions. These sessions will be closed or removed.
- * \param[in] ctx    Plugin context
- * \param[in] cfg    Private instance data
- * \param[in] update Private update data (made during update preparation)
- * \return #IPX_OK on success or a partial failure that is not fatal
- * \return #IPX_ERR_NOMEM if a fatal memory allocation error has occurred and the parser
- *   cannot continue.
+ * \param parser Parser
+ * \param cb     Callback function
+ * \param data   User defined data
  */
-int
-parser_plugin_update_commit(ipx_ctx_t *ctx, void *cfg, void *update);
+IPX_API void
+ipx_parser_session_for(ipx_parser_t *parser, ipx_parser_for_cb cb, void *data);
+
 /**
- * \brief Abort an update
- * \param[in] ctx    Plugin context
- * \param[in] cfg    Private instance data
- * \param[in] update Private update data (made during update preparation)
+ * @}
  */
-void
-parser_plugin_update_abort(ipx_ctx_t *ctx, void *cfg, void *update);
-
-
 
 #endif //IPFIXCOL_PROCESSOR_H

@@ -126,6 +126,7 @@ ipx_gc_create();
  *
  * Before the container is destroyed, all internal garbage is destroyed by calling appropriate
  * callback function.
+ * \note If \p gc is NULL, nothing is done.
  * \param[in] gc Container
  */
 IPX_API void

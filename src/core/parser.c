@@ -946,6 +946,22 @@ parser_parse_message(struct ipx_parser_data *pdata)
     return IPX_OK;
 }
 
+/**
+ * \brief Set block flag to all Transport Session and ODIDs in the parser
+ *
+ * After calling this function, the parser rejects to process particular IPFIX Messages of a TS
+ * until the TS is removed by ipx_parser_session_remove()
+ * \param parser Parser
+ */
+static inline void
+parser_session_block_all(ipx_parser_t *parser)
+{
+    for (size_t idx = 0; idx < parser->recs_valid; ++idx) {
+        struct stream_ctx *ctx = parser->recs[idx].ctx;
+        ctx->flags |= SCF_BLOCK;
+    }
+}
+
 ipx_parser_t *
 ipx_parser_create(ipx_ctx_t *plugin_ctx)
 {
@@ -995,7 +1011,7 @@ ipx_parser_process(ipx_parser_t *parser, ipx_msg_ipfix_t **ipfix, ipx_msg_garbag
         return IPX_ERR_NOMEM;
     }
 
-    if (rec->ctx->flags & SCF_BLOCK) {
+    if ((rec->ctx->flags & SCF_BLOCK) != 0) {
         // This Transport Session has been blocked due to previous invalid behaviour
         return IPX_ERR_DENIED;
     }
@@ -1117,17 +1133,9 @@ ipx_parser_process(ipx_parser_t *parser, ipx_msg_ipfix_t **ipfix, ipx_msg_garbag
 int
 ipx_parser_ie_source(ipx_parser_t *parser, const fds_iemgr_t *iemgr, ipx_msg_garbage_t **garbage)
 {
-    ipx_gc_t *gc = ipx_gc_create();
-    if (!gc) {
-        // Failed to create a garbage container
-        return IPX_ERR_NOMEM;
-    }
+    parser->ie_mgr = iemgr;
 
-    if (ipx_gc_reserve(gc, parser->recs_valid) != IPX_OK) {
-        ipx_gc_destroy(gc);
-        return IPX_ERR_NOMEM;
-    }
-
+    // First, try to update all Template managers
     size_t idx;
     for (idx = 0; idx < parser->recs_valid; idx++) {
         // Skip disabled sources
@@ -1136,20 +1144,32 @@ ipx_parser_ie_source(ipx_parser_t *parser, const fds_iemgr_t *iemgr, ipx_msg_gar
             continue;
         }
 
-        if (fds_tmgr_set_iemgr(ctx->mgr, iemgr) != FDS_OK) {
-            /* Memory allocation failed -> we cannot continue
-             * NOTE: this can be done better by creating copies of the template managers and
-             *   replacing them after all managers are ready.
-             */
-            IPX_ERROR(__func__, "fds_tmgr_set_iemgr() failed to replace old IE definitions in "
-                "a template manager due to a memory allocation error (%s:%d).", __FILE__, __LINE__);
-            ipx_gc_release(gc);
-            ipx_gc_destroy(gc);
-            return IPX_ERR_NOMEM;
+        if (fds_tmgr_set_iemgr(ctx->mgr, iemgr) == FDS_OK) {
+            continue;
         }
 
+        // Memory allocation failed -> we cannot continue
+        IPX_ERROR(__func__, "fds_tmgr_set_iemgr() failed to replace old IE definitions in "
+            "a template manager due to a memory allocation error (%s:%d).", __FILE__, __LINE__);
+        parser_session_block_all(parser);
+        return IPX_ERR_NOMEM;
+    }
+
+    // Prepare to collect garbage
+    ipx_gc_t *gc = NULL;
+    if ((gc = ipx_gc_create()) == NULL || ipx_gc_reserve(gc, parser->recs_valid) != IPX_OK) {
+        // Failed to create a garbage container
+        ipx_gc_destroy(gc);
+        parser_session_block_all(parser);
+        return IPX_ERR_NOMEM;
+    }
+
+    // Clean up
+    for (idx = 0; idx < parser->recs_valid; idx++) {
         // Get old templates and snapshots as garbage
+        struct stream_ctx *ctx = parser->recs[idx].ctx;
         fds_tgarbage_t *fds_garbage;
+
         if (fds_tmgr_garbage_get(ctx->mgr, &fds_garbage) != FDS_OK) {
             // Garbage lost (memory leak)
             IPX_ERROR(__func__, "A memory allocation failed (%s:%d).", __FILE__, __LINE__);
@@ -1159,12 +1179,11 @@ ipx_parser_ie_source(ipx_parser_t *parser, const fds_iemgr_t *iemgr, ipx_msg_gar
         ipx_msg_garbage_cb cb = (ipx_msg_garbage_cb) &fds_tmgr_garbage_destroy;
         if (ipx_gc_add(gc, fds_garbage, cb) != IPX_OK) {
             // Garbage lost (memory leak)
-            IPX_ERROR(__func__, "A memory allocation failed (%s:%d).", __FILE__, __LINE__);
+            IPX_ERROR(__func__, "ipx_gc_add() failed! (%s:%d).", __FILE__, __LINE__);
         }
     }
 
     // Success
-    parser->ie_mgr = iemgr;
     if (ipx_gc_empty(gc)) {
         *garbage = NULL;
         ipx_gc_destroy(gc);
@@ -1226,16 +1245,6 @@ ipx_parser_session_remove(ipx_parser_t *parser, const struct ipx_session *sessio
     return IPX_OK;
 }
 
-/**
- * \brief Ignore processing of messages that corresponds to a Transport Session (TS)
- *
- * All Observation Domain IDs will be blocked until the Transport Session is removed
- * (see ipx_parser_session_remove()).
- * \param[in] parser  Parser
- * \param[in] session Transport Session to block
- * \return #IPX_OK on success
- * \return #IPX_ERR_NOTFOUND if the TS is not present
- */
 int
 ipx_parser_session_block(ipx_parser_t *parser, const struct ipx_session *session)
 {
@@ -1267,256 +1276,24 @@ ipx_parser_session_block(ipx_parser_t *parser, const struct ipx_session *session
     return IPX_OK;
 }
 
-// Internal plugin functions -----------------------------------------------------------------------
-int
-parser_plugin_init(ipx_ctx_t *ctx, const char *params)
-{
-    (void) params; // Not used
-
-    // Subscribe to receive IPFIX and Session messages
-    const uint16_t mask = IPX_MSG_IPFIX | IPX_MSG_SESSION;
-    if (ipx_ctx_subscribe(ctx, &mask, NULL) != IPX_OK) {
-        IPX_CTX_ERROR(ctx, "Failed to subscribe to receive IPFIX and Transport Session Messages.",
-            NULL);
-        return IPX_ERR_ARG;
-    }
-
-    // Create a parser
-    ipx_parser_t *parser = ipx_parser_create(ctx);
-    if (!parser) {
-        IPX_CTX_ERROR(ctx, "Failed to create a parser of IPFIX Messages!", NULL);
-        return IPX_ERR_NOMEM;
-    }
-
-    ipx_ctx_private_set(ctx, parser);
-    return IPX_OK;
-}
-
 void
-parser_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
+ipx_parser_session_for(ipx_parser_t *parser, ipx_parser_for_cb cb, void *data)
 {
-    ipx_parser_t *parser = (ipx_parser_t *) cfg;
-
-    // Create a garbage message
-    ipx_msg_garbage_cb cb = (ipx_msg_garbage_cb) &ipx_parser_destroy;
-    ipx_msg_garbage_t *garbage = ipx_msg_garbage_create(parser, cb);
-    if (!garbage) {
-        /* Failed to create a message
-         * Unfortunately, we can't destroy the parser because its (Options) Template can be still
-         * references by earlier IPFIX Messages -> memory leak
-         */
-        return;
-    }
-
-    if (ipx_ctx_msg_pass(ctx, ipx_msg_garbage2base(garbage)) != IPX_OK) {
-        IPX_CTX_ERROR(ctx, "Failed to pass a garbage message with processor!", NULL);
-    }
-}
-
-/**
- * \brief Process Transport Session event message
- *
- * If the event is of close type, information about the particular Transport Session will be
- * removed, i.e. all template managers and counters of sequence numbers.
- * \param[in] ctx    Plugin context
- * \param[in] parser IPFIX Message parser
- * \param[in] msg    Transport Session message
- * \return Always #IPX_OK
- */
-static inline int
-parser_plugin_process_session(ipx_ctx_t *ctx, ipx_parser_t *parser, ipx_msg_session_t *msg)
-{
-    if (ipx_msg_session_get_event(msg) != IPX_MSG_SESSION_CLOSE) {
-        // Ignore non-close events
-        return IPX_OK;
-    }
-
-    int rc;
-    const struct ipx_session *session = ipx_msg_session_get_session(msg);
-
-    ipx_msg_garbage_t *g_msg;
-    if ((rc = ipx_parser_session_remove(parser, session, &g_msg)) == IPX_OK) {
-        // Send garbage
-        if (g_msg == NULL) {
-            IPX_CTX_WARNING(ctx, "A memory allocation failed (%s:%d).", __FILE__, __LINE__);
-            return IPX_OK;
-        }
-
-        ipx_ctx_msg_pass(ctx, ipx_msg_garbage2base(g_msg));
-        return IPX_OK;
-    }
-
-    switch (rc) {
-    case IPX_ERR_NOTFOUND:
-        IPX_CTX_WARNING(ctx, "Received a request to close unknown Transport Session '%s'.",
-            session->ident);
-        break;
-    default:
-        IPX_CTX_ERROR(ctx, "ipx_parser_session_remove() returned an unexpected value (%s:%d, "
-            "CODE: %d).", __FILE__, __LINE__, rc);
-        break;
-    }
-
-    return IPX_OK;
-}
-
-/**
- * \brief Process IPFIX Message
- *
- * Iterate over all IPFIX Sets in the Message and process templates and add references to
- * Data records. The function takes care of passing messages to the next plugin. However, only
- * successfully parsed messages are passed to the next plugin. Other messages are dropped.
- *
- * In case of any error (malformed message, memory allocation error, etc), tries to send a request
- * to close the Transport Session. If this feature is not available, information about the session
- * is will be removed. Because the UDP Transport Session by its nature doesn't support any
- * feedback, formatting errors are ignored by, for example, removing (Options) Templates that
- * caused parsing errors, etc.
- *
- * \param[in] ctx    Plugin context
- * \param[in] parser IPFIX Message parser
- * \param[in] ipfix  IPFIX Message
- * \return #IPX_OK on success or on non-fatal failure
- * \return #IPX_ERR_ARG on a fatal failure
- */
-static inline int
-parser_plugin_process_ipfix(ipx_ctx_t *ctx, ipx_parser_t *parser, ipx_msg_ipfix_t *ipfix)
-{
-    int rc;
-    ipx_msg_garbage_t *garbage;
-
-    if ((rc = ipx_parser_process(parser, &ipfix, &garbage)) == IPX_OK) {
-        // Everything is fine, pass the message(s)
-        ipx_ctx_msg_pass(ctx, ipx_msg_ipfix2base(ipfix));
-
-        if (garbage != NULL) {
-            /* Garbage MUST be send after the IPFIX Message because the message can have
-             * references to templates in this garbage message!
-             */
-            ipx_ctx_msg_pass(ctx, ipx_msg_garbage2base(garbage));
-        }
-        return IPX_OK;
-    }
-
-    if (rc == IPX_ERR_DENIED) {
-        // Due to previous failures, connection to the session is blocked
-        ipx_msg_ipfix_destroy(ipfix);
-        return IPX_OK;
-    }
-
-    // Something bad happened -> try to close the Transport Session
-    const struct ipx_msg_ctx *msg_ctx = ipx_msg_ipfix_get_ctx(ipfix);
-    if (rc == IPX_ERR_FORMAT && msg_ctx->session->type == FDS_SESSION_UDP) {
-        // In case of UDP and malformed message, just drop the message
-        ipx_msg_ipfix_destroy(ipfix);
-        return IPX_OK;
-    }
-
-    // Try to send request to close the Transport Session
-    ipx_fpipe_t *feedback = ipx_ctx_fpipe_get(ctx);
-    if (!feedback) {
-        // Feedback not available -> hard remove!
-        IPX_CTX_ERROR(ctx, "Unable to send a request to close a Transport Session '%s' "
-            "(not supported by the input plugin). Removing all internal info about the session!",
-            msg_ctx->session->ident);
-
-        rc = ipx_parser_session_remove(parser, msg_ctx->session, &garbage);
-        if (rc == IPX_OK && garbage != NULL) {
-            ipx_ctx_msg_pass(ctx, ipx_msg_garbage2base(garbage));
-        }
-
-        ipx_msg_ipfix_destroy(ipfix);
-        return IPX_OK;
-    }
-
-    // Block the Transport Session and send request
-    ipx_parser_session_block(parser, msg_ctx->session);
-    if (ipx_fpipe_write(feedback, msg_ctx->session) != IPX_OK) {
-        IPX_CTX_ERROR(ctx, "Due to a fatal internal error the parser cannot continue!", NULL);
-        ipx_msg_ipfix_destroy(ipfix);
-        return IPX_ERR_ARG;
-    }
-
-    ipx_msg_ipfix_destroy(ipfix);
-    return IPX_OK;
-}
-
-int
-parser_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
-{
-    int rc;
-    ipx_parser_t *parser = (ipx_parser_t *) cfg;
-
-    switch (ipx_msg_get_type(msg)) {
-    case IPX_MSG_IPFIX:
-        // Process IPFIX Message
-        rc = parser_plugin_process_ipfix(ctx, parser, ipx_msg_base2ipfix(msg));
-        break;
-    case IPX_MSG_SESSION:
-        // Process Transport Session
-        rc = parser_plugin_process_session(ctx, parser, ipx_msg_base2session(msg));
-        ipx_ctx_msg_pass(ctx, msg);
-        break;
-    default:
-        // Unexpected type of the message
-        IPX_CTX_WARNING(ctx, "Received unexpected type of internal message. Skipping...", NULL);
-        ipx_ctx_msg_pass(ctx, msg);
-        rc = IPX_OK;
-        break;
-    }
-
-    if (rc != IPX_OK) {
-        // Unrecoverable error
-        return IPX_ERR_NOMEM;
-    }
-
-    return IPX_OK;
-}
-
-int
-parser_plugin_update_prepare(ipx_ctx_t *ctx, void *cfg, uint16_t what, const char *params)
-{
-    (void) ctx;
-    (void) cfg;
-    (void) params;
-
-    if ((what & IPX_PU_IEMGR) == 0) {
-        // Nothing to update
-        return IPX_OK;
-    }
-
-    /* The elements will be replaced during commit because the processor can still receive
-     * new (Options) Template Definitions, etc.
+    /* Keep on mind that ipx_parser_session_block() and ipx_parser_session_remove() can be
+     * called within the callback function i.e. records can be removed from the parser during for
+     * loop!
      */
-    return IPX_READY;
-}
+    const struct ipx_session *now = NULL;
+    size_t idx = 0;
+    while (idx < parser->recs_valid) {
+        struct parser_rec *rec = &parser->recs[idx];
+        if (rec->session == now) {
+            // Skip already processed sessions
+            idx++;
+            continue;
+        }
 
-int
-parser_plugin_update_commit(ipx_ctx_t *ctx, void *cfg, void *update)
-{
-    (void) update;
-    ipx_parser_t *parser = (ipx_parser_t *) cfg;
-    const fds_iemgr_t *iemgr = ipx_ctx_iemgr_get(ctx);
-
-    ipx_msg_garbage_t *garbage;
-    if (ipx_parser_ie_source(parser, iemgr, &garbage) != IPX_OK) {
-        // Fatal error
-        return IPX_ERR_NOMEM;
+        now = rec->session;
+        cb(parser, now, data); // Number of valid records can be changed here!
     }
-
-    // Pass old templates and snapshots
-    if (garbage != NULL) {
-        ipx_ctx_msg_pass(ctx, ipx_msg_garbage2base(garbage));
-    }
-
-    return IPX_OK;
-}
-
-void
-parser_plugin_update_abort(ipx_ctx_t *ctx, void *cfg, void *update)
-{
-    // Nothing to do
-    (void) ctx;
-    (void) cfg;
-    (void) update;
 }
