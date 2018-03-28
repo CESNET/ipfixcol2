@@ -75,18 +75,18 @@ struct ipx_msg_ipfix {
         struct ipx_ipfix_set *extended;
 
         /** Number of the Sets in the message                                */
-        uint16_t cnt_valid;
+        uint32_t cnt_valid;
         /** Number of allocated sets                                         */
-        uint16_t cnt_alloc;
+        uint32_t cnt_alloc;
     } sets; /**< Parsed IPFIX (Data/Template/Options Template) Sets          */
 
     struct {
         /** Size of a single record (depends on registered extensions)       */
         size_t rec_size;
         /** Number of parsed records                                         */
-        uint16_t cnt_valid;
+        uint32_t cnt_valid;
         /** Number of allocated records                                      */
-        uint16_t cnt_alloc;
+        uint32_t cnt_alloc;
     } rec_info; /**< Parsed IPFIX Data records                               */
 
     /**

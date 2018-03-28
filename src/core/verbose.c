@@ -66,7 +66,7 @@ ipx_verb_level_get()
 void
 ipx_verb_level_set(enum ipx_verb_level level)
 {
-    if (level < IPX_VERB_ERROR || level > IPX_VERB_DEBUG) {
+    if (level < IPX_VERB_NONE || level > IPX_VERB_DEBUG) {
         return;
     }
 
@@ -105,6 +105,7 @@ ipx_verb_level2syslog(const enum ipx_verb_level level)
     case IPX_VERB_WARNING: return LOG_WARNING;
     case IPX_VERB_INFO:    return LOG_INFO;
     case IPX_VERB_DEBUG:   return LOG_DEBUG;
+    default:               break;
     }
 
     // Unhandled type

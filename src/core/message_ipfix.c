@@ -61,7 +61,7 @@ static_assert(offsetof(struct ipx_msg_ipfix, msg_header.type) == 0,
  * \return Size of the structure
  */
 static inline size_t
-ipx_msg_ipfix_size(uint16_t rec_cnt, size_t rec_size)
+ipx_msg_ipfix_size(uint32_t rec_cnt, size_t rec_size)
 {
     return sizeof(struct ipx_msg_ipfix)
         - sizeof(struct ipx_ipfix_record)
@@ -138,7 +138,7 @@ ipx_msg_ipfix_get_sets(ipx_msg_ipfix_t *msg, struct ipx_ipfix_set **sets, size_t
     }
 }
 
-uint16_t
+uint32_t
 ipx_msg_ipfix_get_drec_cnt(const ipx_msg_ipfix_t *msg)
 {
     return msg->rec_info.cnt_valid;
@@ -165,7 +165,7 @@ ipx_msg_ipfix_add_set_ref(struct ipx_msg_ipfix *msg)
     }
 
     if (msg->sets.cnt_valid == msg->sets.cnt_alloc) {
-        const size_t alloc_new =  2 * msg->sets.cnt_alloc;
+        const uint32_t alloc_new =  2U * msg->sets.cnt_alloc;
         const size_t alloc_size = alloc_new * sizeof(struct ipx_ipfix_set);
         msg->sets.extended = realloc(msg->sets.extended, alloc_size);
         if (!msg->sets.extended) {
@@ -190,7 +190,7 @@ ipx_msg_ipfix_add_drec_ref(struct ipx_msg_ipfix **msg_ref)
     struct ipx_msg_ipfix *msg = *msg_ref;
     if (msg->rec_info.cnt_valid == msg->rec_info.cnt_alloc) {
         // Reallocation of the message is necessary
-        const size_t alloc_new = 2 * msg->rec_info.cnt_valid;
+        const uint32_t alloc_new = 2U * msg->rec_info.cnt_valid;
         const size_t alloc_size = ipx_msg_ipfix_size(alloc_new, msg->rec_info.rec_size);
         struct ipx_msg_ipfix *msg_new = realloc(msg, alloc_size);
         if (!msg_new) {

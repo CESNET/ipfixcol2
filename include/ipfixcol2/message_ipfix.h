@@ -180,7 +180,7 @@ ipx_msg_ipfix_get_sets(ipx_msg_ipfix_t *msg, struct ipx_ipfix_set **sets, size_t
  * \param[in] msg Message
  * \return Count
  */
-IPX_API uint16_t
+IPX_API uint32_t
 ipx_msg_ipfix_get_drec_cnt(const ipx_msg_ipfix_t *msg);
 
 /**

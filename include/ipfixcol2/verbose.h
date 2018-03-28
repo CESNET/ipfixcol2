@@ -70,7 +70,8 @@ typedef struct ipx_ctx ipx_ctx_t;
  * #IPX_DEBUG.
  */
 enum ipx_verb_level {
-    IPX_VERB_ERROR = 0,   /**< Error message (default)        */
+    IPX_VERB_NONE  = 0,   /**< Ignore all messages            */
+    IPX_VERB_ERROR,       /**< Error message (default)        */
     IPX_VERB_WARNING,     /**< Warning message                */
     IPX_VERB_INFO,        /**< Informational message          */
     IPX_VERB_DEBUG        /**< Debug message                  */
@@ -135,6 +136,7 @@ enum ipx_verb_level {
 /**
  * \brief Common printing function
  *
+ * Never use this function directly. Always use auxiliary macros.
  * \param[in] level  Verbosity level of the message (for syslog severity)
  * \param[in] ctx    Plugin context
  * \param[in] fmt    Format string (see manual page for "printf" family)
