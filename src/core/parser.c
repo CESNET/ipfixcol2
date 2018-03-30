@@ -112,8 +112,11 @@ struct parser_rec {
 
 /** Main structure of IPFIX message parser         */
 struct ipx_parser {
-    /** Plugin context                             */
-    ipx_ctx_t *plugin_ctx;
+    /** Plugin identification (for logs)           */
+    char *ident;
+    /** Verbosity level of the parser              */
+    enum ipx_verb_level vlevel;
+
     /** Source of Information Elements             */
     const struct fds_iemgr *ie_mgr;
 
@@ -128,47 +131,58 @@ struct ipx_parser {
 /**
  * \def PARSER_ERROR
  * \brief Macro for printing an error message of a parser
- * \param[in] ctx     Plugin context
+ * \param[in] parser  Parser
  * \param[in] msg_ctx IPFIX Message context (Transport Session, ODID, ...)
  * \param[in] fmt     Format string (see manual page for "printf" family)
  * \param[in] ...     Variable number of arguments for the format string
  */
-#define PARSER_ERROR(ctx, msg_ctx, fmt, ...) \
-    IPX_CTX_ERROR((ctx), "[%s, ODID: %" PRIu32 "] " fmt, \
-        (msg_ctx)->session->ident, (msg_ctx)->odid, ## __VA_ARGS__);
+#define PARSER_ERROR(parser, msg_ctx, fmt, ...)                                                  \
+    if ((parser)->vlevel >= IPX_VERB_ERROR) {                                                    \
+        ipx_verb_print(IPX_VERB_ERROR, "ERROR: %s: [%s, ODID: %" PRIu32 "] " fmt "\n",           \
+            (parser)->ident, (msg_ctx)->session->ident, (msg_ctx)->odid, ## __VA_ARGS__);        \
+    }
+
 /**
  * \def PARSER_WARNING
  * \brief Macro for printing a warning message of a parser
- * \param[in] ctx     Plugin context
+ * \param[in] parser  Parser
  * \param[in] msg_ctx IPFIX Message context (Transport Session, ODID, ...)
  * \param[in] fmt     Format string (see manual page for "printf" family)
  * \param[in] ...     Variable number of arguments for the format string
  */
-#define PARSER_WARNING(ctx, msg_ctx, fmt, ...) \
-    IPX_CTX_WARNING((ctx), "[%s, ODID: %" PRIu32 "] " fmt, \
-        (msg_ctx)->session->ident, (msg_ctx)->odid, ## __VA_ARGS__);
+#define PARSER_WARNING(parser, msg_ctx, fmt, ...) \
+    if ((parser)->vlevel >= IPX_VERB_WARNING) {                                                  \
+        ipx_verb_print(IPX_VERB_WARNING, "WARNING: %s: [%s, ODID: %" PRIu32 "] " fmt "\n",       \
+            (parser)->ident, (msg_ctx)->session->ident, (msg_ctx)->odid, ## __VA_ARGS__);        \
+    }
+
 /**
  * \def PARSER_INFO
  * \brief Macro for printing an info message of a parser
- * \param[in] ctx     Plugin context
+ * \param[in] parser  Parser
  * \param[in] msg_ctx IPFIX Message context (Transport Session, ODID, ...)
  * \param[in] fmt     Format string (see manual page for "printf" family)
  * \param[in] ...     Variable number of arguments for the format string
  */
-#define PARSER_INFO(ctx, msg_ctx, fmt, ...) \
-    IPX_CTX_INFO((ctx), "[%s, ODID: %" PRIu32 "] " fmt, \
-        (msg_ctx)->session->ident, (msg_ctx)->odid, ## __VA_ARGS__);
+#define PARSER_INFO(parser, msg_ctx, fmt, ...) \
+    if ((parser)->vlevel >= IPX_VERB_INFO) {                                                     \
+        ipx_verb_print(IPX_VERB_INFO, "INFO: %s: [%s, ODID: %" PRIu32 "] " fmt "\n",             \
+            (parser)->ident, (msg_ctx)->session->ident, (msg_ctx)->odid, ## __VA_ARGS__);        \
+    }
+
 /**
  * \def PARSER_DEBUG
  * \brief Macro for printing a debug message of a parser
- * \param[in] ctx     Plugin context
+ * \param[in] parser  Parser
  * \param[in] msg_ctx IPFIX Message context (Transport Session, ODID, ...)
  * \param[in] fmt     Format string (see manual page for "printf" family)
  * \param[in] ...     Variable number of arguments for the format string
  */
-#define PARSER_DEBUG(ctx, msg_ctx, fmt, ...) \
-    IPX_CTX_DEBUG((ctx), "[%s, ODID: %" PRIu32 "] " fmt, \
-        (msg_ctx)->session->ident, (msg_ctx)->odid, ## __VA_ARGS__);
+#define PARSER_DEBUG(parser, msg_ctx, fmt, ...) \
+    if ((parser)->vlevel >= IPX_VERB_DEBUG) {                                                    \
+        ipx_verb_print(IPX_VERB_DEBUG, "DEBUG: %s: [%s, ODID: %" PRIu32 "] " fmt "\n",           \
+            (parser)->ident, (msg_ctx)->session->ident, (msg_ctx)->odid, ## __VA_ARGS__);        \
+    }
 
 /**
  * \def STREAM_CTX_SIZE
@@ -432,6 +446,8 @@ parser_rec_get(struct ipx_parser *parser, const struct ipx_msg_ctx *ctx)
         return NULL;
     }
 
+    PARSER_INFO(parser, ctx, "New connection detected!", '\0');
+
     parser->recs_valid++;
     parser_rec_sort(parser);
     // Position has been changes... find it again
@@ -533,10 +549,10 @@ parser_seq_num_cmp(uint32_t t1, uint32_t t2)
 
 /** Parser data used during processing an IPFIX message */
 struct ipx_parser_data {
+    /** Message Parser                                  */
+    struct ipx_parser *parser;
     /** Wrapper over an IPFIX Message                   */
     struct ipx_msg_ipfix *ipfix_msg;
-    /** Plugin context                                  */
-    const ipx_ctx_t *plugin_ctx;
     /** Template manager                                */
     fds_tmgr_t *tmgr;
 
@@ -567,10 +583,8 @@ parser_parse_withdrawal(struct ipx_parser_data *pdata, struct fds_ipfix_wdrl_tre
 
     if (pdata->ipfix_msg->ctx.session->type == FDS_SESSION_UDP) {
         // In case of UDP, ignore all requests
-        const struct ipx_ctx *plugin_ctx = pdata->plugin_ctx;
         const struct ipx_msg_ctx *msg_ctx = &pdata->ipfix_msg->ctx;
-
-        PARSER_WARNING(plugin_ctx, msg_ctx, "Ignoring (Options) Template Withdrawal over UDP "
+        PARSER_WARNING(pdata->parser, msg_ctx, "Ignoring (Options) Template Withdrawal over UDP "
             "(Template ID %" PRIu16 ").", tid);
         return IPX_OK;
     }
@@ -597,12 +611,11 @@ parser_parse_withdrawal(struct ipx_parser_data *pdata, struct fds_ipfix_wdrl_tre
     }
 
     // Something bad happened
-    const struct ipx_ctx *plugin_ctx = pdata->plugin_ctx;
     const struct ipx_msg_ctx *msg_ctx = &pdata->ipfix_msg->ctx;
 
     if (rc == FDS_ERR_ARG && tid >= FDS_IPFIX_SET_MIN_DSET) {
         // Template type mismatch - this is not a fatal error (try again)
-        PARSER_WARNING(plugin_ctx, msg_ctx, "Mismatch between template type to withdraw and "
+        PARSER_WARNING(pdata->parser, msg_ctx, "Mismatch between template type to withdraw and "
             "type of template definition of Template ID %" PRIu16 " (Options Template vs Template "
             "or vice versa).", tid);
         rc = fds_tmgr_template_withdraw(pdata->tmgr, tid, FDS_TYPE_TEMPLATE_UNDEF);
@@ -614,22 +627,22 @@ parser_parse_withdrawal(struct ipx_parser_data *pdata, struct fds_ipfix_wdrl_tre
     switch (rc) {
     case FDS_ERR_NOMEM:
         // Memory allocation failed
-        PARSER_ERROR(plugin_ctx, msg_ctx, "A memory allocation failed (%s:%d).",
+        PARSER_ERROR(pdata->parser, msg_ctx, "A memory allocation failed (%s:%d).",
             __FILE__, __LINE__);
         return IPX_ERR_NOMEM;
     case FDS_ERR_NOTFOUND:
         // Template to withdraw not found
-        PARSER_WARNING(plugin_ctx, msg_ctx, "Ignoring (Options) Template Withdrawal for undefined "
-            "(Options) Template ID %" PRIu16 ".", tid);
+        PARSER_WARNING(pdata->parser, msg_ctx, "Ignoring (Options) Template Withdrawal for "
+            "undefined (Options) Template ID %" PRIu16 ".", tid);
         return IPX_OK;
     case FDS_ERR_DENIED:
         // Session type doesn't allow (Options) Template Withdrawal
-        PARSER_WARNING(plugin_ctx, msg_ctx, "(Options) Templates Withdrawals are prohibited over "
-            "this type of Transport Session. Ignoring request to withdraw Template ID %" PRIu16 ".",
-            tid);
+        PARSER_WARNING(pdata->parser, msg_ctx, "(Options) Templates Withdrawals are prohibited "
+            "over this type of Transport Session. Ignoring request to withdraw Template ID "
+            "%" PRIu16 ".", tid);
         return IPX_OK;
     default:
-        PARSER_ERROR(plugin_ctx, msg_ctx, "fds_tmgr_template_withdraw*() returned an unexpected "
+        PARSER_ERROR(pdata->parser, msg_ctx, "fds_tmgr_template_withdraw*() returned an unexpected "
             "error code (%s:%d, code: %d).", __FILE__, __LINE__, rc);
         return IPX_ERR_ARG;
     }
@@ -659,24 +672,23 @@ parser_parse_def(struct ipx_parser_data *pdata, void *rec, enum fds_template_typ
     // Parse the (Options) Template
     if ((rc = fds_template_parse(type, rec, &size, &tmplt)) != FDS_OK) {
         // Something bad happened
-        const struct ipx_ctx *plugin_ctx = pdata->plugin_ctx;
         const struct ipx_msg_ctx *msg_ctx = &pdata->ipfix_msg->ctx;
 
         switch (rc) {
         case FDS_ERR_FORMAT:
             // Invalid definition
-            PARSER_ERROR(plugin_ctx, msg_ctx, "Invalid definition format of (Options) "
+            PARSER_ERROR(pdata->parser, msg_ctx, "Invalid definition format of (Options) "
                 "Template ID %" PRIu16 ".", tid);
             return IPX_ERR_FORMAT;
         case FDS_ERR_NOMEM:
             // Memory allocation failed
-            PARSER_ERROR(plugin_ctx, msg_ctx, "A memory allocation failed (%s:%d).",
+            PARSER_ERROR(pdata->parser, msg_ctx, "A memory allocation failed (%s:%d).",
                 __FILE__, __LINE__);
             return IPX_ERR_NOMEM;
         default:
             // Unexpected situation
-            PARSER_ERROR(plugin_ctx, msg_ctx, "fds_template_parse() returned an unexpected error "
-                "code (%s:%d, code: %d).", __FILE__, __LINE__, rc);
+            PARSER_ERROR(pdata->parser, msg_ctx, "fds_template_parse() returned an unexpected "
+                "error code (%s:%d, code: %d).", __FILE__, __LINE__, rc);
             return FDS_ERR_ARG;
         }
     }
@@ -684,24 +696,23 @@ parser_parse_def(struct ipx_parser_data *pdata, void *rec, enum fds_template_typ
     // Add (Options) Template
     if ((rc = fds_tmgr_template_add(pdata->tmgr, tmplt)) != FDS_OK) {
         // Something bad happened
-        const struct ipx_ctx *plugin_ctx = pdata->plugin_ctx;
         const struct ipx_msg_ctx *msg_ctx = &pdata->ipfix_msg->ctx;
         fds_template_destroy(tmplt);
 
         switch (rc) {
         case FDS_ERR_DENIED:
             // Template cannot be added due to protocol restriction (e.g. must be withdrawn first)
-            PARSER_ERROR(plugin_ctx, msg_ctx, "Unable to add (Options) Template ID %" PRIu16 " due "
-                "to the IPFIX protocol restriction (e.g. must be withdrawn first, etc.).", tid);
+            PARSER_ERROR(pdata->parser, msg_ctx, "Unable to add (Options) Template ID %" PRIu16 " "
+                "due to the IPFIX protocol restriction (e.g. must be withdrawn first, etc.).", tid);
             return IPX_ERR_FORMAT;
         case FDS_ERR_NOMEM:
             // Memory allocation failed
-            PARSER_ERROR(plugin_ctx, msg_ctx, "A memory allocation failed in a template manager "
+            PARSER_ERROR(pdata->parser, msg_ctx, "A memory allocation failed in a template manager "
                 "(%s:%d).", __FILE__, __LINE__);
             return IPX_ERR_NOMEM;
         default:
             // Unexpected situation
-            PARSER_ERROR(plugin_ctx, msg_ctx, "fds_tmgr_template_add() returned an unexpected "
+            PARSER_ERROR(pdata->parser, msg_ctx, "fds_tmgr_template_add() returned an unexpected "
                 "error code (%s:%d, code %d).", __FILE__, __LINE__, rc);
             return IPX_ERR_ARG;
         }
@@ -724,6 +735,9 @@ parser_parse_def(struct ipx_parser_data *pdata, void *rec, enum fds_template_typ
 static inline int
 parser_parse_tset(struct ipx_parser_data *pdata, struct fds_ipfix_set_hdr *tset)
 {
+    // Processing templates
+    pdata->tmplt_changes = true;
+
     uint16_t set_id = ntohs(tset->flowset_id);
     assert(set_id == FDS_IPFIX_SET_TMPLT || set_id == FDS_IPFIX_SET_OPTS_TMPLT);
     // Get type of the templates
@@ -757,9 +771,8 @@ parser_parse_tset(struct ipx_parser_data *pdata, struct fds_ipfix_set_hdr *tset)
     }
 
     if (rc_iter != FDS_ERR_NOTFOUND) {
-        const struct ipx_ctx *plugin_ctx = pdata->plugin_ctx;
         const struct ipx_msg_ctx *msg_ctx = &pdata->ipfix_msg->ctx;
-        PARSER_ERROR(plugin_ctx, msg_ctx, "Failed to parse an IPFIX (Options) Template (%s).",
+        PARSER_ERROR(pdata->parser, msg_ctx, "Failed to parse an IPFIX (Options) Template (%s).",
             fds_tset_iter_err(&it));
         return IPX_ERR_FORMAT;
     }
@@ -790,16 +803,15 @@ parser_parse_dset(struct ipx_parser_data *pdata, struct fds_ipfix_set_hdr *dset)
     const fds_tsnapshot_t *snap;
     if ((rc = fds_tmgr_snapshot_get(pdata->tmgr, &snap)) != FDS_OK) {
         // Something bad happened
-        const struct ipx_ctx *plugin_ctx = pdata->plugin_ctx;
         const struct ipx_msg_ctx *msg_ctx = &pdata->ipfix_msg->ctx;
         if (rc == FDS_ERR_NOMEM) {
             // Memory allocation failure
-            PARSER_ERROR(plugin_ctx, msg_ctx, "A memory allocation failed (%s:%d).",
+            PARSER_ERROR(pdata->parser, msg_ctx, "A memory allocation failed (%s:%d).",
                 __FILE__, __LINE__);
             return IPX_ERR_NOMEM;
         } else {
             // Unexpected error
-            PARSER_ERROR(plugin_ctx, msg_ctx, "fds_tmgr_snapshot_get() returned an unexpected "
+            PARSER_ERROR(pdata->parser, msg_ctx, "fds_tmgr_snapshot_get() returned an unexpected "
                 "error code (%s:%d, code: %d).", __FILE__, __LINE__, rc);
             return IPX_ERR_ARG;
         }
@@ -808,9 +820,8 @@ parser_parse_dset(struct ipx_parser_data *pdata, struct fds_ipfix_set_hdr *dset)
     // Find an (Options) Template
     const struct fds_template *tmplt = fds_tsnapshot_template_get(snap, set_id);
     if (!tmplt) {
-        const struct ipx_ctx *plugin_ctx = pdata->plugin_ctx;
         const struct ipx_msg_ctx *msg_ctx = &pdata->ipfix_msg->ctx;
-        PARSER_WARNING(plugin_ctx, msg_ctx, "Unable to parse IPFIX Data Set %" PRIu16 " "
+        PARSER_WARNING(pdata->parser, msg_ctx, "Unable to parse IPFIX Data Set %" PRIu16 " "
             "due to missing (Options) Template.", set_id);
         return IPX_OK;
     }
@@ -830,9 +841,8 @@ parser_parse_dset(struct ipx_parser_data *pdata, struct fds_ipfix_set_hdr *dset)
 
         struct ipx_ipfix_record *added_ref = ipx_msg_ipfix_add_drec_ref(&pdata->ipfix_msg);
         if (!added_ref) {
-            const struct ipx_ctx *plugin_ctx = pdata->plugin_ctx;
             const struct ipx_msg_ctx *msg_ctx = &pdata->ipfix_msg->ctx;
-            PARSER_ERROR(plugin_ctx, msg_ctx, "Memory allocation failed (%s:%d).",
+            PARSER_ERROR(pdata->parser, msg_ctx, "Memory allocation failed (%s:%d).",
                 __FILE__, __LINE__);
             return IPX_ERR_NOMEM;
         }
@@ -848,9 +858,8 @@ parser_parse_dset(struct ipx_parser_data *pdata, struct fds_ipfix_set_hdr *dset)
 
     // Malformed data structure
     assert(rc == FDS_ERR_FORMAT);
-    const struct ipx_ctx *plugin_ctx = pdata->plugin_ctx;
     const struct ipx_msg_ctx *msg_ctx = &pdata->ipfix_msg->ctx;
-    PARSER_ERROR(plugin_ctx, msg_ctx, "Failed to process a Data Record in a Data Set ID "
+    PARSER_ERROR(pdata->parser, msg_ctx, "Failed to process a Data Record in a Data Set ID "
         "%" PRIu16 " (%s).", set_id, fds_dset_iter_err(&it));
 
     // Try to remove the Template definition
@@ -858,17 +867,17 @@ parser_parse_dset(struct ipx_parser_data *pdata, struct fds_ipfix_set_hdr *dset)
     switch (rc) {
     case FDS_OK:
         // The template has been successfully removed
-        PARSER_WARNING(plugin_ctx, msg_ctx, "Template ID %" PRIu16 " has been removed due to "
+        PARSER_WARNING(pdata->parser, msg_ctx, "Template ID %" PRIu16 " has been removed due to "
             "the previous processing failure.", set_id);
         return IPX_ERR_FORMAT;
     case FDS_ERR_NOMEM:
         // Memory allocation failure
-        PARSER_ERROR(plugin_ctx, msg_ctx, "A memory allocation failed (%s:%d).",
+        PARSER_ERROR(pdata->parser, msg_ctx, "A memory allocation failed (%s:%d).",
             __FILE__, __LINE__);
         return IPX_ERR_NOMEM;
     default:
         // Unexpected error
-        PARSER_ERROR(plugin_ctx, msg_ctx, "fds_tmgr_template_remove() returned an unexpected "
+        PARSER_ERROR(pdata->parser, msg_ctx, "fds_tmgr_template_remove() returned an unexpected "
             "error code (%s:%d, code: %d).", __FILE__, __LINE__, rc);
         return IPX_ERR_ARG;
     }
@@ -879,7 +888,7 @@ parser_parse_dset(struct ipx_parser_data *pdata, struct fds_ipfix_set_hdr *dset)
  *
  * Iterate over each IPFIX Set and process records. Based on content of the Message, (Options)
  * Templates can be added/removed to the Template manager. Positions of Data records in the Message
- * and their Templates will be marked in the wrapper.
+ * and references to their Templates will be marked in the wrapper.
  *
  * \param[in,out] pdata Parser internal data (Message context, Template manager, etc.)
  * \return #IPX_OK on success
@@ -910,9 +919,8 @@ parser_parse_message(struct ipx_parser_data *pdata)
             rc_parse = parser_parse_tset(pdata, it.set);
         } else {
             // Unknown Set ID
-            const struct ipx_ctx *plugin_ctx = pdata->plugin_ctx;
             const struct ipx_msg_ctx *msg_ctx = &pdata->ipfix_msg->ctx;
-            PARSER_WARNING(plugin_ctx, msg_ctx, "Skipping unknown Set ID %" PRIu16 ".", set_id);
+            PARSER_WARNING(pdata->parser, msg_ctx, "Skipping unknown Set ID %" PRIu16 ".", set_id);
             rc_parse = IPX_OK;
         }
 
@@ -920,9 +928,8 @@ parser_parse_message(struct ipx_parser_data *pdata)
         struct ipx_ipfix_set *set_ref = ipx_msg_ipfix_add_set_ref(pdata->ipfix_msg);
         if (!set_ref) {
             // Memory allocation failure
-            const struct ipx_ctx *plugin_ctx = pdata->plugin_ctx;
             const struct ipx_msg_ctx *msg_ctx = &pdata->ipfix_msg->ctx;
-            PARSER_ERROR(plugin_ctx, msg_ctx, "A memory allocation failed (%s:%d).",
+            PARSER_ERROR(pdata->parser, msg_ctx, "A memory allocation failed (%s:%d).",
                 __FILE__, __LINE__);
             return IPX_ERR_NOMEM;
         }
@@ -936,9 +943,8 @@ parser_parse_message(struct ipx_parser_data *pdata)
     }
 
     if (rc_iter != FDS_ERR_NOTFOUND) {
-        const struct ipx_ctx *plugin_ctx = pdata->plugin_ctx;
         const struct ipx_msg_ctx *msg_ctx = &pdata->ipfix_msg->ctx;
-        PARSER_ERROR(plugin_ctx, msg_ctx, "Failed to parse an IPFIX Set (%s).",
+        PARSER_ERROR(pdata->parser, msg_ctx, "Failed to parse an IPFIX Set (%s).",
             fds_sets_iter_err(&it));
         return IPX_ERR_FORMAT;
     }
@@ -963,7 +969,7 @@ parser_session_block_all(ipx_parser_t *parser)
 }
 
 ipx_parser_t *
-ipx_parser_create(ipx_ctx_t *plugin_ctx)
+ipx_parser_create(const char *ident, enum ipx_verb_level vlevel)
 {
     struct ipx_parser *parser = calloc(1, sizeof(*parser));
     if (!parser) {
@@ -977,7 +983,14 @@ ipx_parser_create(ipx_ctx_t *plugin_ctx)
         return NULL;
     }
 
-    parser->plugin_ctx = plugin_ctx;
+    parser->ident = strdup(ident);
+    if (!parser->ident) {
+        free(parser->recs);
+        free(parser);
+        return NULL;
+    }
+
+    parser->vlevel = vlevel;
     parser->recs_alloc = PARSER_DEF_RECS;
     parser->ie_mgr = NULL;
     return parser;
@@ -995,10 +1008,21 @@ ipx_parser_destroy(ipx_parser_t *parser)
     free(parser);
 }
 
+void
+ipx_parser_verb(ipx_parser_t *parser, enum ipx_verb_level *v_new, enum ipx_verb_level *v_old)
+{
+    if (v_old != NULL) {
+        *v_old = parser->vlevel;
+    }
+
+    if (v_new != NULL) {
+        parser->vlevel = *v_new;
+    }
+}
+
 int
 ipx_parser_process(ipx_parser_t *parser, ipx_msg_ipfix_t **ipfix, ipx_msg_garbage_t **garbage)
 {
-    const ipx_ctx_t *plugin_ctx = parser->plugin_ctx;
     const struct ipx_msg_ctx *msg_ctx = &(*ipfix)->ctx;
     const struct fds_ipfix_msg_hdr *msg_data = (struct fds_ipfix_msg_hdr *)(*ipfix)->raw_pkt;
 
@@ -1006,8 +1030,7 @@ ipx_parser_process(ipx_parser_t *parser, ipx_msg_ipfix_t **ipfix, ipx_msg_garbag
     struct parser_rec *rec;   // Combination of Transport Session, ODID
     struct stream_info *info; // Combination of Transport Session, ODID and Stream ID
     if ((rec = parser_rec_get(parser, msg_ctx)) == NULL) {
-        PARSER_ERROR(plugin_ctx, msg_ctx, "A memory allocation failed (%s:%d).",
-            __FILE__, __LINE__);
+        PARSER_ERROR(parser, msg_ctx, "A memory allocation failed (%s:%d).", __FILE__, __LINE__);
         return IPX_ERR_NOMEM;
     }
 
@@ -1017,8 +1040,7 @@ ipx_parser_process(ipx_parser_t *parser, ipx_msg_ipfix_t **ipfix, ipx_msg_garbag
     }
 
     if ((info = stream_ctx_rec_get(&rec->ctx, msg_ctx->stream)) == NULL) {
-        PARSER_ERROR(plugin_ctx, msg_ctx, "A memory allocation failed (%s:%d).",
-            __FILE__, __LINE__);
+        PARSER_ERROR(parser, msg_ctx, "A memory allocation failed (%s:%d).", __FILE__, __LINE__);
         return IPX_ERR_NOMEM;
     }
     assert(rec->session == msg_ctx->session);
@@ -1028,21 +1050,21 @@ ipx_parser_process(ipx_parser_t *parser, ipx_msg_ipfix_t **ipfix, ipx_msg_garbag
     // Check IPFIX Message header and its sequence number
     if (ntohs(msg_data->version) != FDS_IPFIX_VERSION) {
         // TODO: convert NetFlow to IPFIX
-        PARSER_ERROR(plugin_ctx, msg_ctx, "IPFIX Message version doesn't match (expected: "
+        PARSER_ERROR(parser, msg_ctx, "IPFIX Message version doesn't match (expected: "
             "%" PRIu16 ", got: %" PRIu16 ")", FDS_IPFIX_VERSION, ntohs(msg_data->version));
         return IPX_ERR_FORMAT;
     }
 
     if (ntohs(msg_data->length) < FDS_IPFIX_MSG_HDR_LEN) {
-        PARSER_ERROR(plugin_ctx, msg_ctx, "IPFIX Message Header size (%" PRIu16 ") is invalid "
-            "(total length of the message smaller than the IPFIX Message Header structure).",
+        PARSER_ERROR(parser, msg_ctx, "IPFIX Message Header size (%" PRIu16 ") is invalid "
+            "(total length of the message is smaller than the IPFIX Message Header structure).",
             ntohs(msg_data->length));
         return IPX_ERR_FORMAT;
     }
 
     // Sequence number check
     uint32_t msg_seq = ntohl(msg_data->seq_num);
-    PARSER_DEBUG(plugin_ctx, msg_ctx, "Processing an IPFIX Message (Seq. number %" PRIu32 ")",
+    PARSER_DEBUG(parser, msg_ctx, "Processing an IPFIX Message (Seq. number %" PRIu32 ")",
         msg_seq);
 
     if (info->seq_num != msg_seq) {
@@ -1052,7 +1074,7 @@ ipx_parser_process(ipx_parser_t *parser, ipx_msg_ipfix_t **ipfix, ipx_msg_garbag
             info->seq_num = msg_seq;
         } else {
             // Out of sequence message
-            PARSER_WARNING(plugin_ctx, msg_ctx, "Unexpected Sequence number (expected: "
+            PARSER_WARNING(parser, msg_ctx, "Unexpected Sequence number (expected: "
                 "%" PRIu32 ", got: %" PRIu32 ").", info->seq_num, msg_seq);
             if (parser_seq_num_cmp(msg_seq, info->seq_num) > 0) {
                 info->seq_num = msg_seq;
@@ -1067,22 +1089,22 @@ ipx_parser_process(ipx_parser_t *parser, ipx_msg_ipfix_t **ipfix, ipx_msg_garbag
         switch (rc) {
         case FDS_ERR_DENIED:
             // Failed to set Export Time
-            PARSER_ERROR(plugin_ctx, msg_ctx, "Setting Export Time in history is not allowed for "
+            PARSER_ERROR(parser, msg_ctx, "Setting Export Time in history is not allowed for "
                 "this type of Transport Session.", 0);
             return IPX_ERR_FORMAT;
         case FDS_ERR_NOTFOUND:
             // Unable to find a corresponding snapshot
-            PARSER_WARNING(plugin_ctx, msg_ctx, "Received IPFIX Message has too old Export Time. "
+            PARSER_WARNING(parser, msg_ctx, "Received IPFIX Message has too old Export Time. "
                 "Template are no longer available. All its records are ignored.", 0);
             return IPX_OK;
         case FDS_ERR_NOMEM:
             // Memory allocation failed
-            PARSER_ERROR(plugin_ctx, msg_ctx, "A memory allocation failed (%s:%d).",
+            PARSER_ERROR(parser, msg_ctx, "A memory allocation failed (%s:%d).",
                 __FILE__, __LINE__);
             return IPX_ERR_NOMEM;
         default:
             // Unexpected error
-            PARSER_ERROR(plugin_ctx, msg_ctx, "fds_tmgr_set_time() returned an unexpected error "
+            PARSER_ERROR(parser, msg_ctx, "fds_tmgr_set_time() returned an unexpected error "
                 "code (%s:%d, code: %d).", __FILE__, __LINE__, rc);
             return IPX_ERR_ARG;
         }
@@ -1090,9 +1112,9 @@ ipx_parser_process(ipx_parser_t *parser, ipx_msg_ipfix_t **ipfix, ipx_msg_garbag
 
     // Parse IPFIX Sets
     struct ipx_parser_data parser_data = {
-        .plugin_ctx = plugin_ctx,
-        .tmgr = tmgr,
+        .parser = parser,
         .ipfix_msg = *ipfix,
+        .tmgr = tmgr,
         .data_recs = 0,
         .tmplt_changes = false
     };
@@ -1149,7 +1171,7 @@ ipx_parser_ie_source(ipx_parser_t *parser, const fds_iemgr_t *iemgr, ipx_msg_gar
         }
 
         // Memory allocation failed -> we cannot continue
-        IPX_ERROR(__func__, "fds_tmgr_set_iemgr() failed to replace old IE definitions in "
+        IPX_ERROR(parser->ident, "fds_tmgr_set_iemgr() failed to replace old IE definitions in "
             "a template manager due to a memory allocation error (%s:%d).", __FILE__, __LINE__);
         parser_session_block_all(parser);
         return IPX_ERR_NOMEM;
@@ -1172,14 +1194,14 @@ ipx_parser_ie_source(ipx_parser_t *parser, const fds_iemgr_t *iemgr, ipx_msg_gar
 
         if (fds_tmgr_garbage_get(ctx->mgr, &fds_garbage) != FDS_OK) {
             // Garbage lost (memory leak)
-            IPX_ERROR(__func__, "A memory allocation failed (%s:%d).", __FILE__, __LINE__);
+            IPX_ERROR(parser->ident, "A memory allocation failed (%s:%d).", __FILE__, __LINE__);
             continue;
         }
 
         ipx_msg_garbage_cb cb = (ipx_msg_garbage_cb) &fds_tmgr_garbage_destroy;
         if (ipx_gc_add(gc, fds_garbage, cb) != IPX_OK) {
             // Garbage lost (memory leak)
-            IPX_ERROR(__func__, "ipx_gc_add() failed! (%s:%d).", __FILE__, __LINE__);
+            IPX_ERROR(parser->ident, "ipx_gc_add() failed! (%s:%d).", __FILE__, __LINE__);
         }
     }
 
@@ -1194,7 +1216,7 @@ ipx_parser_ie_source(ipx_parser_t *parser, const fds_iemgr_t *iemgr, ipx_msg_gar
     if (!msg) {
         // We cannot free garbage, someone is potentially using templates inside! (memory leak)
         *garbage = NULL;
-        IPX_ERROR(__func__, "A memory allocation failed (%s:%d).", __FILE__, __LINE__);
+        IPX_ERROR(parser->ident, "A memory allocation failed (%s:%d).", __FILE__, __LINE__);
         return IPX_OK;
     }
 

@@ -42,16 +42,19 @@
 #ifndef IPFIXCOL_PROCESSOR_H
 #define IPFIXCOL_PROCESSOR_H
 
-#include <stdint.h>
-#include <ipfixcol2.h>
+
+#include <ipfixcol2/message_ipfix.h>
+#include <ipfixcol2/message_session.h>
+#include <ipfixcol2/message_garbage.h>
+#include <ipfixcol2/verbose.h>
 
 /**
  * \defgroup ipxParser IPFIX Message parser
  * \brief Parse IPFIX Messages and handle Template managers of Transport Sessions
  *
- * The parser takes clear IPFIX Message wrapper, checks consistency, parser Data and (Options)
- * Template Sets and and fills position of Data Records and references to particular templates
- * necessary to interpret them. For each combination of a Transport Session and an ODID,
+ * The parser takes clean IPFIX Message wrapper, checks Message consistency, parser Data and
+ * (Options) Template Sets and and fills positions of Data Records and references to particular
+ * templates necessary to interpret them. For each combination of a Transport Session and an ODID,
  * the parser manages a Template manger and expected sequence numbers.
  *
  * Keep on mind that all referenced templates are part of Template Managers and they are part of
@@ -70,11 +73,12 @@ typedef struct ipx_parser ipx_parser_t;
  * \warning
  *   After initialization an IE manager is not defined and all (Options) Templates will miss
  *   definitions of elements. Use ipx_parser_ie_source() to choose the manager.
- * \param[in] ctx      Plugin context
+ * \param[in] ident  Identification
+ * \param[in] vlevel Verbosity level
  * \return Pointer the parser or NULL (memory allocation error)
  */
 IPX_API ipx_parser_t *
-ipx_parser_create(ipx_ctx_t *ctx); // TODO: remove context, replace with a name?
+ipx_parser_create(const char *ident, enum ipx_verb_level vlevel);
 
 /**
  * \brief Destroy an IPFIX parser
@@ -84,6 +88,18 @@ ipx_parser_create(ipx_ctx_t *ctx); // TODO: remove context, replace with a name?
  */
 IPX_API void
 ipx_parser_destroy(ipx_parser_t *parser);
+
+/**
+ * \brief Change verbosity level
+ *
+ * If \p v_new is non-NULL, the new level is set from \p v_new.
+ * If \p v_old is non-NULL, the previous level is saved in \p v_old.
+ * \param[in] parser Message Parser
+ * \param[in] v_new  New verbosity level (can be NULL)
+ * \param[in] v_old  Old verbosity level (can be NULL)
+ */
+IPX_API void
+ipx_parser_verb(ipx_parser_t *parser, enum ipx_verb_level *v_new, enum ipx_verb_level *v_old);
 
 /**
  * \brief Process IPFIX (or NetFlow) Message
@@ -107,7 +123,7 @@ ipx_parser_destroy(ipx_parser_t *parser);
  *   Wrapper \p msg could be reallocated if it is not able to handle required amount of IPFIX Data
  *   Records.
  * \param[in]     parser  Message parser
- * \param[in,out] ipfix     Pointer to the IPFIX Message wrapper to process (can be reallocated)
+ * \param[in,out] ipfix   Pointer to the IPFIX Message wrapper to process (can be reallocated)
  * \param[out]    garbage Pointer to the garbage message with old templates, snapshots, etc.
  * \return #IPX_OK on success and fills a pointer to the \p garbage message. If the value is NULL,
  *   no garbage is available.

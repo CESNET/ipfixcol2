@@ -57,8 +57,11 @@ parser_plugin_init(ipx_ctx_t *ctx, const char *params)
         return IPX_ERR_ARG;
     }
 
+    const char *plugin_name = ipx_ctx_name_get(ctx);
+    enum ipx_verb_level plugin_vlevel = ipx_ctx_verb_get(ctx);
+
     // Create a parser
-    ipx_parser_t *parser = ipx_parser_create(ctx);
+    ipx_parser_t *parser = ipx_parser_create(plugin_name, plugin_vlevel);
     if (!parser) {
         IPX_CTX_ERROR(ctx, "Failed to create a parser of IPFIX Messages!", NULL);
         return IPX_ERR_NOMEM;
@@ -154,7 +157,6 @@ parser_plugin_process_session(ipx_ctx_t *ctx, ipx_parser_t *parser, ipx_msg_sess
 static inline int
 parser_plugin_remove_session(ipx_ctx_t *ctx, ipx_parser_t *parser, const struct ipx_session *ts)
 {
-    int rc;
     ipx_msg_garbage_t *garbage;
 
     // Try to send request to close the Transport Session
@@ -165,7 +167,7 @@ parser_plugin_remove_session(ipx_ctx_t *ctx, ipx_parser_t *parser, const struct 
                 "(not supported by the input plugin). Removing all internal info about the session!",
             ts->ident);
 
-        rc = ipx_parser_session_remove(parser, ts, &garbage);
+        int rc = ipx_parser_session_remove(parser, ts, &garbage);
         if (rc == IPX_OK && garbage != NULL) {
             ipx_ctx_msg_pass(ctx, ipx_msg_garbage2base(garbage));
         }
@@ -326,6 +328,10 @@ parser_plugin_update_commit(ipx_ctx_t *ctx, void *cfg, void *update)
     (void) update;
     ipx_parser_t *parser = (ipx_parser_t *) cfg;
     const fds_iemgr_t *iemgr = ipx_ctx_iemgr_get(ctx);
+
+    // Update verbosity level - just for sure
+    enum ipx_verb_level vlevel = ipx_ctx_verb_get(ctx);
+    ipx_parser_verb(parser, &vlevel, NULL);
 
     // Redefine all IE managers
     ipx_msg_garbage_t *garbage;
