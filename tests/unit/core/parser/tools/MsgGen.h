@@ -18,10 +18,12 @@ class ipfix_set;
 
 class ipfix_buffer {
 private:
+    using buffer_ptr = std::unique_ptr<uint8_t, decltype(&std::free)>;
+
     /** Memory buffer */
     static const size_t size_max = std::numeric_limits<uint16_t>::max();
     /** Message buffer */
-    std::unique_ptr<uint8_t[]> data;
+    buffer_ptr data;
     /** Allocated size */
     size_t size_used;
 protected:
@@ -29,6 +31,8 @@ protected:
     ipfix_buffer();
     /** Destructor  */
     ~ipfix_buffer() = default;
+    /** Copy constructor */
+    ipfix_buffer(const ipfix_buffer &other);
 
     /**
      * \brief Get a memory (past-last-byte) for storing N bytes
@@ -40,12 +44,6 @@ protected:
      */
     virtual uint8_t *
     mem_reserve(size_t n);
-    /**
-     * \brief Get size of used memory
-     * \return Bytes
-     */
-    uint16_t
-    size() const { return size_used; };
 
     /**
      * \brief Start of the buffer
@@ -53,16 +51,33 @@ protected:
      */
     uint8_t *
     front() { return data.get(); }
+
+public:
+    /**
+     * \brief Get size of used memory
+     * \return Bytes
+     */
+    uint16_t
+    size() const { return size_used; };
     /** \copydoc front() */
     const uint8_t *
     front() const { return data.get(); }
 
-public:
     /**
      * \brief Print content of the buffer on the standard output
      */
     void
     dump();
+
+    /**
+     * \brief Release memory allocated for the message
+     *
+     * \note To delete use free()
+     * \warning The object cannot be used after release!!!
+     * \return Pointer to the memory
+     */
+    uint8_t *
+    release();
 };
 
 /** \brief IPFIX message  */
@@ -96,6 +111,15 @@ public:
      */
     void
     add_set(const ipfix_set &set);
+    /**
+     * \brief Release memory allocated for the message
+     *
+     * \note To delete use free()
+     * \warning The object cannot be used after release!!!
+     * \return Pointer to the memory
+     */
+    struct fds_ipfix_msg_hdr *
+    release();
 };
 
 class ipfix_set : public ipfix_buffer {
@@ -136,6 +160,16 @@ public:
     /** Add an (Options) Template Record and update size of the header */
     void
     add_rec(const ipfix_trec &rec);
+
+    /**
+     * \brief Release memory allocated for the message
+     *
+     * \note To delete use free()
+     * \warning The object cannot be used after release!!!
+     * \return Pointer to the memory
+     */
+    struct fds_ipfix_set_hdr *
+    release();
 };
 
 class ipfix_trec : public ipfix_buffer {
@@ -235,12 +269,19 @@ public:
     void
     append_string(const std::string &value, uint16_t size = SIZE_VAR);
     /**
-     * \brief Add a timestamp
+     * \brief Add a timestamp (high precision)
      * \param ts   Timestamp
      * \param type Type of timestamp
      */
     void
     append_datetime(struct timespec ts, enum fds_iemgr_element_type type);
+    /**
+     * \brief Add a timestamp (low precision)
+     * \param ts   Timestamp
+     * \param type Type of timestamp
+     */
+    void
+    append_datetime(uint64_t ts, enum fds_iemgr_element_type type);
     /**
      * \brief Add an IPv4/IPv6 address
      * \note Type and size (4 or 16 bytes) is automatically determined.

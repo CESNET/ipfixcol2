@@ -94,6 +94,29 @@ ipx_ctx_run(ipx_ctx_t *ctx);
 */
 
 /**
+ * \brief Create a dummy context for testing purposes
+ *
+ * Dummy plugin is not connected to main configuration or to any other context.
+ * The context has permission to send messages. However, if the output ring buffer is not specified
+ * the messages are immediately destroyed.
+ *
+ * \note Size of Data records of the IPFIX Message wrappers that are created using this context
+ *   is enough to hold a record without any extensions.
+ * \param[in] name Identification of the context
+ * \param[in] type Type of plugin
+ * \return Pointer or NULL (memory allocation error)
+ */
+IPX_API ipx_ctx_t *
+ipx_ctx_create_dummy(const char *name, enum ipx_plugin_type type);
+
+/**
+ * \brief Destroy a context
+ * \param[in] ctx Context to destroy
+ */
+IPX_API void
+ipx_ctx_destroy(ipx_ctx_t *ctx);
+
+/**
  * \brief Get size of one IPFIX record with registered extensions (in bytes)
  * \param[in] ctx Plugin context
  * \return Size (always non-zero)

@@ -125,6 +125,34 @@ struct ipx_ctx {
     struct ipx_ctx_rext rext[IPX_REXT_MAX];
 };
 
+ipx_ctx_t *
+ipx_ctx_create_dummy(const char *name, enum ipx_plugin_type type)
+{
+    struct ipx_ctx *ctx = calloc(1, sizeof(*ctx));
+    if (!ctx) {
+        return NULL;
+    }
+
+    ctx->name = strdup(name);
+    if (!ctx->name) {
+        free(ctx);
+        return NULL;
+    }
+
+    ctx->type = type;
+    ctx->cfg_system.vlevel = IPX_VERB_ERROR;
+    ctx->cfg_system.rec_size = sizeof(struct ipx_ipfix_record);
+    ctx->permissions = IPX_CP_MSG_PASS;
+    return ctx;
+}
+
+void
+ipx_ctx_destroy(ipx_ctx_t *ctx)
+{
+    free(ctx->name);
+    free(ctx);
+}
+
 size_t
 ipx_ctx_recsize_get(const ipx_ctx_t *ctx)
 {
@@ -213,3 +241,4 @@ ipx_ctx_iemgr_get(ipx_ctx_t *ctx)
 {
     return ctx->cfg_system.ie_mgr;
 }
+

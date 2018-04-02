@@ -1004,6 +1004,7 @@ ipx_parser_destroy(ipx_parser_t *parser)
         stream_ctx_destroy(parser->recs[idx].ctx);
     }
 
+    free(parser->ident);
     free(parser->recs);
     free(parser);
 }

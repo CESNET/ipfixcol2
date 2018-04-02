@@ -2,18 +2,32 @@
 // Created by lukashutak on 28/03/18.
 //
 
-#include <stdexcept>
+#include <cstdlib>
 #include <cstring>
 #include <arpa/inet.h>
+#include <stdexcept>
 #include <libfds/ipfix_structs.h>
 #include <iomanip>
 #include <iostream>
 
+
 #include "MsgGen.h"
 
-ipfix_buffer::ipfix_buffer()
+ipfix_buffer::ipfix_buffer() : data(nullptr, &free)
 {
-    data = std::unique_ptr<uint8_t []>(new uint8_t[size_max]);
+    data.reset(static_cast<uint8_t *>(std::malloc(size_max * sizeof(uint8_t))));
+    size_used = 0;
+}
+
+ipfix_buffer::ipfix_buffer(const ipfix_buffer &other) : data(nullptr, &free)
+{
+    uint8_t *data2copy = static_cast<uint8_t *>(std::malloc(size_max * sizeof(uint8_t)));
+    if (!data2copy) {
+        throw std::runtime_error("malloc() failed!");
+    }
+
+    std::memcpy(data2copy, other.data.get(), other.size_used);
+    data.reset(data2copy);
     size_used = 0;
 }
 
@@ -49,6 +63,15 @@ ipfix_buffer::dump()
 
     // Cleanup
     std::cout.flags(flags);
+}
+
+uint8_t *
+ipfix_buffer::release()
+{
+    // Reallocate the buffer to represent real size of the message during valgrind tests
+    const size_t data_size = size();
+    uint8_t *data_ptr = data.release();
+    return reinterpret_cast<uint8_t *>(realloc(data_ptr, data_size));
 }
 
 // -----------------------------------------------------------------------------------------------
@@ -112,6 +135,12 @@ ipfix_msg::add_set(const ipfix_set &set)
     set_len(ipfix_msg::size());
 }
 
+struct fds_ipfix_msg_hdr *
+ipfix_msg::release()
+{
+    return reinterpret_cast<fds_ipfix_msg_hdr *>(ipfix_buffer::release());
+}
+
 // -----------------------------------------------------------------------------------------------
 
 ipfix_set::ipfix_set(uint16_t id)
@@ -169,6 +198,12 @@ void ipfix_set::add_rec(const ipfix_trec &rec)
 
     uint8_t *dst = mem_reserve(size);
     std::memcpy(dst, src, size);
+}
+
+struct fds_ipfix_set_hdr *
+ipfix_set::release()
+{
+    return reinterpret_cast<fds_ipfix_set_hdr *>(ipfix_buffer::release());
 }
 
 // -----------------------------------------------------------------------------------------------
@@ -356,6 +391,25 @@ ipfix_drec::append_datetime(struct timespec ts, enum fds_iemgr_element_type type
     uint8_t *mem = mem_reserve(size);
     if (fds_set_datetime_hp_be(mem, size, type, ts) != FDS_OK) {
         throw std::invalid_argument("fds_set_datetime_hp_be() failed!");
+    }
+}
+
+void
+ipfix_drec::append_datetime(uint64_t ts, enum fds_iemgr_element_type type)
+{
+    size_t size;
+    switch (type) {
+    case FDS_ET_DATE_TIME_SECONDS:      size = 4U; break;
+    case FDS_ET_DATE_TIME_MILLISECONDS: size = 8U; break;
+    case FDS_ET_DATE_TIME_MICROSECONDS: size = 8U; break;
+    case FDS_ET_DATE_TIME_NANOSECONDS:  size = 8U; break;
+    default:
+        throw std::invalid_argument("Invalid type of timestamp!");
+    }
+
+    uint8_t *mem = mem_reserve(size);
+    if (fds_set_datetime_lp_be(mem, size, type, ts) != FDS_OK) {
+        throw std::invalid_argument("fds_set_datetime_lp_be() failed!");
     }
 }
 
