@@ -24,6 +24,8 @@ include_directories(
 # Core source files
 set(CORE_SOURCE
 	"${PROJECT_BINARY_DIR}/src/build_config.h"
+	core/config_file.cpp
+	core/configurator.h
 	core/context.c
 	core/context.h
 	core/fpipe.c

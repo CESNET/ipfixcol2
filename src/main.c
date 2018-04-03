@@ -40,32 +40,60 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include <ipfixcol2.h>
 #include "build_config.h"
+#include "core/config_file.h"
 
 /**
  * \brief Print information about version of the collector to standard output
  */
 void print_version()
 {
-	printf("Version:      %s\n",      IPX_BUILD_VERSION_FULL_STR);
-	printf("GIT hash:     %s\n",      IPX_BUILD_GIT_HASH);
-	printf("Build type:   %s\n",      IPX_BUILD_TYPE);
-	printf("Architecture: %s (%s)\n", IPX_BUILD_ARCH, IPX_BUILD_BYTE_ORDER);
-	printf("Compiler:     %s\n",      IPX_BUILD_COMPILER);
-	printf("Compile time: %s, %s\n",  __DATE__, __TIME__);
+    printf("Version:      %s\n",      IPX_BUILD_VERSION_FULL_STR);
+    printf("GIT hash:     %s\n",      IPX_BUILD_GIT_HASH);
+    printf("Build type:   %s\n",      IPX_BUILD_TYPE);
+    printf("Architecture: %s (%s)\n", IPX_BUILD_ARCH, IPX_BUILD_BYTE_ORDER);
+    printf("Compiler:     %s\n",      IPX_BUILD_COMPILER);
+    printf("Compile time: %s, %s\n",  __DATE__, __TIME__);
 }
 
 /**
  * \brief Main function
  * \param[in] argc Number of arguments
  * \param[in] argv Vector of the arguments
- * \return On success returns EXIT_SUCCES. Otherwise returns EXIT_FAILURE.
+ * \return On success returns EXIT_SUCCESS. Otherwise returns EXIT_FAILURE.
  */
 int main(int argc, char *argv[])
 {
-	print_version();
-	return EXIT_SUCCESS;
+    const char *cfg_startup = NULL;
+
+
+    // Parse configuration
+    int opt;
+    opterr = 0; // Disable default error messages
+    while ((opt = getopt(argc, argv, "c:")) != -1) {
+        switch (opt) {
+        case 'c':
+            cfg_startup = optarg;
+            break;
+        default: // ?
+            fprintf(stderr, "Unknown parameter '%c'!\n", optopt);
+            return EXIT_FAILURE;
+        }
+    }
+
+    if (!cfg_startup) {
+        // Use default startup configuration
+        cfg_startup = IPX_DEFAULT_STARTUP_CONFIG;
+    }
+
+
+    ipx_file_parse(cfg_startup);
+
+
+    print_version();
+    return EXIT_SUCCESS;
 }
 
