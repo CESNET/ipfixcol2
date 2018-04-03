@@ -93,14 +93,6 @@ typedef struct ipx_ctx_rext ipx_ctx_rext_t;
  * - plugin_destroy()
  * - plugin_process()
  *
- * Optionally, each plugin should also implement runtime reconfiguration functions (all or none):
- * - plugin_update_prepare()
- * - plugin_update_apply()
- * - plugin_update_abort()
- * If a plugin doesn't implement these reconfiguration functions and a configuration of the plugin
- * is changed and the runtime reconfiguration procedure of the collector is triggered, the process
- * will be aborted.
- *
  * \note
  *   The plugin identification structure and all implemented functions MUST be defined as external
  *   symbols of the plugin's library (i.e. shared object) and MUST have public visibility.
@@ -293,108 +285,6 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg);
 IPX_API int
 ipx_plugin_session_close(ipx_ctx_t *ctx, void *cfg, const struct ipx_session *session);
 
-/** \brief Type of plugin's instance update  */
-enum ipx_plugin_update {
-    /**
-     * \brief Configuration of the instance will be possibly changed
-     *
-     * Because configuration is always plugin specific, the IPFIXcol core is not able to
-     * distinguish whether it was changed or not.
-     */
-    IPX_PU_CFG   = (1 << 0),
-    /**
-     * \brief Manager of Information Elements will be updated
-     *
-     * If the instance holds references to Information Elements from the previous manager. This
-     * references will not be valid after the update is complete.
-     */
-    IPX_PU_IEMGR = (1 << 1),
-    /**
-     * \brief Record extension(s) will be changed
-     *
-     * A new record extension will be added or an old extension will be removed. The plugin should
-     * check if the it uses the required extension and abort update, if necessary.
-     */
-    IPX_PU_REXT  = (1 << 2),
-};
-
-/**
- * \brief Prepare an instance of a plugin for reconfiguration
- *
- * When reconfiguration process of the collector is triggered, the function is called on all
- * affected plugins. An author of plugin should implement parsing configurations and checking
- * if anything has been changed. Reconfiguration can also change the IE manager and list of
- * available Information Elements (can be added/removed/redefined). Furthermore, record extensions
- * can be also added/removed or size of the record can be modified. If anything has changed,
- * the plugin should prepare update data (structure is up to the plugin) and store them
- * using ipx_ctx_update_set(), pointer to this data will be later passed by IPFIXcol core to
- * ipx_plugin_update_commit() or ipx_plugin_update_abort() functions.
- *
- * If the implementation is not provided by the plugin, it means that runtime modification of
- * it's instance configuration is not allowed and moreover, the instance is not notified when
- * an IE manager or record extensions will be changed.
- *
- * During execution of this function the plugin context is temporarily modified to represent future
- * changes, therefore, following functions returns potentially updated resources:
- * - ipx_ctx_subscribe()
- * - ipx_ctx_iemgr_get()
- * - ipx_ctx_rext_register()
- * - ipx_ctx_rext_deregister()
- * - ipx_ctx_rext_subscribe()
- * - ipx_ctx_rext_unsubscribe()
- *
- * \note It is NOT possible to pass any messages from update functions.
- * \warning
- *   Original configuration MUST stay unmodified! Plugin MUST NOT expect that
- *   ipx_plugin_update_apply() or ipx_plugin_update_abort() is called immediately after return
- *   from this function. There are usually multiple calls of ipx_plugin_get() or
- *   ipx_plugin_process() (depends on type of the plugin) between update commit or abort. These
- *   calls MUST be unaffected by the pending update!
- * \param[in] ctx    Plugin context
- * \param[in] cfg    Private data of the instance prepared by initialization function
- * \param[in] what   Bitwise OR of ::ipx_plugin_update flags
- * \param[in] params XML string with specific parameters for the plugin
- * \return #IPX_OK if no changes are necessary (commit or abort will NOT be called)
- * \return #IPX_READY if a new configuration has been parsed
- * \return #IPX_ERR_DENIED if it's NOT possible to perform reconfiguration or any other type
- *   of failure has occurred (commit or abort will NOT be called)
- */
-IPX_API int
-ipx_plugin_update_prepare(ipx_ctx_t *ctx, void *cfg, uint16_t what, const char *params);
-
-/**
- * \brief Apply update of an instance
- *
- * After all plugins are ready to update, this function is called by IPFIXcol core. The plugin
- * MUST apply modifications and free the update data.
- *
- * \note After return, the update data (set by ipx_ctx_update_set()) is set to NULL.
- * \note It is possible to pass any messages from this update function.
- * \param[in] ctx     Plugin context
- * \param[in] cfg     Private data of the instance prepared by initialization function
- * \param[in] update  Update data of the instance prepared by update function
- * \return #IPX_OK on success
- * \return #IPX_ERR_DENIED on a fatal error (such as memory allocation error, etc) The collector
- *   will exit!
- */
-IPX_API int
-ipx_plugin_update_commit(ipx_ctx_t *ctx, void *cfg, void *update);
-
-/**
- * \brief Abort update of an instance
- *
- * If at least one plugin refused new update configuration, this function is called by IPFIXcol
- * core. The plugin MUST abort prepared modifications and free update data.
- *
- * \note After return, the update data (set by ipx_ctx_update_set()) is set to NULL.
- * \note  It is NOT possible to pass any messages from this update function.
- * \param[in] ctx     Plugin context
- * \param[in] cfg     Private data of the instance prepared by initialization function
- * \param[in] update  Update data of the instance prepared by update function
- */
-IPX_API void
-ipx_plugin_update_abort(ipx_ctx_t *ctx, void *cfg, void *update);
-
 /**
  * @}
  *
@@ -418,18 +308,6 @@ ipx_plugin_update_abort(ipx_ctx_t *ctx, void *cfg, void *update);
  */
 IPX_API void
 ipx_ctx_private_set(ipx_ctx_t *ctx, void *data);
-
-/**
- * \brief Set update data of the instance
- *
- * Update data is used to change runtime configuration of the instance. Form of data is up to
- * the author of the plugin.
- * \note By default, private data of the instance is NULL.
- * \param[in] ctx  Current plugin context
- * \param[in] data Pointer to update data (can be NULL)
- */
-IPX_API void
-ipx_ctx_update_set(ipx_ctx_t *ctx, void *data);
 
 /**
  * \brief Get verbosity level of the instance
@@ -460,8 +338,7 @@ ipx_ctx_name_get(const ipx_ctx_t *ctx);
  * plugins haven't been established yet.
  *
  * \warning
- *   This interface is only for Input and Intermediate plugins. Moreover, inside update functions
- *   except ipx_plugin_update_commit() it is not possible to pass any messages.
+ *   This interface is only for Input and Intermediate plugins.
  * \param[in] ctx Current plugin context
  * \param[in] msg Message to send
  * \return #IPX_OK on success.
@@ -509,113 +386,6 @@ ipx_ctx_subscribe(ipx_ctx_t *ctx, const uint16_t *mask_new, uint16_t *mask_old);
  */
 IPX_API const fds_iemgr_t *
 ipx_ctx_iemgr_get(ipx_ctx_t *ctx);
-
-/**
- * @}
- *
- * \defgroup rextAPI Record extension API
- * \ingroup pluginAPI
- * \brief Registration and configuration of Data Record extensions
- *
- * Extensions allow effectively enrich IPFIX Data Records processed by plugins without expensive
- * modifications of IPFIX Messages. During plugin initialization or update preparation, any
- * Intermediate plugin can register a new extension and any Intermediate or Output plugin can
- * subscribe to data of the extension. Content of the extension is always up to the author.
- * Registration and subscription allows the IPFIXcol core to make sure that dependencies of all
- * plugins are satisfied even during reconfiguration.
- *
- * Each extension is identified by "type" and "id" strings. The type makes sure that a plugin is
- * subscribed to expected extension and its version. The ID identifies concrete occurrence
- * of the extension. In other words, a Data Record can be enriched by multiple different extension
- * of the same type at the same time.
- *
- * @{
- */
-
-/**
- * \brief Register a new Data Record extension (Intermediate Plugins ONLY!)
- *
- * The instance is responsible to fill the extension of all Data Records with data that make sense.
- * If an instance wants to redefine existing extension, for example, size. It MUST deregister
- * the extension first and register it again!
- *
- * \warning
- *   This function is only for Intermediate plugins and can be called only from ipx_plugin_init()
- *   or ipx_plugin_update_prepare() functions.
- *
- * \param[in]  ctx  Current plugin context
- * \param[in]  type Unique identification of data format (to prevent plugins subscribe to
- *   unexpected data type, for example, "profiler-0.1-data")
- * \param[in]  id   Identification of the extension
- * \param[in]  size Static size of the extension (in bytes, non-zero)
- * \param[out] key  Pointer to an extension access key
- * \return #IPX_OK on success and \p key is filled
- * \return #IPX_ERR_NOMEM if a memory allocation error has occurred
- * \return #IPX_ERR_ARG on invalid function arguments (empty \p type or \p id, zero \p size, etc.)
- * \return #IPX_ERR_DENIED if the instance doesn't have permission to register an extension
- * \return #IPX_ERR_EXISTS if an extension with the same name already exists
- */
-IPX_API int
-ipx_ctx_rext_register(ipx_ctx_t *ctx, const char *type, const char *id, uint16_t size,
-    ipx_ctx_rext_t **key);
-
-/**
- * \brief Deregister a Data Record extension (Intermediate Plugins ONLY!)
- *
- * Only previously successfully registered extension by this instance can be deregistered.
- * \note If the instance is destroyed, the extension is automatically deregistered.
- * \warning
- *   This function is only for Intermediate plugins and can be called only from ipx_plugin_init(),
- *   ipx_plugin_destroy() or ipx_plugin_update_prepare() functions.
- * \param[in] ctx Current plugin context
- * \param[in] key Pointer to an extension access key
- * \return #IPX_OK on success
- * \return #IPX_ERR_DENIED if the instance doesn't have permission to deregister the extension or
- *   its not owner of the extension
- * \return #IPX_ERR_NOTFOUND if the extension doesn't exist
- */
-IPX_API int
-ipx_ctx_rext_deregister(ipx_ctx_t *ctx, ipx_ctx_rext_t *key);
-
-/**
- * \brief Subscribe to a Data Record extension (Intermediate and Output Plugins ONLY!)
- *
- * Indicates dependency on a Data Record extension provided by another plugin that is placed
- * earlier in the pipeline.
- * \warning
- *   This function is only for Intermediate and Output plugins and can be called only from
- *   ipx_plugin_init() or ipx_plugin_update_prepare() functions.
- *
- * \param[in]  ctx  Current plugin context
- * \param[in]  type Unique identification of data format (to prevent plugins subscribe to
- *   unexpected data type, for example, "profiler-0.1-data")
- * \param[in]  id   Identification of the extension
- * \param[out] key  Pointer to an extension access key
- * \return #IPX_OK on success and \p key is filled
- * \return #IPX_ERR_NOMEM  if a memory allocation error has occurred
- * \return #IPX_ERR_DENIED if the instance doesn't have permission to subscribe the extension
- * \return #IPX_ERR_LIMIT  if the limit of extensions has been reached.
- */
-IPX_API int
-ipx_ctx_rext_subscribe(ipx_ctx_t *ctx, const char *type, const char *id, ipx_ctx_rext_t **key);
-
-/**
- * \brief Unsubscribe to a Data Record extension (Intermediate and Output Plugins ONLY!)
- *
- * Only previously successfully subscribed extensions by this instance can be unsubscribed.
- * \note If the instance is destroyed, the extension is automatically unsubscribed.
- * \warning
- *   This function is only for Intermediate and Output plugins and can be called only from
- *   ipx_plugin_init(), ipx_plugin_destroy or ipx_plugin_update_prepare() functions.
- *
- * \param[in] ctx Current plugin context
- * \param[in] key Pointer to an extension access key
- * \return #IPX_OK on success
- * \return #IPX_ERR_DENIED if the instance doesn't have permission to unsubscribe to the extension
- * \return #IPX_ERR_NOTFOUND if the extension doesn't exists
- */
-IPX_API int
-ipx_ctx_rext_unsubscribe(ipx_ctx_t *ctx, ipx_ctx_rext_t *key);
 
 /**
  * @}

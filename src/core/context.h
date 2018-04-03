@@ -46,14 +46,6 @@
 #include <libfds.h>
 #include "fpipe.h"
 
-/** Extension record of Data Record  */
-struct ipx_ctx_rext {
-    /** Extension offset      */
-    uint16_t offset;
-    /** Data size             */
-    uint16_t size;
-};
-
 /** List of plugin callbacks  */
 struct ipx_ctx_callbacks {
     /** Plugin constructor                                                      */
@@ -67,13 +59,6 @@ struct ipx_ctx_callbacks {
     int  (*process) (ipx_ctx_t *, void *, ipx_msg_t *);
     /** Close session request (INPUT plugins only, can be NULL)                 */
     int  (*ts_close)(ipx_ctx_t *, void *, const struct ipx_session *);
-
-    /** Update prepare (can be NULL)                                            */
-    int  (*update_prepare)(ipx_ctx_t *, void *, uint16_t, const char *);
-    /** Update commit (can be NULL)                                             */
-    int  (*update_commit) (ipx_ctx_t *, void *, void *);
-    /** Update abort (can be NULL)                                              */
-    void (*update_abort)  (ipx_ctx_t *, void *, void *);
 };
 
 /*

@@ -50,25 +50,12 @@
 #include "fpipe.h"
 #include "ring.h"
 
-/** Invalid offset                                */
-#define IPX_REXT_OFFSET_INV (65535)
-/** Maximum number of registered extensions       */
-#define IPX_REXT_MAX (16)
-
 /** Current  */
 enum ipx_ctx_permissions {
     /** Permission to pass a message              */
     IPX_CP_MSG_PASS    = (1 << 0),
     /** Permission to subscribe a message         */
     IPX_CP_MSG_SUB     = (1 << 1),
-    /** Permission to register a new extension    */
-    IPX_CP_REXT_REG    = (1 << 2),
-    /** Permission to deregister an extension     */
-    IPX_CP_REXT_DEREG  = (1 << 3),
-    /** Permission to subscribe to an extension   */
-    IPX_CT_REXT_SUB    = (1 << 4),
-    /** Permission to unsubscribe to an extension */
-    IPX_CT_REXT_UNSUB  = (1 << 5)
 };
 
 /**
@@ -116,13 +103,7 @@ struct ipx_ctx {
         size_t rec_size;
         /** Verbosity level of the plugin                                                        */
         uint8_t  vlevel;
-
-        // TODO: reference to global extension table
-
     } cfg_system; /**< System configuration                                                      */
-
-    /** Array of record extensions TODO                                                          */
-    struct ipx_ctx_rext rext[IPX_REXT_MAX];
 };
 
 ipx_ctx_t *

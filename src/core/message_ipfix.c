@@ -68,13 +68,6 @@ ipx_msg_ipfix_size(uint32_t rec_cnt, size_t rec_size)
         + (rec_cnt * rec_size);
 }
 
-uint16_t
-ipx_record_rext_get(struct ipx_ipfix_record *rec, const ipx_ctx_rext_t *key, uint8_t **data)
-{
-    (*data) = &rec->ext[key->offset];
-    return key->size;
-}
-
 ipx_msg_ipfix_t *
 ipx_msg_ipfix_create(const ipx_ctx_t *plugin_ctx, const struct ipx_msg_ctx *msg_ctx,
     uint8_t *msg_data)

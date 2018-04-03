@@ -106,16 +106,6 @@ struct ipx_ipfix_record {
 };
 
 /**
- * \brief Get data of a Data Record extension
- * \param[in]  rec  Data Record
- * \param[in]  key  Access key
- * \param[out] data Pointer to the start of data
- * \return Size of data (in bytes)
- */
-IPX_API uint16_t
-ipx_record_rext_get(struct ipx_ipfix_record *rec, const ipx_ctx_rext_t *key, uint8_t **data);
-
-/**
  * \brief Create an empty wrapper around IPFIX (or NetFlow) Message
  *
  * Newly create doesn't have filled information about IPFIX Data/Template/Options Template records
