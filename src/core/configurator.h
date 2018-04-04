@@ -83,7 +83,7 @@ ipx_config_init();
  * \return #IPX_ERR_DENIED on failure and an error message is set (see ipx_config_last_err())
  */
 IPX_API int
-ipx_config_input_add(const struct ipx_plugin_input *cfg);
+ipx_config_input_add(const struct ipx_cfg_input *cfg);
 
 /**
  * \brief Add an instance of an intermediate plugin
@@ -93,7 +93,7 @@ ipx_config_input_add(const struct ipx_plugin_input *cfg);
  * \return #IPX_ERR_DENIED on failure and an error message is set (see ipx_config_last_err())
  */
 IPX_API int
-ipx_config_inter_add(const struct ipx_plugin_inter *cfg);
+ipx_config_inter_add(const struct ipx_cfg_inter *cfg);
 
 /**
  * \brief Add an instance of an output plugin
@@ -102,7 +102,7 @@ ipx_config_inter_add(const struct ipx_plugin_inter *cfg);
  * \return #IPX_ERR_DENIED on failure and an error message is set (see ipx_config_last_err())
  */
 IPX_API int
-ipx_config_output_add(const struct ipx_plugin_output *cfg);
+ipx_config_output_add(const struct ipx_cfg_output *cfg);
 
 /**
  * \brief Start new configuration
