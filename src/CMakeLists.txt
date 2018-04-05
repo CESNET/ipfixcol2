@@ -25,6 +25,7 @@ include_directories(
 set(CORE_SOURCE
 	"${PROJECT_BINARY_DIR}/src/build_config.h"
 	core/config_file.cpp
+	core/config_file.hpp
 	core/configurator.cpp
 	core/configurator.h
 	core/context.c
@@ -43,8 +44,6 @@ set(CORE_SOURCE
 	core/parser_plugin.h
 	core/ring.c
 	core/ring.h
-	core/context.c
-	core/context.h
 	core/session.c
 	core/verbose.c
 	core/verbose.h
@@ -66,7 +65,7 @@ target_link_libraries(ipfixcol2base
 
 # Build IPFIXCOL2 exacutable with all symbols from the base library
 set(BASE_LIB -Wl,--whole-archive ipfixcol2base -Wl,--no-whole-archive)
-add_executable(ipfixcol2 main.c)
+add_executable(ipfixcol2 main.cpp)
 target_link_libraries(ipfixcol2 ${BASE_LIB})
 set_target_properties(ipfixcol2 PROPERTIES  # by default, hide all symbols
 	C_VISIBILITY_PRESET hidden

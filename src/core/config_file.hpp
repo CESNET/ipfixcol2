@@ -5,7 +5,9 @@
 #ifndef IPFIXCOL_CONFIG_FILE_H
 #define IPFIXCOL_CONFIG_FILE_H
 
-void
-ipx_file_parse(const char *pathname);
+#include <ipfixcol2/api.h>
+
+IPX_API int
+ipx_file_parse(const std::string &path);
 
 #endif //IPFIXCOL_CONFIG_FILE_H

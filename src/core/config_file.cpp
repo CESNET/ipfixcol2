@@ -9,11 +9,12 @@
 
 #include <libfds.h>
 #include <iostream>
+#include "config_file.hpp"
 
 extern "C" {
     #include "configurator.h"
     #include "utils.h"
-    #include "config_file.h"
+
 }
 
 enum FILE_XML_NODES {
@@ -293,14 +294,14 @@ file_parse_list_output(fds_xml_ctx_t *ctx)
     }
 }
 
-void
-ipx_file_parse(const char *pathname)
+int
+ipx_file_parse(const std::string &path)
 {
     // Load content of the configuration file
-    std::unique_ptr<FILE, decltype(&fclose)> stream(fopen(pathname, "r"), &fclose);
+    std::unique_ptr<FILE, decltype(&fclose)> stream(fopen(path.c_str(), "r"), &fclose);
     if (!stream) {
         // Failed to open file
-        std::string err_msg = "Unable to open file '" + std::string(pathname) + "'";
+        std::string err_msg = "Unable to open file '" + path + "'";
         throw std::runtime_error(err_msg);
     }
 
@@ -350,5 +351,5 @@ ipx_file_parse(const char *pathname)
         }
     }
 
-
+    return IPX_OK;
 }
