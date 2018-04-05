@@ -77,3 +77,5 @@ install(
 	TARGETS ipfixcol2
 	DESTINATION bin
 )
+
+add_subdirectory(plugins)

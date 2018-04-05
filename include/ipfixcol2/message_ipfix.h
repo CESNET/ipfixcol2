@@ -76,7 +76,7 @@ struct ipx_msg_ctx {
      * \brief Stream ID
      * \note
      *   This value is useful only for SCTP sessions to distinguish individual streams.
-     *   For other session the value is set to 0.
+     *   For other session the value MUST be set to 0.
      */
     ipx_stream_t stream;
 };
