@@ -62,29 +62,24 @@ IPX_API void
 ipx_fpipe_destroy(ipx_fpipe_t *fpipe);
 
 /**
- * \brief Send a request to close a Transport Session
+ * \brief Send a message
  *
- * \param[in] fpipe   Feedback pipe
- * \param[in] ts Transport Session to close
- * \return #IPX_OK on success
- * \return #IPX_ERR_ARG if a fatal internal error has occurred
+ * It's safe for multiple writers to write to the pipe at the same time. (thread-safe)
+ * \param[in] fpipe Feedback pipe
+ * \param[in] msg   A message to send
  */
-IPX_API int
-ipx_fpipe_write(ipx_fpipe_t *fpipe, const struct ipx_session *ts);
+IPX_API void
+ipx_fpipe_write(ipx_fpipe_t *fpipe, ipx_msg_t *msg);
 
 /**
- * \brief Get a request to close a Transport Session
+ * \brief Try to get a message
  *
- * The function tries is non-blocking.
- * \warning Do not try to access data in the pointer! It could be already freed! Always use
- *   only value of the pointer.
- * \param[in]  fpipe Feedback pipe
- * \param[out] ts    Transport Session to close
- * \return #IPX_OK if the session is prepared
- * \return #IPX_ERR_NOTFOUND if no session is available
- * \return #IPX_ERR_ARG if a fatal internal error has occurred
+ * The function is non-blocking and can be used by only one thread at the same time!
+ * \param[in]  fpipe   Feedback pipe
+ * \return NULL if no message is available
+ * \return Otherwise a message to process
  */
-IPX_API int
-ipx_fpipe_read(ipx_fpipe_t *fpipe, const struct ipx_session **ts);
+IPX_API ipx_msg_t *
+ipx_fpipe_read(ipx_fpipe_t *fpipe);
 
 #endif // IPFIXCOL_FPIPE_H

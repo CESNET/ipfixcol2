@@ -176,12 +176,21 @@ parser_plugin_remove_session(ipx_ctx_t *ctx, ipx_parser_t *parser, const struct 
     }
 
     // Block the Transport Session and send request
-    ipx_parser_session_block(parser, ts);
-    if (ipx_fpipe_write(feedback, ts) != IPX_OK) {
-        IPX_CTX_ERROR(ctx, "Due to a fatal internal error the parser cannot continue!", NULL);
-        return IPX_ERR_ARG;
+    ipx_msg_session_t *session_msg = ipx_msg_session_create(ts, IPX_MSG_SESSION_CLOSE);
+    if (!session_msg) {
+        IPX_CTX_ERROR(ctx, "Unable to create a request to close a Transport Session '%s' due to "
+            "memory allocation error. Removing all internal info about the session!",
+            ts->ident);
+
+        int rc = ipx_parser_session_remove(parser, ts, &garbage);
+        if (rc == IPX_OK && garbage != NULL) {
+            ipx_ctx_msg_pass(ctx, ipx_msg_garbage2base(garbage));
+        }
+        return IPX_OK;
     }
 
+    ipx_parser_session_block(parser, ts);
+    ipx_fpipe_write(feedback, ipx_msg_session2base(session_msg));
     return IPX_OK;
 }
 

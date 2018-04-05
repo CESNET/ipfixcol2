@@ -64,7 +64,6 @@ struct ipx_fpipe {
     atomic_flag sync_flag;
     /** Records in the pipe                                                          */
     volatile uint32_t cnt;
-
 };
 
 ipx_fpipe_t *
@@ -93,21 +92,25 @@ ipx_fpipe_create()
 void
 ipx_fpipe_destroy(ipx_fpipe_t *fpipe)
 {
+    if (fpipe->cnt != 0) {
+        IPX_WARNING(fpipe_str, "Destroying of a pipe that still contains unprocessed messages!");
+    }
+
     // Close the pipe and destroy the structure
     close(fpipe->fd_read);
     close(fpipe->fd_write);
     free(fpipe);
 }
 
-int
-ipx_fpipe_write(ipx_fpipe_t *fpipe, const struct ipx_session *ts)
+void
+ipx_fpipe_write(ipx_fpipe_t *fpipe, ipx_msg_t *msg)
 {
-    assert(ts != NULL);
+    assert(msg != NULL);
 
     // Send a pointer to the session (write of less than 4096 bytes is atomic - man 7 pipe)
     while (true) {
-        ssize_t rc = write(fpipe->fd_write, &ts, sizeof(struct ipx_session *));
-        if (rc > 0 && ((size_t) rc) == sizeof(struct ipx_session *)) {
+        ssize_t rc = write(fpipe->fd_write, &msg, sizeof(msg));
+        if (rc > 0 && ((size_t) rc) == sizeof(msg)) {
             // Success
             break;
         }
@@ -117,26 +120,28 @@ ipx_fpipe_write(ipx_fpipe_t *fpipe, const struct ipx_session *ts)
             continue;
         }
 
+        // Something bad happened
         if (rc == -1) {
             const char *err_str;
             ipx_strerror(errno, err_str);
-            IPX_ERROR(fpipe_str, "Failed to write: %s", err_str);
+            IPX_ERROR(fpipe_str, "An internal message has been lost. Failed to write: %s", err_str);
         } else {
-            IPX_ERROR(fpipe_str, "Invalid return code of write: %ld", rc);
+            IPX_ERROR(fpipe_str, "An internal message has been probably lost. Invalid return code "
+                "of write(): %ld", rc);
         }
 
-        return IPX_ERR_ARG;
+        return;
     }
 
     // Success - spin until the lock is acquired
     while (atomic_flag_test_and_set_explicit(&fpipe->sync_flag, memory_order_acquire));
     fpipe->cnt++;
     atomic_flag_clear_explicit(&fpipe->sync_flag, memory_order_release);
-    return IPX_OK;
+    return;
 }
 
-int
-ipx_fpipe_read(ipx_fpipe_t *fpipe, const struct ipx_session **ts)
+ipx_msg_t *
+ipx_fpipe_read(ipx_fpipe_t *fpipe)
 {
     // Spin until the lock is acquired
     while (atomic_flag_test_and_set_explicit(&fpipe->sync_flag, memory_order_acquire));
@@ -148,13 +153,13 @@ ipx_fpipe_read(ipx_fpipe_t *fpipe, const struct ipx_session **ts)
     atomic_flag_clear_explicit(&fpipe->sync_flag, memory_order_release);
 
     if (cnt == 0) {
-        return IPX_ERR_NOTFOUND;
+        return NULL;
     }
 
     // Read from the pipe
-    struct ipx_session *ptr;
-    void *buffer = &ptr;
-    size_t buffer_size = sizeof(ptr);
+    ipx_msg_t *msg;
+    void *buffer = &msg;
+    size_t buffer_size = sizeof(msg);
     size_t read_size = 0;
 
     errno = 0;
@@ -165,7 +170,7 @@ ipx_fpipe_read(ipx_fpipe_t *fpipe, const struct ipx_session **ts)
             continue;
         }
 
-        if (rc < 0 && errno == EINTR) {
+        if (rc == -1 && errno == EINTR) {
             // Try again
             continue;
         }
@@ -179,9 +184,8 @@ ipx_fpipe_read(ipx_fpipe_t *fpipe, const struct ipx_session **ts)
             IPX_ERROR(fpipe_str, "Failed to read: %s", err_str);
         }
 
-        return IPX_ERR_ARG;
+        return NULL;
     }
 
-    (*ts) = ptr;
-    return IPX_OK;
+    return msg;
 }
