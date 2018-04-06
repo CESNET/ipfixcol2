@@ -27,7 +27,7 @@ set(CORE_SOURCE
 	core/config_file.cpp
 	core/config_file.hpp
 	core/configurator.cpp
-	core/configurator.h
+	core/configurator.hpp
 	core/context.c
 	core/context.h
 	core/fpipe.c
@@ -61,6 +61,7 @@ add_library(
 target_link_libraries(ipfixcol2base
 	${FDS_LIBRARIES}           # libfds
 	${CMAKE_THREAD_LIBS_INIT}  # libpthread
+	${CMAKE_DL_LIBS}           # libdl (dlopen,...)
 )
 
 # Build IPFIXCOL2 exacutable with all symbols from the base library

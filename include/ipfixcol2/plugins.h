@@ -135,7 +135,7 @@ enum ipx_plugin_type {
 /**
  * \brief Identification of a plugin
  *
- * This structure MUST be defined as global non-static variable called "plugin_info". In other
+ * This structure MUST be defined as global non-static variable called "ipx_plugin_info". In other
  * words, the variable MUST be an exported symbol of the plugin's library. Use IPX_API macro
  * to enable visibility of definition.
  */
@@ -372,7 +372,7 @@ ipx_ctx_msg_pass(ipx_ctx_t *ctx, ipx_msg_t *msg);
  * \return #IPX_ERR_ARG if the plugin is not of proper type (i.e. not Intermediate or Output)
  */
 IPX_API int
-ipx_ctx_subscribe(ipx_ctx_t *ctx, const uint16_t *mask_new, uint16_t *mask_old);
+ipx_ctx_subscribe(ipx_ctx_t *ctx, const uint16_t *mask_new, uint16_t *mask_old); // TODO: mask type
 
 /**
  * \brief Get a manager of Information Elements

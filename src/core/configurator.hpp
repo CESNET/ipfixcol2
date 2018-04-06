@@ -3,6 +3,57 @@
 
 #include <ipfixcol2.h>
 #include <stdint.h>
+#include <vector>
+
+
+
+class Configurator {
+private:
+    class Plugin_finder; // forward declaration
+
+
+public:
+    /** Constructor */
+    Configurator();
+    /** Destructor  */
+    ~Configurator();
+
+    // Disable copy and move constructors
+    Configurator(const Configurator &) = delete;
+    Configurator& operator=(const Configurator &) = delete;
+    Configurator(Configurator &&) = delete;
+    Configurator& operator=(Configurator &&) = delete;
+
+    /** Modules finder */
+    Plugin_finder *plugin_finder;
+};
+
+/** Modules finder */
+class Configurator::Plugin_finder {
+private:
+    /** List of module path where to look for modules */
+    std::vector<std::string> paths;
+
+    void
+    list_dir(const char *dir);
+    void
+    list_file(const char *file);
+public:
+    Plugin_finder() = default;
+    ~Plugin_finder() = default;
+
+    /**
+     * \brief Add path to a plugin or directory with plugins
+     * \param[in] pathname Path
+     */
+    void path_add(const std::string &pathname);
+    /**
+     * \brief List all available modules
+     * \note Available modules are printed on standard output
+     */
+    void list();
+};
+
 
 /**
  * \brief Default instance verbosity
@@ -62,6 +113,7 @@ struct ipx_cfg_output {
         char *expression;
     } odid_filter; /**< ODID filter                                         */
 };
+
 
 /**
  * \brief Prepare for a new configuration

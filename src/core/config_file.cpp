@@ -10,11 +10,10 @@
 #include <libfds.h>
 #include <iostream>
 #include "config_file.hpp"
+#include "configurator.hpp"
 
 extern "C" {
-    #include "configurator.h"
-    #include "utils.h"
-
+#include "utils.h"
 }
 
 enum FILE_XML_NODES {
