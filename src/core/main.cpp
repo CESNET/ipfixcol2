@@ -45,12 +45,12 @@
 
 #include <ipfixcol2.h>
 #include <iostream>
-#include "core/config_file.hpp"
-#include "core/configurator.hpp"
+#include "config_file.hpp"
+#include "configurator.hpp"
 
 extern "C" {
-#include "core/verbose.h"
-#include "build_config.h"
+#include "verbose.h"
+#include <build_config.h>
 }
 
 /**
@@ -63,8 +63,9 @@ print_version()
         << "Version:      " << IPX_BUILD_VERSION_FULL_STR << "\n"
         << "GIT hash:     " << IPX_BUILD_GIT_HASH << "\n"
         << "Build type:   " << IPX_BUILD_TYPE << "\n"
-        << "Architecture: " << IPX_BUILD_ARCH << "(" << IPX_BUILD_BYTE_ORDER << ")" << "\n"
-        << "Compiler:     " << IPX_BUILD_COMPILER << "\n";
+        << "Architecture: " << IPX_BUILD_ARCH << " (" << IPX_BUILD_BYTE_ORDER << ")" << "\n"
+        << "Compiler:     " << IPX_BUILD_COMPILER << "\n"
+        << "Copyright (C) 2018 CESNET z.s.p.o.\n";
 }
 
 /**
@@ -79,7 +80,9 @@ print_help()
         << "  -c FILE   Path to the startup configuration file (default: "
             << IPX_DEFAULT_STARTUP_CONFIG << ")\n"
         << "  -p PATH   Add path to a directory with plugins or to a file (default: "
-           << IPX_DEFAULT_PLUGINS_DIR << ")\n"
+            << IPX_DEFAULT_PLUGINS_DIR << ")\n"
+        << "  -e DIR    Path to a directory with definitions of IPFIX Information Elements "
+            << "(default: " << fds_api_cfg_dir() << ")\n"
         << "  -L        List available plugins and exit\n"
         << "  -h        Show this help message and exit\n"
         << "  -V        Show version information and exit\n"
