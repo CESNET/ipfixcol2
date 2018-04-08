@@ -68,13 +68,15 @@ extern "C" {
 enum ipx_msg_type
 {
     /** A message with a parsed IPFIX message from a source of flows        */
-    IPX_MSG_IPFIX   = (1 << 0),
+    IPX_MSG_IPFIX     = (1 << 0),
     /** A transport session status i.e. information about (dis)connections  */
-    IPX_MSG_SESSION = (1 << 1),
+    IPX_MSG_SESSION   = (1 << 1),
     /** An generic object destructor (usually only for internal usage)      */
-    IPX_MSG_GARBAGE = (1 << 2),
+    IPX_MSG_GARBAGE   = (1 << 2),
+    /** A terminate message (only for internal usage)                       */
+    IPX_MSG_TERMINATE = (1 << 3),
     // An internal configuration message (only for internal usage)
-    //IPX_MSG_CONFIG  = (1 << 3)
+    //IPX_MSG_CONFIG  = (1 << 4)
 };
 
 /** The data type of the base message                                       */

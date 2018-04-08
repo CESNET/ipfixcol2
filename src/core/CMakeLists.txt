@@ -14,6 +14,8 @@ set(CORE_SOURCE
 	message_ipfix.c
 	message_ipfix.h
 	message_session.c
+	message_terminate.c
+	message_terminate.h
 	parser.c
 	parser.h
 	parser_plugin.c

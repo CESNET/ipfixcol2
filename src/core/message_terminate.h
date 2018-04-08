@@ -1,11 +1,11 @@
 /**
- * \file src/core/message_base.c
+ * \file src/core/message_terminate.h
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
- * \brief Common specification of messages for the IPFIXcol pipeline (source file)
- * \date 2016-2018
+ * \brief Terminate message (internal header file)
+ * \date 2018
  */
 
-/* Copyright (C) 2016-2018 CESNET, z.s.p.o.
+/* Copyright (C) 2018 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,33 +39,49 @@
  *
  */
 
-#include <ipfixcol2.h>
-#include "message_base.h"
-#include "message_terminate.h"
+#ifndef IPFIXCOL_MESSAGE_TERMINATE_H
+#define IPFIXCOL_MESSAGE_TERMINATE_H
 
-// Get the type of a message for the collector pipeline
-enum ipx_msg_type
-ipx_msg_get_type(ipx_msg_t *msg)
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** \brief The type of terminate message           */
+typedef struct ipx_msg_terminate ipx_msg_terminate_t;
+
+#include <ipfixcol2/message.h>
+
+/**
+ * \brief Create a terminate message
+ *
+ * Purpose of the message is to signalize instance that it's time to stop processing messages,
+ * execute destructor of the instance and terminate context thread. So evidently, this MUST be the
+ * last message send through pipeline.
+ *
+ * \return Pointer ot the message or NULL (memory allocation error)
+ */
+IPX_API ipx_msg_terminate_t *
+ipx_msg_terminate_create();
+
+/**
+ * \brief Destroy a terminate message
+ * \param[in] msg Pointer to the message
+ */
+IPX_API void
+ipx_msg_termiante_destroy(ipx_msg_terminate_t *msg);
+
+/**
+ * \brief Cast from a terminate message to a base message
+ * \param[in] msg Pointer to the terminate message
+ * \return Pointer to the base message
+ */
+static inline ipx_msg_t *
+ipx_msg_terminate2base(ipx_msg_session_t *msg)
 {
-    return msg->type;
+    return (ipx_msg_t *) msg;
 }
 
-// Destroy a message for the collector pipeline
-void
-ipx_msg_destroy(ipx_msg_t *msg)
-{
-    switch (msg->type) {
-    case IPX_MSG_IPFIX:
-        ipx_msg_ipfix_destroy(ipx_msg_base2ipfix(msg));
-        break;
-    case IPX_MSG_SESSION:
-        ipx_msg_session_destroy(ipx_msg_base2session(msg));
-        break;
-    case IPX_MSG_GARBAGE:
-        ipx_msg_garbage_destroy(ipx_msg_base2garbage(msg));
-        break;
-    case IPX_MSG_TERMINATE:
-        ipx_msg_termiante_destroy(ipx_msg_base2terminate(msg));
-        break;
-    }
+#ifdef __cplusplus
 }
+#endif
+#endif //IPFIXCOL_MESSAGE_TERMINATE_H

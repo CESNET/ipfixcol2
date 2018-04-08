@@ -44,6 +44,7 @@
 
 #include <ipfixcol2.h>
 #include <assert.h>
+#include "message_terminate.h"
 
 /**
  * \internal
@@ -97,6 +98,19 @@ static inline void
 ipx_msg_header_destroy(struct ipx_msg *header)
 {
     (void) header;
+}
+
+/**
+ * \brief Cast from a base message to an IPFIX message
+ * \param[in] msg Pointer to the base message
+ * \warning If the base message is not an IPFIX message, the result is undefined!
+ * \return Pointer to the IPFIX message
+ */
+static inline ipx_msg_terminate_t *
+ipx_msg_base2terminate(ipx_msg_t *msg)
+{
+    assert(ipx_msg_get_type(msg) == IPX_MSG_TERMINATE);
+    return (ipx_msg_terminate_t *) msg;
 }
 
 #endif //IPFIXCOL_MESSAGE_BASE_H

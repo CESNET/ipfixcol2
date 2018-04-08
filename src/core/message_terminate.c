@@ -1,11 +1,11 @@
 /**
- * \file src/core/message_base.c
+ * \file src/core/message_terminate.c
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
- * \brief Common specification of messages for the IPFIXcol pipeline (source file)
- * \date 2016-2018
+ * \brief Terminate message (source file)
+ * \date 2018
  */
 
-/* Copyright (C) 2016-2018 CESNET, z.s.p.o.
+/* Copyright (C) 2018 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,33 +39,38 @@
  *
  */
 
-#include <ipfixcol2.h>
-#include "message_base.h"
+#include <stddef.h>
+#include <stdlib.h>
 #include "message_terminate.h"
+#include "message_base.h"
 
-// Get the type of a message for the collector pipeline
-enum ipx_msg_type
-ipx_msg_get_type(ipx_msg_t *msg)
+/** \brief Structure of a terminate message */
+struct ipx_msg_terminate {
+    /**
+     * Identification of this message. This MUST be always first in this
+     * structure and the "type" MUST be #IPX_MSG_TERMINATE.
+     */
+    struct ipx_msg msg_header;
+};
+
+static_assert(offsetof(struct ipx_msg_terminate, msg_header.type) == 0,
+    "Message type must be the first element of each IPFIXcol message.");
+
+ipx_msg_terminate_t *
+ipx_msg_terminate_create()
 {
-    return msg->type;
+    struct ipx_msg_terminate *msg = malloc(sizeof(*msg));
+    if (!msg) {
+        return NULL;
+    }
+
+    ipx_msg_header_init(&msg->msg_header, IPX_MSG_TERMINATE);
+    return msg;
 }
 
-// Destroy a message for the collector pipeline
 void
-ipx_msg_destroy(ipx_msg_t *msg)
+ipx_msg_termiante_destroy(ipx_msg_terminate_t *msg)
 {
-    switch (msg->type) {
-    case IPX_MSG_IPFIX:
-        ipx_msg_ipfix_destroy(ipx_msg_base2ipfix(msg));
-        break;
-    case IPX_MSG_SESSION:
-        ipx_msg_session_destroy(ipx_msg_base2session(msg));
-        break;
-    case IPX_MSG_GARBAGE:
-        ipx_msg_garbage_destroy(ipx_msg_base2garbage(msg));
-        break;
-    case IPX_MSG_TERMINATE:
-        ipx_msg_termiante_destroy(ipx_msg_base2terminate(msg));
-        break;
-    }
+    ipx_msg_header_destroy((ipx_msg_t *) msg);
+    free(msg);
 }
