@@ -46,6 +46,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <errno.h>
+#include <inttypes.h>
 
 #include "fpipe.h"
 #include "utils.h"
@@ -93,7 +94,8 @@ void
 ipx_fpipe_destroy(ipx_fpipe_t *fpipe)
 {
     if (fpipe->cnt != 0) {
-        IPX_WARNING(fpipe_str, "Destroying of a pipe that still contains unprocessed messages!");
+        IPX_WARNING(fpipe_str, "Destroying of a pipe that still contains %" PRIu32 " unprocessed "
+            "message(s)!", fpipe->cnt);
     }
 
     // Close the pipe and destroy the structure

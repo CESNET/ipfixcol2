@@ -51,6 +51,7 @@
 // START TODO: move into header files
 #include <stdalign.h>
 #include <assert.h>
+#include <inttypes.h>
 
 #ifndef IPX_CLINE_SIZE
 /** Expected CPU cache-line size        */
@@ -271,6 +272,12 @@ exit_A:
 void
 ipx_ring_destroy(ipx_ring_t *ring)
 {
+    if (ring->reader.read_idx != ring->writer.write_idx) {
+        uint32_t cnt = ring->writer.write_idx - ring->reader.read_idx;
+        IPX_WARNING(module, "Destroying of a ring buffer that still contains %" PRIu32
+            " unprocessed message(s)!", cnt);
+    }
+
     pthread_cond_destroy(&ring->sync.cond_writer);
     pthread_cond_destroy(&ring->sync.cond_reader);
     pthread_mutex_destroy(&ring->sync.mutex);
