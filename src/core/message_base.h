@@ -56,7 +56,7 @@
  */
 
 /**
- * \brief Header of all messages for the collector pipeline.
+ * \brief Header of all messages for the collector pipeline
  *
  * \remark Never use this structure directly, instead use API functions, because internal elements
  *   can be changed.
@@ -64,14 +64,11 @@
  *   collector pipeline, because it serves as an identification of the message type.
  */
 struct ipx_msg {
-    /** Type of the message */
+    /** Type of the message                                                           */
     enum ipx_msg_type type;
-
-    /*
-     * TODO: add number of references to this message only for output manager!
-     * atomic_uint ref_cnt;
-     */
-};
+    /** Reference counter (set by the output manager, decremented by output plugins)  */
+    unsigned int ref_cnt;
+}; // TODO: 64 bytes alignment
 
 static_assert(offsetof(struct ipx_msg, type) == 0,
     "Message type must be the first element of each IPFIXcol message.");
@@ -98,6 +95,29 @@ static inline void
 ipx_msg_header_destroy(struct ipx_msg *header)
 {
     (void) header;
+}
+
+/**
+ * \brief Set the reference counter (only for the output manager)
+ * \param[in] header Pointer to the header of the message
+ * \param[in] cnt    Initial value
+ */
+static inline void
+ipx_msg_header_cnt_set(struct ipx_msg *header, unsigned int cnt)
+{
+    header->ref_cnt = cnt;
+}
+
+/**
+ * \brief Decrement the reference counter (only for output plugins)
+ * \param[in] header Pointer to the header of the message
+ * \return True if this is the last reference and the message should be freed
+ * \return False otherwise
+ */
+static inline bool
+ipx_msg_header_cnt_dec(struct ipx_msg *header)
+{
+    return (__sync_sub_and_fetch(&header->ref_cnt, 1U) == 0);
 }
 
 /**

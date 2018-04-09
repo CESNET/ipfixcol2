@@ -67,6 +67,9 @@ struct ipx_ctx_callbacks {
     void  (*ts_close)(ipx_ctx_t *, void *, const struct ipx_session *);
 };
 
+/** Identification number of output manager plugin */
+#define IPX_PT_OUTPUT_MGR 255
+
 /**
  * \brief Create a context
  *

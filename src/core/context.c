@@ -43,6 +43,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <stdatomic.h>
+#include <inttypes.h>
 
 #include "context.h"
 #include "verbose.h"
@@ -223,7 +224,7 @@ ipx_ctx_msg_pass(ipx_ctx_t *ctx, ipx_msg_t *msg)
         return IPX_ERR_ARG;
     }
 
-    if (!ctx->pipeline.dst) {
+    if (!ctx->pipeline.dst) { // TODO: is it really true???
         /* Plugin has permission but the successor is not connected. This can happen only if
          * the destructor is called immediately after initialization without prepared pipeline ->
          * it's safe to destroy message immediately
@@ -284,4 +285,127 @@ void
 ipx_ctx_overwrite_msg_mask(ipx_ctx_t *ctx, ipx_msg_mask_t mask)
 {
     ctx->cfg_system.msg_mask_allowed = mask;
+}
+
+// -------------------------------------------------------------------------------------------------
+
+static int
+init_check_input(ipx_ctx_t *ctx)
+{
+    if (ctx->pipeline.feedback == NULL) {
+        IPX_CTX_ERROR(ctx, "Input feedback pipe is not defined!");
+        return IPX_ERR_ARG;
+    }
+
+    if (ctx->pipeline.dst == NULL) {
+        IPX_CTX_ERROR(ctx, "Output ring buffer is not defined!");
+        return IPX_ERR_ARG;
+    }
+
+    if (ctx->plugin_cbs->get == NULL) {
+        IPX_CTX_ERROR(ctx, "Getter callback function is not defined!");
+        return IPX_ERR_ARG;
+    }
+
+    return IPX_OK;
+}
+
+static int
+init_check_intermediate(ipx_ctx_t *ctx)
+{
+    if (ctx->pipeline.src == NULL) { // TODO: except output plugin...
+        IPX_CTX_ERROR(ctx, "Input ring buffer is not defined!");
+        return IPX_ERR_ARG;
+    }
+
+    /* Although the output manager is implemented as an intermediate plugin, it doesn't use
+     * a standard output ring buffer.
+     */
+    if (ctx->pipeline.dst == NULL && ctx->plugin_cbs->info->type != IPX_PT_OUTPUT_MGR) {
+        IPX_CTX_ERROR(ctx, "Output ring buffer is not defined!");
+        return IPX_ERR_ARG;
+    }
+
+    if (ctx->plugin_cbs->process) {
+        IPX_CTX_ERROR(ctx, "Processing callback function is not defined!");
+        return IPX_ERR_ARG;
+    }
+
+    return IPX_OK;
+}
+
+static int
+init_check_output(ipx_ctx_t *ctx)
+{
+    if (ctx->pipeline.src == NULL) {
+        IPX_CTX_ERROR(ctx, "Input ring buffer is not defined!");
+        return IPX_ERR_ARG;
+    }
+
+    if (ctx->plugin_cbs->process) {
+        IPX_CTX_ERROR(ctx, "Processing callback function is not defined!");
+        return IPX_ERR_ARG;
+    }
+
+    return IPX_OK;
+}
+
+int
+ipx_ctx_init(ipx_ctx_t *ctx, const char *params)
+{
+    // Check plugin description
+    if (ctx->plugin_cbs == NULL || ctx->plugin_cbs->info == NULL) {
+        IPX_CTX_ERROR(ctx, "Plugin information or functions callbacks are undefined!");
+        return IPX_ERR_ARG;
+    }
+
+    // Check plugin specific requirements
+    int rc;
+    uint16_t plugin_type = ctx->plugin_cbs->info->type;
+    switch (plugin_type) {
+    case IPX_PT_INPUT:
+        rc = init_check_input(ctx);
+        break;
+    case IPX_PT_INTERMEDIATE:
+    case IPX_PT_OUTPUT_MGR:    // Output manager is implemented as an input plugin
+        rc = init_check_intermediate(ctx);
+        break;
+    case IPX_PT_OUTPUT:
+        rc = init_check_output(ctx);
+        break;
+    default:
+        IPX_CTX_ERROR(ctx, "Unexpected plugin type (id %" PRIu16 ") cannot be initialized!",
+            plugin_type);
+        return IPX_ERR_ARG;
+    }
+
+    if (rc != IPX_OK) {
+        return rc;
+    }
+
+    // Check common requirements
+    if (ctx->cfg_system.ie_mgr == NULL) {
+        IPX_CTX_ERROR(ctx, "Reference to a manager of Information Elements is not defined!");
+        return IPX_ERR_ARG;
+    }
+
+    if (ctx->plugin_cbs->init == NULL || ctx->plugin_cbs->destroy == NULL) {
+        IPX_CTX_ERROR(ctx, "Plugin instance constructor and/or destructor is not defined!");
+        return IPX_ERR_ARG;
+    }
+
+    // Try to initialize the plugin
+    // Temporarily remove permission to pass messages
+    uint32_t permissions_old = ctx->permissions;
+    ctx->permissions &= ~(uint32_t) IPX_CP_MSG_PASS;
+    rc = ctx->plugin_cbs->init(ctx, params);
+    ctx->permissions = permissions_old;
+
+    if (rc != IPX_OK) {
+        IPX_CTX_ERROR(ctx, "Initialization function of the instance failed!");
+        return IPX_ERR_ARG;
+    }
+
+    ctx->type = plugin_type;
+    return IPX_OK;
 }
