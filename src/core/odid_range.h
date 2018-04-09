@@ -45,7 +45,7 @@
 #include <stdbool.h>
 #include <ipfixcol2/api.h>
 
-// Internal data type
+/** Internal data type                                                      */
 typedef struct ipx_orange ipx_orange_t;
 
 /** Output ODID filter type                                                 */
@@ -79,7 +79,7 @@ ipx_orange_destroy(ipx_orange_t *range);
  * and intervals. Interval is all the numbers between two given numbers separated by a dash.
  * If one number of the interval is missing, the minimum or the maximum is used by default.
  * White spaces in the expression are ignored.
- * For example, "1-5, 7, 10-"
+ * For example, "1-5, 7, 10-" represents all ODIDs except 0, 6, 8 and 9
  *
  * \note
  *   In case of error, the state of the filter is undefined and must be destroyed or
