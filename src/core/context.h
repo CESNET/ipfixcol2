@@ -45,9 +45,15 @@
 #include <ipfixcol2.h>
 #include <libfds.h>
 #include "fpipe.h"
+#include "ring.h"
 
 /** List of plugin callbacks  */
 struct ipx_ctx_callbacks {
+    /** Plugin library handle (from dlopen)                                     */
+    void *handle;
+    /** Description of the plugin                                               */
+    const struct ipx_plugin_info *info;
+
     /** Plugin constructor                                                      */
     int  (*init)    (ipx_ctx_t *, const char *);
     /** Plugin destructor                                                       */
@@ -58,41 +64,33 @@ struct ipx_ctx_callbacks {
     /** Process function (INTERMEDIATE and OUTPUT plugins only)                 */
     int  (*process) (ipx_ctx_t *, void *, ipx_msg_t *);
     /** Close session request (INPUT plugins only, can be NULL)                 */
-    int  (*ts_close)(ipx_ctx_t *, void *, const struct ipx_session *);
+    void  (*ts_close)(ipx_ctx_t *, void *, const struct ipx_session *);
 };
 
-/*
-IPX_API ipx_ctx_t *
-ipx_ctx_create(const char *name, enum ipx_plugin_type type, const struct ipx_ctx_callbacks *cbs);
-
-IPX_API void
-ipx_ctx_destroy(ipx_ctx_t *ctx);
-
-IPX_API int
-ipx_ctx_initialize(ipx_ctx_t *ctx);
-
-IPX_API void
-ipx_ctx_initialize(ipx_ctx_t *ctx);
-
-IPX_API int
-ipx_ctx_run(ipx_ctx_t *ctx);
-*/
-
 /**
- * \brief Create a dummy context for testing purposes
+ * \brief Create a context
  *
- * Dummy plugin is not connected to main configuration or to any other context.
- * The context has permission to send messages. However, if the output ring buffer is not specified
- * the messages are immediately destroyed.
+ * Context holds local information of a plugin instance and provides uniform interface for its
+ * configuration. After the context is created, almost all parameters are set to default values:
+ * - record size:                         size of a record without any extensions
+ * - verbosity level:                     inherited from the global configuration
+ * - source and destination ring buffers: not connected (NULL)
+ * - feedback pipeline:                   not connected (NULL)
+ * - manager of Information Elements:     not defined (NULL)
+ * - subscription mask:                   ::IPX_MSG_IPFIX (IPFIX Message)
  *
- * \note Size of Data records of the IPFIX Message wrappers that are created using this context
- *   is enough to hold a record without any extensions.
- * \param[in] name Identification of the context
- * \param[in] type Type of plugin
+ * \note
+ *   If \p callback is NULL, the context cannot be used to initialize and start new instance
+ *   thread. Only purpose of this is to create a dummy context for testing. Dummy context is
+ *   allowed to pass messages. However, if the output ring buffer is not specified, the
+ *   messages are immediately destroyed.
+ *
+ * \param[in] name      Identification of the context
+ * \param[in] callbacks Callback functions and description of the plugin (can be NULL, see notes)
  * \return Pointer or NULL (memory allocation error)
  */
 IPX_API ipx_ctx_t *
-ipx_ctx_create_dummy(const char *name, enum ipx_plugin_type type);
+ipx_ctx_create(const char *name, const struct ipx_ctx_callbacks *callbacks);
 
 /**
  * \brief Destroy a context
@@ -110,7 +108,19 @@ IPX_API size_t
 ipx_ctx_recsize_get(const ipx_ctx_t *ctx);
 
 /**
- * \brief Get a feedback pipe
+ * \brief Set size of one IPFIX record withe registered extensions (in bytes)
+ *
+ * \warning
+ *   The \p size MUST be at least large enough to cover a simple IPFIX record structure without
+ *   extensions. Otherwise the behavior is undefined.
+ * \param[in] ctx Plugin context
+ * \param[in] size New size
+ */
+IPX_API void
+ipx_ctx_recsize_set(ipx_ctx_t *ctx, size_t size);
+
+/**
+ * \brief Get a feedback pipe (only for input plugins and the IPFIX parser)
  *
  * Purpose of the pipe is to send a request to close a Transport Session. An IPFIX parser
  * generates requests and an input plugin accepts and process request. If the input plugin
@@ -118,12 +128,70 @@ ipx_ctx_recsize_get(const ipx_ctx_t *ctx);
  *
  * \note Only available for input plugins and IPFIX parser
  * \param[in] ctx Plugin context
- * \return
+ * \return Pointer to the pipe or NULL (pipe is not available)
  */
 IPX_API ipx_fpipe_t *
 ipx_ctx_fpipe_get(ipx_ctx_t *ctx);
 
+/**
+ * \brief Set a reference to a feedback pipe
+ *
+ * Feedback pipe MUST be set for all input plugins. Moreover, IPFIX parser plugins directly
+ * connected to input plugins that implement interface for processing request to close a Transport
+ * Session SHOULD have connection to the pipe..
+ * \param[in] ctx  Plugin context
+ * \param[in] pipe New feedback pipe
+ */
+IPX_API void
+ipx_ctx_fpipe_set(ipx_ctx_t *ctx, ipx_fpipe_t *pipe);
 
+/**
+ * \brief Set a reference to source input ring buffer (only for Intermediate and Output plugins)
+ * \param[in] ctx  Plugin context
+ * \param[in] ring New source ring buffer
+ */
+IPX_API void
+ipx_ctx_ring_src_set(ipx_ctx_t *ctx, ipx_ring_t *ring);
 
+/**
+ * \brief Set a reference to destination ring buffer (only for Input and Intermediate plugins)
+ * \param[in] ctx  Plugin context
+ * \param[in] ring New destination ring buffer
+ */
+IPX_API void
+ipx_ctx_ring_dst_set(ipx_ctx_t *ctx, ipx_ring_t *ring);
+
+/**
+ * \brief Set a reference to a manager of Information Elements
+ * \param[in] ctx Plugin context
+ * \param[in] mgr New IE manager
+ */
+IPX_API void
+ipx_ctx_iemgr_set(ipx_ctx_t *ctx, const fds_iemgr_t *mgr);
+
+/**
+ * \brief Set verbosity of the context
+ * \param[in] ctx  Plugin context
+ * \param[in] verb New verbosity level
+ */
+IPX_API void
+ipx_ctx_verb_set(ipx_ctx_t *ctx, enum ipx_verb_level verb);
+
+/**
+ * \brief Overwrite default types of messages that can be processed by an instance
+ *   (only for Intermediate and Output plugins)
+ *
+ * By default, only ::IPX_MSG_IPFIX (IPFIX Message) and ::IPX_MSG_SESSION (Transport Session
+ * Message) types can be passed to plugin instance for processing. However, implementation of the
+ * output manager (as an intermediate plugin) requires processing of almost all types of messages.
+ * \warning
+ *   This configuration does NOT change subscription mask of the plugin. It must be done separately.
+ * \note
+ *  To allow processing of all type of messages, use #IPX_MSG_MASK_ALL
+ * \param[in] ctx  Plugin context
+ * \param[in] mask New mask
+ */
+IPX_API void
+ipx_ctx_overwrite_msg_mask(ipx_ctx_t *ctx, ipx_msg_mask_t mask);
 
 #endif // IPFIXCOL_CONTEXT_INTERNAL_H

@@ -52,20 +52,10 @@
 static_assert(offsetof(struct ipx_msg_ipfix, msg_header.type) == 0,
     "Message header must be the first element of each IPFIXcol message.");
 
-/**
- * \brief Size of IPFIX Message wrapper structure
- *
- * For structure able to hold up to \p rec_cnt where each record is \p rec_size bytes.
- * \param[in] rec_cnt  Number of pre-allocated Data Records
- * \param[in] rec_size Size of a Data Record
- * \return Size of the structure
- */
-static inline size_t
+size_t
 ipx_msg_ipfix_size(uint32_t rec_cnt, size_t rec_size)
 {
-    return sizeof(struct ipx_msg_ipfix)
-        - sizeof(struct ipx_ipfix_record)
-        + (rec_cnt * rec_size);
+    return offsetof(struct ipx_msg_ipfix, recs) + (rec_cnt * rec_size);
 }
 
 ipx_msg_ipfix_t *

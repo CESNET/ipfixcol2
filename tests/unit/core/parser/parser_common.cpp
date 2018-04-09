@@ -43,7 +43,7 @@ protected:
 
         parser_uniq  parser_wrap(ipx_parser_create(parser_name.c_str(), DEF_VERB), &ipx_parser_destroy);
         iemgr_uniq   iemgr_wrap(fds_iemgr_create(), &fds_iemgr_destroy);
-        ctx_uniq     ctx_wrap(ipx_ctx_create_dummy(ctx_name.c_str(), IPX_PT_INTERMEDIATE), &ipx_ctx_destroy);
+        ctx_uniq     ctx_wrap(ipx_ctx_create(ctx_name.c_str(), nullptr), &ipx_ctx_destroy);
         session_uniq session_wrap(NULL, &ipx_session_destroy);
 
         switch (GetParam()) {

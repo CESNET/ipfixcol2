@@ -49,6 +49,7 @@ extern "C" {
 
 #include <ipfixcol2/api.h>
 #include <stddef.h>
+#include <stdint.h>
 
 /**
  * \defgroup ipxBaseMessage Collector internal messages
@@ -67,20 +68,24 @@ extern "C" {
  */
 enum ipx_msg_type
 {
-    /** A message with a parsed IPFIX message from a source of flows        */
+    /** A message with a parsed IPFIX message from a source of flows                */
     IPX_MSG_IPFIX     = (1 << 0),
-    /** A transport session status i.e. information about (dis)connections  */
+    /** A transport session status i.e. information about (dis)connections          */
     IPX_MSG_SESSION   = (1 << 1),
-    /** An generic object destructor (usually only for internal usage)      */
+    /** An generic object destructor (usually only for internal usage)              */
     IPX_MSG_GARBAGE   = (1 << 2),
-    /** A terminate message (only for internal usage)                       */
+    /** A terminate message (only for internal usage)                               */
     IPX_MSG_TERMINATE = (1 << 3),
     // An internal configuration message (only for internal usage)
     //IPX_MSG_CONFIG  = (1 << 4)
 };
 
-/** The data type of the base message                                       */
+/** The data type of the base message                                               */
 typedef struct ipx_msg ipx_msg_t;
+/** Unsigned numeric type that is able to handle bit OR of all message types        */
+typedef uint16_t ipx_msg_mask_t;
+/** Mask that covers all types of message                                           */
+#define IPX_MSG_MASK_ALL (UINT16_MAX)
 
 /**
  * \brief Get the type of a message for the collector pipeline

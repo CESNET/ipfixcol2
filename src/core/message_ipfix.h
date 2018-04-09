@@ -98,6 +98,23 @@ struct ipx_msg_ipfix {
 };
 
 /**
+ * \brief Size of a base IPFIX record without any extension
+ */
+#define IPX_MSG_IPFIX_BASE_REC_SIZE \
+    (offsetof(struct ipx_ipfix_record, ext))
+
+/**
+ * \brief Size of IPFIX Message wrapper structure
+ *
+ * For structure able to hold up to \p rec_cnt where each record is \p rec_size bytes.
+ * \param[in] rec_cnt  Number of pre-allocated Data Records
+ * \param[in] rec_size Size of a Data Record
+ * \return Size of the structure
+ */
+size_t
+ipx_msg_ipfix_size(uint32_t rec_cnt, size_t rec_size);
+
+/**
  * \brief Add a new IPFIX Set
  *
  * The record is uninitialized and user MUST fill it!

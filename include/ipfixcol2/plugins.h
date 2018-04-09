@@ -99,38 +99,40 @@ typedef struct ipx_ctx_rext ipx_ctx_rext_t;
  * @{
  */
 
-/** Type of plugin */
-enum ipx_plugin_type {
-    /**
-     * \brief Input plugin
-     *
-     * Input plugins pass data to the IPFIXcol in a form of the IPFIX or NetFlow messages. The
-     * source of data is completely independent and it's up to the plugin input to maintain
-     * a connection with the source. Generally, we distinguish two kinds of sources - network and
-     * file. Together with the messages also an information about the data source is passed.
-     * Parsing of the message is provided by the IPFIXcol core.
-     */
-    IPX_PT_INPUT,
-    /**
-     * \brief Intermediate plugin
-     *
-     * Intermediate plugins get IPFIX messages and are allowed to modify, create and drop the
-     * messages. The intermediate plugins are connected in series by ring buffers, therefore,
-     * each message from an Input plugin goes through all plugins one by one, unless some plugin
-     * discards it.
-     */
-    IPX_PT_INTERMEDIATE,
-    /**
-     * \brief Output plugin
-     *
-     * Output plugins get IPFIX messages from the last intermediate plugin or directly from
-     * input plugin, if no intermediate plugins are enabled. It's up to the output plugins what
-     * they do with the messages. Records could be, for example, stored to a hard drive, forwarded
-     * to another collector or analysis tool, converted to different data format, etc.
-     * IPFIX messages MUST NOT be modified by the plugins.
-     */
-    IPX_PT_OUTPUT
-};
+/**
+ * \def IPX_PT_INPUT
+ * \brief Input plugin type
+ *
+ * Input plugins pass data to the IPFIXcol in a form of the IPFIX or NetFlow messages. The
+ * source of data is completely independent and it's up to the plugin input to maintain
+ * a connection with the source. Generally, we distinguish two kinds of sources - network and
+ * file. Together with the messages also an information about the data source is passed.
+ * Parsing of the message is provided by the IPFIXcol core.
+ */
+#define IPX_PT_INPUT 1U
+
+/**
+ * \def IPX_PT_INTERMEDIATE
+ * \brief Intermediate plugin type
+ *
+ * Intermediate plugins get IPFIX messages and are allowed to modify, create and drop the
+ * messages. The intermediate plugins are connected in series by ring buffers, therefore,
+ * each message from an Input plugin goes through all plugins one by one, unless some plugin
+ * discards it.
+ */
+#define IPX_PT_INTERMEDIATE 2U
+
+/**
+ * \def IPX_PT_OUTPUT
+ * \brief Output plugin type
+ *
+ * Output plugins get IPFIX messages from the last intermediate plugin or directly from
+ * input plugin, if no intermediate plugins are enabled. It's up to the output plugins what
+ * they do with the messages. Records could be, for example, stored to a hard drive, forwarded
+ * to another collector or analysis tool, converted to different data format, etc.
+ * IPFIX messages MUST NOT be modified by the plugins.
+ */
+#define IPX_PT_OUTPUT 3U
 
 /**
  * \brief Identification of a plugin
@@ -140,17 +142,17 @@ enum ipx_plugin_type {
  * to enable visibility of definition.
  */
 struct ipx_plugin_info {
-    /** Plugin type                                      */
-    enum ipx_plugin_type type;
-    /** Plugin identification name                       */
+    /** Plugin identification name                                                            */
     const char *name;
-    /** Brief description of plugin                      */
+    /** Brief description of the plugin                                                       */
     const char *dsc;
-    /** Configuration flags (reserved for future use)    */
+    /** Plugin type (one of #IPX_PT_INPUT, #IPX_PT_INTERMEDIATE, #IPX_PT_OUTPUT)              */
+    uint16_t type;
+    /** Configuration flags (reserved for future use)                                         */
     uint16_t flags;
-    /** Plugin version string (like "1.2.3")             */
+    /** Plugin version string (like "1.2.3")                                                  */
     const char *version;
-    /** Minimal IPFIXcol version string (like "1.2.3")   */
+    /** Minimal IPFIXcol version string (like "1.2.3")                                        */
     const char *ipx_min;
 };
 
@@ -223,7 +225,7 @@ ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg);
  * \param[in] cfg Private data of the instance prepared by initialization function
  * \return #IPX_OK on success (or if a non-fatal error has occurred and the plugin can continue to
  *   work)
- * \return #IPX_ERR_NOMEM if a fatal memory allocation error has occurred and/or the plugin cannot
+ * \return #IPX_ERR_DENIED if a fatal memory allocation error has occurred and/or the plugin cannot
  *   continue to work properly (the plugin will be destroyed immediately).
  * \return #IPX_ERR_EOF if the end of file/stream has been reached and the plugin cannot provide
  *   more data from any sources. The plugin will be destroyed immediately and if this is also the
@@ -260,7 +262,7 @@ ipx_plugin_get(ipx_ctx_t *ctx, void *cfg);
  * \param[in] cfg Private data of the instance prepared by initialization function
  * \param[in] msg Message to process
  * \return #IPX_OK on success
- * \return #IPX_ERR_NOMEM if a fatal memory allocation error has occurred and/or the plugin cannot
+ * \return #IPX_ERR_DENIED if a fatal memory allocation error has occurred and/or the plugin cannot
  *   continue to work properly (the collector will exit).
  */
 IPX_API int
@@ -279,10 +281,8 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg);
  * \param[in] ctx     Plugin context
  * \param[in] cfg     Private data of the instance prepared by initialization function
  * \param[in] session Pointer to the Transport Session to close
- * \return #IPX_OK on success
- * \return #IPX_ERR_NOTFOUND if the Transport Session cannot be found
  */
-IPX_API int
+IPX_API void
 ipx_plugin_session_close(ipx_ctx_t *ctx, void *cfg, const struct ipx_session *session);
 
 /**
@@ -363,16 +363,16 @@ ipx_ctx_msg_pass(ipx_ctx_t *ctx, ipx_msg_t *msg);
  * \note By default, each plugin is subscribed only to receive IPFIX Messages.
  * \warning
  *   This interface is only for Intermediate and Output plugins! In case of the other types.
- * \param[in] ctx      Plugin context
- * \param[in] mask_new New message mask (can be NULL)
- * \param[in] mask_old Old message mask (can be NULL)
+ * \param[in]  ctx      Plugin context
+ * \param[in]  mask_new New message mask (can be NULL)
+ * \param[out] mask_old Old message mask (can be NULL)
  * \return #IPX_OK on success
  * \return #IPX_ERR_FORMAT if the \p mask_new contains unknown message type or the instance doesn't
  *   have permission to subscribe these types of messages (the new mask is not installed)
  * \return #IPX_ERR_ARG if the plugin is not of proper type (i.e. not Intermediate or Output)
  */
 IPX_API int
-ipx_ctx_subscribe(ipx_ctx_t *ctx, const uint16_t *mask_new, uint16_t *mask_old); // TODO: mask type
+ipx_ctx_subscribe(ipx_ctx_t *ctx, const ipx_msg_mask_t *mask_new, ipx_msg_mask_t *mask_old);
 
 /**
  * \brief Get a manager of Information Elements

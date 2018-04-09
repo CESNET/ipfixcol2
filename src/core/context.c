@@ -49,6 +49,7 @@
 #include "utils.h"
 #include "fpipe.h"
 #include "ring.h"
+#include "message_ipfix.h"
 
 /** Current  */
 enum ipx_ctx_permissions {
@@ -62,41 +63,58 @@ enum ipx_ctx_permissions {
  * \brief Context a plugin instance
  */
 struct ipx_ctx {
-    /** Plugin identification name                                                               */
+    /** Instance identification name (usually from startup configuration)                        */
     char *name;
-    /** Plugin type                                                                              */
-    enum ipx_plugin_type type;
+    /** Plugin type (#IPX_PT_INPUT, #IPX_PT_INTERMEDIATE or #IPX_PT_OUTPUT)                      */
+    unsigned int type;
     /** Permission flags (see #ipx_ctx_permissions)                                              */
     uint32_t permissions;
+    /** Plugin description and callback function                                                 */
+    const struct ipx_ctx_callbacks *plugin_cbs;
 
     struct {
-        /** Feedback pipe (only from an IPFIX parser to particular Inputs plugin)                */
+        /**
+         * Feedback pipe (connection to Input plugin)
+         * \note
+         *   For input plugins represents connection from a collector configurator (for injecting
+         *   messages on the front of pipeline) and if the plugin supports processing request to
+         *   close a Transport Session, its also feedback from IPFIX Message parser.
+         * \note
+         *   For IPFIX parser plugin represents pipe for passing requests to close misbehaving
+         *   Transport Sessions. However, not all input plugins support this feature, therefore,
+         *   the pipe is NULL if the feature is not supported.
+         */
         ipx_fpipe_t *feedback;
         /**
          * Previous plugin (i.e. source of messages) - read ONLY
          * \note NULL for input plugins
          */
-        ipx_ring_t *prev;
+        ipx_ring_t *src;
         /**
          * Next plugin (i.e. destination of messages) - write ONLY
          * \note NULL for output plugins
          */
-        ipx_ring_t *next;
+        ipx_ring_t *dst;
     } pipeline; /**< Connection to internal communication pipeline                               */
 
     struct {
         /** Private data of the instance                                                         */
         void *private;
-        /** Update data                                                                          */
-        void *update;
+        // TODO:  Update data
+        // void *update;
     } cfg_plugin; /**< Plugin configuration                                                      */
 
     struct {
         /**
-         * Message subscription mask
+         * Message types selected for processing by instance
          * \note The value represents bitwise OR of #ipx_msg_type flags
          */
-        uint16_t msg_mask;
+        ipx_msg_mask_t msg_mask_selected;
+        /**
+         * Message types that can be subscribed
+         * \note The value represents bitwise OR of #ipx_msg_type flags
+         */
+        ipx_msg_mask_t msg_mask_allowed;
         /** Pointer to the current manager of Information Elements (can be NULL)                 */
         const fds_iemgr_t *ie_mgr;
         /** Current size of IPFIX record (with registered extensions)                            */
@@ -107,7 +125,7 @@ struct ipx_ctx {
 };
 
 ipx_ctx_t *
-ipx_ctx_create_dummy(const char *name, enum ipx_plugin_type type)
+ipx_ctx_create(const char *name, const struct ipx_ctx_callbacks *callbacks)
 {
     struct ipx_ctx *ctx = calloc(1, sizeof(*ctx));
     if (!ctx) {
@@ -120,10 +138,14 @@ ipx_ctx_create_dummy(const char *name, enum ipx_plugin_type type)
         return NULL;
     }
 
-    ctx->type = type;
-    ctx->cfg_system.vlevel = IPX_VERB_ERROR;
-    ctx->cfg_system.rec_size = sizeof(struct ipx_ipfix_record);
+    ctx->type = 0; // Undefined type
     ctx->permissions = IPX_CP_MSG_PASS;
+    ctx->plugin_cbs = callbacks;
+
+    ctx->cfg_system.vlevel = ipx_verb_level_get();
+    ctx->cfg_system.rec_size = IPX_MSG_IPFIX_BASE_REC_SIZE;
+    ctx->cfg_system.msg_mask_selected = IPX_MSG_IPFIX;
+    ctx->cfg_system.msg_mask_allowed = IPX_MSG_IPFIX | IPX_MSG_SESSION;
     return ctx;
 }
 
@@ -140,6 +162,16 @@ ipx_ctx_recsize_get(const ipx_ctx_t *ctx)
     return ctx->cfg_system.rec_size;
 }
 
+void
+ipx_ctx_recsize_set(ipx_ctx_t *ctx, size_t size)
+{
+    /* Size allocated for an IPFIX record reference MUST be able to hold at least a record without
+     * any extensions.
+     */
+    assert(size >= offsetof(struct ipx_ipfix_record, ext));
+    ctx->cfg_system.rec_size = size;
+}
+
 const char *
 ipx_ctx_name_get(const ipx_ctx_t *ctx)
 {
@@ -152,15 +184,21 @@ ipx_ctx_verb_get(const ipx_ctx_t *ctx)
     return ctx->cfg_system.vlevel;
 }
 
+void
+ipx_ctx_verb_set(ipx_ctx_t *ctx, enum ipx_verb_level verb)
+{
+    ctx->cfg_system.vlevel = verb;
+}
+
 int
-ipx_ctx_subscribe(ipx_ctx_t *ctx, const uint16_t *mask_new, uint16_t *mask_old)
+ipx_ctx_subscribe(ipx_ctx_t *ctx, const ipx_msg_mask_t *mask_new, ipx_msg_mask_t *mask_old)
 {
     if ((ctx->permissions & IPX_CP_MSG_SUB) == 0) {
         return IPX_ERR_ARG;
     }
 
     if (mask_old != NULL) {
-        *mask_old = ctx->cfg_system.msg_mask;
+        *mask_old = ctx->cfg_system.msg_mask_selected;
     }
 
     if (!mask_new) {
@@ -168,13 +206,12 @@ ipx_ctx_subscribe(ipx_ctx_t *ctx, const uint16_t *mask_new, uint16_t *mask_old)
     }
 
     // Plugin can receive only IPFIX and Transport Session Messages
-    const uint16_t allowed_types = IPX_MSG_IPFIX | IPX_MSG_SESSION;
-    if (((*mask_new) & ~allowed_types) != 0) {
+    if (((*mask_new) & ~ctx->cfg_system.msg_mask_allowed) != 0) {
         // Mask includes prohibited types
         return IPX_ERR_FORMAT;
     }
 
-    ctx->cfg_system.msg_mask = (*mask_new);
+    ctx->cfg_system.msg_mask_selected = (*mask_new);
     return IPX_OK;
 }
 
@@ -186,7 +223,7 @@ ipx_ctx_msg_pass(ipx_ctx_t *ctx, ipx_msg_t *msg)
         return IPX_ERR_ARG;
     }
 
-    if (!ctx->pipeline.next) {
+    if (!ctx->pipeline.dst) {
         /* Plugin has permission but the successor is not connected. This can happen only if
          * the destructor is called immediately after initialization without prepared pipeline ->
          * it's safe to destroy message immediately
@@ -195,7 +232,7 @@ ipx_ctx_msg_pass(ipx_ctx_t *ctx, ipx_msg_t *msg)
         return IPX_OK;
     }
 
-    ipx_ring_push(ctx->pipeline.next, msg);
+    ipx_ring_push(ctx->pipeline.dst, msg);
     return IPX_OK;
 }
 
@@ -205,16 +242,16 @@ ipx_ctx_private_set(ipx_ctx_t *ctx, void *data)
     ctx->cfg_plugin.private = data;
 }
 
-void
-ipx_ctx_update_set(ipx_ctx_t *ctx, void *data)
-{
-    ctx->cfg_plugin.update = data;
-}
-
 ipx_fpipe_t *
 ipx_ctx_fpipe_get(ipx_ctx_t *ctx)
 {
     return ctx->pipeline.feedback;
+}
+
+void
+ipx_ctx_fpipe_set(ipx_ctx_t *ctx, ipx_fpipe_t *pipe)
+{
+    ctx->pipeline.feedback = pipe;
 }
 
 const fds_iemgr_t *
@@ -223,3 +260,28 @@ ipx_ctx_iemgr_get(ipx_ctx_t *ctx)
     return ctx->cfg_system.ie_mgr;
 }
 
+void
+ipx_ctx_iemgr_set(ipx_ctx_t *ctx, const fds_iemgr_t *mgr)
+{
+    // Template manager must be always defined. Event if it is empty...
+    assert(mgr != NULL);
+    ctx->cfg_system.ie_mgr = mgr;
+}
+
+void
+ipx_ctx_ring_src_set(ipx_ctx_t *ctx, ipx_ring_t *ring)
+{
+    ctx->pipeline.src = ring;
+}
+
+void
+ipx_ctx_ring_dst_set(ipx_ctx_t *ctx, ipx_ring_t *ring)
+{
+    ctx->pipeline.dst = ring;
+}
+
+void
+ipx_ctx_overwrite_msg_mask(ipx_ctx_t *ctx, ipx_msg_mask_t mask)
+{
+    ctx->cfg_system.msg_mask_allowed = mask;
+}
