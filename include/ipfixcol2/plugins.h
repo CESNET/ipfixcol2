@@ -172,9 +172,8 @@ struct ipx_plugin_info {
  * \param[in] ctx    Plugin context
  * \param[in] params XML string with specific parameters for the plugin
  * \return #IPX_OK on success
- * \return #IPX_ERR_NOMEM if a memory allocation error has occurred.
- * \return #IPX_ERR_ARG if the configuration \p params is not valid and the plugin is not
- *   initialized.
+ * \return #IPX_ERR_DENIED if a memory allocation error has occurred or if the
+ *   configuration \p params are not valid and the plugin is not initialized.
  */
 IPX_API int
 ipx_plugin_init(ipx_ctx_t *ctx, const char *params);

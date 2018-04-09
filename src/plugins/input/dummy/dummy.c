@@ -75,7 +75,7 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
     // Create a private data
     struct instance_data *data = calloc(1, sizeof(data));
     if (!data) {
-        return IPX_ERR_NOMEM;
+        return IPX_ERR_DENIED;
     }
 
     // TODO: Parse configuration
@@ -125,13 +125,13 @@ ipx_plugin_get(ipx_ctx_t *ctx, void *cfg)
             || inet_pton(AF_INET, "127.0.0.1", &net_cfg.addr_dst.ipv4) != 1) {
             // inet_pton() failed!
             IPX_CTX_ERROR(ctx, "inet_pton() failed!", '\0');
-            return IPX_ERR_NOMEM;
+            return IPX_ERR_DENIED;
         }
 
         data->session = ipx_session_new_tcp(&net_cfg);
         if (!data->session) {
             IPX_CTX_ERROR(ctx, "ipx_session_new_tcp() failed!", '\0');
-            return IPX_ERR_NOMEM;
+            return IPX_ERR_DENIED;
         }
 
         // Inform other plugins about the new Transport Session

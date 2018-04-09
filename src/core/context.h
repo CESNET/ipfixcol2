@@ -94,10 +94,53 @@ ipx_ctx_create(const char *name, const struct ipx_ctx_callbacks *callbacks);
 
 /**
  * \brief Destroy a context
+ *
+ * \note
+ *   If the context has been successfully initialized but a thread hasn't been started yet, the
+ *   destructor callback is called.
+ * \note
+ *   If the thread of the context is running, the function waits (in other words, blocks)
+ *   until the thread is joined. For more information how to stop the thread, see ipx_ctx_run().
+ *   In this case, the destructor callback is not called by this function. The thread is
+ *   responsible.
  * \param[in] ctx Context to destroy
  */
 IPX_API void
 ipx_ctx_destroy(ipx_ctx_t *ctx);
+
+/**
+ * \brief Initialize plugin
+ *
+ * The function checks that all necessary parameters for required plugin type are configured
+ * and call the initialize function of the plugin instance.
+ * \param[in] ctx    Plugin context
+ * \param[in] params XML parameters for plugin constructor
+ * \return #IPX_OK on success and the plugin is ready to run (ipx_ctx_run())
+ * \return #IPX_ERR_DENIED if the plugin refused to initialize itself (for example, due to invalid
+ *   parameters, memory allocation error, etc.)
+ * \return #IPX_ERR_ARG if not all required parameters are configured correctly
+ */
+IPX_API int
+ipx_ctx_init(ipx_ctx_t *ctx, const char *params);
+
+/**
+ * \brief Start plugin thread
+ *
+ * Based on the type of the plugin (i.e. input, intermediate or output), start a thread that
+ * processes pipeline messages, calls plugin callback functions, etc.
+ *
+ * \note
+ *   To terminate the thread pass a Terminate message to the input ring buffer (Intermediate and
+ *   Output plugins) or feedback pipeline (Input plugins). Context destructor ipx_ctx_destroy()
+ *   waits until the thread is joined.
+ * \warning
+ *   Only successfully initialized instances can be started. For more information,
+ *   see ipx_ctx_init()
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_DENIED if the operation failed and the thread is not running.
+ */
+IPX_API int
+ipx_ctx_run(ipx_ctx_t *ctx);
 
 /**
  * \brief Get size of one IPFIX record with registered extensions (in bytes)
