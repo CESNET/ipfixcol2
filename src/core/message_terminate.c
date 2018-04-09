@@ -51,13 +51,15 @@ struct ipx_msg_terminate {
      * structure and the "type" MUST be #IPX_MSG_TERMINATE.
      */
     struct ipx_msg msg_header;
+    /** Type of termination                                                 */
+    enum ipx_msg_terminate_type type;
 };
 
 static_assert(offsetof(struct ipx_msg_terminate, msg_header.type) == 0,
     "Message type must be the first element of each IPFIXcol message.");
 
 ipx_msg_terminate_t *
-ipx_msg_terminate_create()
+ipx_msg_terminate_create(enum ipx_msg_terminate_type type)
 {
     struct ipx_msg_terminate *msg = malloc(sizeof(*msg));
     if (!msg) {
@@ -65,6 +67,7 @@ ipx_msg_terminate_create()
     }
 
     ipx_msg_header_init(&msg->msg_header, IPX_MSG_TERMINATE);
+    msg->type = type;
     return msg;
 }
 
@@ -73,4 +76,10 @@ ipx_msg_termiante_destroy(ipx_msg_terminate_t *msg)
 {
     ipx_msg_header_destroy((ipx_msg_t *) msg);
     free(msg);
+}
+
+enum ipx_msg_terminate_type
+ipx_msg_terminate_get_type(const ipx_msg_terminate_t *msg)
+{
+    return msg->type;
 }

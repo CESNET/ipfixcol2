@@ -51,8 +51,29 @@ typedef struct ipx_msg_terminate ipx_msg_terminate_t;
 
 #include <ipfixcol2/message.h>
 
+/** Type of instance termination */
+enum ipx_msg_terminate_type {
+    /**
+     * \brief Stop processing of all messages (except Terminate messages)
+     *
+     * After receiving this message, a context MUST stop processing all IPFIX and Transport Session
+     * messages and let them through to other plugins until #IPX_MSG_TERMINATE_INSTANCE is received.
+     * This type of termination is usually used if a instance is not able to work correctly and
+     * the collector is about to shut down. The corrupted instance use this type of message to
+     * signalize this situation to other plugins.
+     */
+    IPX_MSG_TERMINATE_PROCESSING,
+    /**
+     * \brief Stop instance
+     *
+     * After receiving this message, a context MUST call plugin destructor on its instance and
+     * terminate thread of the context.
+     */
+    IPX_MSG_TERMINATE_INSTANCE
+};
+
 /**
- * \brief Create a terminate message
+ * \brief Create a termination message
  *
  * Purpose of the message is to signalize instance that it's time to stop processing messages,
  * execute destructor of the instance and terminate context thread. So evidently, this MUST be the
@@ -61,14 +82,22 @@ typedef struct ipx_msg_terminate ipx_msg_terminate_t;
  * \return Pointer ot the message or NULL (memory allocation error)
  */
 IPX_API ipx_msg_terminate_t *
-ipx_msg_terminate_create();
+ipx_msg_terminate_create(enum ipx_msg_terminate_type type);
 
 /**
- * \brief Destroy a terminate message
+ * \brief Destroy a termination message
  * \param[in] msg Pointer to the message
  */
 IPX_API void
 ipx_msg_termiante_destroy(ipx_msg_terminate_t *msg);
+
+/**
+ * \brief Get the termination type
+ * \param msg Pointer to the the message
+ * \return Type
+ */
+IPX_API enum ipx_msg_terminate_type
+ipx_msg_terminate_get_type(const ipx_msg_terminate_t *msg);
 
 /**
  * \brief Cast from a terminate message to a base message
