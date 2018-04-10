@@ -274,9 +274,17 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg);
  * core to close a Transport Session if a malformed message has been received to restart the
  * Session. If the input cannot close the Transport Session (e.g. UDP sessions, etc.), this
  * function should not be implemented at all.
+ *
+ * After _successful_ closing of the session, the plugin MUST create and pass Session status
+ * message with event type ::IPX_MSG_SESSION_CLOSE.
+ *
  * \warning
  *   This interface is only for Input plugins! In case of the other types, the IPFIXcol core
  *   ignores this function.
+ * \warning
+ *   Do NOT access Session information properties because the structure can be already freed,
+ *   if the plugin removed it before receiving the request! Use can use ONLY pointer to the
+ *   Session structure to compare it with known sessions!
  * \param[in] ctx     Plugin context
  * \param[in] cfg     Private data of the instance prepared by initialization function
  * \param[in] session Pointer to the Transport Session to close
@@ -325,13 +333,13 @@ IPX_API const char *
 ipx_ctx_name_get(const ipx_ctx_t *ctx);
 
 /**
- * \brief Pass a message to a successor of the plugin
+ * \brief Pass a message to a successor of the plugin (only Input and Intermediate plugins ONLY!)
  *
  * The message is pushed into an output queue of the instance and will be later processed by
  * a successor. When the message does not fit into the queue of messages, the function blocks.
  * The message can be of any type supported by the collector. Therefore, the plugin can use it
  * to pass processed IPFIX messages, information about Transport Sessions, garbage that cannot
- * be freed because  someone is still using it, etc.
+ * be freed because someone is still using it, etc.
  *
  * During plugin instance initialization, messages cannot be passed because connection between
  * plugins haven't been established yet.
@@ -349,7 +357,7 @@ ipx_ctx_msg_pass(ipx_ctx_t *ctx, ipx_msg_t *msg);
 /**
  * \brief Change message subscription (Intermediate and Output plugins ONLY!)
  *
- * Each instance can modify types of messages that are passed into ipx_plugin_process().
+ * Each instance can define types of messages that are passed into ipx_plugin_process().
  * \p mask_new and \p mask_old specifies a set of message types as bitwise OR of zero or more
  * of the flags defined by ::ipx_msg_type. Usually plugin can only subscribe to the following
  * types of messages:
@@ -360,8 +368,10 @@ ipx_ctx_msg_pass(ipx_ctx_t *ctx, ipx_msg_t *msg);
  * If \p mask_old is non-NULL, the previous mask is saved in \p mask_old.
  *
  * \note By default, each plugin is subscribed only to receive IPFIX Messages.
+ * \note In case of Intermediate plugins, message types that are not subscribed are automatically
+ *   passed to the successor of the instance!
  * \warning
- *   This interface is only for Intermediate and Output plugins! In case of the other types.
+ *   This interface is only for Intermediate and Output plugins!
  * \param[in]  ctx      Plugin context
  * \param[in]  mask_new New message mask (can be NULL)
  * \param[out] mask_old Old message mask (can be NULL)

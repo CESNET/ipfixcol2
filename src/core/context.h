@@ -112,10 +112,26 @@ IPX_API void
 ipx_ctx_destroy(ipx_ctx_t *ctx);
 
 /**
- * \brief Initialize plugin
+ * \brief Initialize a plugin instance
  *
  * The function checks that all necessary parameters for required plugin type are configured
  * and call the initialize function of the plugin instance.
+ *
+ * To initialize the instance of the plugin you MUST always specify:
+ * - IE manager i.e. ipx_ctx_iemgr_set()
+ * - initialization and destruction callback function (see struct ipx_ctx_callbacks)
+ * - plugin name and correct type (see struct ipx_ctx_callbacks)
+ * Moreover, Input plugins require:
+ * - getter callback (see struct ipx_ctx_callbacks)
+ * - feedback pipe i.e. ipx_ctx_fpipe_set()
+ * - output ring buffer i.e. ipx_ctx_ring_dst_set()
+ * Moreover, Intermediate plugins require:
+ * - processing callback (see struct ipx_ctx_callbacks)
+ * - input and output ring buffer i.e. ipx_ctx_ring_src_set() and ipx_ctx_ring_dst_set()
+ * Moreover, Output plugins require:
+ * - processing callback (see struct ipx_ctx_callbacks)
+ * - input ring buffer i.e. ipx_ctx_ring_src_set()
+ *
  * \param[in] ctx    Plugin context
  * \param[in] params XML parameters for plugin constructor
  * \return #IPX_OK on success and the plugin is ready to run (ipx_ctx_run())
@@ -222,22 +238,5 @@ ipx_ctx_iemgr_set(ipx_ctx_t *ctx, const fds_iemgr_t *mgr);
  */
 IPX_API void
 ipx_ctx_verb_set(ipx_ctx_t *ctx, enum ipx_verb_level verb);
-
-/**
- * \brief Overwrite default types of messages that can be processed by an instance
- *   (only for Intermediate and Output plugins)
- *
- * By default, only ::IPX_MSG_IPFIX (IPFIX Message) and ::IPX_MSG_SESSION (Transport Session
- * Message) types can be passed to plugin instance for processing. However, implementation of the
- * output manager (as an intermediate plugin) requires processing of almost all types of messages.
- * \warning
- *   This configuration does NOT change subscription mask of the plugin. It must be done separately.
- * \note
- *  To allow processing of all type of messages, use #IPX_MSG_MASK_ALL
- * \param[in] ctx  Plugin context
- * \param[in] mask New mask
- */
-IPX_API void
-ipx_ctx_overwrite_msg_mask(ipx_ctx_t *ctx, ipx_msg_mask_t mask);
 
 #endif // IPFIXCOL_CONTEXT_INTERNAL_H
