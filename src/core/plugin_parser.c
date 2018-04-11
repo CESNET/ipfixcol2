@@ -1,5 +1,5 @@
 /**
- * \file src/core/parser_plugin.c
+ * \file src/core/plugin_parser.c
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief Internal parser plugin (source file)
  * \date 2018
@@ -41,8 +41,17 @@
 
 #include "fpipe.h"
 #include "context.h"
-#include "parser_plugin.h"
+#include "plugin_parser.h"
 #include "parser.h"
+
+const struct ipx_plugin_info plugin_parser_info = {
+    .name    = "IPFIX Parser",
+    .dsc     = "Internal IPFIXcol plugin for parsing IPFIX and NetFlow Messages",
+    .type    = IPX_PT_INTERMEDIATE,
+    .flags   = 0,
+    .version = "1.0.0",
+    .ipx_min = "2.0.0"
+};
 
 int
 parser_plugin_init(ipx_ctx_t *ctx, const char *params)
@@ -54,7 +63,7 @@ parser_plugin_init(ipx_ctx_t *ctx, const char *params)
     if (ipx_ctx_subscribe(ctx, &mask, NULL) != IPX_OK) {
         IPX_CTX_ERROR(ctx, "Failed to subscribe to receive IPFIX and Transport Session Messages.",
             NULL);
-        return IPX_ERR_ARG;
+        return IPX_ERR_DENIED;
     }
 
     const char *plugin_name = ipx_ctx_name_get(ctx);
@@ -64,7 +73,7 @@ parser_plugin_init(ipx_ctx_t *ctx, const char *params)
     ipx_parser_t *parser = ipx_parser_create(plugin_name, plugin_vlevel);
     if (!parser) {
         IPX_CTX_ERROR(ctx, "Failed to create a parser of IPFIX Messages!", NULL);
-        return IPX_ERR_NOMEM;
+        return IPX_ERR_DENIED;
     }
 
     ipx_ctx_private_set(ctx, parser);
@@ -127,12 +136,12 @@ parser_plugin_process_session(ipx_ctx_t *ctx, ipx_parser_t *parser, ipx_msg_sess
 
     switch (rc) {
     case IPX_ERR_NOTFOUND:
-        IPX_CTX_WARNING(ctx, "Received a request to close unknown Transport Session '%s'.",
+        IPX_CTX_WARNING(ctx, "Received an event about closing of unknown Transport Session '%s'.",
             session->ident);
         break;
     default:
         IPX_CTX_ERROR(ctx, "ipx_parser_session_remove() returned an unexpected value (%s:%d, "
-            "CODE: %d).", __FILE__, __LINE__, rc);
+            "code: %d).", __FILE__, __LINE__, rc);
         break;
     }
 
@@ -164,7 +173,7 @@ parser_plugin_remove_session(ipx_ctx_t *ctx, ipx_parser_t *parser, const struct 
     if (!feedback) {
         // Feedback not available -> hard remove!
         IPX_CTX_WARNING(ctx, "Unable to send a request to close a Transport Session '%s' "
-                "(not supported by the input plugin). Removing all internal info about the session!",
+            "(not supported by the input plugin). Removing all internal info about the session!",
             ts->ident);
 
         int rc = ipx_parser_session_remove(parser, ts, &garbage);
@@ -179,8 +188,7 @@ parser_plugin_remove_session(ipx_ctx_t *ctx, ipx_parser_t *parser, const struct 
     ipx_msg_session_t *session_msg = ipx_msg_session_create(ts, IPX_MSG_SESSION_CLOSE);
     if (!session_msg) {
         IPX_CTX_ERROR(ctx, "Unable to create a request to close a Transport Session '%s' due to "
-            "memory allocation error. Removing all internal info about the session!",
-            ts->ident);
+            "memory allocation error. Removing all internal info about the session!", ts->ident);
 
         int rc = ipx_parser_session_remove(parser, ts, &garbage);
         if (rc == IPX_OK && garbage != NULL) {
@@ -278,7 +286,7 @@ parser_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
 
     if (rc != IPX_OK) {
         // Unrecoverable error
-        return IPX_ERR_NOMEM;
+        return IPX_ERR_DENIED;
     }
 
     return IPX_OK;

@@ -596,7 +596,7 @@ thread_input(void *arg)
     assert(ctx->type == IPX_PT_INPUT);
     thread_set_name(ctx);
 
-    const char plugin_name = ctx->plugin_cbs->info->name;
+    const char *plugin_name = ctx->plugin_cbs->info->name;
     IPX_CTX_DEBUG(ctx, "Instance thread of the input plugin '%s' has started!", plugin_name);
 
     bool terminate = false;
@@ -637,7 +637,7 @@ thread_intermediate(void *arg)
     assert(ctx->type == IPX_PT_INTERMEDIATE || ctx->type == IPX_PT_OUTPUT_MGR);
     thread_set_name(ctx);
 
-    const char plugin_name = ctx->plugin_cbs->info->name;
+    const char *plugin_name = ctx->plugin_cbs->info->name;
     IPX_CTX_DEBUG(ctx, "Instance thread of the intermediate plugin '%s' has started!", plugin_name);
 
     bool terminate = false;
@@ -698,7 +698,7 @@ thread_output(void *arg)
     assert(ctx->type == IPX_PT_OUTPUT);
     thread_set_name(ctx);
 
-    const char plugin_name = ctx->plugin_cbs->info->name;
+    const char *plugin_name = ctx->plugin_cbs->info->name;
     IPX_CTX_DEBUG(ctx, "Instance thread of the output plugin '%s' has started!", plugin_name);
 
     bool terminate = false;

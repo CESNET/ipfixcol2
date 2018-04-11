@@ -66,8 +66,7 @@ extern "C" {
 /**
  * \brief Types of messages for the collector pipeline
  */
-enum ipx_msg_type
-{
+enum ipx_msg_type {
     /** A message with a parsed IPFIX message from a source of flows                */
     IPX_MSG_IPFIX     = (1 << 0),
     /** A transport session status i.e. information about (dis)connections          */

@@ -105,7 +105,7 @@ ipx_msg_header_destroy(struct ipx_msg *header)
 static inline void
 ipx_msg_header_cnt_set(struct ipx_msg *header, unsigned int cnt)
 {
-    header->ref_cnt = cnt;
+    __atomic_store_n(&header->ref_cnt, cnt, __ATOMIC_RELEASE);
 }
 
 /**
@@ -117,7 +117,7 @@ ipx_msg_header_cnt_set(struct ipx_msg *header, unsigned int cnt)
 static inline bool
 ipx_msg_header_cnt_dec(struct ipx_msg *header)
 {
-    return (__sync_sub_and_fetch(&header->ref_cnt, 1U) == 0);
+    return (__atomic_sub_fetch(&header->ref_cnt, 1U, __ATOMIC_SEQ_CST) == 0);
 }
 
 /**

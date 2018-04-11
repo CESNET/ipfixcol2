@@ -20,8 +20,10 @@ set(CORE_SOURCE
 	odid_range.h
 	parser.c
 	parser.h
-	parser_plugin.c
-	parser_plugin.h
+	plugin_parser.c
+	plugin_parser.h
+	plugin_output_mgr.c
+	plugin_parser.h
 	ring.c
 	ring.h
 	session.c

@@ -578,13 +578,16 @@ static inline int
 parser_parse_withdrawal(struct ipx_parser_data *pdata, struct fds_ipfix_wdrl_trec *rec,
     enum fds_template_type type)
 {
+    const struct ipx_msg_ctx *msg_ctx = &pdata->ipfix_msg->ctx;
     uint16_t tid = ntohs(rec->template_id);
     assert(ntohs(rec->count) == 0);
 
+    PARSER_DEBUG(pdata->parser, msg_ctx, "Processing a request to withdraw an (Options) Template "
+        "ID %" PRIu16 " ...", tid);
+
     if (pdata->ipfix_msg->ctx.session->type == FDS_SESSION_UDP) {
         // In case of UDP, ignore all requests
-        const struct ipx_msg_ctx *msg_ctx = &pdata->ipfix_msg->ctx;
-        PARSER_WARNING(pdata->parser, msg_ctx, "Ignoring (Options) Template Withdrawal over UDP "
+        PARSER_WARNING(pdata->parser, msg_ctx, "Ignoring an (Options) Template Withdrawal over UDP "
             "(Template ID %" PRIu16 ").", tid);
         return IPX_OK;
     }
@@ -607,19 +610,29 @@ parser_parse_withdrawal(struct ipx_parser_data *pdata, struct fds_ipfix_wdrl_tre
     }
 
     if (rc == FDS_OK) {
+        // Success
+        if (tid >= FDS_IPFIX_SET_MIN_DSET) {
+            PARSER_INFO(pdata->parser, msg_ctx, "A definition of the %s ID %" PRIu16 " has been "
+                "withdrawn.", (type == FDS_TYPE_TEMPLATE) ? "Template" : "Options Template", tid);
+        } else {
+            PARSER_INFO(pdata->parser, msg_ctx, "Definitions of All %s have been withdrawn.",
+                (type == FDS_TYPE_TEMPLATE) ? "Templates" : "Options Templates");
+        }
+
         return IPX_OK;
     }
 
     // Something bad happened
-    const struct ipx_msg_ctx *msg_ctx = &pdata->ipfix_msg->ctx;
-
     if (rc == FDS_ERR_ARG && tid >= FDS_IPFIX_SET_MIN_DSET) {
         // Template type mismatch - this is not a fatal error (try again)
         PARSER_WARNING(pdata->parser, msg_ctx, "Mismatch between template type to withdraw and "
             "type of template definition of Template ID %" PRIu16 " (Options Template vs Template "
             "or vice versa).", tid);
+
         rc = fds_tmgr_template_withdraw(pdata->tmgr, tid, FDS_TYPE_TEMPLATE_UNDEF);
         if (rc == FDS_OK) {
+            PARSER_INFO(pdata->parser, msg_ctx, "A definition of the %s ID %" PRIu16 " has been "
+                "withdrawn.", (type == FDS_TYPE_TEMPLATE) ? "Template" : "Options Template", tid);
             return IPX_OK;
         }
     }
@@ -666,14 +679,16 @@ parser_parse_def(struct ipx_parser_data *pdata, void *rec, enum fds_template_typ
     uint16_t size)
 {
     int rc;
+    const struct ipx_msg_ctx *msg_ctx = &pdata->ipfix_msg->ctx;
     uint16_t tid = ntohs(((struct fds_ipfix_trec *) rec)->template_id);
     struct fds_template *tmplt;
+
+    PARSER_DEBUG(pdata->parser, msg_ctx, "Processing a definition of %s ID %" PRIu16 " ...",
+        (type == FDS_TYPE_TEMPLATE) ? "Template" : "Options Template", tid);
 
     // Parse the (Options) Template
     if ((rc = fds_template_parse(type, rec, &size, &tmplt)) != FDS_OK) {
         // Something bad happened
-        const struct ipx_msg_ctx *msg_ctx = &pdata->ipfix_msg->ctx;
-
         switch (rc) {
         case FDS_ERR_FORMAT:
             // Invalid definition
@@ -696,7 +711,6 @@ parser_parse_def(struct ipx_parser_data *pdata, void *rec, enum fds_template_typ
     // Add (Options) Template
     if ((rc = fds_tmgr_template_add(pdata->tmgr, tmplt)) != FDS_OK) {
         // Something bad happened
-        const struct ipx_msg_ctx *msg_ctx = &pdata->ipfix_msg->ctx;
         fds_template_destroy(tmplt);
 
         switch (rc) {
@@ -717,6 +731,9 @@ parser_parse_def(struct ipx_parser_data *pdata, void *rec, enum fds_template_typ
             return IPX_ERR_ARG;
         }
     }
+
+    PARSER_INFO(pdata->parser, msg_ctx, "A definition of the %s ID %" PRIu16 " has been accepted.",
+        (type == FDS_TYPE_TEMPLATE) ? "Template" : "Options Template", tid);
 
     return IPX_OK;
 }
@@ -902,7 +919,7 @@ static inline int
 parser_parse_message(struct ipx_parser_data *pdata)
 {
     int rc_iter;
-    int rc_parse = 0;
+    int rc_parse = IPX_OK;
 
     struct fds_sets_iter it;
     fds_sets_iter_init(&it, (struct fds_ipfix_msg_hdr *) pdata->ipfix_msg->raw_pkt);

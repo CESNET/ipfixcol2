@@ -1,5 +1,5 @@
 /**
- * \file src/core/parser_plugin.h
+ * \file src/core/plugin_parser.h
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief Internal parser plugin (header file)
  * \date 2018
@@ -39,18 +39,20 @@
  *
  */
 
-#ifndef IPFIXCOL_PARSER_PLUGIN_H
-#define IPFIXCOL_PARSER_PLUGIN_H
+#ifndef IPFIXCOL_PLUGIN_PARSER_H
+#define IPFIXCOL_PLUGIN_PARSER_H
 
 #include <ipfixcol2.h>
+
+/** Description of the parser plugin */
+extern const struct ipx_plugin_info plugin_parser_info;
 
 /**
  * \brief Initialize an IPFIX parser
  * \param[in] ctx    Plugin context
  * \param[in] params Ignored (should be NULL)
  * \return #IPX_OK on success
- * \return #IPX_ERR_NOMEM if a memory allocation error has occurred
- * \return #IPX_ERR_ARG in case of an internal error
+ * \return #IPX_ERR_DENIED in case of a fatal error
  */
 int
 parser_plugin_init(ipx_ctx_t *ctx, const char *params);
@@ -69,9 +71,10 @@ parser_plugin_destroy(ipx_ctx_t *ctx, void *cfg);
  * \param[in] ctx Plugin context
  * \param[in] cfg Private instance data
  * \param[in] msg IPFIX or Transport Session Message to process
- * \return Always #IPX_OK or #IPX_ERR_NOMEM
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_DENIED in case of a fatal error
  */
 int
 parser_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg);
 
-#endif //IPFIXCOL_PARSER_PLUGIN_H
+#endif // IPFIXCOL_PLUGIN_PARSER_H
