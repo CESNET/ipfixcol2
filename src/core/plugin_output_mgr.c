@@ -116,7 +116,7 @@ ipx_output_mgr_list_add(ipx_output_mgr_list_t *list, ipx_ring_t *ring,
 
 // ------------------------------------------------------------------------------------------------
 
-const struct ipx_plugin_info plugin_output_mgr_info = {
+const struct ipx_plugin_info ipx_plugin_output_mgr_info = {
     .name    = "Output manager",
     .dsc     = "Internal IPFIXcol plugin for passing messages to output plugins.",
     .type    = IPX_PT_INTERMEDIATE,
@@ -126,7 +126,7 @@ const struct ipx_plugin_info plugin_output_mgr_info = {
 };
 
 int
-plugin_output_mgr_init(ipx_ctx_t *ctx, const char *params)
+ipx_plugin_output_mgr_init(ipx_ctx_t *ctx, const char *params)
 {
     (void) params;
 
@@ -141,7 +141,7 @@ plugin_output_mgr_init(ipx_ctx_t *ctx, const char *params)
 }
 
 void
-plugin_output_mgr_destroy(ipx_ctx_t *ctx, void *cfg)
+ipx_plugin_output_mgr_destroy(ipx_ctx_t *ctx, void *cfg)
 {
     // Do nothing, private data should be freed by the configurator
     (void) ctx;
@@ -149,7 +149,7 @@ plugin_output_mgr_destroy(ipx_ctx_t *ctx, void *cfg)
 }
 
 int
-plugin_output_mgr_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
+ipx_plugin_output_mgr_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
 {
     (void) ctx;
     struct ipx_output_mgr_list *list = (struct ipx_output_mgr_list *) cfg;

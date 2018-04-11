@@ -84,7 +84,7 @@ ipx_output_mgr_list_add(ipx_output_mgr_list_t *list, ipx_ring_t *ring,
 // ------------------------------------------------------------------------------------------------
 
 /** Description of the output manager plugin */
-extern const struct ipx_plugin_info plugin_output_mgr_info;
+extern const struct ipx_plugin_info ipx_plugin_output_mgr_info;
 
 /**
  * \brief Initialize an IPFIX parser
@@ -94,7 +94,7 @@ extern const struct ipx_plugin_info plugin_output_mgr_info;
  * \return #IPX_ERR_DENIED in case of a fatal error
  */
 int
-plugin_output_mgr_init(ipx_ctx_t *ctx, const char *params);
+ipx_plugin_output_mgr_init(ipx_ctx_t *ctx, const char *params);
 
 /**
  * \brief Destroy an IPFIX parser
@@ -103,7 +103,7 @@ plugin_output_mgr_init(ipx_ctx_t *ctx, const char *params);
  * \param[in] cfg Private instance data
  */
 void
-plugin_output_mgr_destroy(ipx_ctx_t *ctx, void *cfg);
+ipx_plugin_output_mgr_destroy(ipx_ctx_t *ctx, void *cfg);
 
 /**
  * \brief Pass messages to output plugins
@@ -117,6 +117,6 @@ plugin_output_mgr_destroy(ipx_ctx_t *ctx, void *cfg);
  * \return #IPX_ERR_DENIED in case of a fatal error
  */
 int
-plugin_output_mgr_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg);
+ipx_plugin_output_mgr_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg);
 
 #endif //IPFIXCOL_PLUGIN_OUTPUT_MGR_H

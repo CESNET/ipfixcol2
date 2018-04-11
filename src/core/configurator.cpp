@@ -15,35 +15,41 @@
 #include <dirent.h>
 
 #include "configurator.hpp"
+
 extern "C" {
     #include "verbose.h"
+    #include "plugin_parser.h"
+    #include "plugin_output_mgr.h"
 }
+
+/** Description of the internal parser plugin */
+static const struct ipx_ctx_callbacks parser_callbacks = {
+    // Static plugin, no library handles
+    nullptr,
+    &ipx_plugin_parser_info,
+    // Only basic functions
+    &ipx_plugin_parser_init,
+    &ipx_plugin_parser_destroy,
+    nullptr,
+    &ipx_plugin_parser_process,
+    nullptr
+};
+
+/** Description of the internal output manager */
+static const struct ipx_ctx_callbacks output_mgr_callbacks = {
+    // Static plugin, no library handles
+    nullptr,
+    &ipx_plugin_output_mgr_info,
+    // Only basic functions
+    &ipx_plugin_output_mgr_init,
+    &ipx_plugin_output_mgr_destroy,
+    nullptr,
+    &ipx_plugin_output_mgr_process,
+    nullptr
+};
 
 /** Component identification (for log) */
 static const char *comp_str = "Configurator";
-
-/** Plugin structure */
-struct plugin_handler {
-    /** Library handle                                               */
-    void *lib_handle;
-    /** Number of instances that use this plugin                     */
-    unsigned int instance_cnt;
-
-    struct {
-        /** Description of the module                                */
-        struct ipx_plugin_info *plugin_info;
-
-        /** Plugin instance initialization                           */
-        int (*plugin_init)(ipx_ctx_t *, const char *);
-        /** Plugin instance destruction                              */
-        void (*plugin_destroy)(ipx_ctx_t *, void *);
-        /** Get an IPFIX (or NetFlow) message (Input plugins ONLY)   */
-        int (*plugin_get)(ipx_ctx_t *, void *);
-        /** Process a message (Intermediate and Output plugins ONLY) */
-        int (*plugin_process)(ipx_ctx_t *, void *, ipx_msg_t *);
-    } symbols;
-};
-
 
 Configurator::Configurator()
 {

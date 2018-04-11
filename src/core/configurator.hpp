@@ -5,7 +5,9 @@
 #include <stdint.h>
 #include <vector>
 
-
+extern "C" {
+#include "context.h"
+};
 
 class Configurator {
 private:

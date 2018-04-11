@@ -44,7 +44,7 @@
 #include "plugin_parser.h"
 #include "parser.h"
 
-const struct ipx_plugin_info plugin_parser_info = {
+const struct ipx_plugin_info ipx_plugin_parser_info = {
     .name    = "IPFIX Parser",
     .dsc     = "Internal IPFIXcol plugin for parsing IPFIX and NetFlow Messages",
     .type    = IPX_PT_INTERMEDIATE,
@@ -54,7 +54,7 @@ const struct ipx_plugin_info plugin_parser_info = {
 };
 
 int
-parser_plugin_init(ipx_ctx_t *ctx, const char *params)
+ipx_plugin_parser_init(ipx_ctx_t *ctx, const char *params)
 {
     (void) params; // Not used
 
@@ -81,7 +81,7 @@ parser_plugin_init(ipx_ctx_t *ctx, const char *params)
 }
 
 void
-parser_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
+ipx_plugin_parser_destroy(ipx_ctx_t *ctx, void *cfg)
 {
     ipx_parser_t *parser = (ipx_parser_t *) cfg;
 
@@ -261,7 +261,7 @@ parser_plugin_process_ipfix(ipx_ctx_t *ctx, ipx_parser_t *parser, ipx_msg_ipfix_
 }
 
 int
-parser_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
+ipx_plugin_parser_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
 {
     int rc;
     ipx_parser_t *parser = (ipx_parser_t *) cfg;

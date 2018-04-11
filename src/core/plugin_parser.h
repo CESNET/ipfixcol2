@@ -45,7 +45,7 @@
 #include <ipfixcol2.h>
 
 /** Description of the parser plugin */
-extern const struct ipx_plugin_info plugin_parser_info;
+extern const struct ipx_plugin_info ipx_plugin_parser_info;
 
 /**
  * \brief Initialize an IPFIX parser
@@ -55,7 +55,7 @@ extern const struct ipx_plugin_info plugin_parser_info;
  * \return #IPX_ERR_DENIED in case of a fatal error
  */
 int
-parser_plugin_init(ipx_ctx_t *ctx, const char *params);
+ipx_plugin_parser_init(ipx_ctx_t *ctx, const char *params);
 
 /**
  * \brief Destroy an IPFIX parser
@@ -64,7 +64,7 @@ parser_plugin_init(ipx_ctx_t *ctx, const char *params);
  * \param[in] cfg Private instance data
  */
 void
-parser_plugin_destroy(ipx_ctx_t *ctx, void *cfg);
+ipx_plugin_parser_destroy(ipx_ctx_t *ctx, void *cfg);
 
 /**
  * \brief Process an IPFIX or a Transport Session Message
@@ -75,6 +75,6 @@ parser_plugin_destroy(ipx_ctx_t *ctx, void *cfg);
  * \return #IPX_ERR_DENIED in case of a fatal error
  */
 int
-parser_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg);
+ipx_plugin_parser_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg);
 
 #endif // IPFIXCOL_PLUGIN_PARSER_H
