@@ -1,18 +1,17 @@
 #ifndef IPFIXCOL_CONFIGURATOR_H
 #define IPFIXCOL_CONFIGURATOR_H
 
-#include <ipfixcol2.h>
 #include <stdint.h>
 #include <vector>
+#include "plugin_finder.hpp"
 
 extern "C" {
-#include "context.h"
-};
+#include <ipfixcol2.h>
+#include "../context.h"
+}
 
 class Configurator {
 private:
-    class Plugin_finder; // forward declaration
-
 
 public:
     /** Constructor */
@@ -27,35 +26,8 @@ public:
     Configurator& operator=(Configurator &&) = delete;
 
     /** Modules finder */
-    Plugin_finder *plugin_finder;
+    plugin_finder finder;
 };
-
-/** Modules finder */
-class Configurator::Plugin_finder {
-private:
-    /** List of module path where to look for modules */
-    std::vector<std::string> paths;
-
-    void
-    list_dir(const char *dir);
-    void
-    list_file(const char *file);
-public:
-    Plugin_finder() = default;
-    ~Plugin_finder() = default;
-
-    /**
-     * \brief Add path to a plugin or directory with plugins
-     * \param[in] pathname Path
-     */
-    void path_add(const std::string &pathname);
-    /**
-     * \brief List all available modules
-     * \note Available modules are printed on standard output
-     */
-    void list();
-};
-
 
 /**
  * \brief Default instance verbosity

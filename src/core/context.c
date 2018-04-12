@@ -53,6 +53,9 @@
 #include "ring.h"
 #include "message_ipfix.h"
 
+/** Identification of this component (for log) */
+const char *comp_str = "Context";
+
 /** List of permissions */
 enum ipx_ctx_permissions {
     /** Permission to pass a message              */
@@ -398,6 +401,44 @@ init_check_output(ipx_ctx_t *ctx)
     return IPX_OK;
 }
 
+/**
+ * \brief Set the name of a thread
+ * \param[in] ident New identification
+ */
+static inline void
+thread_set_name(const char *ident)
+{
+    static const size_t size = 16; // i.e. 15 characters + '\0'
+    char name[size];
+    strncpy(name, ident, size - 1);
+    name[size - 1] = '\0';
+
+    int rc = prctl(PR_SET_NAME, name, 0, 0, 0);
+    if (rc == -1) {
+        const char *err_str;
+        ipx_strerror(errno, err_str);
+        IPX_WARNING(comp_str, "Failed to set the name of a thread. prctl() failed: %s",
+            err_str);
+    }
+}
+
+/**
+ * \brief Get the name of a thread
+ * \param[out] ident Current identification
+ */
+static inline void
+thread_get_name(char ident[16])
+{
+    int rc = prctl(PR_GET_NAME, ident, 0, 0, 0);
+    if (rc == -1) {
+        const char *err_str;
+        ipx_strerror(errno, err_str);
+        IPX_WARNING(comp_str, "Failed to set the name of a thread. prctl() failed: %s",
+            err_str);
+        ident[0] = '\0';
+    }
+}
+
 int
 ipx_ctx_init(ipx_ctx_t *ctx, const char *params)
 {
@@ -478,14 +519,23 @@ ipx_ctx_init(ipx_ctx_t *ctx, const char *params)
         break;
     }
 
+    /* Change name of the current thread because the instance can create a new threads and
+     * we want to preserve correct inheritance of identifications
+     */
+    char old_ident[16];  // Up to 16 bytes can be stored based on the manual page of prctl
+    thread_get_name(old_ident);
+    thread_set_name(ctx->name);
+
     // Try to initialize the plugin
     IPX_CTX_DEBUG(ctx, "Calling instance constructor of the plugin '%s'", plugin_name);
-
     // Temporarily remove permission to pass messages
     uint32_t permissions_old = ctx->permissions;
     ctx->permissions &= ~(uint32_t) IPX_CP_MSG_PASS;
     rc = ctx->plugin_cbs->init(ctx, params);
     ctx->permissions = permissions_old;
+
+    // Restore the previous thread identification
+    thread_set_name(old_ident);
 
     if (rc != IPX_OK) {
         IPX_CTX_ERROR(ctx, "Initialization function of the instance failed!");
@@ -503,27 +553,6 @@ ipx_ctx_init(ipx_ctx_t *ctx, const char *params)
     ctx->type = plugin_type;
     ctx->state = IPX_CS_INIT;
     return IPX_OK;
-}
-
-/**
- * \brief Set the name of a thread
- * \param[in] ctx Current context
- */
-static inline void
-thread_set_name(struct ipx_ctx *ctx)
-{
-    static const size_t size = 16; // i.e. 15 characters + '\0'
-    char name[size];
-    strncpy(name, ctx->name, size - 1);
-    name[size - 1] = '\0';
-
-    int rc = prctl(PR_SET_NAME, name, 0, 0, 0);
-    if (rc == -1) {
-        const char *err_str;
-        ipx_strerror(errno, err_str);
-        IPX_CTX_WARNING(ctx, "Failed to set the name of a thread. prctl() failed %s",
-            err_str);
-    }
 }
 
 /**
@@ -594,7 +623,7 @@ thread_input(void *arg)
 {
     struct ipx_ctx *ctx = (struct ipx_ctx *) arg;
     assert(ctx->type == IPX_PT_INPUT);
-    thread_set_name(ctx);
+    thread_set_name(ctx->name);
 
     const char *plugin_name = ctx->plugin_cbs->info->name;
     IPX_CTX_DEBUG(ctx, "Instance thread of the input plugin '%s' has started!", plugin_name);
@@ -635,7 +664,7 @@ thread_intermediate(void *arg)
 {
     struct ipx_ctx *ctx = (struct ipx_ctx *) arg;
     assert(ctx->type == IPX_PT_INTERMEDIATE || ctx->type == IPX_PT_OUTPUT_MGR);
-    thread_set_name(ctx);
+    thread_set_name(ctx->name);
 
     const char *plugin_name = ctx->plugin_cbs->info->name;
     IPX_CTX_DEBUG(ctx, "Instance thread of the intermediate plugin '%s' has started!", plugin_name);
@@ -696,7 +725,7 @@ thread_output(void *arg)
 {
     struct ipx_ctx *ctx = (struct ipx_ctx *) arg;
     assert(ctx->type == IPX_PT_OUTPUT);
-    thread_set_name(ctx);
+    thread_set_name(ctx->name);
 
     const char *plugin_name = ctx->plugin_cbs->info->name;
     IPX_CTX_DEBUG(ctx, "Instance thread of the output plugin '%s' has started!", plugin_name);

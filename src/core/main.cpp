@@ -45,8 +45,8 @@
 
 #include <ipfixcol2.h>
 #include <iostream>
-#include "config_file.hpp"
-#include "configurator.hpp"
+#include "configurator/config_file.hpp"
+#include "configurator/configurator.hpp"
 
 extern "C" {
 #include "verbose.h"
@@ -118,12 +118,11 @@ int main(int argc, char *argv[])
 {
     const char *cfg_startup = NULL;
     Configurator conf;
-    bool list_modules = false;
 
     // Parse configuration
     int opt;
     opterr = 0; // Disable default error messages
-    while ((opt = getopt(argc, argv, "c:vVhp:L")) != -1) {
+    while ((opt = getopt(argc, argv, "c:vVhp:")) != -1) {
         switch (opt) {
         case 'c': // Configuration file
             cfg_startup = optarg;
@@ -137,11 +136,8 @@ int main(int argc, char *argv[])
         case 'h': // Help
             print_help();
             return EXIT_SUCCESS;
-        case 'L':
-            list_modules = true;
-            break;
         case 'p': // Plugin search path
-            conf.plugin_finder->path_add(std::string(optarg));
+            conf.finder.path_add(std::string(optarg));
             break;
         default: // ?
             std::cerr << "Unknown parameter '" << static_cast<char>(optopt) << "'!" << std::endl;
@@ -155,11 +151,7 @@ int main(int argc, char *argv[])
     }
 
     // Always use the default directory for looking for plugins, but with the lowest priority
-    conf.plugin_finder->path_add(IPX_DEFAULT_PLUGINS_DIR);
-    if (list_modules) {
-        conf.plugin_finder->list();
-        return EXIT_SUCCESS;
-    }
+    conf.finder.path_add(IPX_DEFAULT_PLUGINS_DIR);
 
     // Initialize the pipeline configurator
     // TODO: pass default configuration directory

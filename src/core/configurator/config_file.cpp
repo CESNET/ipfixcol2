@@ -13,7 +13,7 @@
 #include "configurator.hpp"
 
 extern "C" {
-#include "utils.h"
+#include "../utils.h"
 }
 
 enum FILE_XML_NODES {

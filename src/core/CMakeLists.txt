@@ -1,9 +1,11 @@
 # Core source files
 set(CORE_SOURCE
-	config_file.cpp
-	config_file.hpp
-	configurator.cpp
-	configurator.hpp
+	configurator/config_file.cpp
+	configurator/config_file.hpp
+	configurator/configurator.cpp
+	configurator/configurator.hpp
+	configurator/plugin_finder.cpp
+	configurator/plugin_finder.hpp
 	context.c
 	context.h
 	fpipe.c
