@@ -11,6 +11,7 @@
 #include <iostream>
 #include "config_file.hpp"
 #include "configurator.hpp"
+#include "model.hpp"
 
 extern "C" {
 #include "../utils.h"
@@ -95,60 +96,36 @@ static const struct fds_xml_args args_main[] = {
     FDS_OPTS_END
 };
 
-static enum ipx_verb_level
-file_parse_verbosity(const char *str)
-{
-    if (strcasecmp(str, "none") == 0) {
-        return IPX_VERB_NONE;
-    }
-    if (strcasecmp(str, "error") == 0) {
-        return IPX_VERB_ERROR;
-    }
-    if (strcasecmp(str, "warning") == 0) {
-        return IPX_VERB_WARNING;
-    }
-    if (strcasecmp(str, "info") == 0) {
-        return IPX_VERB_INFO;
-    }
-    if (strcasecmp(str, "debug") == 0) {
-        return IPX_VERB_DEBUG;
-    }
-
-    throw std::runtime_error("Invalid verbosity mode '" + std::string(str) + "'");
-}
-
 static void
-file_parse_instance_input(fds_xml_ctx_t *ctx)
+file_parse_instance_input(fds_xml_ctx_t *ctx, ipx_config_model &model)
 {
-    struct ipx_cfg_input input;
-    memset(&input, 0, sizeof(input));
-    input.common.verb_mode = IPX_PLUGIN_VERB_DEFAULT;;
+    struct ipx_plugin_input input;
 
     const struct fds_xml_cont *content;
     while (fds_xml_next(ctx, &content) != FDS_EOC) {
         switch (content->id) {
         case IN_PLUGIN_NAME:
-            input.common.name = content->ptr_string;
+            input.name = content->ptr_string;
             break;
         case IN_PLUGIN_PLUGIN:
-            input.common.plugin = content->ptr_string;
+            input.plugin = content->ptr_string;
             break;
         case IN_PLUGIN_VERBOSITY:
-            input.common.verb_mode = file_parse_verbosity(content->ptr_string);
+            input.verbosity = content->ptr_string;
             break;
         case IN_PLUGIN_PARAMS:
-            input.common.params = content->ptr_string;
+            input.params = content->ptr_string;
             break;
         default:
             throw std::logic_error("Unexpected XML node within <input>!");
         }
     }
 
-    ipx_config_input_add(&input);
+    model.add_instance(input);
 }
 
 static void
-file_parse_list_input(fds_xml_ctx_t *ctx)
+file_parse_list_input(fds_xml_ctx_t *ctx, ipx_config_model &model)
 {
     unsigned int cnt = 0;
     const struct fds_xml_cont *content;
@@ -162,7 +139,7 @@ file_parse_list_input(fds_xml_ctx_t *ctx)
         }
 
         try {
-            file_parse_instance_input(content->ptr_ctx);
+            file_parse_instance_input(content->ptr_ctx, model);
         } catch (std::exception &ex) {
             throw std::runtime_error("Failed to parse configuration of "
                 + std::to_string(cnt) + ". input plugin: " + ex.what());
@@ -171,37 +148,35 @@ file_parse_list_input(fds_xml_ctx_t *ctx)
 }
 
 static void
-file_parse_instance_inter(fds_xml_ctx_t *ctx)
+file_parse_instance_inter(fds_xml_ctx_t *ctx, ipx_config_model &model)
 {
-    struct ipx_cfg_inter inter;
-    memset(&inter, 0, sizeof(inter));
-    inter.common.verb_mode = IPX_PLUGIN_VERB_DEFAULT;;
+    struct ipx_plugin_inter inter;
 
     const struct fds_xml_cont *content;
     while (fds_xml_next(ctx, &content) != FDS_EOC) {
         switch (content->id) {
         case INTER_PLUGIN_NAME:
-            inter.common.name = content->ptr_string;
+            inter.name = content->ptr_string;
             break;
         case INTER_PLUGIN_PLUGIN:
-            inter.common.plugin = content->ptr_string;
+            inter.plugin = content->ptr_string;
             break;
         case INTER_PLUGIN_VERBOSITY:
-            inter.common.verb_mode = file_parse_verbosity(content->ptr_string);
+            inter.verbosity = content->ptr_string;
             break;
         case INTER_PLUGIN_PARAMS:
-            inter.common.params = content->ptr_string;
+            inter.params = content->ptr_string;
             break;
         default:
             throw std::logic_error("Unexpected XML node within <intermediate>!");
         }
     }
 
-    ipx_config_inter_add(&inter);
+    model.add_instance(inter);
 }
 
 static void
-file_parse_list_inter(fds_xml_ctx_t *ctx)
+file_parse_list_inter(fds_xml_ctx_t *ctx, ipx_config_model &model)
 {
     unsigned int cnt = 0;
     const struct fds_xml_cont *content;
@@ -215,7 +190,7 @@ file_parse_list_inter(fds_xml_ctx_t *ctx)
         }
 
         try {
-            file_parse_instance_inter(content->ptr_ctx);
+            file_parse_instance_inter(content->ptr_ctx, model);
         } catch (std::exception &ex) {
             throw std::runtime_error("Failed to parse configuration of "
                 + std::to_string(cnt) + ". intermediate plugin: " + ex.what());
@@ -225,53 +200,53 @@ file_parse_list_inter(fds_xml_ctx_t *ctx)
 
 
 static void
-file_parse_instance_output(fds_xml_ctx_t *ctx)
+file_parse_instance_output(fds_xml_ctx_t *ctx, ipx_config_model &model)
 {
-    struct ipx_cfg_output output;
-    memset(&output, 0, sizeof(output));
-    output.common.verb_mode = IPX_PLUGIN_VERB_DEFAULT;
-    output.odid_filter.type = IPX_CFG_ODID_FILTER_NONE;
+    struct ipx_plugin_output output;
+    output.odid_type = IPX_ODID_FILTER_NONE; // default
+    bool odid_set = false;
 
     const struct fds_xml_cont *content;
     while (fds_xml_next(ctx, &content) != FDS_EOC) {
         switch (content->id) {
         case OUT_PLUGIN_NAME:
-            output.common.name = content->ptr_string;
+            output.name = content->ptr_string;
             break;
         case OUT_PLUGIN_PLUGIN:
-            output.common.plugin = content->ptr_string;
+            output.plugin = content->ptr_string;
             break;
         case OUT_PLUGIN_VERBOSITY:
-            output.common.verb_mode = file_parse_verbosity(content->ptr_string);
+            output.verbosity= content->ptr_string;
             break;
         case OUT_PLUGIN_PARAMS:
-            output.common.params = content->ptr_string;
+            output.params = content->ptr_string;
             break;
         case OUT_PLUGIN_ODID_EXCEPT:
-            if (output.odid_filter.type != IPX_CFG_ODID_FILTER_NONE) {
-                throw std::runtime_error("<odidExcept> cannot be combined with <odidOnly>!");
+            if (!odid_set) {
+                output.odid_type = IPX_ODID_FILTER_EXCEPT;
+                output.odid_expression = content->ptr_string;
+                odid_set = true;
+                break;
             }
-            output.odid_filter.type = IPX_CFG_ODID_FILTER_EXCEPT;
-            output.odid_filter.expression = content->ptr_string;
-            break;
+            throw std::runtime_error("Multiple definitions of <odidExcept>/<odidOnly>!");
         case OUT_PLUGIN_ODID_ONLY:
-            if (output.odid_filter.type != IPX_CFG_ODID_FILTER_NONE) {
-                throw std::runtime_error("<odidOnly> cannot be combined with <odidExcept!");
+            if (!odid_set) {
+                output.odid_type = IPX_ODID_FILTER_ONLY;
+                output.odid_expression = content->ptr_string;
+                odid_set = true;
+                break;
             }
-
-            output.odid_filter.type = IPX_CFG_ODID_FILTER_ONLY;
-            output.odid_filter.expression = content->ptr_string;
-            break;
+            throw std::runtime_error("Multiple definitions of <odidExcept>/<odidOnly>!");
         default:
             throw std::logic_error("Unexpected XML node within <output>!");
         }
     }
 
-    ipx_config_output_add(&output);
+    model.add_instance(output);
 }
 
 static void
-file_parse_list_output(fds_xml_ctx_t *ctx)
+file_parse_list_output(fds_xml_ctx_t *ctx, ipx_config_model &model)
 {
     unsigned int cnt = 0;
     const struct fds_xml_cont *content;
@@ -285,7 +260,7 @@ file_parse_list_output(fds_xml_ctx_t *ctx)
         }
 
         try {
-            file_parse_instance_output(content->ptr_ctx);
+            file_parse_instance_output(content->ptr_ctx, model);
         } catch (std::exception &ex) {
             throw std::runtime_error("Failed to parse configuration of "
                 + std::to_string(cnt) + ". output plugin: " + ex.what());
@@ -293,8 +268,8 @@ file_parse_list_output(fds_xml_ctx_t *ctx)
     }
 }
 
-int
-ipx_file_parse(const std::string &path)
+static ipx_config_model
+file_parse_model(const std::string &path)
 {
     // Load content of the configuration file
     std::unique_ptr<FILE, decltype(&fclose)> stream(fopen(path.c_str(), "r"), &fclose);
@@ -332,23 +307,35 @@ ipx_file_parse(const std::string &path)
             + std::string(fds_xml_last_err(parser.get())));
     }
 
+    ipx_config_model model;
     const struct fds_xml_cont *content;
     while(fds_xml_next(ctx, &content) != FDS_EOC) {
         assert(content->type == FDS_OPTS_T_CONTEXT);
         switch (content->id) {
         case LIST_INPUTS:
-            file_parse_list_input(content->ptr_ctx);
+            file_parse_list_input(content->ptr_ctx, model);
             break;
         case LIST_INTER:
-            file_parse_list_inter(content->ptr_ctx);
+            file_parse_list_inter(content->ptr_ctx, model);
             break;
         case LIST_OUTPUT:
-            file_parse_list_output(content->ptr_ctx);
+            file_parse_list_output(content->ptr_ctx, model);
             break;
         default:
             throw std::logic_error("Unexpected XML node within startup <ipfixcol2>!");
         }
     }
 
-    return IPX_OK;
+    return model;
+}
+
+int
+ipx_config_file(Configurator &conf, const std::string &path)
+{
+    ipx_config_model model = file_parse_model(path);
+    model.dump();
+    
+    // TODO: pass the model to the configuration
+
+    return EXIT_SUCCESS;
 }

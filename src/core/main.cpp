@@ -161,7 +161,7 @@ int main(int argc, char *argv[])
     // Pass control to the parser of the configuration file
     int rc;
     try {
-        rc = ipx_file_parse(std::string(cfg_startup));
+        rc = ipx_config_file(conf, std::string(cfg_startup));
     } catch (std::exception &ex) {
         std::cerr << "An error has occurred during processing configuration: " << ex.what()
             << std::endl;

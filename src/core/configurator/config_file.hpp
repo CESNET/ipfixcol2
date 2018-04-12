@@ -6,8 +6,15 @@
 #define IPFIXCOL_CONFIG_FILE_H
 
 #include <ipfixcol2/api.h>
+#include "configurator.hpp"
 
+/**
+ * \brief Pass control to the file parser
+ * \param[in] conf Collector configurator
+ * \param[in] path Startup file
+ * \return EXIT_SUCCESS or EXIT_FAILURE
+ */
 IPX_API int
-ipx_file_parse(const std::string &path);
+ipx_config_file(Configurator &conf, const std::string &path);
 
 #endif //IPFIXCOL_CONFIG_FILE_H
