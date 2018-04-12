@@ -13,6 +13,12 @@
 #include "configurator.hpp"
 #include "model.hpp"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <limits.h>
+#include <stdlib.h>
+
 extern "C" {
 #include "../utils.h"
 }
@@ -262,7 +268,7 @@ file_parse_list_output(fds_xml_ctx_t *ctx, ipx_config_model &model)
         try {
             file_parse_instance_output(content->ptr_ctx, model);
         } catch (std::exception &ex) {
-            throw std::runtime_error("Failed to parse configuration of "
+            throw std::runtime_error("Failed to parse the configuration of "
                 + std::to_string(cnt) + ". output plugin: " + ex.what());
         }
     }
@@ -271,19 +277,35 @@ file_parse_list_output(fds_xml_ctx_t *ctx, ipx_config_model &model)
 static ipx_config_model
 file_parse_model(const std::string &path)
 {
+    // Is it really a configuration file
+    struct stat file_info;
+    std::unique_ptr<char, decltype(&free)> real_path(realpath(path.c_str(), nullptr), &free);
+    if (!real_path || stat(real_path.get(), &file_info) != 0) {
+        throw std::runtime_error("Failed to get info about '" + path + "'. Check if the path "
+            "exists and the application has permission to access it.");
+    }
+
+    if ((file_info.st_mode & S_IFREG) == 0) {
+        throw std::runtime_error("The specified path '" + path + "' doesn't lead to a valid "
+            "configuration file!");
+    }
+
     // Load content of the configuration file
     std::unique_ptr<FILE, decltype(&fclose)> stream(fopen(path.c_str(), "r"), &fclose);
     if (!stream) {
         // Failed to open file
-        std::string err_msg = "Unable to open file '" + path + "'";
+        std::string err_msg = "Unable to open the file '" + path + "'";
         throw std::runtime_error(err_msg);
     }
 
     // Load whole content of the file
     fseek(stream.get(), 0, SEEK_END);
     long fsize = ftell(stream.get());
-    rewind(stream.get());
+    if (fsize == -1) {
+        throw std::runtime_error("Unable to get the size of the file '" + path + "'");
+    }
 
+    rewind(stream.get());
     std::unique_ptr<char[]> fcontent(new char[fsize + 1]);
     if (fread(fcontent.get(), fsize, 1, stream.get()) != 1) {
         throw std::runtime_error("Failed to load startup configuration.");
@@ -330,11 +352,13 @@ file_parse_model(const std::string &path)
 }
 
 int
-ipx_config_file(Configurator &conf, const std::string &path)
+ipx_config_file(ipx_configurator &conf, const std::string &path)
 {
     ipx_config_model model = file_parse_model(path);
     model.dump();
-    
+    conf.apply(model);
+
+
     // TODO: pass the model to the configuration
 
     return EXIT_SUCCESS;

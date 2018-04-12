@@ -62,7 +62,8 @@ extern "C" {
 /** Component identification (for log) */
 static const char *comp_str = "Configurator (plugin finder)";
 
-void plugin_finder::path_add(const std::string &pathname)
+void
+ipx_plugin_finder::path_add(const std::string &pathname)
 {
     std::size_t pos = pathname.find_first_of('/');
     if (pos == std::string::npos) {
@@ -73,7 +74,8 @@ void plugin_finder::path_add(const std::string &pathname)
     }
 }
 
-void plugin_finder::find(const std::string &name, uint16_t type, struct ipx_ctx_callbacks &cbs)
+void
+ipx_plugin_finder::find(const std::string &name, uint16_t type, struct ipx_ctx_callbacks &cbs)
 {
     void *handle = nullptr;
 
@@ -166,7 +168,8 @@ void plugin_finder::find(const std::string &name, uint16_t type, struct ipx_ctx_
  * \param[in] required Version required by the plugin
  * \return True if compatible. False otherwise.
  */
-bool plugin_finder::collector_version_check(std::string required)
+bool
+ipx_plugin_finder::collector_version_check(std::string required)
 {
     constexpr int ARRAY_SIZE = 3;
     int parsed_collector[ARRAY_SIZE] = {
@@ -206,7 +209,8 @@ bool plugin_finder::collector_version_check(std::string required)
  * \throw runtime_error
  *   If the plugin exists, but an error has occurred - incompatible version, etc.
  */
-void *plugin_finder::file_find(const std::string &name, uint16_t type, const char *path)
+void *
+ipx_plugin_finder::file_find(const std::string &name, uint16_t type, const char *path)
 {
     // Clear previous errors
     dlerror();
@@ -229,7 +233,7 @@ void *plugin_finder::file_find(const std::string &name, uint16_t type, const cha
     }
 
     struct ipx_plugin_info *info = reinterpret_cast<struct ipx_plugin_info *>(sym);
-    if (!info->name || !info->version || !info->ipx_min || !info->version) {
+    if (!info->name || !info->dsc || !info->ipx_min || !info->version) {
         IPX_WARNING(comp_str, "Description of a plugin in the file '%s' is not valid! Ignoring.",
             path);
         return nullptr;
@@ -246,7 +250,7 @@ void *plugin_finder::file_find(const std::string &name, uint16_t type, const cha
     }
 
     // Found!
-    IPX_INFO(comp_str, "Plugin '%s' found in file '%s'.", name, path);
+    IPX_INFO(comp_str, "Plugin '%s' found in file '%s'.", name.c_str(), path);
 
     // Check the version string
     if (collector_version_check(std::string(info->ipx_min)) == false) {
@@ -277,7 +281,8 @@ void *plugin_finder::file_find(const std::string &name, uint16_t type, const cha
  * \throw runtime_error
  *   If the plugin exists, but an error has occurred - incompatible version, etc.
  */
-void* plugin_finder::dir_find(const std::string &name, uint16_t type, const char *path)
+void *
+ipx_plugin_finder::dir_find(const std::string &name, uint16_t type, const char *path)
 {
     auto delete_fn = [](DIR *dir) {closedir(dir);};
     std::unique_ptr<DIR, std::function<void(DIR*)>> dir_stream(opendir(path), delete_fn);

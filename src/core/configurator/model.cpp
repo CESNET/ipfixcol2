@@ -28,6 +28,12 @@ ipx_config_model::check_common(struct ipx_plugin_base *base)
             + base->name + "' cannot be empty");
     }
 
+    // Remove an XML namespace if present
+    std::size_t pos = base->plugin.find_first_of(':');
+    if (pos != std::string::npos) {
+        base->plugin.erase(0, pos + 1);
+    }
+
     if (base->params.empty()) {
         throw std::invalid_argument("Parameters ('<params>') of the instance '"
             + base->name + "' are missing!");

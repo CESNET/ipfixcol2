@@ -117,7 +117,7 @@ increase_verbosity()
 int main(int argc, char *argv[])
 {
     const char *cfg_startup = NULL;
-    Configurator conf;
+    ipx_configurator conf;
 
     // Parse configuration
     int opt;

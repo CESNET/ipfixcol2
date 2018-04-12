@@ -51,7 +51,7 @@ extern "C" {
 /**
  * \brief Plugin finder
  */
-class plugin_finder {
+class ipx_plugin_finder {
 private:
     /** Search paths (files and directories) */
     std::vector<std::string> paths;
@@ -63,8 +63,8 @@ private:
 
 public:
     // Use default constructor and destructor
-    plugin_finder() = default;
-    ~plugin_finder() = default;
+    ipx_plugin_finder() = default;
+    ~ipx_plugin_finder() = default;
 
     /**
      * \brief Add path to a plugin or directory with plugins

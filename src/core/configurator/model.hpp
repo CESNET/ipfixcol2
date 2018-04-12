@@ -41,6 +41,7 @@ struct ipx_plugin_output : ipx_plugin_base {
 
 /** Parsed configuration of the collector                                      */
 class ipx_config_model {
+    friend class ipx_configurator;
 private:
     /** List of instances of input plugins                                     */
     std::vector<struct ipx_plugin_input>  inputs;

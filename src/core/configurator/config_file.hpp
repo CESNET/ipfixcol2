@@ -15,6 +15,6 @@
  * \return EXIT_SUCCESS or EXIT_FAILURE
  */
 IPX_API int
-ipx_config_file(Configurator &conf, const std::string &path);
+ipx_config_file(ipx_configurator &conf, const std::string &path);
 
 #endif //IPFIXCOL_CONFIG_FILE_H
