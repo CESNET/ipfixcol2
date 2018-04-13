@@ -105,7 +105,7 @@ ipx_msg_header_destroy(struct ipx_msg *header)
 static inline void
 ipx_msg_header_cnt_set(struct ipx_msg *header, unsigned int cnt)
 {
-    __atomic_store_n(&header->ref_cnt, cnt, __ATOMIC_RELEASE);
+    header->ref_cnt = cnt;
 }
 
 /**

@@ -272,8 +272,9 @@ exit_A:
 void
 ipx_ring_destroy(ipx_ring_t *ring)
 {
-    if (ring->reader.read_idx != ring->writer.write_idx) {
-        uint32_t cnt = ring->writer.write_idx - ring->reader.read_idx;
+    // The last read message is not confirmed by the reader, it is 1 index behind -> "+ 1"
+    if (ring->reader.read_idx + 1 != ring->writer.write_idx) {
+        uint32_t cnt = ring->writer.write_idx - ring->reader.read_idx + 1;
         IPX_WARNING(module, "Destroying of a ring buffer that still contains %" PRIu32
             " unprocessed message(s)!", cnt);
     }
