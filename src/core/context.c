@@ -519,12 +519,16 @@ ipx_ctx_init(ipx_ctx_t *ctx, const char *params)
         break;
     }
 
-    /* Change name of the current thread because the instance can create a new threads and
-     * we want to preserve correct inheritance of identifications
+    /* Change name of the current thread and block all signals because the instance can create
+     * new threads and we want to preserve correct inheritance of these configurations
      */
     char old_ident[16];  // Up to 16 bytes can be stored based on the manual page of prctl
     thread_get_name(old_ident);
     thread_set_name(ctx->name);
+
+    sigset_t set_new, set_old;
+    sigfillset(&set_new);
+    pthread_sigmask(SIG_SETMASK, &set_new, &set_old);
 
     // Try to initialize the plugin
     IPX_CTX_DEBUG(ctx, "Calling instance constructor of the plugin '%s'", plugin_name);
@@ -534,7 +538,8 @@ ipx_ctx_init(ipx_ctx_t *ctx, const char *params)
     rc = ctx->plugin_cbs->init(ctx, params);
     ctx->permissions = permissions_old;
 
-    // Restore the previous thread identification
+    // Restore the previous thread identification and signal mask
+    pthread_sigmask(SIG_SETMASK, &set_old, NULL);
     thread_set_name(old_ident);
 
     if (rc != IPX_OK) {
