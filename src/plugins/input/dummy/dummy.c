@@ -73,7 +73,7 @@ int
 ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
 {
     // Create a private data
-    struct instance_data *data = calloc(1, sizeof(data));
+    struct instance_data *data = calloc(1, sizeof(*data));
     if (!data) {
         return IPX_ERR_DENIED;
     }
@@ -96,13 +96,13 @@ ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
 
     if (data->session != NULL) {
         // Inform other plugins that the Transport Session is closed
-        ipx_msg_session_t *close_event = ipx_msg_session_create(cfg, IPX_MSG_SESSION_CLOSE);
+        ipx_msg_session_t *close_event = ipx_msg_session_create(data->session, IPX_MSG_SESSION_CLOSE);
         ipx_ctx_msg_pass(ctx, ipx_msg_session2base(close_event));
 
         /* The session cannot be freed because other plugin still have access to it.
          * Send it as a garbage message after the Transport Session close event.
          */
-        ipx_msg_garbage_cb cb = (ipx_msg_garbage_cb) &ipx_msg_session_destroy;
+        ipx_msg_garbage_cb cb = (ipx_msg_garbage_cb) &ipx_session_destroy;
         ipx_msg_garbage_t *garbage = ipx_msg_garbage_create(data->session, cb);
         ipx_ctx_msg_pass(ctx, ipx_msg_garbage2base(garbage));
     }

@@ -70,7 +70,7 @@ int
 ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
 {
     // Create a private data
-    struct instance_data *data = calloc(1, sizeof(data));
+    struct instance_data *data = calloc(1, sizeof(*data));
     if (!data) {
         return IPX_ERR_DENIED;
     }
