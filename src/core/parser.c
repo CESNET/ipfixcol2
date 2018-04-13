@@ -471,13 +471,16 @@ struct session_gabage {
 static void
 session_garbage_destroy(struct session_gabage *grb)
 {
-    if (grb == NULL || grb->recs == NULL) {
+    if (grb == NULL) {
         return;
     }
 
     for (size_t i = 0; i < grb->rec_cnt; ++i) {
         stream_ctx_destroy(grb->recs[i]);
     }
+
+    free(grb->recs);
+    free(grb);
 }
 
 /**

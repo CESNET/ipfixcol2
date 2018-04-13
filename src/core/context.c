@@ -377,7 +377,7 @@ init_check_intermediate(ipx_ctx_t *ctx)
         return IPX_ERR_ARG;
     }
 
-    if (ctx->plugin_cbs->process) {
+    if (ctx->plugin_cbs->process == NULL) {
         IPX_CTX_ERROR(ctx, "Processing callback function is not defined!");
         return IPX_ERR_ARG;
     }
@@ -393,7 +393,7 @@ init_check_output(ipx_ctx_t *ctx)
         return IPX_ERR_ARG;
     }
 
-    if (ctx->plugin_cbs->process) {
+    if (ctx->plugin_cbs->process == NULL) {
         IPX_CTX_ERROR(ctx, "Processing callback function is not defined!");
         return IPX_ERR_ARG;
     }
@@ -512,6 +512,7 @@ ipx_ctx_init(ipx_ctx_t *ctx, const char *params)
          */
         ctx->cfg_system.msg_mask_selected = IPX_MSG_MASK_ALL;
         ctx->cfg_system.msg_mask_allowed = IPX_MSG_MASK_ALL; // overwrite
+        ctx->permissions = IPX_CP_MSG_SUB;
         break;
     case IPX_PT_OUTPUT:
         ctx->cfg_system.msg_mask_selected = IPX_MSG_IPFIX;
@@ -605,7 +606,11 @@ thread_input_process_pipe(struct ipx_ctx *ctx)
     }
 
     if (msg_type == IPX_MSG_TERMINATE) {
-        // Received a request to terminate the instance, pass it on
+        // Destroy the instance (usually produce garbage messages, etc)
+        const char *plugin_name = ctx->plugin_cbs->info->name;
+        IPX_CTX_DEBUG(ctx, "Calling instance destructor of the input plugin '%s'", plugin_name);
+        ctx->plugin_cbs->destroy(ctx, ctx->cfg_plugin.private);
+        // Pass the termination message
         ipx_ring_push(ctx->pipeline.dst, msg_ptr);
         return IPX_ERR_EOF;
     }
@@ -647,10 +652,6 @@ thread_input(void *arg)
         ctx->plugin_cbs->get(ctx, ctx->cfg_plugin.private); // TODO: check return value
     }
 
-    // Destroy the instance
-    IPX_CTX_DEBUG(ctx, "Calling instance destructor of the input plugin '%s'", plugin_name);
-    ctx->plugin_cbs->destroy(ctx, ctx->cfg_plugin.private);
-
     IPX_CTX_DEBUG(ctx, "Instance thread of the input plugin '%s' has been terminated!",
         plugin_name);
     pthread_exit(NULL);
@@ -674,13 +675,16 @@ thread_intermediate(void *arg)
     const char *plugin_name = ctx->plugin_cbs->info->name;
     IPX_CTX_DEBUG(ctx, "Instance thread of the intermediate plugin '%s' has started!", plugin_name);
 
+    ipx_msg_t *msg_ptr;
+    enum ipx_msg_type msg_type;
+
     bool terminate = false;
     bool process_en = true; // enable message processing
 
     while (!terminate) {
         // Get a new message for the buffer
-        ipx_msg_t *msg_ptr = ipx_ring_pop(ctx->pipeline.src);
-        enum ipx_msg_type msg_type = ipx_msg_get_type(msg_ptr);
+        msg_ptr = ipx_ring_pop(ctx->pipeline.src);
+        msg_type = ipx_msg_get_type(msg_ptr);
         bool processed = false; // only not processed messages are automatically passed
 
         if ((process_en && (msg_type & ctx->cfg_system.msg_mask_selected) != 0)
@@ -700,6 +704,7 @@ thread_intermediate(void *arg)
             } else {
                 // We received a request to terminate the instance
                 terminate = true;
+                continue; // Prevent sending the termination message
             }
         }
 
@@ -709,9 +714,16 @@ thread_intermediate(void *arg)
         }
     }
 
-    // Destroy the instance
+    // Destroy the instance (usually produce garbage messages)
     IPX_CTX_DEBUG(ctx, "Calling instance destructor of the intermediate plugin '%s'", plugin_name);
     ctx->plugin_cbs->destroy(ctx, ctx->cfg_plugin.private);
+
+    // Pass the termination message as the last message to the buffer
+    assert(msg_type == IPX_MSG_TERMINATE);
+    if (ctx->type != IPX_PT_OUTPUT_MGR) {
+        // All intermediate plugins (except the output manager) have to pass the message here
+        ipx_ring_push(ctx->pipeline.dst, msg_ptr);
+    }
 
     IPX_CTX_DEBUG(ctx, "Instance thread of the intermediate plugin '%s' has been terminated!",
         plugin_name);

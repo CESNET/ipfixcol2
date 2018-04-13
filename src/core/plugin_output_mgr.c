@@ -43,6 +43,7 @@
 #include <stddef.h>
 #include "plugin_output_mgr.h"
 #include "message_base.h"
+#include "context.h"
 
 /** Definition of a connection with an output instance      */
 struct ipx_output_mgr_rec {
@@ -119,7 +120,7 @@ ipx_output_mgr_list_add(ipx_output_mgr_list_t *list, ipx_ring_t *ring,
 const struct ipx_plugin_info ipx_plugin_output_mgr_info = {
     .name    = "Output manager",
     .dsc     = "Internal IPFIXcol plugin for passing messages to output plugins.",
-    .type    = IPX_PT_INTERMEDIATE,
+    .type    = IPX_PT_OUTPUT_MGR,
     .flags   = 0,
     .version = "1.0.0",
     .ipx_min = "2.0.0"

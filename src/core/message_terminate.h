@@ -105,7 +105,7 @@ ipx_msg_terminate_get_type(const ipx_msg_terminate_t *msg);
  * \return Pointer to the base message
  */
 static inline ipx_msg_t *
-ipx_msg_terminate2base(ipx_msg_session_t *msg)
+ipx_msg_terminate2base(ipx_msg_terminate_t *msg)
 {
     return (ipx_msg_t *) msg;
 }

@@ -219,7 +219,7 @@ ipx_plugin_finder::file_find(const std::string &name, uint16_t type, const char 
     const int flags = RTLD_LAZY | RTLD_LOCAL;
     std::unique_ptr<void, std::function<void(void*)>> handle(dlopen(path, flags), delete_fn);
     if (!handle) {
-        IPX_WARNING(comp_str, "Failed to open plugin in file '%s': %s", path, dlerror());
+        IPX_DEBUG(comp_str, "Failed to open plugin in file '%s': %s", path, dlerror());
         return nullptr;
     }
 
@@ -227,14 +227,14 @@ ipx_plugin_finder::file_find(const std::string &name, uint16_t type, const char 
     dlerror();
     void *sym = dlsym(handle.get(), "ipx_plugin_info");
     if (!sym) {
-        IPX_WARNING(comp_str, "Unable to find the plugin description in the file '%s': %s",
+        IPX_DEBUG(comp_str, "Unable to find the plugin description in the file '%s': %s",
             path, dlerror());
         return nullptr;
     }
 
     struct ipx_plugin_info *info = reinterpret_cast<struct ipx_plugin_info *>(sym);
     if (!info->name || !info->dsc || !info->ipx_min || !info->version) {
-        IPX_WARNING(comp_str, "Description of a plugin in the file '%s' is not valid! Ignoring.",
+        IPX_DEBUG(comp_str, "Description of a plugin in the file '%s' is not valid! Ignoring.",
             path);
         return nullptr;
     }
@@ -309,13 +309,13 @@ ipx_plugin_finder::dir_find(const std::string &name, uint16_t type, const char *
         struct stat file_info;
         std::unique_ptr<char, decltype(&free)> path(realpath(file.c_str(), nullptr), &free);
         if (!path || stat(path.get(), &file_info) != 0) {
-            IPX_WARNING(comp_str, "Failed to get info about '%s'. Check if the path exists and "
+            IPX_DEBUG(comp_str, "Failed to get info about '%s'. Check if the path exists and "
                 "the application has permission to access it.", file.c_str());
             continue;
         }
 
         if ((file_info.st_mode & S_IFREG) == 0) {
-            IPX_INFO(comp_str, "Non regular file '%s' skipped.", path.get());
+            IPX_DEBUG(comp_str, "Non regular file '%s' skipped.", path.get());
             continue;
         }
 
