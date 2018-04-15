@@ -83,7 +83,6 @@ print_help()
             << IPX_DEFAULT_PLUGINS_DIR << ")\n"
         << "  -e DIR    Path to a directory with definitions of IPFIX Information Elements "
             << "(default: " << fds_api_cfg_dir() << ")\n"
-        << "  -L        List available plugins and exit\n"
         << "  -h        Show this help message and exit\n"
         << "  -V        Show version information and exit\n"
         << "  -v        Be verbose (in addition, show warning messages)\n"
@@ -116,13 +115,14 @@ increase_verbosity()
  */
 int main(int argc, char *argv[])
 {
-    const char *cfg_startup = NULL;
+    const char *cfg_startup = nullptr;
+    const char *cfg_iedir = nullptr;
     ipx_configurator conf;
 
     // Parse configuration
     int opt;
     opterr = 0; // Disable default error messages
-    while ((opt = getopt(argc, argv, "c:vVhp:")) != -1) {
+    while ((opt = getopt(argc, argv, "c:vVhp:e:")) != -1) {
         switch (opt) {
         case 'c': // Configuration file
             cfg_startup = optarg;
@@ -139,6 +139,9 @@ int main(int argc, char *argv[])
         case 'p': // Plugin search path
             conf.finder.path_add(std::string(optarg));
             break;
+        case 'e':
+            cfg_iedir = optarg;
+            break;
         default: // ?
             std::cerr << "Unknown parameter '" << static_cast<char>(optopt) << "'!" << std::endl;
             return EXIT_FAILURE;
@@ -150,8 +153,14 @@ int main(int argc, char *argv[])
         cfg_startup = IPX_DEFAULT_STARTUP_CONFIG;
     }
 
+    if (!cfg_iedir) {
+        // Use default directory of the library
+        cfg_iedir = fds_api_cfg_dir();
+    }
+
     // Always use the default directory for looking for plugins, but with the lowest priority
     conf.finder.path_add(IPX_DEFAULT_PLUGINS_DIR);
+    conf.set_iemgr_dir(cfg_iedir);
 
     // Initialize the pipeline configurator
     // TODO: pass default configuration directory

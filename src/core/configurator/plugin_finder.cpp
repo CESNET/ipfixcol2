@@ -62,6 +62,15 @@ extern "C" {
 /** Component identification (for log) */
 static const char *comp_str = "Configurator (plugin finder)";
 
+ipx_plugin_finder::~ipx_plugin_finder()
+{
+    // Unload all plugins
+    for (struct ipx_plugin_data *plugin : loaded_plugins) {
+        dlclose(plugin->cbs.handle);
+        delete plugin;
+    }
+}
+
 void
 ipx_plugin_finder::path_add(const std::string &pathname)
 {
@@ -74,8 +83,51 @@ ipx_plugin_finder::path_add(const std::string &pathname)
     }
 }
 
+const struct ipx_plugin_data *
+ipx_plugin_finder::find(const std::string &name, uint16_t type)
+{
+    struct ipx_plugin_data *result = nullptr;
+
+    // First, try to find it among already loaded plugins
+    for (struct ipx_plugin_data *plugin : loaded_plugins) {
+        if (plugin->type != type || plugin->name != name) {
+            continue;
+        }
+
+        // Found
+        result = plugin;
+        break;
+    }
+
+    if (result != nullptr) {
+        result->ref_cnt++;
+        return result;
+    }
+
+    // Not found, try to load it
+    std::unique_ptr<ipx_plugin_data> new_plugin(new ipx_plugin_data);
+    new_plugin->name = name;
+    new_plugin->type = type;
+    new_plugin->ref_cnt = 0;
+
+    find_in_paths(name, type, new_plugin->cbs); // Throws an exception on failure
+    new_plugin->ref_cnt = 1;
+
+    result = new_plugin.release();
+    loaded_plugins.push_back(result);
+    return result;
+}
+
+/**
+ * \brief Try to find plugin in paths defined by a user
+ * \param[in]  name Name of the plugin
+ * \param[in]  type Plugin type
+ * \param[out] cbs  Callbacks
+ * \throw runtime_error
+ *   If the plugin exists, but an error has occurred - incompatible version, etc.
+ */
 void
-ipx_plugin_finder::find(const std::string &name, uint16_t type, struct ipx_ctx_callbacks &cbs)
+ipx_plugin_finder::find_in_paths(const std::string &name, uint16_t type, struct ipx_ctx_callbacks &cbs)
 {
     void *handle = nullptr;
 
@@ -94,10 +146,10 @@ ipx_plugin_finder::find(const std::string &name, uint16_t type, struct ipx_ctx_c
         // Find  content of the directory/file
         switch (file_info.st_mode & S_IFMT) {
         case S_IFDIR:
-            handle = dir_find(name, type, real_path.get());
+            handle = find_in_dir(name, type, real_path.get());
             break;
         case S_IFREG:
-            handle = file_find(name, type, real_path.get());
+            handle = find_in_file(name, type, real_path.get());
             break;
         default:
             handle = nullptr;
@@ -210,7 +262,7 @@ ipx_plugin_finder::collector_version_check(std::string required)
  *   If the plugin exists, but an error has occurred - incompatible version, etc.
  */
 void *
-ipx_plugin_finder::file_find(const std::string &name, uint16_t type, const char *path)
+ipx_plugin_finder::find_in_file(const std::string &name, uint16_t type, const char *path)
 {
     // Clear previous errors
     dlerror();
@@ -219,7 +271,7 @@ ipx_plugin_finder::file_find(const std::string &name, uint16_t type, const char 
     const int flags = RTLD_LAZY | RTLD_LOCAL;
     std::unique_ptr<void, std::function<void(void*)>> handle(dlopen(path, flags), delete_fn);
     if (!handle) {
-        IPX_DEBUG(comp_str, "Failed to open plugin in file '%s': %s", path, dlerror());
+        IPX_WARNING(comp_str, "Failed to open plugin in file '%s': %s", path, dlerror());
         return nullptr;
     }
 
@@ -227,14 +279,14 @@ ipx_plugin_finder::file_find(const std::string &name, uint16_t type, const char 
     dlerror();
     void *sym = dlsym(handle.get(), "ipx_plugin_info");
     if (!sym) {
-        IPX_DEBUG(comp_str, "Unable to find the plugin description in the file '%s': %s",
+        IPX_WARNING(comp_str, "Unable to find the plugin description in the file '%s': %s",
             path, dlerror());
         return nullptr;
     }
 
     struct ipx_plugin_info *info = reinterpret_cast<struct ipx_plugin_info *>(sym);
     if (!info->name || !info->dsc || !info->ipx_min || !info->version) {
-        IPX_DEBUG(comp_str, "Description of a plugin in the file '%s' is not valid! Ignoring.",
+        IPX_WARNING(comp_str, "Description of a plugin in the file '%s' is not valid! Ignoring.",
             path);
         return nullptr;
     }
@@ -282,7 +334,7 @@ ipx_plugin_finder::file_find(const std::string &name, uint16_t type, const char 
  *   If the plugin exists, but an error has occurred - incompatible version, etc.
  */
 void *
-ipx_plugin_finder::dir_find(const std::string &name, uint16_t type, const char *path)
+ipx_plugin_finder::find_in_dir(const std::string &name, uint16_t type, const char *path)
 {
     auto delete_fn = [](DIR *dir) {closedir(dir);};
     std::unique_ptr<DIR, std::function<void(DIR*)>> dir_stream(opendir(path), delete_fn);
@@ -309,17 +361,17 @@ ipx_plugin_finder::dir_find(const std::string &name, uint16_t type, const char *
         struct stat file_info;
         std::unique_ptr<char, decltype(&free)> path(realpath(file.c_str(), nullptr), &free);
         if (!path || stat(path.get(), &file_info) != 0) {
-            IPX_DEBUG(comp_str, "Failed to get info about '%s'. Check if the path exists and "
+            IPX_WARNING(comp_str, "Failed to get info about '%s'. Check if the path exists and "
                 "the application has permission to access it.", file.c_str());
             continue;
         }
 
         if ((file_info.st_mode & S_IFREG) == 0) {
-            IPX_DEBUG(comp_str, "Non regular file '%s' skipped.", path.get());
+            IPX_INFO(comp_str, "Non regular file '%s' skipped.", path.get());
             continue;
         }
 
-        void *handle = file_find(name, type, path.get());
+        void *handle = find_in_file(name, type, path.get());
         if (!handle) {
             // Not found
             continue;

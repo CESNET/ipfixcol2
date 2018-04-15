@@ -83,6 +83,12 @@ ipx_output_mgr_list_destroy(ipx_output_mgr_list_t *list)
     free(list);
 }
 
+bool
+ipx_output_mgr_list_empty(const ipx_output_mgr_list_t *list)
+{
+    return (list->size == 0);
+}
+
 int
 ipx_output_mgr_list_add(ipx_output_mgr_list_t *list, ipx_ring_t *ring,
     enum ipx_odid_filter_type odid_type, const ipx_orange_t *odid_filter)
@@ -153,7 +159,9 @@ int
 ipx_plugin_output_mgr_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
 {
     (void) ctx;
+    // List of output destination is prepared by the configurator
     struct ipx_output_mgr_list *list = (struct ipx_output_mgr_list *) cfg;
+    assert(list != NULL);
 
     // Only IPFIX messages are filtered
     enum ipx_msg_type msg_type = ipx_msg_get_type(msg);

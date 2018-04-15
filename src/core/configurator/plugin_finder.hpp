@@ -48,6 +48,20 @@ extern "C" {
 #include "../context.h"
 }
 
+/** Description of a loaded plugin                                                            */
+struct ipx_plugin_data {
+    /** Plugin type (one of #IPX_PT_INPUT, #IPX_PT_INTERMEDIATE, #IPX_PT_OUTPUT)              */
+    uint16_t type;
+    /** Identification name of the plugin                                                     */
+    std::string name;
+    /** Number of references                                                                  */
+    unsigned int ref_cnt;
+
+    /** Module identification and callbacks                                                   */
+    struct ipx_ctx_callbacks cbs;
+};
+
+
 /**
  * \brief Plugin finder
  */
@@ -55,16 +69,18 @@ class ipx_plugin_finder {
 private:
     /** Search paths (files and directories) */
     std::vector<std::string> paths;
+    std::vector<struct ipx_plugin_data *> loaded_plugins;
 
-    void *file_find(const std::string &name, uint16_t type, const char *path);
-    void *dir_find(const std::string &name, uint16_t type, const char *path);
+    void find_in_paths(const std::string &name, uint16_t, struct ipx_ctx_callbacks &cbs);
+    void *find_in_file(const std::string &name, uint16_t type, const char *path);
+    void *find_in_dir(const std::string &name, uint16_t type, const char *path);
 
     bool collector_version_check(std::string min_version);
 
 public:
     // Use default constructor and destructor
     ipx_plugin_finder() = default;
-    ~ipx_plugin_finder() = default;
+    ~ipx_plugin_finder();
 
     /**
      * \brief Add path to a plugin or directory with plugins
@@ -77,8 +93,6 @@ public:
      *
      * Try to find the plugin and check its version requirements, presence of required callbacks,
      * correctness of its description, etc.
-     * \warning
-     *   After the plugin is not required anymore, a user free handler using dlclose function.
      *
      * \param[in]  name Name of the plugin
      * \param[in]  type Plugin type (one of #IPX_PT_INPUT, #IPX_PT_INTERMEDIATE, #IPX_PT_OUTPUT)
@@ -87,13 +101,9 @@ public:
      *   If the function failed to find suitable version of the plugin or version requirements
      *   hasn't been met.
      */
-    void find(const std::string &name, uint16_t type, struct ipx_ctx_callbacks &cbs);
+    const struct ipx_plugin_data *
+    find(const std::string &name, uint16_t type);
 
-    /**
-     * \brief List all available modules
-     * \note Available modules are printed on standard output
-     */
-    void list();
 };
 
 #endif //IPFIXCOL_PLUGIN_FINDER_H

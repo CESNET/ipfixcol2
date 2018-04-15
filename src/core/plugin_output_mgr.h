@@ -59,6 +59,14 @@ ipx_output_mgr_list_t *
 ipx_output_mgr_list_create();
 
 /**
+ * \brief Is the list empty?
+ * \param[in] list Output manager list
+ * \return True or false
+ */
+bool
+ipx_output_mgr_list_empty(const ipx_output_mgr_list_t *list);
+
+/**
  * \brief Destroy the list
  *
  * \note Ring buffers and ODID filters are NOT freed by this function!
