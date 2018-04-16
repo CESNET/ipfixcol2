@@ -44,6 +44,9 @@
 #include <unistd.h>
 #include <inttypes.h>
 
+#include "config.h"
+#include "../../input/dummy/config.h"
+
 /** Plugin description */
 IPX_API struct ipx_plugin_info ipx_plugin_info = {
     // Plugin type
@@ -62,8 +65,8 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
 
 /** Instance */
 struct instance_data {
-    /** Sleep time between messages           */
-    struct timespec sleep_time;
+    /** Parsed configuration of the instance  */
+    struct instance_config *config;
 };
 
 int
@@ -75,10 +78,11 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
         return IPX_ERR_DENIED;
     }
 
-    // TODO: Parse configuration
-    (void) params;
-    data->sleep_time.tv_sec = 0;
-    data->sleep_time.tv_nsec = 100000000LL; // 100ms
+    if ((data->config = config_parse(ctx, params)) == NULL) {
+        free(data);
+        return IPX_ERR_DENIED;
+    }
+
     ipx_ctx_private_set(ctx, data);
 
     // Subscribe to receive IPFIX messages and Transport Session events
@@ -93,6 +97,7 @@ ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
     (void) ctx; // Suppress warnings
 
     struct instance_data *data = (struct instance_data *) cfg;
+    config_destroy(data->config);
     free(data);
 }
 
@@ -106,7 +111,7 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
         // Process IPFIX message
         ipx_msg_ipfix_t *ipfix_msg = ipx_msg_base2ipfix(msg);
         const struct ipx_msg_ctx *ipfix_ctx = ipx_msg_ipfix_get_ctx(ipfix_msg);
-        IPX_CTX_INFO(ctx, "[%" PRIu32 "] Received an IPFIX message", ipfix_ctx->odid);
+        IPX_CTX_INFO(ctx, "[ODID: %" PRIu32 "] Received an IPFIX message", ipfix_ctx->odid);
     }
 
     if (type == IPX_MSG_SESSION) {
@@ -118,6 +123,6 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
         IPX_CTX_INFO(ctx, "Transport Session '%s' %s", session->ident, status_msg);
     }
 
-    nanosleep(&data->sleep_time, NULL);
+    nanosleep(&data->config->sleep_time, NULL);
     return IPX_OK;
 }

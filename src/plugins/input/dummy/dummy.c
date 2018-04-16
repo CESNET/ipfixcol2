@@ -62,7 +62,7 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
 
 /** Instance */
 struct instance_data {
-    /** Parsed configuration of the intance   */
+    /** Parsed configuration of the instance  */
     struct instance_config *config;
     /** Information about the source of flows */
     struct ipx_session     *session;
