@@ -271,7 +271,7 @@ ipx_plugin_finder::find_in_file(const std::string &name, uint16_t type, const ch
     const int flags = RTLD_LAZY | RTLD_LOCAL;
     std::unique_ptr<void, std::function<void(void*)>> handle(dlopen(path, flags), delete_fn);
     if (!handle) {
-        IPX_WARNING(comp_str, "Failed to open plugin in file '%s': %s", path, dlerror());
+        IPX_DEBUG(comp_str, "Failed to open plugin in file '%s': %s", path, dlerror());
         return nullptr;
     }
 
@@ -279,14 +279,14 @@ ipx_plugin_finder::find_in_file(const std::string &name, uint16_t type, const ch
     dlerror();
     void *sym = dlsym(handle.get(), "ipx_plugin_info");
     if (!sym) {
-        IPX_WARNING(comp_str, "Unable to find the plugin description in the file '%s': %s",
+        IPX_DEBUG(comp_str, "Unable to find the plugin description in the file '%s': %s",
             path, dlerror());
         return nullptr;
     }
 
     struct ipx_plugin_info *info = reinterpret_cast<struct ipx_plugin_info *>(sym);
     if (!info->name || !info->dsc || !info->ipx_min || !info->version) {
-        IPX_WARNING(comp_str, "Description of a plugin in the file '%s' is not valid! Ignoring.",
+        IPX_DEBUG(comp_str, "Description of a plugin in the file '%s' is not valid! Ignoring.",
             path);
         return nullptr;
     }
@@ -367,7 +367,7 @@ ipx_plugin_finder::find_in_dir(const std::string &name, uint16_t type, const cha
         }
 
         if ((file_info.st_mode & S_IFREG) == 0) {
-            IPX_INFO(comp_str, "Non regular file '%s' skipped.", path.get());
+            IPX_DEBUG(comp_str, "Non regular file '%s' skipped.", path.get());
             continue;
         }
 
