@@ -174,8 +174,11 @@ ipx_instance_intermediate::ipx_instance_intermediate(const std::string &name,
 
 ipx_instance_intermediate::~ipx_instance_intermediate()
 {
-    // Destroy context (if running, wait for termination of threads)
-    ipx_ctx_destroy(_ctx);
+    // Output manager might already destroyed the context
+    if (_ctx != nullptr) {
+        // Destroy context (if running, wait for termination of threads)
+        ipx_ctx_destroy(_ctx);
+    }
     // Now we can destroy buffers
     ipx_ring_destroy(_instance_buffer);
 }
@@ -237,6 +240,11 @@ ipx_instance_outmgr::ipx_instance_outmgr(uint32_t bsize)
 
 ipx_instance_outmgr::~ipx_instance_outmgr()
 {
+    // The plugins must be terminated first
+    ipx_ctx_destroy(_ctx);
+    _ctx = nullptr;
+
+    // Now we can destroy its private data
     ipx_output_mgr_list_destroy(_list);
 }
 
@@ -272,7 +280,6 @@ ipx_instance_outmgr::connect_to(ipx_instance_output &output)
         throw std::runtime_error("Failed to connect an output instance to the output manager!");
     }
 }
-
 
 // -------------------------------------------------------------------------------------------------
 
