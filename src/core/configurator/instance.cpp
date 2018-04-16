@@ -1,6 +1,43 @@
-//
-// Created by lukashutak on 15.4.18.
-//
+/**
+ * \file src/core/configurator/instance.cpp
+ * \author Lukas Hutak <lukas.hutak@cesnet.cz>
+ * \brief Pipeline instance wrappers (source file)
+ * \date 2018
+ */
+
+/* Copyright (C) 2018 CESNET, z.s.p.o.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is'', and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
 
 #include <memory>
 #include "instance.hpp"
@@ -10,9 +47,13 @@ extern "C" {
 #include "../plugin_output_mgr.h"
 }
 
+/** Unique pointer type of an instance context */
 using unique_ctx = std::unique_ptr<ipx_ctx_t, decltype(&ipx_ctx_destroy)>;
+/** Unique pointer type of a feedback pipe     */
 using unique_fpipe = std::unique_ptr<ipx_fpipe_t, decltype(&ipx_fpipe_destroy)>;
+/** Unique pointer type of a ring buffer       */
 using unique_ring = std::unique_ptr<ipx_ring_t, decltype(&ipx_ring_destroy)>;
+/** Unique pointer type of an ODID filter      */
 using unique_orange = std::unique_ptr<ipx_orange_t, decltype(&ipx_orange_destroy)>;
 
 /** Description of the internal parser plugin                                                    */
@@ -45,6 +86,7 @@ static const struct ipx_ctx_callbacks output_mgr_callbacks = {
 
 ipx_instance::ipx_instance(const std::string &name) : _name(name), _ctx(nullptr)
 {
+    _state = state::NEW;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -108,6 +150,7 @@ void
 ipx_instance_input::init(const std::string &params, const fds_iemgr_t *iemgr, ipx_verb_level level)
 {
     assert(iemgr != nullptr);
+    assert(_state == state::NEW); // Only not initialized instance can be initialized
 
     // Configure
     ipx_ctx_verb_set(_ctx, level);
@@ -123,15 +166,21 @@ ipx_instance_input::init(const std::string &params, const fds_iemgr_t *iemgr, ip
     if (ipx_ctx_init(_ctx, params.c_str()) != IPX_OK) {
         throw std::runtime_error("Failed to initialize the instance of the input plugin!");
     }
+
+    _state = state::INITIALIZED;
 }
 
 void
 ipx_instance_input::start()
 {
+    assert(_state == state::INITIALIZED); // Only initialized instances can start
+
     // TODO: first parser, send input, ... in case of error ... cancel parser!!!
     if (ipx_ctx_run(_parser_ctx) != IPX_OK || ipx_ctx_run(_ctx) != IPX_OK) {
         throw std::runtime_error("Failed to start a thread of the input instance.");
     }
+
+    _state = state::RUNNING;
 }
 
 ipx_fpipe_t *
@@ -143,6 +192,7 @@ ipx_instance_input::get_feedback()
 void
 ipx_instance_input::connect_to(ipx_instance_intermediate &intermediate)
 {
+    assert(_state == state::NEW); // Only configuration of an uninitialized instance can be changed!
     ipx_ctx_ring_dst_set(_parser_ctx, intermediate.get_input());
 }
 
@@ -188,6 +238,7 @@ ipx_instance_intermediate::init(const std::string &params, const fds_iemgr_t *ie
     ipx_verb_level level)
 {
     assert(iemgr != nullptr);
+    assert(_state == state::NEW); // Only not initialized instance can be initialized
 
     // Configure
     ipx_ctx_verb_set(_ctx, level);
@@ -197,14 +248,17 @@ ipx_instance_intermediate::init(const std::string &params, const fds_iemgr_t *ie
     if (ipx_ctx_init(_ctx, params.c_str()) != IPX_OK) {
         throw std::runtime_error("Failed to initialize the instance of the intermediate plugin!");
     }
+    _state = state::INITIALIZED;
 }
 
 void
 ipx_instance_intermediate::start()
 {
+    assert(_state == state::INITIALIZED); // Only initialized instances can start
     if (ipx_ctx_run(_ctx) != IPX_OK) {
         throw std::runtime_error("Failed to start a thread of the intermediate instance.");
     }
+    _state = state::RUNNING;
 }
 
 ipx_ring_t *
@@ -216,6 +270,7 @@ ipx_instance_intermediate::get_input()
 void
 ipx_instance_intermediate::connect_to(ipx_instance_intermediate &intermediate)
 {
+    assert(_state == state::NEW); // Only configuration of an uninitialized instance can be changed!
     ipx_ctx_ring_dst_set(_ctx, intermediate.get_input());
 }
 
@@ -251,6 +306,7 @@ ipx_instance_outmgr::~ipx_instance_outmgr()
 void ipx_instance_outmgr::init(const std::string &params, const fds_iemgr_t *iemgr,
     ipx_verb_level level)
 {
+    assert(_state == state::NEW); // Only not initialized instance can be initialized
     if (ipx_output_mgr_list_empty(_list)) {
         throw std::runtime_error("Output manager is not connected to any output instances!");
     }
@@ -258,6 +314,7 @@ void ipx_instance_outmgr::init(const std::string &params, const fds_iemgr_t *iem
     // Pass the list of destinations
     ipx_ctx_private_set(_ctx, _list);
     ipx_instance_intermediate::init(params, iemgr, level);
+    _state = state::INITIALIZED;
 }
 
 void
@@ -270,6 +327,7 @@ ipx_instance_outmgr::connect_to(ipx_instance_intermediate &intermediate)
 void
 ipx_instance_outmgr::connect_to(ipx_instance_output &output)
 {
+    assert(_state == state::NEW); // Only configuration of an uninitialized instance can be changed!
     auto connection = output.get_input();
 
     ipx_ring_t *ring = std::get<0>(connection);
@@ -328,6 +386,8 @@ ipx_instance_output::~ipx_instance_output()
 void
 ipx_instance_output::set_filter(ipx_odid_filter_type type, const std::string &expr)
 {
+    assert(_state == state::NEW); // Only configuration of an uninitialized instance can be changed!
+
     // Delete the previous filter
     if (_filter != nullptr) {
         ipx_orange_destroy(_filter);
@@ -355,6 +415,7 @@ ipx_instance_output::set_filter(ipx_odid_filter_type type, const std::string &ex
 void ipx_instance_output::init(const std::string &params, const fds_iemgr_t *iemgr,
     ipx_verb_level level)
 {
+    assert(_state == state::NEW); // Only not initialized instance can be initialized
     assert(iemgr != nullptr);
 
     // Configure
@@ -365,14 +426,17 @@ void ipx_instance_output::init(const std::string &params, const fds_iemgr_t *iem
     if (ipx_ctx_init(_ctx, params.c_str()) != IPX_OK) {
         throw std::runtime_error("Failed to initialize the instance of the output plugin!");
     }
+    _state = state::INITIALIZED;
 }
 
 void
 ipx_instance_output::start()
 {
+    assert(_state == state::INITIALIZED); // Only initialized instances can start
     if (ipx_ctx_run(_ctx) != IPX_OK) {
         throw std::runtime_error("Failed to start a thread of the output instance.");
     }
+    _state = state::RUNNING;
 }
 
 std::tuple<ipx_ring_t *, enum ipx_odid_filter_type, const ipx_orange_t *>

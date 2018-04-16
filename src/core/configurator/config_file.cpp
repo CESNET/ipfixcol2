@@ -1,7 +1,43 @@
-//
-// Created by lukashutak on 03/04/18.
-//
+/**
+ * \file src/core/configurator/config_file.cpp
+ * \author Lukas Hutak <lukas.hutak@cesnet.cz>
+ * \brief Parser of configuration file (source file)
+ * \date 2018
+ */
 
+/* Copyright (C) 2018 CESNET, z.s.p.o.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is'', and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
 
 #include <cstdio>
 #include <stdexcept>
@@ -18,12 +54,18 @@
 #include <unistd.h>
 #include <limits.h>
 #include <stdlib.h>
+#include <signal.h>
 
 extern "C" {
 #include "../utils.h"
+#include "../verbose.h"
 }
 
-enum FILE_XML_NODES {
+/** Component identification (for log) */
+static const char *comp_str = "Configurator";
+
+/** Types of XML configuration nodes   */
+enum file_xml_nodes {
     // List of plugin instances
     LIST_INPUTS = 1,
     LIST_INTER,
@@ -51,57 +93,88 @@ enum FILE_XML_NODES {
     OUT_PLUGIN_ODID_EXCEPT,
 };
 
-
+/**
+ * \brief Definition of the \<input\> node
+ * \note Presence of the all required parameters is checked during building of the model
+ */
 static const struct fds_xml_args args_instance_input[] = {
-    FDS_OPTS_ELEM(IN_PLUGIN_NAME,      "name",       FDS_OPTS_T_STRING, 0),
-    FDS_OPTS_ELEM(IN_PLUGIN_PLUGIN,    "plugin",     FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_ELEM(IN_PLUGIN_NAME,      "name",       FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(IN_PLUGIN_PLUGIN,    "plugin",     FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(IN_PLUGIN_VERBOSITY, "verbosity",  FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
-    FDS_OPTS_RAW( IN_PLUGIN_PARAMS,    "params",                        0),
+    FDS_OPTS_RAW( IN_PLUGIN_PARAMS,    "params",                        FDS_OPTS_P_OPT),
     FDS_OPTS_END
 };
 
+/**
+ * \brief Definition of the \<inputPlugins\> node
+ * \note The configurator checks later if at least one instance is present
+ */
 static const struct fds_xml_args args_list_inputs[] = {
-    FDS_OPTS_NESTED(INSTANCE_INPUT, "input", args_instance_input, FDS_OPTS_P_MULTI),
+    FDS_OPTS_NESTED(INSTANCE_INPUT, "input", args_instance_input, FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
     FDS_OPTS_END
 };
 
-
+/**
+ * \brief Definition of the \<intermediate\> node
+ * \note Presence of the all required parameters is checked during building of the model
+ */
 static const struct fds_xml_args args_instance_inter[] = {
-    FDS_OPTS_ELEM(INTER_PLUGIN_NAME,      "name",       FDS_OPTS_T_STRING, 0),
-    FDS_OPTS_ELEM(INTER_PLUGIN_PLUGIN,    "plugin",     FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_ELEM(INTER_PLUGIN_NAME,      "name",       FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(INTER_PLUGIN_PLUGIN,    "plugin",     FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(INTER_PLUGIN_VERBOSITY, "verbosity",  FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
-    FDS_OPTS_RAW( INTER_PLUGIN_PARAMS,    "params",                        0),
+    FDS_OPTS_RAW( INTER_PLUGIN_PARAMS,    "params",                        FDS_OPTS_P_OPT),
     FDS_OPTS_END
 };
 
+/** Definition of the \<intermediatePlugins\> node                                               */
 static const struct fds_xml_args args_list_inter[] = {
-    FDS_OPTS_NESTED(INSTANCE_INTER, "intermediate", args_instance_inter, FDS_OPTS_P_MULTI),
+    FDS_OPTS_NESTED(INSTANCE_INTER, "intermediate", args_instance_inter, FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
     FDS_OPTS_END
 };
 
+/**
+ * \brief Definition of the \<output\> node
+ * \note Presence of the all required parameters is checked during building of the model
+ */
 static const struct fds_xml_args args_instance_output[] = {
-    FDS_OPTS_ELEM(OUT_PLUGIN_NAME,        "name",       FDS_OPTS_T_STRING, 0),
-    FDS_OPTS_ELEM(OUT_PLUGIN_PLUGIN,      "plugin",     FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_ELEM(OUT_PLUGIN_NAME,        "name",       FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(OUT_PLUGIN_PLUGIN,      "plugin",     FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(OUT_PLUGIN_VERBOSITY,   "verbosity",  FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(OUT_PLUGIN_ODID_EXCEPT, "odidExcept", FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(OUT_PLUGIN_ODID_ONLY,   "odidOnly",   FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
-    FDS_OPTS_RAW( OUT_PLUGIN_PARAMS,      "params",                        0),
+    FDS_OPTS_RAW( OUT_PLUGIN_PARAMS,      "params",                        FDS_OPTS_P_OPT),
     FDS_OPTS_END
 };
 
+/**
+ * \brief Definition of the \<outputPlugins\> node
+ * \note The configurator checks later if at least one instance is present
+ */
 static const struct fds_xml_args args_list_output[] = {
-    FDS_OPTS_NESTED(INSTANCE_OUTPUT, "output", args_instance_output, FDS_OPTS_P_MULTI),
+    FDS_OPTS_NESTED(INSTANCE_OUTPUT, "output", args_instance_output, FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
     FDS_OPTS_END
 };
 
+/**
+ * \brief Definition of the main \<ipfixcol2\> node
+ * \note
+ *   Missing an input or output instance is check during starting of a new pipeline in the
+ *   configurator.
+ */
 static const struct fds_xml_args args_main[] = {
     FDS_OPTS_ROOT("ipfixcol2"),
-    FDS_OPTS_NESTED(LIST_INPUTS, "inputPlugins",        args_list_inputs, 0),
-    FDS_OPTS_NESTED(LIST_INTER,  "intermediatePlugins", args_list_inter, FDS_OPTS_P_OPT),
-    FDS_OPTS_NESTED(LIST_OUTPUT, "outputPlugins",       args_list_output, 0),
+    FDS_OPTS_NESTED(LIST_INPUTS, "inputPlugins",        args_list_inputs, FDS_OPTS_P_OPT),
+    FDS_OPTS_NESTED(LIST_INTER,  "intermediatePlugins", args_list_inter,  FDS_OPTS_P_OPT),
+    FDS_OPTS_NESTED(LIST_OUTPUT, "outputPlugins",       args_list_output, FDS_OPTS_P_OPT),
     FDS_OPTS_END
 };
 
+/**
+ * \brief Parse \<input\> node and add the parsed input instance to the model
+ * \param[in] ctx   Parsed XML node
+ * \param[in] model Configuration model
+ * \throw invalid_argument if the parameters are not valid or missing
+ */
 static void
 file_parse_instance_input(fds_xml_ctx_t *ctx, ipx_config_model &model)
 {
@@ -123,13 +196,20 @@ file_parse_instance_input(fds_xml_ctx_t *ctx, ipx_config_model &model)
             input.params = content->ptr_string;
             break;
         default:
-            throw std::logic_error("Unexpected XML node within <input>!");
+            // Unexpected XML node within <input>!
+            assert(false);
         }
     }
 
     model.add_instance(input);
 }
 
+/**
+ * \brief Parse \<inputPlugins\> node and add the parsed input instances to the model
+ * \param[in] ctx   Parsed XML node
+ * \param[in] model Configuration model
+ * \throw invalid_argument if the parameters are not valid or missing
+ */
 static void
 file_parse_list_input(fds_xml_ctx_t *ctx, ipx_config_model &model)
 {
@@ -138,21 +218,24 @@ file_parse_list_input(fds_xml_ctx_t *ctx, ipx_config_model &model)
 
     while (fds_xml_next(ctx, &content) != FDS_EOC) {
         // Process an input plugin
+        assert(content->id == INSTANCE_INPUT);
         cnt++;
-
-        if (content->id != INSTANCE_INPUT) {
-            throw std::logic_error("Unexpected XML node! Expected <input>.");
-        }
 
         try {
             file_parse_instance_input(content->ptr_ctx, model);
         } catch (std::exception &ex) {
-            throw std::runtime_error("Failed to parse configuration of "
+            throw std::runtime_error("Failed to parse the configuration of the "
                 + std::to_string(cnt) + ". input plugin: " + ex.what());
         }
     }
 }
 
+/**
+ * \brief Parse \<intermediate\> node and add the parsed intermediate instance to the model
+ * \param[in] ctx   Parsed XML node
+ * \param[in] model Configuration model
+ * \throw invalid_argument if the parameters are not valid or missing
+ */
 static void
 file_parse_instance_inter(fds_xml_ctx_t *ctx, ipx_config_model &model)
 {
@@ -174,13 +257,20 @@ file_parse_instance_inter(fds_xml_ctx_t *ctx, ipx_config_model &model)
             inter.params = content->ptr_string;
             break;
         default:
-            throw std::logic_error("Unexpected XML node within <intermediate>!");
+            // "Unexpected XML node within <intermediate>!"
+            assert(false);
         }
     }
 
     model.add_instance(inter);
 }
 
+/**
+ * \brief Parse \<intermediatePlugins\> node and add the parsed intermediate instances to the model
+ * \param[in] ctx   Parsed XML node
+ * \param[in] model Configuration model
+ * \throw invalid_argument if the parameters are not valid or missing
+ */
 static void
 file_parse_list_inter(fds_xml_ctx_t *ctx, ipx_config_model &model)
 {
@@ -189,22 +279,24 @@ file_parse_list_inter(fds_xml_ctx_t *ctx, ipx_config_model &model)
 
     while (fds_xml_next(ctx, &content) != FDS_EOC) {
         // Process an intermediate plugin
+        assert(content->id == INSTANCE_INTER);
         cnt++;
-
-        if (content->id != INSTANCE_INTER) {
-            throw std::logic_error("Unexpected XML node! Expected <intermediate>.");
-        }
 
         try {
             file_parse_instance_inter(content->ptr_ctx, model);
         } catch (std::exception &ex) {
-            throw std::runtime_error("Failed to parse configuration of "
+            throw std::runtime_error("Failed to parse the configuration of the "
                 + std::to_string(cnt) + ". intermediate plugin: " + ex.what());
         }
     }
 }
 
-
+/**
+ * \brief Parse \<output\> node and add the parsed output instance to the model
+ * \param[in] ctx   Parsed XML node
+ * \param[in] model Configuration model
+ * \throw invalid_argument if the parameters are not valid or missing
+ */
 static void
 file_parse_instance_output(fds_xml_ctx_t *ctx, ipx_config_model &model)
 {
@@ -244,13 +336,20 @@ file_parse_instance_output(fds_xml_ctx_t *ctx, ipx_config_model &model)
             }
             throw std::runtime_error("Multiple definitions of <odidExcept>/<odidOnly>!");
         default:
-            throw std::logic_error("Unexpected XML node within <output>!");
+            // Unexpected XML node within <output>!
+            assert(false);
         }
     }
 
     model.add_instance(output);
 }
 
+/**
+ * \brief Parse \<outputPlugins\> node and add the parsed intermediate instances to the model
+ * \param[in] ctx   Parsed XML node
+ * \param[in] model Configuration model
+ * \throw invalid_argument if the parameters are not valid or missing
+ */
 static void
 file_parse_list_output(fds_xml_ctx_t *ctx, ipx_config_model &model)
 {
@@ -259,21 +358,27 @@ file_parse_list_output(fds_xml_ctx_t *ctx, ipx_config_model &model)
 
     while (fds_xml_next(ctx, &content) != FDS_EOC) {
         // Process an output plugin
+        assert(content->id == INSTANCE_OUTPUT);
         cnt++;
-
-        if (content->id != INSTANCE_OUTPUT) {
-            throw std::logic_error("Unexpected XML node! Expected <output>.");
-        }
 
         try {
             file_parse_instance_output(content->ptr_ctx, model);
         } catch (std::exception &ex) {
-            throw std::runtime_error("Failed to parse the configuration of "
+            throw std::runtime_error("Failed to parse the configuration of the "
                 + std::to_string(cnt) + ". output plugin: " + ex.what());
         }
     }
 }
 
+/**
+ * \brief Parse startup configuration file
+ *
+ *
+ * \param[in] path Path to the startup file
+ * \return Parsed model
+ * \throw runtime_error if the file doesn't exists, it's not available or it is malformed
+ * \throw invalid_argument if some parameters are not valid or missing
+ */
 static ipx_config_model
 file_parse_model(const std::string &path)
 {
@@ -293,7 +398,7 @@ file_parse_model(const std::string &path)
     // Load content of the configuration file
     std::unique_ptr<FILE, decltype(&fclose)> stream(fopen(path.c_str(), "r"), &fclose);
     if (!stream) {
-        // Failed to open file
+        // Failed to open the file
         std::string err_msg = "Unable to open the file '" + path + "'";
         throw std::runtime_error(err_msg);
     }
@@ -344,7 +449,8 @@ file_parse_model(const std::string &path)
             file_parse_list_output(content->ptr_ctx, model);
             break;
         default:
-            throw std::logic_error("Unexpected XML node within startup <ipfixcol2>!");
+            // Unexpected XML node within startup <ipfixcol2>!
+            assert(false);
         }
     }
 
@@ -354,12 +460,37 @@ file_parse_model(const std::string &path)
 int
 ipx_config_file(ipx_configurator &conf, const std::string &path)
 {
-    ipx_config_model model = file_parse_model(path);
-    model.dump();
-    conf.apply(model);
+    // Try to parse the configuration model and start the pipeline
+    ipx_config_model model;
+    try {
+        model = file_parse_model(path);
+        conf.start(model);
+    } catch (const std::exception &ex) {
+        IPX_ERROR(comp_str, "%s", ex.what());
+        return EXIT_FAILURE;
+    }
 
+    // Wait for a termination signal
+    sigset_t mask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGINT);
+    sigaddset(&mask, SIGTERM);
 
-    // TODO: pass the model to the configuration
+    while (true) {
+        int sig;
+        if (sigwait(&mask, &sig) != 0) {
+            IPX_WARNING(comp_str, "sigwait() failed.");
+            continue;
+        }
 
+        if (sig == SIGINT || sig == SIGTERM) {
+            break;
+        }
+    }
+
+    IPX_INFO(comp_str, "Received a termination signal.");
+
+    // Stop the pipeline
+    conf.stop();
     return EXIT_SUCCESS;
 }

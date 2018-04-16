@@ -340,8 +340,13 @@ ipx_ctx_ring_dst_set(ipx_ctx_t *ctx, ipx_ring_t *ring)
 
 // -------------------------------------------------------------------------------------------------
 
+/**
+ * \brief Check specific requirements of an input instance
+ * \param[in] ctx Context
+ * \return #IPX_OK or #IPX_ERR_ARG
+ */
 static int
-init_check_input(ipx_ctx_t *ctx)
+init_check_input(const ipx_ctx_t *ctx)
 {
     if (ctx->pipeline.feedback == NULL) {
         IPX_CTX_ERROR(ctx, "Input feedback pipe is not defined!");
@@ -361,8 +366,13 @@ init_check_input(ipx_ctx_t *ctx)
     return IPX_OK;
 }
 
+/**
+ * \brief Check specific requirements of an intermediate instance
+ * \param[in] ctx Context
+ * \return #IPX_OK or #IPX_ERR_ARG
+ */
 static int
-init_check_intermediate(ipx_ctx_t *ctx)
+init_check_intermediate(const ipx_ctx_t *ctx)
 {
     if (ctx->pipeline.src == NULL) {
         IPX_CTX_ERROR(ctx, "Input ring buffer is not defined!");
@@ -385,8 +395,13 @@ init_check_intermediate(ipx_ctx_t *ctx)
     return IPX_OK;
 }
 
+/**
+ * \brief Check specific requirements of an output instance
+ * \param[in] ctx Context
+ * \return #IPX_OK or #IPX_ERR_ARG
+ */
 static int
-init_check_output(ipx_ctx_t *ctx)
+init_check_output(const ipx_ctx_t *ctx)
 {
     if (ctx->pipeline.src == NULL) {
         IPX_CTX_ERROR(ctx, "Input ring buffer is not defined!");
@@ -395,6 +410,34 @@ init_check_output(ipx_ctx_t *ctx)
 
     if (ctx->plugin_cbs->process == NULL) {
         IPX_CTX_ERROR(ctx, "Processing callback function is not defined!");
+        return IPX_ERR_ARG;
+    }
+
+    return IPX_OK;
+}
+
+/**
+ * \brief Check common (i.e. input/intermediate/output) requirements of an instance
+ * \param[in] ctx Context
+ * \return #IPX_OK or #IPX_ERR_ARG
+ */
+static int
+init_check_common(const ipx_ctx_t *ctx)
+{
+    // Check common requirements
+    if (ctx->cfg_system.ie_mgr == NULL) {
+        IPX_CTX_ERROR(ctx, "Reference to a manager of Information Elements is not defined!");
+        return IPX_ERR_ARG;
+    }
+
+    if (ctx->plugin_cbs->init == NULL || ctx->plugin_cbs->destroy == NULL) {
+        IPX_CTX_ERROR(ctx, "Plugin instance constructor and/or destructor is not defined!");
+        return IPX_ERR_ARG;
+    }
+
+    const char *plugin_name = ctx->plugin_cbs->info->name;
+    if (plugin_name == NULL || strlen(plugin_name) == 0) {
+        IPX_CTX_ERROR(ctx, "Name of the plugin is not defined or it is empty!");
         return IPX_ERR_ARG;
     }
 
@@ -478,20 +521,8 @@ ipx_ctx_init(ipx_ctx_t *ctx, const char *params)
     }
 
     // Check common requirements
-    if (ctx->cfg_system.ie_mgr == NULL) {
-        IPX_CTX_ERROR(ctx, "Reference to a manager of Information Elements is not defined!");
-        return IPX_ERR_ARG;
-    }
-
-    if (ctx->plugin_cbs->init == NULL || ctx->plugin_cbs->destroy == NULL) {
-        IPX_CTX_ERROR(ctx, "Plugin instance constructor and/or destructor is not defined!");
-        return IPX_ERR_ARG;
-    }
-
-    const char *plugin_name = ctx->plugin_cbs->info->name;
-    if (plugin_name == NULL || strlen(plugin_name) == 0) {
-        IPX_CTX_ERROR(ctx, "Name of the plugin is not defined or it is empty!");
-        return IPX_ERR_ARG;
+    if ((rc = init_check_common(ctx)) != IPX_OK) {
+        return rc;
     }
 
     // Ok, everything seems fine, set default parameters
@@ -532,6 +563,7 @@ ipx_ctx_init(ipx_ctx_t *ctx, const char *params)
     pthread_sigmask(SIG_SETMASK, &set_new, &set_old);
 
     // Try to initialize the plugin
+    const char *plugin_name = ctx->plugin_cbs->info->name;
     IPX_CTX_DEBUG(ctx, "Calling instance constructor of the plugin '%s'", plugin_name);
     // Temporarily remove permission to pass messages
     uint32_t permissions_old = ctx->permissions;
@@ -553,7 +585,7 @@ ipx_ctx_init(ipx_ctx_t *ctx, const char *params)
     }
 
     if (plugin_type != IPX_PT_INPUT && ctx->cfg_system.msg_mask_selected == 0) {
-        IPX_CTX_WARNING(ctx, "The plugin is not subscribed to receive any kind of message!");
+        IPX_CTX_WARNING(ctx, "The instance is not subscribed to receive any kind of message!");
     }
 
     ctx->type = plugin_type;

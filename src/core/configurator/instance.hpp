@@ -1,6 +1,43 @@
-//
-// Created by lukashutak on 15.4.18.
-//
+/**
+ * \file src/core/configurator/instance.hpp
+ * \author Lukas Hutak <lukas.hutak@cesnet.cz>
+ * \brief Pipeline instance wrappers (header file)
+ * \date 2018
+ */
+
+/* Copyright (C) 2018 CESNET, z.s.p.o.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is'', and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
 
 #ifndef IPFIXCOL_INSTANCE_H
 #define IPFIXCOL_INSTANCE_H
@@ -26,9 +63,21 @@ class ipx_instance_intermediate;
 class ipx_instance_outmgr;
 class ipx_instance_output;
 
-/** \brief Base class of a plugin instance                                                       */
+/** \brief Base class of a plugin instance                                                      */
 class ipx_instance {
 protected:
+    /** State of an instance                                                                    */
+    enum class state {
+        /** The instance of the plugin exists, but the constructor hasn't been called yet       */
+        NEW,
+        /** The instance constructor has been called, but thread hasn't been created yet        */
+        INITIALIZED,
+        /** The thread of the instance is running                                               */
+        RUNNING
+    };
+
+    /** Status of the instance                                                                   */
+    state _state;
     /** Name of the instance                                                                     */
     std::string _name;
     /** Context of the instance                                                                  */
@@ -94,13 +143,14 @@ public:
      * \param[in] params XML parameters of the instance
      * \param[in] iemgr Reference to the manager of Information Elements
      * \param[in] level Verbosity level
-     * \throw TODO
+     * \throw runtime_error if the function fails to initialize all components or if an output
+     *   plugin is not connected
      */
     void init(const std::string &params, const fds_iemgr_t *iemgr, ipx_verb_level level);
 
     /**
      * \brief Start a thread of the instance
-     * \throw TODO
+     * \throw runtime_error if a thread fails to the start
      */
     void start();
 
@@ -153,13 +203,14 @@ public:
      * \param[in] params XML parameters of the instance
      * \param[in] iemgr  Reference to the manager of Information Elements
      * \param[in] level  Verbosity level
-     * \throw TODO
+     * \throw runtime_error if the function fails to initialize all components or if an output
+     *   plugin is not connected
      */
     void init(const std::string &params, const fds_iemgr_t *iemgr, ipx_verb_level level);
 
     /**
      * \brief Start a thread of the instance
-     * \throw TODO
+     * \throw runtime_error if a thread fails to the start
      */
     void start();
 
@@ -216,14 +267,15 @@ public:
      * \param[in] params XML parameters of the instance
      * \param[in] iemgr  Reference to the manager of Information Elements
      * \param[in] level  Verbosity level
-     * \throw TODO
+     * \throw runtime_error if the function fails to initialize all components or if no output
+     *   plugins are connected.
      */
     void init(const std::string &params, const fds_iemgr_t *iemgr, ipx_verb_level level);
 
     /**
      * \brief Connect the the output manager to an instance of an output plugin
      * \param[in] output Output plugin to receive our messages
-     * \throw TODO
+     * \throw runtime_error if creating of the connection fails
      */
     void connect_to(ipx_instance_output &output);
 };
@@ -243,7 +295,7 @@ public:
     /**
      * \brief Create an instance of an output plugin
      * \param[in] name   Name of the instance
-     * \param[in] plugin Parsed plugin interface
+     * \param[in] cbs    Parsed plugin interface
      * \param[in] bsize  Size of the input ring buffer
      */
     ipx_instance_output(const std::string &name, const struct ipx_ctx_callbacks *cbs,
@@ -270,17 +322,19 @@ public:
     /**
      * \brief Initialize the instance
      *
-     * // TODO: set filter before calling
-     *
-     * Initialize a context of the plugin and an input ring buffer
+     * Initialize a context of the plugin and an input ring buffer.
+     * \note The ODID filter MUST be set before calling this initialization!
      * \param[in] params XML parameters of the instance
      * \param[in] iemgr Reference to the manager of Information Elements
      * \param[in] level Verbosity level
+     * \throw runtime_error if the function fails to initialize all components or if an output
+     *   plugin is not connected
      */
     void init(const std::string &params, const fds_iemgr_t *iemgr, ipx_verb_level level);
 
     /**
      * \brief Start a thread of the instance
+     * \throw runtime_error if a thread fails to the start
      */
     void start();
 

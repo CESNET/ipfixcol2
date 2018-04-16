@@ -1,5 +1,5 @@
 /**
- * \file src/input_plugins/dummy/dummy.c
+ * \file src/plugins/output/dummy/dummy.c
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief Example output plugin for IPFIXcol 2
  * \date 2018

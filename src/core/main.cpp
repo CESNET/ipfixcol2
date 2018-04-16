@@ -1,5 +1,5 @@
 /**
- * \file src/main.cpp
+ * \file src/core/main.cpp
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief Main body of IPFIXcol
  */
@@ -160,28 +160,21 @@ int main(int argc, char *argv[])
 
     // Always use the default directory for looking for plugins, but with the lowest priority
     conf.finder.path_add(IPX_DEFAULT_PLUGINS_DIR);
-    conf.set_iemgr_dir(cfg_iedir);
-
-    // Initialize the pipeline configurator
-    // TODO: pass default configuration directory
-
-    // TODO: only list plugins???
+    conf.iemgr_set_dir(cfg_iedir);
 
     // Pass control to the parser of the configuration file
     int rc;
     try {
         rc = ipx_config_file(conf, std::string(cfg_startup));
     } catch (std::exception &ex) {
-        std::cerr << "An error has occurred during processing configuration: " << ex.what()
-            << std::endl;
+        std::cerr << "An unexpected error has occurred: " << ex.what() << std::endl;
         return EXIT_FAILURE;
     } catch (...) {
-        std::cerr << "Unexpected exception has occurred!" << std::endl;
+        std::cerr << "An unexpected exception has occurred!" << std::endl;
         return EXIT_FAILURE;
     }
 
     // Destroy the pipeline configurator
-    // TODO: destroy
     return rc;
 }
 

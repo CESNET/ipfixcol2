@@ -38,6 +38,7 @@
  * if advised of the possibility of such damage.
  *
  */
+
 #ifndef IPFIXCOL_PLUGIN_FINDER_H
 #define IPFIXCOL_PLUGIN_FINDER_H
 
@@ -96,7 +97,7 @@ public:
      *
      * \param[in]  name Name of the plugin
      * \param[in]  type Plugin type (one of #IPX_PT_INPUT, #IPX_PT_INTERMEDIATE, #IPX_PT_OUTPUT)
-     * \param[out] cbs  Information about the plugin and callbacks
+     * \return Pointer to info about the loaded plugin (contains callbacks, etc.)
      * \throw runtime_error
      *   If the function failed to find suitable version of the plugin or version requirements
      *   hasn't been met.
