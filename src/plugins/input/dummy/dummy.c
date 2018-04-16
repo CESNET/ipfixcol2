@@ -42,6 +42,7 @@
 #include <ipfixcol2.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include "config.h"
 
 /** Plugin description */
 IPX_API struct ipx_plugin_info ipx_plugin_info = {
@@ -61,13 +62,25 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
 
 /** Instance */
 struct instance_data {
-    /** ODID                                  */
-    uint32_t odid;
-    /** Sleep time between messages           */
-    struct timespec sleep_time;
+    /** Parsed configuration of the intance   */
+    struct instance_config *config;
     /** Information about the source of flows */
-    struct ipx_session *session;
+    struct ipx_session     *session;
 };
+
+/**
+ * \brief Sleep for specific time
+ * \param delay Delay specification
+ */
+static void
+dummy_sleep(const struct timespec *delay)
+{
+    if (delay->tv_sec == 0 && delay->tv_nsec == 0) {
+        return;
+    }
+
+    nanosleep(delay, NULL);
+}
 
 int
 ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
@@ -78,11 +91,11 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
         return IPX_ERR_DENIED;
     }
 
-    // TODO: Parse configuration
-    (void) params;
-    data->odid = 1;
-    data->sleep_time.tv_sec = 0;
-    data->sleep_time.tv_nsec = 100000000LL;
+    // Parse configuration of the instance
+    if ((data->config = config_parse(ctx, params)) == NULL) {
+        free(data);
+        return IPX_ERR_DENIED;
+    }
 
     // Store the instance data
     ipx_ctx_private_set(ctx, data);
@@ -107,6 +120,7 @@ ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
         ipx_ctx_msg_pass(ctx, ipx_msg_garbage2base(garbage));
     }
 
+    config_destroy(data->config);
     free(data);
 }
 
@@ -142,7 +156,7 @@ ipx_plugin_get(ipx_ctx_t *ctx, void *cfg)
     // Define a source of the a new IPFIX message
     struct ipx_msg_ctx msg_ctx = {
         .session = data->session,
-        .odid = data->odid,
+        .odid = data->config->odid,
         .stream = 0
     };
 
@@ -151,7 +165,7 @@ ipx_plugin_get(ipx_ctx_t *ctx, void *cfg)
     if (!ipfix_hdr) {
         // Allocation failed, but this is not a fatal error - just skip the message
         IPX_CTX_ERROR(ctx, "Memory allocation failed! (%s:%d)", __FILE__, __LINE__);
-        nanosleep(&data->sleep_time, NULL);
+        dummy_sleep(&data->config->sleep_time);
         return IPX_OK;
     }
 
@@ -159,20 +173,20 @@ ipx_plugin_get(ipx_ctx_t *ctx, void *cfg)
     ipfix_hdr->length = htons(FDS_IPFIX_MSG_HDR_LEN);
     ipfix_hdr->export_time = htonl(time(NULL));
     ipfix_hdr->seq_num = htonl(0);
-    ipfix_hdr->odid = htonl(data->odid);
+    ipfix_hdr->odid = htonl(data->config->odid);
 
     // Insert the message and info about source into a wrapper
     ipx_msg_ipfix_t *msg2send = ipx_msg_ipfix_create(ctx, &msg_ctx, (uint8_t *) ipfix_hdr);
     if (!msg2send) {
         // Allocation failed, but this is not a fatal error - just skip the message
         IPX_CTX_ERROR(ctx, "Memory allocation failed! (%s:%d)", __FILE__, __LINE__);
-        nanosleep(&data->sleep_time, NULL);
+        dummy_sleep(&data->config->sleep_time);
         return IPX_OK;
     }
 
     // Pass the message
     ipx_ctx_msg_pass(ctx, ipx_msg_ipfix2base(msg2send));
 
-    nanosleep(&data->sleep_time, NULL);
+    dummy_sleep(&data->config->sleep_time);
     return IPX_OK;
 }

@@ -1,6 +1,9 @@
 # Create a linkable module
 add_library(dummy-input MODULE
-	dummy.c)
+	dummy.c
+	config.c
+	config.h
+)
 
 install(
 	TARGETS dummy-input
