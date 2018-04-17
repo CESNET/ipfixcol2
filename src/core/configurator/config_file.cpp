@@ -479,7 +479,7 @@ ipx_config_file(ipx_configurator &conf, const std::string &path)
     while (true) {
         int sig;
         if (sigwait(&mask, &sig) != 0) {
-            IPX_WARNING(comp_str, "sigwait() failed.");
+            IPX_WARNING(comp_str, "sigwait() failed.", '\0');
             continue;
         }
 
@@ -488,7 +488,7 @@ ipx_config_file(ipx_configurator &conf, const std::string &path)
         }
     }
 
-    IPX_INFO(comp_str, "Received a termination signal.");
+    IPX_INFO(comp_str, "Received a termination signal.", '\0');
 
     // Stop the pipeline
     conf.stop();

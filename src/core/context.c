@@ -248,7 +248,7 @@ int
 ipx_ctx_subscribe(ipx_ctx_t *ctx, const ipx_msg_mask_t *mask_new, ipx_msg_mask_t *mask_old)
 {
     if ((ctx->permissions & IPX_CP_MSG_SUB) == 0) {
-        IPX_CTX_DEBUG(ctx, "Called ipx_ctx_subscribe() but doesn't have permissions!");
+        IPX_CTX_DEBUG(ctx, "Called ipx_ctx_subscribe() but doesn't have permissions!", '\0');
         return IPX_ERR_ARG;
     }
 
@@ -349,17 +349,17 @@ static int
 init_check_input(const ipx_ctx_t *ctx)
 {
     if (ctx->pipeline.feedback == NULL) {
-        IPX_CTX_ERROR(ctx, "Input feedback pipe is not defined!");
+        IPX_CTX_ERROR(ctx, "Input feedback pipe is not defined!", '\0');
         return IPX_ERR_ARG;
     }
 
     if (ctx->pipeline.dst == NULL) {
-        IPX_CTX_ERROR(ctx, "Output ring buffer is not defined!");
+        IPX_CTX_ERROR(ctx, "Output ring buffer is not defined!", '\0');
         return IPX_ERR_ARG;
     }
 
     if (ctx->plugin_cbs->get == NULL) {
-        IPX_CTX_ERROR(ctx, "Getter callback function is not defined!");
+        IPX_CTX_ERROR(ctx, "Getter callback function is not defined!", '\0');
         return IPX_ERR_ARG;
     }
 
@@ -375,7 +375,7 @@ static int
 init_check_intermediate(const ipx_ctx_t *ctx)
 {
     if (ctx->pipeline.src == NULL) {
-        IPX_CTX_ERROR(ctx, "Input ring buffer is not defined!");
+        IPX_CTX_ERROR(ctx, "Input ring buffer is not defined!", '\0');
         return IPX_ERR_ARG;
     }
 
@@ -383,12 +383,12 @@ init_check_intermediate(const ipx_ctx_t *ctx)
      * a standard output ring buffer.
      */
     if (ctx->pipeline.dst == NULL && ctx->plugin_cbs->info->type != IPX_PT_OUTPUT_MGR) {
-        IPX_CTX_ERROR(ctx, "Output ring buffer is not defined!");
+        IPX_CTX_ERROR(ctx, "Output ring buffer is not defined!", '\0');
         return IPX_ERR_ARG;
     }
 
     if (ctx->plugin_cbs->process == NULL) {
-        IPX_CTX_ERROR(ctx, "Processing callback function is not defined!");
+        IPX_CTX_ERROR(ctx, "Processing callback function is not defined!", '\0');
         return IPX_ERR_ARG;
     }
 
@@ -404,12 +404,12 @@ static int
 init_check_output(const ipx_ctx_t *ctx)
 {
     if (ctx->pipeline.src == NULL) {
-        IPX_CTX_ERROR(ctx, "Input ring buffer is not defined!");
+        IPX_CTX_ERROR(ctx, "Input ring buffer is not defined!", '\0');
         return IPX_ERR_ARG;
     }
 
     if (ctx->plugin_cbs->process == NULL) {
-        IPX_CTX_ERROR(ctx, "Processing callback function is not defined!");
+        IPX_CTX_ERROR(ctx, "Processing callback function is not defined!", '\0');
         return IPX_ERR_ARG;
     }
 
@@ -426,18 +426,18 @@ init_check_common(const ipx_ctx_t *ctx)
 {
     // Check common requirements
     if (ctx->cfg_system.ie_mgr == NULL) {
-        IPX_CTX_ERROR(ctx, "Reference to a manager of Information Elements is not defined!");
+        IPX_CTX_ERROR(ctx, "Reference to a manager of Information Elements is not defined!", '\0');
         return IPX_ERR_ARG;
     }
 
     if (ctx->plugin_cbs->init == NULL || ctx->plugin_cbs->destroy == NULL) {
-        IPX_CTX_ERROR(ctx, "Plugin instance constructor and/or destructor is not defined!");
+        IPX_CTX_ERROR(ctx, "Plugin instance constructor and/or destructor is not defined!", '\0');
         return IPX_ERR_ARG;
     }
 
     const char *plugin_name = ctx->plugin_cbs->info->name;
     if (plugin_name == NULL || strlen(plugin_name) == 0) {
-        IPX_CTX_ERROR(ctx, "Name of the plugin is not defined or it is empty!");
+        IPX_CTX_ERROR(ctx, "Name of the plugin is not defined or it is empty!", '\0');
         return IPX_ERR_ARG;
     }
 
@@ -486,13 +486,13 @@ int
 ipx_ctx_init(ipx_ctx_t *ctx, const char *params)
 {
     if (ctx->state != IPX_CS_NEW) {
-        IPX_CTX_ERROR(ctx, "Unable to initialize already initialized instance context!");
+        IPX_CTX_ERROR(ctx, "Unable to initialize already initialized instance context!", '\0');
         return IPX_ERR_ARG;
     }
 
     // Check plugin description
     if (ctx->plugin_cbs == NULL || ctx->plugin_cbs->info == NULL) {
-        IPX_CTX_ERROR(ctx, "Plugin information or functions callbacks are undefined!");
+        IPX_CTX_ERROR(ctx, "Plugin information or functions callbacks are undefined!", '\0');
         return IPX_ERR_ARG;
     }
 
@@ -576,7 +576,7 @@ ipx_ctx_init(ipx_ctx_t *ctx, const char *params)
     thread_set_name(old_ident);
 
     if (rc != IPX_OK) {
-        IPX_CTX_ERROR(ctx, "Initialization function of the instance failed!");
+        IPX_CTX_ERROR(ctx, "Initialization function of the instance failed!", '\0');
         // Restore default default parameters
         ctx->permissions = 0;
         ctx->cfg_system.msg_mask_selected = 0;
@@ -585,7 +585,7 @@ ipx_ctx_init(ipx_ctx_t *ctx, const char *params)
     }
 
     if (plugin_type != IPX_PT_INPUT && ctx->cfg_system.msg_mask_selected == 0) {
-        IPX_CTX_WARNING(ctx, "The instance is not subscribed to receive any kind of message!");
+        IPX_CTX_WARNING(ctx, "The instance is not subscribed to receive any kind of message!", '\0');
     }
 
     ctx->type = plugin_type;
@@ -616,7 +616,7 @@ thread_input_process_pipe(struct ipx_ctx *ctx)
         enum ipx_msg_session_event event = ipx_msg_session_get_event(session_msg);
         if (event != IPX_MSG_SESSION_CLOSE) {
             IPX_CTX_ERROR(ctx, "Received a Session message from the feedback pipe with "
-                "non-close event type! Ignoring.");
+                "non-close event type! Ignoring.", '\0');
             ipx_msg_session_destroy(session_msg);
             return IPX_OK;
         }
@@ -629,7 +629,7 @@ thread_input_process_pipe(struct ipx_ctx *ctx)
             return IPX_OK;
         }
 
-        IPX_CTX_DEBUG(ctx, "Received a request to close a Transport Session.");
+        IPX_CTX_DEBUG(ctx, "Received a request to close a Transport Session.", '\0');
         // Warning: do not access Session properties, they can be already freed!
         const struct ipx_session *session = ipx_msg_session_get_session(session_msg);
         ctx->plugin_cbs->ts_close(ctx, ctx->cfg_plugin.private, session);

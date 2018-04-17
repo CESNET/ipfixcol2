@@ -82,7 +82,7 @@ config_parser_root(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct instance_config *
             // Observation Domain ID
             assert(content->type == FDS_OPTS_T_UINT);
             if (content->val_uint > UINT32_MAX) {
-                IPX_CTX_ERROR(ctx, "The ODID value must be between 0 .. 2^32");
+                IPX_CTX_ERROR(ctx, "The ODID value must be between 0 .. 2^32", '\0');
                 return IPX_ERR_FORMAT;
             }
             cfg->odid = (uint32_t) content->val_uint;
@@ -90,8 +90,8 @@ config_parser_root(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct instance_config *
         case NODE_DELAY:
             // Delay between messages [microseconds]
             assert(content->type == FDS_OPTS_T_UINT);
-            cfg->sleep_time.tv_nsec = content->val_uint % 1000000ULL;
-            cfg->sleep_time.tv_sec  = content->val_uint / 1000000ULL;
+            cfg->sleep_time.tv_nsec = (content->val_uint % 1000000LL) * 1000LL;
+            cfg->sleep_time.tv_sec  = content->val_uint / 1000000LL;
             break;
         default:
             // Internal error
@@ -135,7 +135,7 @@ config_parse(ipx_ctx_t *ctx, const char *params)
     }
 
     if (fds_xml_set_args(parser, args_params) != IPX_OK) {
-        IPX_CTX_ERROR(ctx, "Failed to parse the description of an XML document!");
+        IPX_CTX_ERROR(ctx, "Failed to parse the description of an XML document!", '\0');
         fds_xml_destroy(parser);
         free(cfg);
         return NULL;

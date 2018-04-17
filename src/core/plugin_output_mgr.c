@@ -140,7 +140,7 @@ ipx_plugin_output_mgr_init(ipx_ctx_t *ctx, const char *params)
     // Check that all message types are subscribed
     ipx_msg_mask_t mask = IPX_MSG_MASK_ALL;
     if (ipx_ctx_subscribe(ctx, &mask, NULL) != IPX_OK) {
-        IPX_CTX_ERROR(ctx, "Unable to subscribe to all message types!");
+        IPX_CTX_ERROR(ctx, "Unable to subscribe to all message types!", '\0');
         return IPX_ERR_DENIED;
     }
 

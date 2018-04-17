@@ -72,14 +72,16 @@ static const struct fds_xml_args args_params[] = {
 static int
 config_parser_root(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct instance_config *cfg)
 {
+    (void) ctx;
+
     const struct fds_xml_cont *content;
     while(fds_xml_next(root, &content) != FDS_EOC) {
         switch (content->id) {
         case NODE_DELAY:
             // Delay between messages [microseconds]
             assert(content->type == FDS_OPTS_T_UINT);
-            cfg->sleep_time.tv_nsec = content->val_uint % 1000000ULL;
-            cfg->sleep_time.tv_sec  = content->val_uint / 1000000ULL;
+            cfg->sleep_time.tv_nsec = (content->val_uint % 1000000LL) * 1000LL;
+            cfg->sleep_time.tv_sec  = content->val_uint / 1000000LL;
             break;
         default:
             // Internal error
@@ -122,7 +124,7 @@ config_parse(ipx_ctx_t *ctx, const char *params)
     }
 
     if (fds_xml_set_args(parser, args_params) != IPX_OK) {
-        IPX_CTX_ERROR(ctx, "Failed to parse the description of an XML document!");
+        IPX_CTX_ERROR(ctx, "Failed to parse the description of an XML document!", '\0');
         fds_xml_destroy(parser);
         free(cfg);
         return NULL;

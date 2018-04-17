@@ -173,7 +173,7 @@ ipx_configurator::start(const ipx_config_model &model)
     ipx_instance_outmgr *output_manager = new ipx_instance_outmgr(ring_size);
     inters.emplace_back(output_manager);
 
-    IPX_DEBUG(comp_str, "All plugins have been successfully loaded.");
+    IPX_DEBUG(comp_str, "All plugins have been successfully loaded.", '\0');
 
     // Phase 2. Connect instances (input -> inter -> ... -> inter -> output manager -> output)
     ipx_instance_intermediate *first_inter = inters.front().get(); // TODO: set term. ref_num
@@ -216,7 +216,7 @@ ipx_configurator::start(const ipx_config_model &model)
         instance->init(cfg.params, iemgr, ipx_verb_level_get()); // TODO: get level
     }
 
-    IPX_DEBUG(comp_str, "All instances have been successfully initialized.");
+    IPX_DEBUG(comp_str, "All instances have been successfully initialized.", '\0');
 
     // Start threads of all plugins
     for (auto &output : outputs) {
@@ -231,7 +231,7 @@ ipx_configurator::start(const ipx_config_model &model)
         input->start();
     }
 
-    IPX_DEBUG(comp_str, "All threads of instances has been successfully started.");
+    IPX_DEBUG(comp_str, "All threads of instances has been successfully started.", '\0');
     running_inputs = std::move(inputs);
     running_inter = std::move(inters);
     running_outputs = std::move(outputs);
@@ -256,12 +256,12 @@ void ipx_configurator::stop()
     }
 
     IPX_DEBUG(comp_str, "Requests to terminate the pipeline sent! Waiting for instances to "
-        "terminate.");
+        "terminate.", '\0');
 
     // Wait for termination (destructor of smart pointers will call instance destructor)
     running_inputs.clear();
     running_inter.clear();
     running_outputs.clear();
 
-    IPX_DEBUG(comp_str, "All instances successfully terminated.");
+    IPX_DEBUG(comp_str, "All instances successfully terminated.", '\0');
 }
