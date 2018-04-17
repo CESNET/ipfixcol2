@@ -40,6 +40,7 @@
  */
 
 #include <cstdio>
+#include <cstring>
 #include <stdexcept>
 #include <memory>
 
@@ -168,6 +169,17 @@ static const struct fds_xml_args args_main[] = {
     FDS_OPTS_NESTED(LIST_OUTPUT, "outputPlugins",       args_list_output, FDS_OPTS_P_OPT),
     FDS_OPTS_END
 };
+
+/**
+ * \brief Terminating signal handler
+ */
+void termination_handler(int sig)
+{
+    (void) sig;
+    static const char *msg = "Another termination signal detected. Quiting without cleanup...\n";
+    write(STDOUT_FILENO, msg, strlen(msg));
+    abort();
+}
 
 /**
  * \brief Parse \<input\> node and add the parsed input instance to the model
@@ -471,14 +483,15 @@ ipx_config_file(ipx_configurator &conf, const std::string &path)
     }
 
     // Wait for a termination signal
-    sigset_t mask;
-    sigemptyset(&mask);
-    sigaddset(&mask, SIGINT);
-    sigaddset(&mask, SIGTERM);
+    sigset_t mask_new, mask_old;
+    sigemptyset(&mask_new);
+    sigaddset(&mask_new, SIGINT);
+    sigaddset(&mask_new, SIGTERM);
+    pthread_sigmask(SIG_BLOCK, &mask_new, &mask_old);
 
     while (true) {
         int sig;
-        if (sigwait(&mask, &sig) != 0) {
+        if (sigwait(&mask_new, &sig) != 0) { // Waits for _pending_ signals
             IPX_WARNING(comp_str, "sigwait() failed.", '\0');
             continue;
         }
@@ -489,6 +502,16 @@ ipx_config_file(ipx_configurator &conf, const std::string &path)
     }
 
     IPX_INFO(comp_str, "Received a termination signal.", '\0');
+    pthread_sigmask(SIG_SETMASK, &mask_old, NULL);
+
+    // Register a handler that terminates the collector if it is not responding
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sigemptyset(&sa.sa_mask);
+    sa.sa_handler = termination_handler;
+    if (sigaction(SIGTERM, &sa, NULL) == -1 || sigaction(SIGINT, &sa, NULL) == -1) {
+        IPX_ERROR(comp_str, "Failed to register termination signal handlers!", '\0');
+    }
 
     // Stop the pipeline
     conf.stop();
