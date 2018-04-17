@@ -205,6 +205,8 @@ ipx_configurator::start(const ipx_config_model &model)
 
     // Phase 2. Connect instances (input -> inter -> ... -> inter -> output manager -> output)
     ipx_instance_intermediate *first_inter = inters.front().get(); // TODO: set term. ref_num
+    // Enable multi-write mode of the ring buffer of the first intermediate plugin
+    first_inter->multiwrite_input(true);
     for (auto &input : inputs) {
         input->connect_to(*first_inter);
     }

@@ -224,6 +224,14 @@ public:
     ipx_ring_t *get_input();
 
     /**
+     * \brief Enable writing to the input buffer from multiple sources (disabled by default)
+     *
+     * \warning Property can be changed only if nobody is using the the ring buffer!
+     * \param[in] enable New status
+     */
+    void multiwrite_input(bool enable);
+
+    /**
      * \brief Connect the the intermediate instance to another instance of an intermediate plugin
      * \param[in] intermediate Intermediate plugin to receive our messages
      */

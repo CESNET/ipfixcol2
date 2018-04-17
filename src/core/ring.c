@@ -452,3 +452,9 @@ ipx_ring_pop(ipx_ring_t *ring)
         }
     }
 }
+
+void
+ipx_ring_mw_mode(ipx_ring_t *ring, bool mode)
+{
+    ring->mw_mode = mode;
+}

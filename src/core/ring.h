@@ -111,6 +111,18 @@ IPX_API ipx_msg_t *
 ipx_ring_pop(ipx_ring_t *ring);
 
 /**
+ * \brief Change (i.e. disable/enable) multi-writer mode
+ *
+ * \warning
+ *   During this function call, the user MUST make sure that nobody is pushing messages to the
+ *   buffer. Otherwise it can cause deadlock!
+ * \param[in] ring Ring buffer
+ * \param[in] mode New mode
+ */
+IPX_API void
+ipx_ring_mw_mode(ipx_ring_t *ring, bool mode);
+
+/**
  * @}
  */
 

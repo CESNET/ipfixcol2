@@ -268,6 +268,13 @@ ipx_instance_intermediate::get_input()
 }
 
 void
+ipx_instance_intermediate::multiwrite_input(bool enable)
+{
+    assert(_state == state::NEW); // Only configuration of an uninitialized instance can be changed!
+    ipx_ring_mw_mode(_instance_buffer, enable);
+}
+
+void
 ipx_instance_intermediate::connect_to(ipx_instance_intermediate &intermediate)
 {
     assert(_state == state::NEW); // Only configuration of an uninitialized instance can be changed!
