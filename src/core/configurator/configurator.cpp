@@ -121,8 +121,36 @@ ipx_configurator::iemgr_load(const std::string dir)
     return new_iemgr.release();
 }
 
+/**
+ * \brief Convert a string to corresponding verbosity level
+ * \param[in] verb String
+ * \return Verbosity level
+ */
+enum ipx_verb_level
+ipx_configurator::verbosity_str2level(const std::string &verb)
+{
+    if (verb.empty() || strcasecmp(verb.c_str(), "default") == 0) {
+        // Default
+        return ipx_verb_level_get();
+    }
+
+    if (strcasecmp(verb.c_str(), "none") == 0) {
+        return IPX_VERB_NONE;
+    } else if (strcasecmp(verb.c_str(), "error") == 0) {
+        return IPX_VERB_ERROR;
+    } else if (strcasecmp(verb.c_str(), "warning") == 0) {
+        return IPX_VERB_WARNING;
+    } else if (strcasecmp(verb.c_str(), "info") == 0) {
+        return IPX_VERB_INFO;
+    } else if (strcasecmp(verb.c_str(), "debug") == 0) {
+        return IPX_VERB_DEBUG;
+    } else {
+        throw std::invalid_argument("Invalid verbosity level!");
+    }
+}
+
 void
-ipx_configurator::iemgr_set_dir(const std::string path)
+ipx_configurator::iemgr_set_dir(const std::string &path)
 {
     iemgr_dir = path;
 }
@@ -200,20 +228,20 @@ ipx_configurator::start(const ipx_config_model &model)
             instance->set_filter(cfg.odid_type, cfg.odid_expression);
         }
 
-        instance->init(cfg.params, iemgr, ipx_verb_level_get()); // TODO: get level
+        instance->init(cfg.params, iemgr, verbosity_str2level(cfg.verbosity));
     }
 
     output_manager->init("", iemgr, ipx_verb_level_get());
     for (size_t i = 0; i < model.inters.size(); ++i) {
         ipx_instance_intermediate *instance = inters[i].get();
         const ipx_plugin_inter &cfg = model.inters[i];
-        instance->init(cfg.params, iemgr, ipx_verb_level_get()); // TODO: get level
+        instance->init(cfg.params, iemgr, verbosity_str2level(cfg.verbosity));
     }
 
     for (size_t i = 0; i < model.inputs.size(); ++i) {
         ipx_instance_input *instance = inputs[i].get();
         const ipx_plugin_input &cfg = model.inputs[i];
-        instance->init(cfg.params, iemgr, ipx_verb_level_get()); // TODO: get level
+        instance->init(cfg.params, iemgr, verbosity_str2level(cfg.verbosity));
     }
 
     IPX_DEBUG(comp_str, "All instances have been successfully initialized.", '\0');

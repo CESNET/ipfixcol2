@@ -81,7 +81,8 @@ ipx_config_model::check_common(struct ipx_plugin_base *base)
         && strcasecmp(base->verbosity.c_str(), "error") != 0
         && strcasecmp(base->verbosity.c_str(), "warning") != 0
         && strcasecmp(base->verbosity.c_str(), "info") != 0
-        && strcasecmp(base->verbosity.c_str(), "debug") != 0) {
+        && strcasecmp(base->verbosity.c_str(), "debug") != 0
+        && strcasecmp(base->verbosity.c_str(), "default") != 0) {
         throw std::invalid_argument("Verbosity level '" + base->verbosity + "' of the instance '"
             + base->name + "' is not valid type!");
     }

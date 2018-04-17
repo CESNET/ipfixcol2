@@ -73,6 +73,7 @@ private:
 
     void model_check(const ipx_config_model &model);
     fds_iemgr_t *iemgr_load(const std::string dir);
+    enum ipx_verb_level verbosity_str2level(const std::string &verb);
 
 public:
     /** Minimal size of ring buffers between instances of plugins                              */
@@ -114,7 +115,7 @@ public:
      * \brief Define a path to the directory of Information Elements definitions
      * \param[in] path Path
      */
-     void iemgr_set_dir(const std::string path);
+     void iemgr_set_dir(const std::string &path);
      /**
       * \brief Define a size of ring buffers
       * \param[in] size Size
