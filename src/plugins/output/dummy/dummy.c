@@ -123,6 +123,10 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
         IPX_CTX_INFO(ctx, "Transport Session '%s' %s", session->ident, status_msg);
     }
 
-    nanosleep(&data->config->sleep_time, NULL);
+    const struct timespec *delay = &data->config->sleep_time;
+    if (delay->tv_sec != 0 || delay->tv_nsec != 0) {
+        nanosleep(delay, NULL);
+    }
+
     return IPX_OK;
 }
