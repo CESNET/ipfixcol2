@@ -171,8 +171,13 @@ public:
 /** \brief Instance of an intermediate plugin                                                    */
 class ipx_instance_intermediate : public ipx_instance {
 protected:
+    /** Allow connector to enable multi-write mode                                               */
+    friend void ipx_instance_input::connect_to(ipx_instance_intermediate &intermediate);
+
     /** Input ring buffer                                                                        */
     ipx_ring_t *_instance_buffer;
+    /** Number of connection inputs                                                              */
+    unsigned int _inputs_cnt;
 public:
     /**
      * \brief Create an instance of an intermediate plugin
@@ -222,14 +227,6 @@ public:
      * \return Pointer to the ring buffer.
      */
     ipx_ring_t *get_input();
-
-    /**
-     * \brief Enable writing to the input buffer from multiple sources (disabled by default)
-     *
-     * \warning Property can be changed only if nobody is using the the ring buffer!
-     * \param[in] enable New status
-     */
-    void multiwrite_input(bool enable);
 
     /**
      * \brief Connect the the intermediate instance to another instance of an intermediate plugin

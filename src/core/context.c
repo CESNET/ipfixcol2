@@ -141,6 +141,14 @@ struct ipx_ctx {
         size_t rec_size;
         /** Verbosity level of the plugin                                                        */
         uint8_t  vlevel;
+        /**
+         * Number of termination messages that must be received before terminating the thread
+         * of a running instance. Useful only for intermediate instances.
+         *
+         * All context should have the value set to 1. Only the first intermediate instance after
+         * the input plugins MUST have the value corresponding to the number of input instances.
+         */
+        unsigned int term_msg_cnt;
     } cfg_system; /**< System configuration                                                      */
 };
 
@@ -167,6 +175,7 @@ ipx_ctx_create(const char *name, const struct ipx_ctx_callbacks *callbacks)
     ctx->cfg_system.rec_size = IPX_MSG_IPFIX_BASE_REC_SIZE;
     ctx->cfg_system.msg_mask_selected = 0; // No messages to process selected
     ctx->cfg_system.msg_mask_allowed = IPX_MSG_IPFIX | IPX_MSG_SESSION;
+    ctx->cfg_system.term_msg_cnt = 1; // By default, wait for 1 termination message
 
     if (callbacks == NULL) {
         // Dummy context for testing
@@ -242,6 +251,17 @@ void
 ipx_ctx_verb_set(ipx_ctx_t *ctx, enum ipx_verb_level verb)
 {
     ctx->cfg_system.vlevel = verb;
+}
+
+int
+ipx_ctx_term_cnt_set(ipx_ctx_t *ctx, unsigned int cnt)
+{
+    if (cnt == 0) {
+        return IPX_ERR_DENIED;
+    }
+
+    ctx->cfg_system.term_msg_cnt = cnt;
+    return IPX_OK;
 }
 
 int
@@ -719,29 +739,37 @@ thread_intermediate(void *arg)
         msg_type = ipx_msg_get_type(msg_ptr);
         bool processed = false; // only not processed messages are automatically passed
 
+        if (msg_type == IPX_MSG_TERMINATE) {
+            ipx_msg_terminate_t *terminate_msg = ipx_msg_base2terminate(msg_ptr);
+            enum ipx_msg_terminate_type type = ipx_msg_terminate_get_type(terminate_msg);
+
+            if (type == IPX_MSG_TERMINATE_INSTANCE && (--ctx->cfg_system.term_msg_cnt) != 0) {
+                // Drop the message, we are still waiting for another termination request
+                IPX_CTX_DEBUG(ctx, "Termination message dropped. Waiting for %u remaining input "
+                    "plugin(s) to terminate.", ctx->cfg_system.term_msg_cnt);
+                ipx_msg_termiante_destroy(terminate_msg);
+                continue;
+            }
+
+            // It's time to stop processing
+            process_en = false;
+            if (type == IPX_MSG_TERMINATE_INSTANCE) {
+                terminate = true;
+            }
+        }
+
         if ((process_en && (msg_type & ctx->cfg_system.msg_mask_selected) != 0)
-                || ctx->type == IPX_PT_OUTPUT_MGR) { // Pass all message to the output manager
+                || ctx->type == IPX_PT_OUTPUT_MGR) { // Always pass all messages to the output manager
             // Process the message
             ctx->plugin_cbs->process(ctx, ctx->cfg_plugin.private, msg_ptr); // TODO:check return value
             processed = true;
         }
 
-        if (msg_type == IPX_MSG_TERMINATE) {
-            ipx_msg_terminate_t *terminate_msg = ipx_msg_base2terminate(msg_ptr);
-            enum ipx_msg_terminate_type type = ipx_msg_terminate_get_type(terminate_msg);
-
-            if (type == IPX_MSG_TERMINATE_PROCESSING) {
-                // We received a request to stop passing message to the instance
-                process_en = false;
-            } else {
-                // We received a request to terminate the instance
-                terminate = true;
-                continue; // Prevent sending the termination message
-            }
-        }
-
-        if (!processed) {
-            // Not processed by the instance, pass the message
+        if (!processed && terminate != true) {
+            /* Not processed by the instance, pass the message.
+             * Note: Termination message is passed after intermediate instance destructor!
+             */
+            assert(ctx->type != IPX_PT_OUTPUT_MGR);
             ipx_ring_push(ctx->pipeline.dst, msg_ptr);
         }
     }

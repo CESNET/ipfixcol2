@@ -192,8 +192,16 @@ ipx_instance_input::get_feedback()
 void
 ipx_instance_input::connect_to(ipx_instance_intermediate &intermediate)
 {
-    assert(_state == state::NEW); // Only configuration of an uninitialized instance can be changed!
+    // Only configuration of uninitialized instances can be changed!
+    assert(_state == state::NEW && intermediate._state == state::NEW);
     ipx_ctx_ring_dst_set(_parser_ctx, intermediate.get_input());
+
+    intermediate._inputs_cnt++;
+    if (intermediate._inputs_cnt > 1) {
+        // Multiple writers (it's OK to check these values because instances are not running)
+        ipx_ring_mw_mode(intermediate.get_input(), true);
+        ipx_ctx_term_cnt_set(intermediate._ctx, intermediate._inputs_cnt);
+    }
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -220,6 +228,7 @@ ipx_instance_intermediate::ipx_instance_intermediate(const std::string &name,
     ipx_ctx_ring_src_set(inter_wrap.get(), ring_wrap.get());
     _instance_buffer = ring_wrap.release();
     _ctx = inter_wrap.release();
+    _inputs_cnt = 0;
 }
 
 ipx_instance_intermediate::~ipx_instance_intermediate()
@@ -265,13 +274,6 @@ ipx_ring_t *
 ipx_instance_intermediate::get_input()
 {
     return _instance_buffer;
-}
-
-void
-ipx_instance_intermediate::multiwrite_input(bool enable)
-{
-    assert(_state == state::NEW); // Only configuration of an uninitialized instance can be changed!
-    ipx_ring_mw_mode(_instance_buffer, enable);
 }
 
 void

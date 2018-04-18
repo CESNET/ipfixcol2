@@ -239,4 +239,29 @@ ipx_ctx_iemgr_set(ipx_ctx_t *ctx, const fds_iemgr_t *mgr);
 IPX_API void
 ipx_ctx_verb_set(ipx_ctx_t *ctx, enum ipx_verb_level verb);
 
+/**
+ * \brief Change number of termination messages that must received before plugin terminates
+ *
+ * By default, the context terminates running thread of its instance when a termination message
+ * (type ::IPX_MSG_TERMINATE_INSTANCE) is received. However, the first intermediate instance
+ * after multiple input instances can be terminated only when all input instances are not running
+ * anymore.
+ *
+ * This function sets an internal counter that is decremented every time a termination message
+ * (type ::IPX_MSG_TERMINATE_INSTANCE) is received. If the counter is non-zero after decrementation,
+ * the termination message is dropped. If the counter is zero, the thread is stopped and the
+ * message is passed.
+ *
+ * \warning
+ *   This configuration parameter affects only intermediate plugins (the output manager
+ *   is also intermediate plugin). Be aware of consequences of changing value if the thread
+ *   is already running!
+ * \param[in] ctx Plugin context
+ * \param[in] cnt Non-zero number of messages
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_DENIED if the value is not valid
+ */
+IPX_API int
+ipx_ctx_term_cnt_set(ipx_ctx_t *ctx, unsigned int cnt);
+
 #endif // IPFIXCOL_CONTEXT_INTERNAL_H
