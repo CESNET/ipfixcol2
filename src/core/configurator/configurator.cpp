@@ -217,19 +217,22 @@ ipx_configurator::start(const ipx_config_model &model)
         now->connect_to(*next);
     }
 
-    for (auto &output : outputs) {
-        output_manager->connect_to(*output);
+    for (size_t i = 0; i < model.outputs.size(); ++i) {
+        // First initialize ODID filter, if necessary
+        ipx_instance_output *instance = outputs[i].get();
+        const ipx_plugin_output &cfg = model.outputs[i];
+        if (cfg.odid_type != IPX_ODID_FILTER_NONE) {
+            instance->set_filter(cfg.odid_type, cfg.odid_expression);
+        }
+
+        // Connect the output manager and the output instance
+        output_manager->connect_to(*instance);
     }
 
     // Phase 3. Initialize all instances (call constructors)
     for (size_t i = 0; i < model.outputs.size(); ++i) {
         ipx_instance_output *instance = outputs[i].get();
         const ipx_plugin_output &cfg = model.outputs[i];
-        if (cfg.odid_type != IPX_ODID_FILTER_NONE) {
-            // Define the ODID filter
-            instance->set_filter(cfg.odid_type, cfg.odid_expression);
-        }
-
         instance->init(cfg.params, iemgr, verbosity_str2level(cfg.verbosity));
     }
 
