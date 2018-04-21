@@ -79,7 +79,7 @@ public:
     /** Minimal size of ring buffers between instances of plugins                              */
     static constexpr uint32_t RING_MIN_SIZE = 128;
     /** Default size of ring buffers between instances of plugins                              */
-    static constexpr uint32_t RING_DEF_SIZE = 8096;
+    static constexpr uint32_t RING_DEF_SIZE = 8192;
 
     /** Constructor */
     ipx_configurator();

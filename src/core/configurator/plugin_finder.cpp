@@ -130,6 +130,15 @@ void
 ipx_plugin_finder::find_in_paths(const std::string &name, uint16_t type, struct ipx_ctx_callbacks &cbs)
 {
     void *handle = nullptr;
+    std::string plugin_type_str;
+    switch (type) {
+    case IPX_PT_INPUT:        plugin_type_str = "input"; break;
+    case IPX_PT_INTERMEDIATE: plugin_type_str = "intermediate"; break;
+    case IPX_PT_OUTPUT:       plugin_type_str = "output"; break;
+    default:                  plugin_type_str = "unknown type"; break;
+    }
+
+    IPX_DEBUG(comp_str, "Looking for %s plugin '%s'...", plugin_type_str.c_str(), name.c_str());
 
     for (const std::string &path : paths) {
         // Get real path and information about a directory/file
@@ -165,7 +174,8 @@ ipx_plugin_finder::find_in_paths(const std::string &name, uint16_t type, struct 
     }
 
     if (handle == nullptr) {
-        throw std::runtime_error("Unable to find the plugin. Is the plugin installed?");
+        throw std::runtime_error("Unable to find the " + plugin_type_str + " plugin '" + name
+            + "'. Is the plugin installed?");
     }
 
     // Find required symbols
