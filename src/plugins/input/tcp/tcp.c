@@ -61,6 +61,8 @@
 #define GETTER_TIMEOUT    (10)
 /** Max sockets events processed in the getter - i.e. epoll_wait array size                      */
 #define GETTER_MAX_EVENTS (16)
+/** Timeout to read whole IPFIX Message after at least part has been received (in microseconds)  */
+#define GETTER_RECV_TIMEOUT (500000)
 /** Default size of a buffer prepared for new IPFIX/NetFlow message (bytes)                      */
 #define DEF_MSG_SIZE      (4096)
 
@@ -329,10 +331,15 @@ listener_thread(void *cfg)
         int old_state;
         pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &old_state);
 
-
-        // TODO: set input buffer size
-        // TODO: set read timeout (we don't want to be blocked if data are partially send) (protection agains bad behaviour)
-
+        // Set receive timeout (after the socket is ready)
+        struct timeval rcv_timeout;
+        rcv_timeout.tv_sec = GETTER_RECV_TIMEOUT / 1000000;
+        rcv_timeout.tv_usec = GETTER_RECV_TIMEOUT % 1000000;
+        if (setsockopt(new_sd, SOL_SOCKET, SO_RCVTIMEO, &rcv_timeout, sizeof(rcv_timeout)) == -1) {
+            ipx_strerror(errno, err_str);
+            IPX_CTX_WARNING(data->ctx, "Listener: Failed to specify receiving timeout of "
+                "a socket: %s", err_str);
+        }
 
         // Get also description of the local socket
         struct sockaddr_storage dst_addr;
@@ -867,8 +874,6 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
         return IPX_ERR_DENIED;
     }
     data->ctx = ctx;
-
-    // TODO: get max size of buffer
 
     // Parse configuration
     data->config = config_parse(ctx, params);
