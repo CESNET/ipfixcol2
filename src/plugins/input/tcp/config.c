@@ -41,6 +41,7 @@
 
 #include <stdlib.h>
 #include <limits.h>
+#include <string.h>
 #include "config.h"
 
 /*
@@ -66,6 +67,8 @@ static const struct fds_xml_args args_params[] = {
 
 /**
  * \brief Add a local IP address
+ *
+ * \note An empty address is ignored and success is returned!
  * \param[in] ctx  Instance context
  * \param[in] cfg  Configuration
  * \param[in] addr IPv4/IPv6 address to add
@@ -76,6 +79,10 @@ int
 config_add_addr(ipx_ctx_t *ctx, struct tcp_config *cfg, const char *addr)
 {
     struct tcp_ipaddr_rec rec;
+
+    if (strlen(addr) == 0) {
+        return IPX_OK;
+    }
 
     // Try to convert IP address
     if (inet_pton(AF_INET, addr, &rec.ipv4) == 1) {
