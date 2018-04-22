@@ -64,6 +64,14 @@ static const struct fds_xml_args args_params[] = {
     FDS_OPTS_END
 };
 
+/**
+ * \brief Add a local IP address
+ * \param[in] ctx  Instance context
+ * \param[in] cfg  Configuration
+ * \param[in] addr IPv4/IPv6 address to add
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_FORMAT if the address is malformed
+ */
 int
 config_add_addr(ipx_ctx_t *ctx, struct tcp_config *cfg, const char *addr)
 {

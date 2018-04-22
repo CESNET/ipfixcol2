@@ -259,8 +259,8 @@ active_session_remove_aux(struct tcp_data *data, size_t idx)
  * \brief Remove a session for a list of active Transport Session
  *
  * Close sockets, deregister on the epoll instance, send a Session Message (close event)
- * \param[in] data Instance data
- * \param[in] idx  Index of the pair (socket descriptor and session) to remove
+ * \param[in] data     Instance data
+ * \param[in] session  Session to remove
  * \return #IPX_OK on success
  * \return #IPX_ERR_NOTFOUND if the session is not present in the list
  */
@@ -292,7 +292,14 @@ active_session_remove_by_session(struct tcp_data *data, const struct ipx_session
     return IPX_OK;
 }
 
-
+/**
+ * \brief Thread function of connection acceptor
+ *
+ * The thread accept new connections and inserts them into the list of active connections
+ * and registers them on the epoll instance of active connections.
+ * \param[in] cfg Instance data
+ * \return Never returns. Must be violently terminated.
+ */
 static void *
 listener_thread(void *cfg)
 {
@@ -466,7 +473,6 @@ listener_stop(ipx_ctx_t *ctx, struct tcp_data *data)
  *
  * Local address and port is taken from \p addr description.
  * \param[in] ctx      Instance contest
- * \param[in] family   Address family (AF_INET or AF_INET6)
  * \param[in] addr     Local IPv4/IPv6 address and port of the socket(sockaddr_in6 or sockaddr_in)
  * \param[in] addrlen  Size of the address
  * \param[in] ipv6only Accept only IPv6 addresses (only for AF_INET6 and the wildcard address)
