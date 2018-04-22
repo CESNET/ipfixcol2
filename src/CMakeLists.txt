@@ -24,3 +24,4 @@ include_directories(
 # Project subdirectories
 add_subdirectory(core)
 add_subdirectory(plugins)
+add_subdirectory(tools)
