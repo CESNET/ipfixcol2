@@ -45,6 +45,7 @@
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 #include <unistd.h>
 
 #include <stdlib.h>
@@ -131,7 +132,7 @@ struct tcp_data {
  * into the list of active sessions. The file descriptor is also registered on epoll instance
  * of active connections.
  *
- * \param[in] data    Instace data
+ * \param[in] data    Instance data
  * \param[in] sd      Socket descriptor of the Transport Session
  * \param[in] session Description of the Transport Session
  * \return #IPX_OK on success (the pair is added and the socket is registered)
@@ -293,6 +294,109 @@ active_session_remove_by_session(struct tcp_data *data, const struct ipx_session
 }
 
 /**
+ * \brief Add a new connection
+ *
+ * Socket parameters are configured for the socket (such as receive timeout), the connection
+ * is inserted into active connections and registered on the epoll instance of active connections.
+ * \param[in] data Instance data
+ * \param[in] sd   Socket descriptor to add
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_DENIED on failure (the socket should be closed by the user)
+ */
+static int
+listener_add_connection(struct tcp_data *data, int sd)
+{
+    assert(sd >= 0);
+    const char *err_str;
+
+    // Set receive timeout (after data on the socket is ready)
+    struct timeval rcv_timeout;
+    rcv_timeout.tv_sec = GETTER_RECV_TIMEOUT / 1000000;
+    rcv_timeout.tv_usec = GETTER_RECV_TIMEOUT % 1000000;
+    if (setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, &rcv_timeout, sizeof(rcv_timeout)) == -1) {
+        ipx_strerror(errno, err_str);
+        IPX_CTX_WARNING(data->ctx, "Listener: Failed to specify receiving timeout of a socket: %s",
+            err_str);
+    }
+
+    // Get the description of the remove address
+    struct sockaddr_storage src_addr;
+    socklen_t src_addrlen = sizeof(src_addr);
+    if (getpeername(sd, (struct sockaddr *) &src_addr, &src_addrlen) == -1) {
+        ipx_strerror(errno, err_str);
+        IPX_CTX_ERROR(data->ctx, "Listener: Failed to get the remote IP address. getpeername() "
+            "failed: %s", err_str);
+        return IPX_ERR_DENIED;
+    }
+
+    // Get the description of the local address
+    struct sockaddr_storage dst_addr;
+    socklen_t dst_addrlen = sizeof(dst_addr);
+    if (getsockname(sd, (struct sockaddr *) &dst_addr, &dst_addrlen) == -1) {
+        ipx_strerror(errno, err_str);
+        IPX_CTX_ERROR(data->ctx, "Listener: Failed to get the local IP address. getsockname() "
+            "failed: %s", err_str);
+        return IPX_ERR_DENIED;
+    }
+
+    if (src_addr.ss_family != dst_addr.ss_family) {
+        IPX_CTX_ERROR(data->ctx, "Listener: New connection with different family of local and "
+            "remote IP addresses rejected!", '\0');
+        return IPX_ERR_DENIED;
+    }
+
+    // Create a description of the new session
+    struct ipx_session_net net;
+    memset(&net, 0, sizeof(net));
+
+    net.l3_proto = src_addr.ss_family;
+    if (net.l3_proto == AF_INET) { // IPv4
+        const struct sockaddr_in *src_v4 = (struct sockaddr_in *) &src_addr;
+        const struct sockaddr_in *dst_v4 = (struct sockaddr_in *) &dst_addr;
+        net.port_src = ntohs(src_v4->sin_port);
+        net.port_dst = ntohs(dst_v4->sin_port);
+        net.addr_src.ipv4 = src_v4->sin_addr;
+        net.addr_dst.ipv4 = dst_v4->sin_addr;
+    } else if (net.l3_proto == AF_INET6) { // IPv6
+        const struct sockaddr_in6 *src_v6 = (struct sockaddr_in6 *) &src_addr;
+        const struct sockaddr_in6 *dst_v6 = (struct sockaddr_in6 *) &dst_addr;
+        net.port_src = ntohs(src_v6->sin6_port);
+        net.port_dst = ntohs(dst_v6->sin6_port);
+        if (IN6_IS_ADDR_V4MAPPED(&src_v6->sin6_addr) && IN6_IS_ADDR_V4MAPPED(&dst_v6->sin6_addr)) {
+            // IPv4 mapped into IPv6
+            net.l3_proto = AF_INET; // Overwrite family type!
+            net.addr_src.ipv4 = *(const struct in_addr *) (((uint8_t *) &src_v6->sin6_addr) + 12);
+            net.addr_dst.ipv4 = *(const struct in_addr *) (((uint8_t *) &dst_v6->sin6_addr) + 12);
+        } else {
+            net.addr_src.ipv6 = src_v6->sin6_addr;
+            net.addr_dst.ipv6 = dst_v6->sin6_addr;
+        }
+    } else {
+        // Unknown address type
+        IPX_CTX_ERROR(data->ctx, "Listener: New connection with an unsupported IP address family "
+            "rejected (family ID: %u)!", (unsigned) src_addr.ss_family);
+        return IPX_ERR_DENIED;
+    }
+
+    char src_addr_str[INET6_ADDRSTRLEN] = {0};
+    inet_ntop(net.l3_proto, &net.addr_src, src_addr_str, INET6_ADDRSTRLEN);
+
+    struct ipx_session *session = ipx_session_new_tcp(&net);
+    if (!session || active_session_add(data, sd, session) != IPX_OK) {
+        // Failed to add the session
+        IPX_CTX_ERROR(data->ctx, "Listener: Failed to add internal information about a new "
+            "Transport Session from '%s'! Connection rejected.", src_addr_str);
+        if (session != NULL) {
+            ipx_session_destroy(session);
+        }
+        return IPX_ERR_DENIED;
+    }
+
+    IPX_CTX_INFO(data->ctx, "New exporter connected from '%s'.", src_addr_str);
+    return IPX_OK;
+}
+
+/**
  * \brief Thread function of connection acceptor
  *
  * The thread accept new connections and inserts them into the list of active connections
@@ -325,9 +429,7 @@ listener_thread(void *cfg)
         }
 
         // Accept the connection
-        struct sockaddr_storage src_addr;
-        socklen_t src_addrlen = sizeof(src_addr);
-        int new_sd = accept(ev->data.fd, (struct sockaddr *) &src_addr, &src_addrlen);
+        int new_sd = accept(ev->data.fd, NULL, NULL);
         if (new_sd == INVALID_FD) {
             ipx_strerror(errno, err_str);
             IPX_CTX_ERROR(data->ctx, "Listener: Failed to accept a new connection: %s", err_str);
@@ -338,83 +440,13 @@ listener_thread(void *cfg)
         int old_state;
         pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &old_state);
 
-        // Set receive timeout (after the socket is ready)
-        struct timeval rcv_timeout;
-        rcv_timeout.tv_sec = GETTER_RECV_TIMEOUT / 1000000;
-        rcv_timeout.tv_usec = GETTER_RECV_TIMEOUT % 1000000;
-        if (setsockopt(new_sd, SOL_SOCKET, SO_RCVTIMEO, &rcv_timeout, sizeof(rcv_timeout)) == -1) {
-            ipx_strerror(errno, err_str);
-            IPX_CTX_WARNING(data->ctx, "Listener: Failed to specify receiving timeout of "
-                "a socket: %s", err_str);
-        }
-
-        // Get also description of the local socket
-        struct sockaddr_storage dst_addr;
-        socklen_t dst_addrlen = sizeof(dst_addr);
-        if (getsockname(new_sd, (struct sockaddr *) &dst_addr, &dst_addrlen) == -1) {
-            ipx_strerror(errno, err_str);
-            IPX_CTX_ERROR(data->ctx, "Listener: Failed to get the description of a local socket: "
-                "%s", err_str);
+        if (listener_add_connection(data, new_sd) != IPX_OK) {
+            // Failed
             close(new_sd);
-            pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &old_state);
-            continue;
         }
 
-        if (src_addr.ss_family != dst_addr.ss_family) {
-            IPX_CTX_ERROR(data->ctx, "Listener: New connection with different family of "
-                "local and remote addresses rejected", '\0');
-            close(new_sd);
-            pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &old_state);
-            continue;
-        }
-
-        // Create a description of the new session
-        struct ipx_session_net net;
-        memset(&net, 0, sizeof(net));
-
-        net.l3_proto = src_addr.ss_family;
-        if (net.l3_proto == AF_INET) { // IPv4
-            const struct sockaddr_in *src_v4 = (struct sockaddr_in *) &src_addr;
-            const struct sockaddr_in *dst_v4 = (struct sockaddr_in *) &dst_addr;
-            net.port_src = ntohs(src_v4->sin_port);
-            net.addr_src.ipv4 = src_v4->sin_addr;
-            net.port_dst = ntohs(dst_v4->sin_port);
-            net.addr_dst.ipv4 = dst_v4->sin_addr;
-        } else if (net.l3_proto == AF_INET6) { // IPv6
-            const struct sockaddr_in6 *src_v6 = (struct sockaddr_in6 *) &src_addr;
-            const struct sockaddr_in6 *dst_v6 = (struct sockaddr_in6 *) &dst_addr;
-            net.port_src = ntohs(src_v6->sin6_port);
-            net.addr_src.ipv6 = src_v6->sin6_addr;
-            net.port_dst = ntohs(dst_v6->sin6_port);
-            net.addr_dst.ipv6 = dst_v6->sin6_addr;
-        } else {
-            // Unknown address type
-            IPX_CTX_ERROR(data->ctx, "Listener: New connection with an unsupported address "
-                "family rejected (family ID: %u)!", (unsigned) src_addr.ss_family);
-            close(new_sd);
-            pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &old_state);
-            continue;
-        }
-
-        char src_addr_str[INET6_ADDRSTRLEN] = {0};
-        inet_ntop(net.l3_proto, &net.addr_src, src_addr_str, INET6_ADDRSTRLEN);
-
-        struct ipx_session *session = ipx_session_new_tcp(&net);
-        if (!session || active_session_add(data, new_sd, session) != IPX_OK) {
-            // Failed to add the session
-            IPX_CTX_ERROR(data->ctx, "Listener: Failed to add a new information about a new "
-                "Transport Session from '%s'! Connection rejected.", src_addr_str);
-            close(new_sd);
-            if (session != NULL) {
-                ipx_session_destroy(session);
-            }
-            pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &old_state);
-            continue;
-        }
-
-        // Success, enable cancelability again
+        // Enable cancelability again
         pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &old_state);
-        IPX_CTX_INFO(data->ctx, "New exporter connected from '%s'.", src_addr_str);
     }
 
     pthread_exit(0);
