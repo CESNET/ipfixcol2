@@ -48,7 +48,6 @@
 #include <string.h>
 
 #include "reader.h"
-#include "ipfixsend.h"
 
 /** Maximum IPFIX packet size (2^16) */
 #define MAX_PACKET_SIZE 65536
@@ -82,7 +81,7 @@ reader_create(const char *file, bool preload)
 {
     reader_t *new_reader = calloc(1, sizeof(*new_reader));
     if (!new_reader) {
-        ERR_MEM;
+        fprintf(stderr, "Unable to allocate memory (%s:%d)!\n", __FILE__, __LINE__);
         return NULL;
     }
 
@@ -246,7 +245,7 @@ reader_load_packet_alloc(reader_t *reader, struct fds_ipfix_msg_hdr **packet_dat
     uint16_t new_size = ntohs(header.length);
     result = (uint8_t *) malloc(new_size);
     if (!result) {
-        ERR_MEM;
+        fprintf(stderr, "Unable to allocate memory (%s:%d)!\n", __FILE__, __LINE__);
         return READER_ERROR;
     }
 
@@ -284,7 +283,7 @@ reader_preload_packets(reader_t *reader)
 
     struct fds_ipfix_msg_hdr **packets = calloc(pkt_max, sizeof(*packets));
     if (!packets) {
-        ERR_MEM;
+        fprintf(stderr, "Unable to allocate memory (%s:%d)!\n", __FILE__, __LINE__);
         return NULL;
     }
 
@@ -316,7 +315,7 @@ reader_preload_packets(reader_t *reader)
 
         new_packets = realloc(packets, new_max * sizeof(*packets));
         if (!new_packets) {
-            ERR_MEM;
+            fprintf(stderr, "Unable to allocate memory (%s:%d)!\n", __FILE__, __LINE__);
             // Failed -> Delete all loaded packets
             for (size_t i = 0; i < pkt_cnt; ++i) {
                 free(packets[i]);

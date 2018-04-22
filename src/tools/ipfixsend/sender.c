@@ -4,7 +4,7 @@
  * \author Lukas Hutak <hutak@cesnet.cz>
  * \brief Functions for parsing IP, connecting to collector and sending packets
  *
- * Copyright (C) 2015 CESNET, z.s.p.o.
+ * Copyright (C) 2015-2018 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,25 +50,22 @@
 #include <netinet/in.h>
 
 #include <sys/time.h>
+#include <signal.h>
 
-#include "ipfixsend.h"
 #include "sender.h"
 #include "reader.h"
 #include "siso.h"
 
-/* Ethernet MTU */
-/* Should be MSG_MAX_LENGTH (- some bytes) */
-#define UDP_MTU MSG_MAX_LENGTH - 535
-#define MIN(_first_, _second_) ((_first_) < (_second_)) ? (_first_) : (_second_)
-
-// 1 second in microseconds
+/** 1 second in microseconds     */
 #define MICRO_SEC 1000000L
-// 1 second in nanoseconds
+/** 1 second in nanoseconds      */
 #define NANO_SEC 1000000000L
-
-static int stop_sending = 0;
+/** Global termination flag      */
+static volatile sig_atomic_t stop_sending = 0;
+/** Time  */
 static struct timeval begin = {0};
 
+/** \brief Interrupt sending     */
 void sender_stop()
 {
     stop_sending = 1;
@@ -105,7 +102,7 @@ int send_packets_limit(sisoconf *sender, reader_t *reader, int packets_s)
     struct timeval end;
     struct timespec sleep_time = {0};
 
-    /* These must be static variables - local would be rewrited with each call
+    /* These must be static variables - local would be rewritten with each call
      * of send_packets */
     static int pkts_from_begin = 0;
     static double time_per_pkt = 0.0; // [ms]

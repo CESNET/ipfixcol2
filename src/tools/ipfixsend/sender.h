@@ -1,9 +1,10 @@
 /**
  * \file ipfixsend/sender.h
  * \author Michal Kozubik <kozubik@cesnet.cz>
+ * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief Functions for parsing IP, connecting to collector and sending packets
  *
- * Copyright (C) 2015 CESNET, z.s.p.o.
+ * Copyright (C) 2015-2018 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

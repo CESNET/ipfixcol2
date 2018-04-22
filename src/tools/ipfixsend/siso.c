@@ -3,7 +3,7 @@
  * \author Michal Kozubik <kozubik@cesnet.cz>
  * \brief Simple socket library for sending data over the network
  *
- * Copyright (C) 2015 CESNET, z.s.p.o.
+ * Copyright (C) 2015-2018 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -56,17 +56,31 @@
 #include <stdio.h>
 #include <strings.h>
 
-#define CHECK_PTR(_ptr_) if (!(_ptr_)) return (SISO_ERR)
-#define CHECK_RETVAL(_retval_) if ((_retval_) != SISO_OK) return (SISO_ERR)
-
-#define PERROR_LAST strerror(errno)
-
-#define SISO_UDP_MAX 65000
-#define SISO_MIN(_frst_, _scnd_) ((_frst_) > (_scnd_) ? (_scnd_) : (_frst_))
-
 /**
-* \brief Accepted connection types
-*/
+ * \brief Check that a pointer is not null. Otherwise returns #SISO_ERR
+ * \param[in] ptr Pointer to check
+ */
+#define CHECK_PTR(ptr) if (!(ptr)) return (SISO_ERR)
+/**
+ * \brief Check that a status code is #SISO_OK. Otherwise return #SISO_ERR.
+ * \param[in] retval Status code to check
+ */
+#define CHECK_RETVAL(retval) if ((retval) != SISO_OK) return (SISO_ERR)
+/**
+ * \brief Get the lass error message
+ */
+#define PERROR_LAST strerror(errno)
+/** Maximum message size that can be send over UDP                          */
+#define SISO_UDP_MAX 65000
+/**
+ * \brief Get minimum from 2 values
+ * \param[in] frst First value
+ * \param[in] scnd Second value
+ * \return Minimum
+ */
+#define SISO_MIN(frst, scnd) ((frst) > (scnd) ? (scnd) : (frst))
+
+/** Accepted connection types                */
 enum siso_conn_type {
    SC_UDP,
    SC_TCP,
@@ -74,9 +88,7 @@ enum siso_conn_type {
    SC_UNKNOWN,
 };
 
-/**
- * \brief Message indexes
- */
+/** Message indexes                           */
 enum SISO_ERRORS {
     SISO_ERR_OK,
     SISO_ERR_TYPE,
@@ -84,16 +96,19 @@ enum SISO_ERRORS {
     SISO_ERR_CONFIG
 };
 
+/** Error message  */
 static const char *siso_messages[] = {
-
-    "Everything OK",
-    "Unknown connection type",
-    "Unable to create a new socket and connect to a destination.",
-    "Configuration information is missing."
+    [SISO_ERR_OK]      = "Everything OK",
+    [SISO_ERR_TYPE]    = "Unknown connection type",
+    [SISO_ERR_CONNECT] = "Unable to create a new socket and connect to a destination.",
+    [SISO_ERR_CONFIG]  = "Configuration information is missing."
 };
 
+/** Supported connection types      */
 static const char *siso_sc_types[] = {
-    "UDP", "TCP", "SCTP"
+    [SC_UDP]  = "UDP",
+    [SC_TCP]  = "TCP",
+    [SC_SCTP] = "SCTP"
 };
 
 /**

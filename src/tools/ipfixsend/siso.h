@@ -3,7 +3,7 @@
  * \author Michal Kozubik <kozubik@cesnet.cz>
  * \brief Simple socket library for sending data over the network
  *
- * Copyright (C) 2015 CESNET, z.s.p.o.
+ * Copyright (C) 2015-2018 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,7 +47,15 @@ extern "C" {
 #include <inttypes.h>
 #include <sys/types.h>
 
+/**
+ * \def SISO_OK
+ * \brief Status code for success
+ */
 #define SISO_OK  0
+/**
+ * \def SISO_ERR
+ * \brief Status code for failure
+ */
 #define SISO_ERR 1
 
 /**
@@ -74,13 +82,14 @@ sisoconf *siso_create();
 
 /**
  * \brief Destructor
+ * \param[in] conf sisoconf configuration
  */
 void siso_destroy(sisoconf *conf);
 
 /**
  * \brief Get socket descriptor
  *
- * \param conf sisoconf configuration
+ * \param[in] conf sisoconf configuration
  * \return socket
  */
 int siso_get_socket(sisoconf *conf);
@@ -88,7 +97,7 @@ int siso_get_socket(sisoconf *conf);
 /**
  * \brief Get connection type
  *
- * \param conf sisoconf configuration
+ * \param[in] conf sisoconf configuration
  * \return connection type
  */
 int siso_get_conn_type(sisoconf *conf);
@@ -96,7 +105,7 @@ int siso_get_conn_type(sisoconf *conf);
 /**
  * \brief Get speed limit
  *
- * \param conf sisoconf configuration
+ * \param[in] conf sisoconf configuration
  * \return 0 if not set
  */
 uint64_t siso_get_speed(sisoconf *conf);
@@ -104,7 +113,7 @@ uint64_t siso_get_speed(sisoconf *conf);
 /**
  * \brief Get last error description
  *
- * \param conf sisoconf configuration
+ * \param[in] conf sisoconf configuration
  * \return error message
  */
 const char *siso_get_last_err(sisoconf *conf);
@@ -112,13 +121,13 @@ const char *siso_get_last_err(sisoconf *conf);
 /**
  * \brief Set unlimited speed
  *
- * \param conf sisoconf configuration
+ * \param[in] conf sisoconf configuration
  */
 void siso_unlimit_speed(sisoconf* conf);
 
 /**
  * \brief Check if a destination is connected
- * \paramf[in] conf
+ * \param[in] conf
  * \return When the destination is NOT connected, returns 0. Otherwise
  *   returns non-zero value.
  */
@@ -127,9 +136,9 @@ int siso_is_connected(const sisoconf *conf);
 /**
  * \brief Set max. speed limit
  *
- * \param conf sisoconf configuration
- * \param limit speed limit
- * \param units data size units
+ * \param[in] conf  sisoconf configuration
+ * \param[in] limit speed limit
+ * \param[in] units data size units
  */
 void siso_set_speed(sisoconf* conf, uint32_t limit, enum siso_units units);
 
@@ -137,29 +146,27 @@ void siso_set_speed(sisoconf* conf, uint32_t limit, enum siso_units units);
 /**
  * \brief Set max. speed limit
  *
- * \param conf sisoconf configuration
- * \param limit speed limit (with optional suffix K,M,G)
+ * \param[in] conf sisoconf configuration
+ * \param[in] limit speed limit (with optional suffix K,M,G)
  */
 void siso_set_speed_str(sisoconf* conf, const char* limit);
 
 /**
  * \brief Create new connection
- *      Each sisoconf object can hold only one connection,
- *      any previous connection will be closed
  *
- * \param conf sisoconf configuration
- * \param ip IPv4/6 address
- * \param port port number
- * \param type connection type (case insensitive)
- * \return SISO_OK or SISO_ERR and sets error message (see siso_get_last_err for details)
+ * Each sisoconf object can hold only one connection, any previous connection will be closed.
+ * \param[in] conf sisoconf configuration
+ * \param[in] ip   IPv4/6 address
+ * \param[in] port port number
+ * \param[in] type connection type (case insensitive)
+ * \return #SISO_OK or #SISO_ERR and sets error message (see siso_get_last_err() for details)
  */
 int siso_create_connection(sisoconf* conf, const char* ip, const char *port, const char *type);
 
 /**
  * \brief Close current connection
- *          it is automatically called in siso_destroy
- *
- * \param conf sisoconf configuration
+ * \note It is automatically called in siso_destroy
+ * \param[in] conf sisoconf configuration
  */
 void siso_close_connection(sisoconf *conf);
 
@@ -170,8 +177,8 @@ void siso_close_connection(sisoconf *conf);
  * \warning This function can be used only when the connection have been
  *   previously configured by siso_create_connection(), because otherwise
  *   a destination address, a port and a protocol are not specified.
- * \param[in,out] conf Sisoconf configuration
- * \return SISO_OK or SISO_ERR and sets error message (see siso_get_last_err for details)
+ * \param[in] conf Sisoconf configuration
+ * \return #SISO_OK or #SISO_ERR and sets error message (see siso_get_last_err() for details)
  */
 int siso_reconnect(sisoconf *conf);
 
@@ -180,10 +187,10 @@ int siso_reconnect(sisoconf *conf);
  *
  * When the #SISO_ERR is returned, than the connection is broken and must
  * be reinitialized using siso_reconnect()
- * \param conf sisoconf configuration
- * \param data data to be sent
- * \param length data length
- * \return SISO_OK or SISO_ERR and sets error message (see siso_get_last_err for details)
+ * \param[in] conf   sisoconf configuration
+ * \param[in] data   data to be sent
+ * \param[in] length data length
+ * \return #SISO_OK or #SISO_ERR and sets error message (see siso_get_last_err() for details)
  */
 int siso_send(sisoconf *conf, const char *data, ssize_t length);
 

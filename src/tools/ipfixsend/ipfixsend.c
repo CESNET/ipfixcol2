@@ -4,7 +4,7 @@
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief Tool that sends ipfix packets
  *
- * Copyright (C) 2016 CESNET, z.s.p.o.
+ * Copyright (C) 2016-2018 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,26 +50,27 @@
 #include <time.h>
 
 #include "siso.h"
-#include "ipfixsend.h"
 #include "reader.h"
 #include "sender.h"
 
-#define OPTSTRING "hci:d:p:t:n:s:S:R:"
+/** Default destination IP                 */
 #define DEFAULT_IP "127.0.0.1"
+/** Default destination port               */
 #define DEFAULT_PORT "4739"
+/** Default transport protocol             */
 #define DEFAULT_TYPE "UDP"
+/** By default, send data in infinite loop */
 #define INFINITY_LOOPS (-1)
-/*
+/**
  * Timeout for waiting until all queued messages have been sent before close()
  * (in nanoseconds)
  */
 #define FLUSHER_TIME 100000000LL
 
-static int stop = 0;
+/** Global stop signal                     */
+static volatile sig_atomic_t stop = 0;
 
-/**
- * \brief Print usage
- */
+/** \brief Print usage                     */
 void usage()
 {
     printf("\n");
@@ -89,6 +90,10 @@ void usage()
     printf("\n");
 }
 
+/**
+ * \brief Termination signal handler
+ * \param[in] signal Signal to process
+ */
 void handler(int signal)
 {
     (void) signal; // skip compiler warning
@@ -98,6 +103,8 @@ void handler(int signal)
 
 /**
  * \brief Main function
+ * \param[in] argc Number of arguments
+ * \param[in] argv Array of arguments
  */
 int main(int argc, char** argv)
 {
@@ -119,7 +126,7 @@ int main(int argc, char** argv)
 
     // Parse parameters
     int c;
-    while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
+    while ((c = getopt(argc, argv, "hci:d:p:t:n:s:S:R:")) != -1) {
         switch (c) {
         case 'h':
             usage();
