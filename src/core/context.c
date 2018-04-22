@@ -608,6 +608,10 @@ ipx_ctx_init(ipx_ctx_t *ctx, const char *params)
         IPX_CTX_WARNING(ctx, "The instance is not subscribed to receive any kind of message!", '\0');
     }
 
+    if (ctx->cfg_plugin.private == NULL) {
+        IPX_CTX_WARNING(ctx, "The instance didn't set its private data.", '\0');
+    }
+
     ctx->type = plugin_type;
     ctx->state = IPX_CS_INIT;
     return IPX_OK;
