@@ -51,7 +51,7 @@
  * \param[in] sender    sisoconf object
  * \param[in] reader    Input file
  * \param[in] packets_s packets/s limit
- * \return On succes returns 0. Otherwise returns nonzero value.
+ * \return On success returns 0. Otherwise returns nonzero value.
  */
 int send_packets_limit(sisoconf *sender, reader_t *reader, int packets_s);
 

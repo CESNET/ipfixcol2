@@ -62,8 +62,6 @@
 #define NANO_SEC 1000000000L
 /** Global termination flag      */
 static volatile sig_atomic_t stop_sending = 0;
-/** Time  */
-static struct timeval begin = {0};
 
 /** \brief Interrupt sending     */
 void sender_stop()
@@ -72,7 +70,9 @@ void sender_stop()
 }
 
 /**
- * \brief Send packet
+ * \brief Send a packet
+ * \param[in] sender SISO instance
+ * \param[in] packet Packet to send
  */
 int send_packet(sisoconf *sender, const struct fds_ipfix_msg_hdr *packet)
 {
@@ -99,19 +99,16 @@ int send_packets_limit(sisoconf *sender, reader_t *reader, int packets_s)
 {
     enum READER_STATUS status;
     struct fds_ipfix_msg_hdr *pkt_data;
-    struct timeval end;
+    struct timeval begin, end;
     struct timespec sleep_time = {0};
 
-    /* These must be static variables - local would be rewritten with each call
-     * of send_packets */
-    static int pkts_from_begin = 0;
-    static double time_per_pkt = 0.0; // [ms]
+    // These must be static variables - local would be rewritten with each call of send_packets
+    int pkts_from_begin = 0;
+    double time_per_pkt; // [ms]
 
-    if (begin.tv_sec == 0) {
-        /* Absolutely first packet */
-        gettimeofday(&begin, NULL);
-        time_per_pkt = 1000000.0 / packets_s; // [micro seconds]
-    }
+    // Absolutely first packet
+    gettimeofday(&begin, NULL);
+    time_per_pkt = 1000000.0 / packets_s; // [micro seconds]
 
     while (stop_sending == 0) {
         status = reader_get_next_packet(reader, &pkt_data, NULL);
@@ -121,7 +118,7 @@ int send_packets_limit(sisoconf *sender, reader_t *reader, int packets_s)
             return 1;
         }
 
-        /* send packet */
+        // send packet
         int ret = send_packet(sender, pkt_data);
         if (ret != SISO_OK) {
             fprintf(stderr, "Network error: %s\n", siso_get_last_err(sender));
@@ -130,15 +127,15 @@ int send_packets_limit(sisoconf *sender, reader_t *reader, int packets_s)
 
         pkts_from_begin++;
         if (packets_s <= 0) {
-            /* Limit for packets/s is not enabled */
+            // Limit for packets/s is not enabled
             continue;
         }
 
-        /* Calculate expected time of sending next packet */
+        // Calculate expected time of sending next packet
         gettimeofday(&end, NULL);
         long elapsed = timeval_diff(&begin, &end);
         if (elapsed < 0) {
-            /* Should be never negative. Just for sure... */
+            // Should be never negative. Just for sure...
             elapsed = pkts_from_begin * time_per_pkt;
         }
 
@@ -149,20 +146,42 @@ int send_packets_limit(sisoconf *sender, reader_t *reader, int packets_s)
             diff = MICRO_SEC - 1;
         }
 
-        /* Sleep */
+        // Sleep
         if (diff > 0) {
             sleep_time.tv_nsec = diff * 1000L;
             nanosleep(&sleep_time, NULL);
         }
 
         if (pkts_from_begin >= packets_s) {
-            /* Restart counter */
+            // Restart counter
             gettimeofday(&begin, NULL);
             pkts_from_begin = 0;
         }
     };
 
     return 0;
+}
+
+/**
+ * \brief Compare IPFIX timestamps numbers (with wraparound support)
+ * \param[in] t1 First timestamp
+ * \param[in] t2 Second timestamp
+ * \return  The function  returns an integer less than, equal to, or greater than zero if the
+ *   first number \p t1 is found, respectively, to be less than, to match, or be greater than
+ *   the second number.
+ */
+static inline int
+ts_cmp(uint32_t t1, uint32_t t2)
+{
+    if (t1 == t2) {
+        return 0;
+    }
+
+    if ((t1 - t2) & 0x80000000) { // test the "sign" bit
+        return (-1);
+    } else {
+        return 1;
+    }
 }
 
 /**
@@ -201,7 +220,7 @@ int ts_grp_cnt(reader_t *reader)
             return -1;
         }
 
-        if (reference_time < ntohl(header->export_time)) { // TODO: overflow
+        if (ts_cmp(reference_time, ntohl(header->export_time)) < 0) {
             break;
         }
 
@@ -266,8 +285,8 @@ int send_packets_realtime(sisoconf *sender, reader_t *reader, double speed)
             grp_ts_now = ntohl(new_packet->export_time);
             time_per_pkt = 1000000.0 / (grp_cnt * speed); // [micro seconds]
 
-            /* Sleep between time groups only when difference > 1 second */
-            if (grp_ts_now > grp_ts_prev + 1) { // TODO: overflow
+            // Sleep between time groups only when difference > 1 second
+            if (ts_cmp(grp_ts_now, grp_ts_prev + 1) > 0) {
                 double  seconds_diff = (grp_ts_now - grp_ts_prev - 1) / speed;
                 struct timespec sleep_time;
                 sleep_time.tv_sec = (int) seconds_diff;
@@ -293,18 +312,18 @@ int send_packets_realtime(sisoconf *sender, reader_t *reader, double speed)
 
         ++grp_id;
 
-        /* Calculate expected time of sending next packet */
+        // Calculate expected time of sending next packet
         gettimeofday(&end, NULL);
         long elapsed = timeval_diff(&group_ts_start, &end);
         if (elapsed < 0) {
-            /* Should be never negative. Just for sure... */
+            // Should be never negative. Just for sure...
             elapsed = grp_id * time_per_pkt;
         }
 
         long next_start = grp_id * time_per_pkt;
         long diff = next_start - elapsed;
 
-        /* Sleep between packets in the group */
+        // Sleep between packets in the group
         if (diff > 0) {
             struct timespec sleep_time;
             sleep_time.tv_sec = diff / MICRO_SEC;
