@@ -87,6 +87,7 @@ void usage()
     printf("  -S packets Speed limit in packets/s\n");
     printf("  -R num     Real-time sending\n");
     printf("             Allow speed-up sending 'num' times (realtime: 1.0)\n");
+    printf("  -O num     Rewrite Observation Domain ID (ODID)\n");
     printf("\n");
 }
 
@@ -119,6 +120,9 @@ int main(int argc, char** argv)
     double  realtime_s = 0.0;
     bool    precache = false;
 
+    bool    odid_rewrite = false;
+    long    odid_new;
+
     if (argc == 1) {
         usage();
         return 0;
@@ -126,7 +130,7 @@ int main(int argc, char** argv)
 
     // Parse parameters
     int c;
-    while ((c = getopt(argc, argv, "hci:d:p:t:n:s:S:R:")) != -1) {
+    while ((c = getopt(argc, argv, "hci:d:p:t:n:s:S:R:O:")) != -1) {
         switch (c) {
         case 'h':
             usage();
@@ -158,6 +162,10 @@ int main(int argc, char** argv)
         case 'R':
             realtime_s = atof(optarg);
             break;
+        case 'O':
+            odid_rewrite = true;
+            odid_new = atol(optarg);
+            break;
         default:
             fprintf(stderr, "Unknown option.\n");
             return 1;
@@ -186,6 +194,12 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    if (odid_rewrite && (odid_new < 0 || odid_new > UINT32_MAX)) {
+        fprintf(stderr, "Invalid ODID value. Must be in range (0 .. %" PRIu32 ")\n",
+            UINT32_MAX);
+        return 1;
+    }
+
     // Check whether everything is set
     if (!input) {
         fprintf(stderr, "Input file must be set!\n");
@@ -206,6 +220,10 @@ int main(int argc, char** argv)
     if (!reader) {
         siso_destroy(sender);
         return 1;
+    }
+
+    if (odid_rewrite) {
+        reader_odid_rewrite(reader, (uint32_t) odid_new);
     }
 
     // Create connection

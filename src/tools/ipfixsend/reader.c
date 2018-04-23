@@ -62,6 +62,14 @@ struct reader_internal {
     uint8_t packet_single[MAX_PACKET_SIZE];      /**< Internal buffer        */
 
     struct {
+        struct {
+            uint32_t value; /**< New value                                   */
+            bool rewrite;   /**< Enable                                      */
+        } odid;            /**< ODID                                         */
+
+    } rewrite;             /**< Rewrite header parameters                    */
+
+    struct {
         bool   valid;      /**< Position validity flag                       */
         fpos_t pos_offset; /**< Position (only for non-preloaded)            */
         size_t pos_idx;    /**< Position (only for preloaded)                */
@@ -348,6 +356,14 @@ reader_free_preloaded_packets(struct fds_ipfix_msg_hdr **packets)
     free(packets);
 }
 
+static void
+reader_update_header(reader_t *reader, struct fds_ipfix_msg_hdr *hdr)
+{
+    // Update ODID
+    if (reader->rewrite.odid.rewrite) {
+        hdr->odid = htonl(reader->rewrite.odid.value);
+    }
+}
 
 // Rewind file (go to the beginning of a file)
 void
@@ -402,42 +418,43 @@ reader_position_pop(reader_t *reader)
 
 // Get the pointer to a next packet
 enum READER_STATUS
-reader_get_next_packet(reader_t *reader, struct fds_ipfix_msg_hdr **output,
-    uint16_t *size)
+reader_get_next_packet(reader_t *reader, struct fds_ipfix_msg_hdr **output, uint16_t *size)
 {
-    struct fds_ipfix_msg_hdr *packet = NULL;
+    // Store data into the internal buffer
+    struct fds_ipfix_msg_hdr *buffer;
+    buffer = (struct fds_ipfix_msg_hdr *) reader->packet_single;
 
     if (reader->is_preloaded) {
         // Read from memory
-        packet = reader->packets_preload[reader->next_id];
+        const struct fds_ipfix_msg_hdr *packet = reader->packets_preload[reader->next_id];
         if (packet == NULL) {
             return READER_EOF;
         }
 
+        // Copy to the buffer
+        memcpy(buffer, packet, ntohs(packet->length));
         ++reader->next_id;
     } else {
         // Read from the file
         size_t b_size = MAX_PACKET_SIZE;
         enum READER_STATUS ret;
 
-        ret = reader_load_packet_buffer(reader, reader->packet_single, &b_size);
+        ret = reader_load_packet_buffer(reader, (uint8_t *) buffer, &b_size);
         if (ret == READER_EOF) {
             return READER_EOF;
         }
 
         if (ret != READER_OK) {
-            // Buffer should be big enought, so only an error can occur
+            // Buffer should be big enough, so only an error can occur
             return READER_ERROR;
         }
-
-        packet = (struct fds_ipfix_msg_hdr *) reader->packet_single;
     }
 
-    *output = packet;
+    reader_update_header(reader, buffer);
+    *output = buffer;
     if (size) {
-        *size = ntohs(packet->length);
+        *size = ntohs(buffer->length);
     }
-
     return READER_OK;
 }
 
@@ -445,21 +462,23 @@ reader_get_next_packet(reader_t *reader, struct fds_ipfix_msg_hdr **output,
 enum READER_STATUS
 reader_get_next_header(reader_t *reader, struct fds_ipfix_msg_hdr **header)
 {
+    // Store data into the internal buffer
+    struct fds_ipfix_msg_hdr *header_buffer;
+    header_buffer = (struct fds_ipfix_msg_hdr *) reader->packet_single;
+
     if (reader->is_preloaded) {
         // Read from memory
-        struct fds_ipfix_msg_hdr *packet = reader->packets_preload[reader->next_id];
+        const struct fds_ipfix_msg_hdr *packet = reader->packets_preload[reader->next_id];
         if (packet == NULL) {
             return READER_EOF;
         }
 
+        // Copy to the buffer
+        memcpy(header_buffer, packet, FDS_IPFIX_MSG_HDR_LEN);
         ++reader->next_id;
-        *header = packet;
     } else {
         // Read from the file
         enum READER_STATUS status;
-        struct fds_ipfix_msg_hdr *header_buffer;
-
-        header_buffer = (struct fds_ipfix_msg_hdr *) reader->packet_single;
         status = reader_load_packet_header(reader, header_buffer);
         if (status != READER_OK) {
             return status;
@@ -473,9 +492,16 @@ reader_get_next_header(reader_t *reader, struct fds_ipfix_msg_hdr **header)
             fprintf(stderr, "fseek error: %s\n", strerror(errno));
             return READER_ERROR;
         }
-
-        *header = header_buffer;
     }
 
+    reader_update_header(reader, header_buffer);
+    *header = header_buffer;
     return READER_OK;
+}
+
+void
+reader_odid_rewrite(reader_t *reader, uint32_t odid)
+{
+    reader->rewrite.odid.value = odid;
+    reader->rewrite.odid.rewrite = true;
 }

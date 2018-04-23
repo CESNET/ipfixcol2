@@ -137,5 +137,13 @@ reader_get_next_packet(reader_t *reader, struct fds_ipfix_msg_hdr **output,
 enum READER_STATUS
 reader_get_next_header(reader_t *reader, struct fds_ipfix_msg_hdr **header);
 
+/**
+ * \brief Rewrite ODID of all IPFIX Messages
+ * \param[in] reader Pointer to the packet reader
+ * \param[in] odid   New ODID
+ */
+void
+reader_odid_rewrite(reader_t *reader, uint32_t odid);
+
 #endif	/* READER_H */
 
