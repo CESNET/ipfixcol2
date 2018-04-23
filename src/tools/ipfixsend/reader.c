@@ -51,6 +51,21 @@
 
 /** Maximum IPFIX packet size (2^16) */
 #define MAX_PACKET_SIZE 65536
+/** Increase the auto-updated sequence number after finishing the file       */
+#define SEQ_NUM_INC     256
+
+/** Auto update configuration */
+struct reader_autoupdate {
+    bool enable;      /**< Enable auto update of header                      */
+    bool file_start;  /**< Current record is the first in the file           */
+    bool read_start;  /**< Current record is the first ever sent             */
+
+    uint32_t seq_off; /**< Current Sequence Number offset                    */
+    uint32_t exp_off; /**< Current Export Time offset                        */
+
+    uint32_t seq_max; /**< Max. sequence number                              */
+    uint32_t exp_max; /**< Max. Export timestamp                             */
+};
 
 /** Internal representation of the packet reader                             */
 struct reader_internal {
@@ -65,8 +80,10 @@ struct reader_internal {
         struct {
             uint32_t value; /**< New value                                   */
             bool rewrite;   /**< Enable                                      */
-        } odid;            /**< ODID                                         */
+        } odid;             /**< ODID                                        */
 
+        /** Auto update of IPFIX Message headers                             */
+        struct reader_autoupdate update;
     } rewrite;             /**< Rewrite header parameters                    */
 
     struct {
@@ -136,6 +153,30 @@ reader_destroy(reader_t *reader)
     }
 
     free(reader);
+}
+
+/**
+ * \brief Compare IPFIX 32bit header numbers (with wraparound support)
+ *
+ * \note The purpose of the function is to compare Sequence numbers and Export timestamps
+ * \param[in] t1 First timestamp
+ * \param[in] t2 Second timestamp
+ * \return  The function  returns an integer less than, equal to, or greater than zero if the
+ *   first number \p t1 is found, respectively, to be less than, to match, or be greater than
+ *   the second number.
+ */
+static inline int
+reader_u32_cmp(uint32_t t1, uint32_t t2)
+{
+    if (t1 == t2) {
+        return 0;
+    }
+
+    if ((t1 - t2) & 0x80000000) { // test the "sign" bit
+        return (-1);
+    } else {
+        return 1;
+    }
 }
 
 /**
@@ -356,12 +397,55 @@ reader_free_preloaded_packets(struct fds_ipfix_msg_hdr **packets)
     free(packets);
 }
 
+
+#include <inttypes.h>
+
 static void
-reader_update_header(reader_t *reader, struct fds_ipfix_msg_hdr *hdr)
+reader_header_update(reader_t *reader, struct fds_ipfix_msg_hdr *hdr)
 {
     // Update ODID
     if (reader->rewrite.odid.rewrite) {
         hdr->odid = htonl(reader->rewrite.odid.value);
+    }
+
+    struct reader_autoupdate *update = &reader->rewrite.update;
+    if (!update->enable) {
+        return;
+    }
+
+    // Update header
+    if (update->file_start) {
+        // Calculate new offsets
+        update->file_start = false;
+
+        if (update->read_start) {
+            // This is the first record from the 1. iteration (no offsets)
+            update->read_start = false;
+            update->seq_off = 0;
+            update->exp_off = 0;
+            update->seq_max = ntohl(hdr->seq_num);
+            update->exp_max = ntohl(hdr->export_time);
+        } else {
+            // This is the first record from the 2..n iteration
+            update->seq_off = update->seq_max - ntohl(hdr->seq_num) + SEQ_NUM_INC;
+            update->exp_off = update->exp_max - ntohl(hdr->export_time) + 1;
+            update->seq_max = ntohl(hdr->seq_num) + update->seq_off;
+            update->exp_max = ntohl(hdr->export_time) + update->exp_off;
+        }
+    }
+
+    uint32_t new_exp = ntohl(hdr->export_time) + update->exp_off;
+    uint32_t new_seq = ntohl(hdr->seq_num) + update->seq_off;
+    hdr->export_time = htonl(new_exp);
+    hdr->seq_num = htonl(new_seq);
+
+    // Update max. values
+    if (reader_u32_cmp(update->exp_max, new_exp) < 0) {
+        update->exp_max = new_exp;
+    }
+
+    if (reader_u32_cmp(update->seq_max, new_seq) < 0) {
+        update->seq_max = new_seq;
     }
 }
 
@@ -374,6 +458,8 @@ reader_rewind(reader_t *reader)
     } else {
         rewind(reader->file);
     }
+
+    reader->rewrite.update.file_start = true;
 }
 
 // Push the current position in a file
@@ -450,7 +536,7 @@ reader_get_next_packet(reader_t *reader, struct fds_ipfix_msg_hdr **output, uint
         }
     }
 
-    reader_update_header(reader, buffer);
+    reader_header_update(reader, buffer);
     *output = buffer;
     if (size) {
         *size = ntohs(buffer->length);
@@ -494,7 +580,7 @@ reader_get_next_header(reader_t *reader, struct fds_ipfix_msg_hdr **header)
         }
     }
 
-    reader_update_header(reader, header_buffer);
+    reader_header_update(reader, header_buffer);
     *header = header_buffer;
     return READER_OK;
 }
@@ -504,4 +590,14 @@ reader_odid_rewrite(reader_t *reader, uint32_t odid)
 {
     reader->rewrite.odid.value = odid;
     reader->rewrite.odid.rewrite = true;
+}
+
+void
+reader_header_autoupdate(reader_t *reader, bool enable)
+{
+    struct reader_autoupdate *update = &reader->rewrite.update;
+    memset(update, 0, sizeof(*update));
+    update->enable = enable;
+    update->file_start = true;
+    update->read_start = true;
 }

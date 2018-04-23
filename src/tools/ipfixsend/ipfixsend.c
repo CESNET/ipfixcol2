@@ -226,6 +226,10 @@ int main(int argc, char** argv)
         reader_odid_rewrite(reader, (uint32_t) odid_new);
     }
 
+    if (loops != 1) {
+        reader_header_autoupdate(reader, true);
+    }
+
     // Create connection
     int ret = siso_create_connection(sender, ip, port, type);
     if (ret != SISO_OK) {

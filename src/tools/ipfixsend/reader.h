@@ -76,6 +76,9 @@ reader_destroy(reader_t *reader);
 
 /**
  * \brief Rewind file (go to the beginning of a file)
+ *
+ * \note
+ * If header auto-update is enabled (see reader_header_autoupdate()) new offsets are calculated.
  * \param[in] reader Pointer to the packet reader
  */
 void
@@ -144,6 +147,26 @@ reader_get_next_header(reader_t *reader, struct fds_ipfix_msg_hdr **header);
  */
 void
 reader_odid_rewrite(reader_t *reader, uint32_t odid);
+
+/**
+ * \brief Enable/disable automatic update of IPFIX Messages
+ *
+ * Automatically update IPFIX Message header fields, Sequence number and Export Time, if the
+ * file is replayed multiple times. If enabled, the fields are updated to follow up on the last
+ * message. In other words, every time the end of file is reached, new offsets are calculated
+ * and applied.
+ *
+ * However, the sequence number cannot be properly updated because this tool doesn't interpret
+ * messages and correct number of records in the last message cannot be determined to properly
+ * update sequence number. Therefore, sequence number is increase by a static value.
+ *
+ * If this options is enabled, every time the reader is rewinded, new offsets are calculated.
+ * \note Disabling this options resets offsets from the original values.
+ * \param[in] reader Pointer to the packet reader
+ * \param[in] enable Enable/disable
+ */
+void
+reader_header_autoupdate(reader_t *reader, bool enable);
 
 #endif	/* READER_H */
 
