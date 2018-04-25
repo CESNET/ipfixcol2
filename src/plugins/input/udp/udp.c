@@ -537,7 +537,7 @@ active_add(struct udp_data *instance, int src_fd, const struct sockaddr *src_add
         const struct sockaddr_in6 *dst_v6 = (struct sockaddr_in6 *) &dst_addr;
         net.port_src = ntohs(src_v6->sin6_port);
         net.port_dst = ntohs(dst_v6->sin6_port);
-        if (IN6_IS_ADDR_V4MAPPED(&src_v6->sin6_addr) && IN6_IS_ADDR_V4MAPPED(&dst_v6->sin6_addr)) {
+        if (IN6_IS_ADDR_V4MAPPED(&src_v6->sin6_addr)) {
             // IPv4 mapped into IPv6
             net.l3_proto = AF_INET; // Overwrite family type!
             net.addr_src.ipv4 = *(const struct in_addr *) (((uint8_t *) &src_v6->sin6_addr) + 12);
@@ -589,6 +589,7 @@ active_add(struct udp_data *instance, int src_fd, const struct sockaddr *src_add
         return NULL;
     }
 
+    IPX_CTX_INFO(instance->ctx, "New exporter connected from '%s'.", src_addr_str);
     new_sources[instance->active.cnt] = rec2add;
     instance->active.sources = new_sources;
     instance->active.cnt++;
@@ -609,6 +610,7 @@ static void
 active_remove_by_id(struct udp_data *instance, size_t idx)
 {
     struct udp_source *src = instance->active.sources[idx];
+    IPX_CTX_INFO(instance->ctx, "Transport Session '%s' closed!", src->session->ident);
 
     // Have we received at least one valid record?
     if (src->new_connection) {
