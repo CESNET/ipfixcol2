@@ -48,7 +48,6 @@
 #include <netinet/in.h>
 #include <sys/timerfd.h>
 #include <unistd.h>
-
 #include <stdlib.h>
 #include <pthread.h>
 #include <errno.h>
@@ -58,14 +57,14 @@
 
 /** Identification of an invalid socket descriptor                                               */
 #define INVALID_FD        (-1)
-/** Timeout for a getter operation - i.e. epoll_wait timeout (in milliseconds)                   */
+/** Timeout for a getter operation - i.e. epoll_wait timeout [in milliseconds]                   */
 #define GETTER_TIMEOUT    (10)
 /** Max sockets events processed in the getter - i.e. epoll_wait array size                      */
 #define GETTER_MAX_EVENTS (16)
-/** Timeout to read whole IPFIX Message after at least part has been received (in microseconds)  */
-#define GETTER_RECV_TIMEOUT (500000)
-/** Number of seconds between timer events (seconds)                                             */
+/** Number of seconds between timer events [seconds]                                             */
 #define TIMER_INTERVAL    (2)
+/** Required minimal size of receive buffer size [bytes] (otherwise produces a warning message)  */
+#define UDP_RMEM_REQ      (1024*1024)
 
 /** Plugin description */
 IPX_API struct ipx_plugin_info ipx_plugin_info = {
@@ -113,6 +112,8 @@ struct udp_data {
         size_t cnt;
         /** Array of sockets                                                                     */
         int *sockets;
+        /** New size of receive buffer (try to change only if not equal to zero)                 */
+        int rmem_size;
 
         /** Epoll file descriptor (binded sockets and timer)                                     */
         int epoll_fd;
@@ -138,10 +139,12 @@ struct udp_data {
  * \param[in] addr     Local IPv4/IPv6 address and port of the socket(sockaddr_in6 or sockaddr_in)
  * \param[in] addrlen  Size of the address
  * \param[in] ipv6only Accept only IPv6 addresses (only for AF_INET6 and the wildcard address)
+ * \param[in] rbuffer  Change the receive buffer size (ignored, if zero or negative)
  * \return On failure returns #INVALID_FD. Otherwise returns valid socket descriptor.
  */
 static int
-address_bind(ipx_ctx_t *ctx, const struct sockaddr *addr, socklen_t addrlen, bool ipv6only)
+address_bind(ipx_ctx_t *ctx, const struct sockaddr *addr, socklen_t addrlen, bool ipv6only,
+    int rbuffer)
 {
     sa_family_t family = addr->sa_family;
     assert(family == AF_INET || family == AF_INET6);
@@ -162,8 +165,6 @@ address_bind(ipx_ctx_t *ctx, const struct sockaddr *addr, socklen_t addrlen, boo
         IPX_CTX_WARNING(ctx, "Cannot turn on socket reuse option. It may take a while before "
             "the port can be used again. (error: %s)", err_str);
     }
-
-    // TODO: increate the buffer size
 
     // Make sure that IPv6 only is disabled
     if (family == AF_INET6) {
@@ -193,6 +194,29 @@ address_bind(ipx_ctx_t *ctx, const struct sockaddr *addr, socklen_t addrlen, boo
         assert(addr_v6->sin6_family == family);
         inet_ntop(family, &addr_v6->sin6_addr, addr_str, INET6_ADDRSTRLEN);
         port = ntohs(addr_v6->sin6_port);
+    }
+
+    // Get default size of the receive buffer and try to increase it
+    int rmem_def = 0;
+    socklen_t rmem_size = sizeof(rmem_def);
+    if (getsockopt(sd, SOL_SOCKET, SO_RCVBUF, &rmem_def, &rmem_size) == -1) {
+        ipx_strerror(errno, err_str);
+        IPX_CTX_WARNING(ctx, "Unable get the default socket receive buffer size. getsockopt() "
+            "failed: %s", err_str);
+    }
+
+    rmem_def /= 2; // Get not doubled size
+    if (rbuffer > 0 && rmem_def < rbuffer) {
+        // Change the size of the buffer
+        if (setsockopt(sd, SOL_SOCKET, SO_RCVBUF, &rbuffer, sizeof(rbuffer)) == -1) {
+            ipx_strerror(errno, err_str);
+            IPX_CTX_WARNING(ctx, "Unable to expand the socket receive buffer size (from %d to "
+                "%d bytes). Some records may be lost under heavy traffic. setsockopt() failed %s",
+                rmem_def, rbuffer, err_str);
+        } else {
+            IPX_CTX_INFO(ctx, "The socket receive buffer size of a new socket (local IP %s) "
+                "enlarged (from %d to %d bytes).", addr_str, rmem_def, rbuffer);
+        }
     }
 
     // Bind
@@ -240,7 +264,8 @@ listener_bind(struct udp_data *instance)
         addr.sin6_port = htons(instance->config->local_port);
         addr.sin6_addr = in6addr_any;
 
-        int sd = address_bind(instance->ctx, (struct sockaddr *) &addr, sizeof(addr), false);
+        int sd = address_bind(instance->ctx, (struct sockaddr *) &addr, sizeof(addr), false,
+            instance->listen.rmem_size);
         if (sd == INVALID_FD) {
             free(sockets);
             return IPX_ERR_DENIED;
@@ -292,7 +317,8 @@ listener_bind(struct udp_data *instance)
             ipv6only = true;
         }
 
-        int sd = address_bind(instance->ctx, (struct sockaddr *) &addr_helper, addrlen, ipv6only);
+        int sd = address_bind(instance->ctx, (struct sockaddr *) &addr_helper, addrlen, ipv6only,
+            instance->listen.rmem_size);
         if (sd == INVALID_FD) {
             // Failed
             break;
@@ -362,6 +388,30 @@ listener_init(struct udp_data *instance)
 {
     const char *err_str;
 
+    // Get maximum socket receive buffer size (in bytes)
+    FILE *f;
+    int sock_rmax = 0;
+    static const char *sys_cfg = "/proc/sys/net/core/rmem_max";
+    if ((f = fopen(sys_cfg, "r")) == NULL || fscanf(f, "%d", &sock_rmax) != 1 || sock_rmax < 0) {
+        ipx_strerror(errno, err_str);
+        IPX_CTX_WARNING(instance->ctx, "Unable to get the maximum socket receive buffer size "
+            "from '%s' (%s). Due to potentially small buffers, some records may be lost!", sys_cfg,
+            err_str);
+        sock_rmax = 0;
+    }
+
+    instance->listen.rmem_size = sock_rmax;
+    if (f != NULL) {
+        fclose(f);
+    }
+
+    if (sock_rmax != 0 && sock_rmax < UDP_RMEM_REQ) {
+        IPX_CTX_WARNING(instance->ctx, "The maximum socket receive buffer size is too small "
+            "(%d bytes). Some records may be lost under heavy traffic. See documentation for "
+            "more details!", sock_rmax);
+    }
+
+    // Create epoll and bind all sockets
     instance->listen.epoll_fd = epoll_create(1);
     if (instance->listen.epoll_fd == INVALID_FD) {
         ipx_strerror(errno, err_str);
@@ -369,7 +419,6 @@ listener_init(struct udp_data *instance)
         return IPX_ERR_DENIED;
     }
 
-    // Bind
     if (listener_bind(instance) != IPX_OK) {
         close(instance->listen.epoll_fd);
         return IPX_ERR_DENIED;
@@ -690,7 +739,9 @@ active_get(struct udp_data *instance, int src_fd, const struct sockaddr *addr)
 /**
  * \brief Compare 2 active Transport Session by activity
  *
- * \note First the
+ * \note The sessions are primary sorted by number of messages received since the last reset of
+ * counters. Secondary, if the both counters are zero, the sessions are sorted by the timestamp
+ * of their last occurrence.
  * \param p1 First Transport Session
  * \param p2 Second Transport Session
  * \return
