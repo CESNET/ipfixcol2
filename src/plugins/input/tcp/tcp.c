@@ -418,6 +418,11 @@ listener_thread(void *cfg)
         // Wait for an event (indefinitely)
         int ret = epoll_wait(data->listen.epoll_fd, ev, ev_size, -1);
         if (ret == -1) {
+            if (errno == EINTR) {
+                // Interrupted!
+                continue;
+            }
+
             ipx_strerror(errno, err_str);
             IPX_CTX_ERROR(data->ctx, "Listener: Cannot accept new connections. "
                 "epoll_wait() failed: %s", err_str);
