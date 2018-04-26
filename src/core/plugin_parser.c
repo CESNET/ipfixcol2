@@ -62,7 +62,7 @@ ipx_plugin_parser_init(ipx_ctx_t *ctx, const char *params)
     const uint16_t mask = IPX_MSG_IPFIX | IPX_MSG_SESSION;
     if (ipx_ctx_subscribe(ctx, &mask, NULL) != IPX_OK) {
         IPX_CTX_ERROR(ctx, "Failed to subscribe to receive IPFIX and Transport Session Messages.",
-            NULL);
+            '\0');
         return IPX_ERR_DENIED;
     }
 
@@ -72,8 +72,20 @@ ipx_plugin_parser_init(ipx_ctx_t *ctx, const char *params)
     // Create a parser
     ipx_parser_t *parser = ipx_parser_create(plugin_name, plugin_vlevel);
     if (!parser) {
-        IPX_CTX_ERROR(ctx, "Failed to create a parser of IPFIX Messages!", NULL);
+        IPX_CTX_ERROR(ctx, "Failed to create a parser of IPFIX Messages!", '\0');
         return IPX_ERR_DENIED;
+    }
+
+    ipx_msg_garbage_t *garbage = NULL;
+    if (ipx_parser_ie_source(parser, ipx_ctx_iemgr_get(ctx), &garbage) != IPX_OK) {
+        IPX_CTX_ERROR(ctx, "Failed to create set a source of Information Elements!", '\0');
+        ipx_parser_destroy(parser);
+        return IPX_ERR_DENIED;
+    }
+
+    if (garbage != NULL) { // Should not produce any garbage, but you never know...
+        // There are not references to the templates in parser -> we can destroy it immediately
+        ipx_msg_garbage_destroy(garbage);
     }
 
     ipx_ctx_private_set(ctx, parser);
@@ -97,7 +109,7 @@ ipx_plugin_parser_destroy(ipx_ctx_t *ctx, void *cfg)
     }
 
     if (ipx_ctx_msg_pass(ctx, ipx_msg_garbage2base(garbage)) != IPX_OK) {
-        IPX_CTX_ERROR(ctx, "Failed to pass a garbage message with processor!", NULL);
+        IPX_CTX_ERROR(ctx, "Failed to pass a garbage message with processor!", '\0');
     }
 }
 
@@ -278,7 +290,7 @@ ipx_plugin_parser_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
         break;
     default:
         // Unexpected type of the message
-        IPX_CTX_WARNING(ctx, "Received unexpected type of internal message. Skipping...", NULL);
+        IPX_CTX_WARNING(ctx, "Received unexpected type of internal message. Skipping...", '\0');
         ipx_ctx_msg_pass(ctx, msg);
         rc = IPX_OK;
         break;
