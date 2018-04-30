@@ -46,6 +46,7 @@
 #include "Config.hpp"
 #include "Storage.hpp"
 #include "Printer.hpp"
+#include "File.hpp"
 
 /** Plugin description */
 IPX_API struct ipx_plugin_info ipx_plugin_info = {
@@ -76,14 +77,19 @@ struct Instance {
  *
  * For each definition of an output in a plugin configuration, call its constructor and add it to
  * an output manager.
+ * \param[in] ctx     Instance context
  * \param[in] storage Manager of output
  * \param[in] cfg     Parsed configuration of the instance
  */
 static void
-outputs_initialize(Storage *storage, Config *cfg)
+outputs_initialize(ipx_ctx_t *ctx, Storage *storage, Config *cfg)
 {
     for (const auto &print : cfg->outputs.prints) {
-        storage->output_add(new Printer(print));
+        storage->output_add(new Printer(print, ctx));
+    }
+
+    for (const auto &file : cfg->outputs.files) {
+        storage->output_add(new File(file, ctx));
     }
 }
 
@@ -98,7 +104,7 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
         std::unique_ptr<Storage> storage(new Storage(cfg.get()->format));
 
         // Initialize outputs
-        outputs_initialize(storage.get(), cfg.get());
+        outputs_initialize(ctx, storage.get(), cfg.get());
 
         // Success
         data = ptr.release();

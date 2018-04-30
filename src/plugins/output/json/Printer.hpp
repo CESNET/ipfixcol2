@@ -51,8 +51,9 @@ public:
     /**
      * \brief Constructor
      * \param[in] cfg Output configuration
+     * \param[in] ctx Instance context
      */
-    explicit Printer(const struct cfg_print &cfg);
+    explicit Printer(const struct cfg_print &cfg, ipx_ctx_t *ctx);
 
     /**
      * \brief Print a record on standard output

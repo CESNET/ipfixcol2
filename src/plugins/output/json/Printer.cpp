@@ -42,7 +42,7 @@
 #include "Printer.hpp"
 #include <iostream>
 
-Printer::Printer(const struct cfg_print &cfg) : Output(cfg.name)
+Printer::Printer(const struct cfg_print &cfg, ipx_ctx_t *ctx) : Output(cfg.name, ctx)
 {
     // Nothing to do
 }

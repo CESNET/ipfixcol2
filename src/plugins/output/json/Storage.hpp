@@ -50,13 +50,16 @@
 class Output {
 protected:
     /** Identification name of the output                                                        */
-    std::string name;
+    std::string _name;
+    /** Instance context (only for messages)                                                     */
+    ipx_ctx_t *_ctx;
 public:
     /**
      * \brief Base class constructor
-     * \param[in] id Identification
+     * \param[in] id  Identification of the output
+     * \param[in] ctx Instance context
      */
-    Output(const std::string &id) {name = id;};
+    Output(const std::string &id, ipx_ctx_t *ctx) : _name(id), _ctx(ctx) {};
     /** \brief Base class destructor                                                             */
     virtual
     ~Output() {};
