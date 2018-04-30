@@ -38,6 +38,7 @@
  * if advised of the possibility of such damage.
  *
  */
+
 #ifndef JSON_STORAGE_H
 #define JSON_STORAGE_H
 

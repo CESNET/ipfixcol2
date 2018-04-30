@@ -13,6 +13,8 @@ add_library(json-output MODULE
 	File.hpp
 	Server.cpp
 	Server.hpp
+	Sender.cpp
+	Server.hpp
 )
 
 install(

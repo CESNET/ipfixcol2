@@ -310,6 +310,7 @@ Server::msg_send(const char *data, ssize_t len, client_t &client)
  *
  * \param[in] str JSON Record
  * \param[in] len Length of the record
+ * \return Always #IPX_OK
  */
 int Server::process(const char *str, size_t len)
 {

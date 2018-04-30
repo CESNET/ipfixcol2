@@ -79,6 +79,8 @@ struct cfg_send : cfg_output {
     std::string addr;
     /** Destination port                                                                         */
     uint16_t port;
+    /** Blocking communication                                                                   */
+    bool blocking;
     /** Transport Protocol                                                                       */
     enum class proto {
         PROTO_UDP,

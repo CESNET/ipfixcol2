@@ -48,6 +48,7 @@
 #include "Printer.hpp"
 #include "File.hpp"
 #include "Server.hpp"
+#include "Sender.hpp"
 
 /** Plugin description */
 IPX_API struct ipx_plugin_info ipx_plugin_info = {
@@ -95,6 +96,10 @@ outputs_initialize(ipx_ctx_t *ctx, Storage *storage, Config *cfg)
 
     for (const auto &server : cfg->outputs.servers) {
         storage->output_add(new Server(server, ctx));
+    }
+
+    for (const auto &send : cfg->outputs.sends) {
+        storage->output_add(new Sender(send, ctx));
     }
 }
 

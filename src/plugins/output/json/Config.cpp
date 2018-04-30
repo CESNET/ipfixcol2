@@ -70,6 +70,7 @@ enum params_xml_nodes {
     SEND_IP,           /**< Destination IP                  */
     SEND_PORT,         /**< Destination port                */
     SEND_PROTO,        /**< Transport Protocol              */
+    SEND_BLOCK,        /**< Blocking connection (TCP only)  */
     // Server output
     SERVER_NAME,       /**< Server name                     */
     SERVER_PORT,       /**< Server port                     */
@@ -102,6 +103,7 @@ static const struct fds_xml_args args_send[] = {
     FDS_OPTS_ELEM(SEND_IP,    "ip",       FDS_OPTS_T_STRING, 0),
     FDS_OPTS_ELEM(SEND_PORT,  "port",     FDS_OPTS_T_UINT,   0),
     FDS_OPTS_ELEM(SEND_PROTO, "protocol", FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_ELEM(SEND_BLOCK, "blocking", FDS_OPTS_T_BOOL,   0),
     FDS_OPTS_END
 };
 
@@ -293,6 +295,10 @@ Config::parse_send(fds_xml_ctx_t *send)
             assert(content->type == FDS_OPTS_T_STRING);
             output.proto = check_or("protocol", content->ptr_string, "UDP", "TCP")
                 ? cfg_send::proto::PROTO_UDP : cfg_send::proto::PROTO_TCP;
+            break;
+        case SEND_BLOCK:
+            assert(content->type == FDS_OPTS_T_BOOL);
+            output.blocking = content->val_bool;
             break;
         default:
             throw std::invalid_argument("Unexpected element within <send>!");
