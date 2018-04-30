@@ -26,7 +26,7 @@ set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY 1)
 # copied and the second being the relative path in th toplevel install
 # directory.
 # Note: This can be also utilized to change the top directory of an archive.
-#       Just change "/" to "/<name>/" and disable 
+#       Just change "/" to "/<name>/" and disable
 set(CPACK_INSTALLED_DIRECTORIES
 	"${CMAKE_SOURCE_DIR}" "/" # By default, add all source codes
 	# add here path to extra + relative dir inside archive e.g. "<path>;/extra/"
@@ -36,7 +36,9 @@ set(CPACK_INSTALLED_DIRECTORIES
 set(CPACK_IGNORE_FILES
 	".*~$"                        # Ignore temporary files
 	"${CMAKE_BINARY_DIR}/"
+	"${CMAKE_SOURCE_DIR}/.git/"
 	"${CMAKE_SOURCE_DIR}/.gitignore"
+	"${CMAKE_SOURCE_DIR}/cmake-build-*" # Ignore CLion build files
 	"${CMAKE_SOURCE_DIR}/.idea/"  # Ignore JetBrains IDE files
 )
 
@@ -58,9 +60,21 @@ endif()
 
 message(STATUS "Maintainer contact for packages: " ${CPACK_PACKAGE_CONTACT})
 
-add_subdirectory(tgz)
+find_package(PkgConfig QUIET)
+if (PKG_CONFIG_FOUND)
+	# Generate and install pkg-config file
+	configure_file(
+		"${CMAKE_CURRENT_SOURCE_DIR}/ipfixcol2.pc.in"
+		"${CMAKE_CURRENT_BINARY_DIR}/ipfixcol2.pc"
+		@ONLY)
+	install(
+		FILES "${CMAKE_CURRENT_BINARY_DIR}/ipfixcol2.pc"
+		DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}/pkgconfig/")
+endif()
 
 # Package builders
+add_subdirectory(tgz)
+
 if (PACKAGE_BUILDER_RPM)
 	add_subdirectory(rpm)
 endif()
