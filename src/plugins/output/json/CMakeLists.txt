@@ -11,6 +11,8 @@ add_library(json-output MODULE
 	Printer.hpp
 	File.cpp
 	File.hpp
+	Server.cpp
+	Server.hpp
 )
 
 install(

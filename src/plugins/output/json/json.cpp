@@ -47,6 +47,7 @@
 #include "Storage.hpp"
 #include "Printer.hpp"
 #include "File.hpp"
+#include "Server.hpp"
 
 /** Plugin description */
 IPX_API struct ipx_plugin_info ipx_plugin_info = {
@@ -90,6 +91,10 @@ outputs_initialize(ipx_ctx_t *ctx, Storage *storage, Config *cfg)
 
     for (const auto &file : cfg->outputs.files) {
         storage->output_add(new File(file, ctx));
+    }
+
+    for (const auto &server : cfg->outputs.servers) {
+        storage->output_add(new Server(server, ctx));
     }
 }
 
