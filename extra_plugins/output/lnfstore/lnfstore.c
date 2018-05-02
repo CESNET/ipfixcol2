@@ -139,11 +139,7 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
         conf->window_start = new_time;
 
         // Update storage files
-        //if (conf->params->profiles.en) {
-        //    stg_profiles_new_window(conf->storage.profiles, new_time);
-        //} else {
-            stg_basic_new_window(conf->storage.basic, new_time);
-        //}
+        stg_basic_new_window(conf->storage.basic, new_time);
     }
 
     ipx_msg_ipfix_t *ipfix = ipx_msg_base2ipfix(msg);
@@ -151,29 +147,30 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
     for (uint32_t i = 0; i < rec_cnt; i++) {
         // Get a pointer to the next record
         struct ipx_ipfix_record *ipfix_rec = ipx_msg_ipfix_get_drec(ipfix, i);
+        bool biflow = (ipfix_rec->rec.tmplt->flags & FDS_TEMPLATE_BIFLOW) != 0;
 
-        //if (conf->params->profiles.en && !mdata->channels) {
-            /*
-             * Record won't be stored, it does not belong to any channel and
-             * profiling is activated
-             */
-        //    continue;
-        //}
-
-        // Fill record // TODO: biflow
+        // Fill record
+        uint16_t flags = biflow ? FDS_DREC_BIFLOW_FWD : 0; // In case of biflow, forward fields only
         lnf_rec_t *lnf_rec = conf->record.rec_ptr;
-        if (translator_translate(conf->record.translator, &ipfix_rec->rec, lnf_rec) <= 0) {
+        if (translator_translate(conf->record.translator, &ipfix_rec->rec, lnf_rec, flags) <= 0) {
             // Nothing to store
             continue;
         }
 
-        //if (conf->params->profiles.en) {
-            // Profile mode
-            //stg_profiles_store(conf->storage.profiles, mdata, lnf_rec);
-        //} else {
-            // Basic mode
-            stg_basic_store(conf->storage.basic, lnf_rec);
-        //}
+        stg_basic_store(conf->storage.basic, lnf_rec);
+
+        // Is it biflow? Store the reverse direction
+        if (!biflow) {
+            continue;
+        }
+
+        flags = FDS_DREC_BIFLOW_REV;
+        if (translator_translate(conf->record.translator, &ipfix_rec->rec, lnf_rec, flags) <= 0) {
+            // Nothing to store
+            continue;
+        }
+
+        stg_basic_store(conf->storage.basic, lnf_rec);
     }
 
     return 0;

@@ -65,9 +65,11 @@ translator_destroy(translator_t *trans);
  * \param[in]     trans     Translator instance
  * \param[in]     ipfix_rec IPFIX record (read only!)
  * \param[in,out] lnf_rec   Filled LNF record
+ * \param[in]     flags     Flags for iterator over the IPFIX record
  * \return Number of converted fields
  */
 int
-translator_translate(translator_t *trans, struct fds_drec *ipfix_rec, lnf_rec_t *lnf_rec);
+translator_translate(translator_t *trans, struct fds_drec *ipfix_rec, lnf_rec_t *lnf_rec,
+    uint16_t flags);
 
 #endif //LS_TRANSLATOR_H

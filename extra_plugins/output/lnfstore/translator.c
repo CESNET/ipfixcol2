@@ -495,13 +495,14 @@ translator_destroy(translator_t *trans)
 }
 
 int
-translator_translate(translator_t *trans, struct fds_drec *ipfix_rec, lnf_rec_t *lnf_rec)
+translator_translate(translator_t *trans, struct fds_drec *ipfix_rec, lnf_rec_t *lnf_rec,
+    uint16_t flags)
 {
     lnf_rec_clear(lnf_rec);
 
     // Initialize a record iterator
     struct fds_drec_iter it;
-    fds_drec_iter_init(&it, ipfix_rec, 0);
+    fds_drec_iter_init(&it, ipfix_rec, flags);
 
     // Try to convert all IPFIX fields
     struct translator_table_rec key;
