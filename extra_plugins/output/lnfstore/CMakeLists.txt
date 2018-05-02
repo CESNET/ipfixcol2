@@ -1,0 +1,89 @@
+cmake_minimum_required(VERSION 2.8.8)
+project(lnfstore)
+
+# Description of the project
+set(LNFSTORE_DESCRIPTION
+	"Output plugin for IPFIXcol2 that stores flow records into nfdump compatible files."
+)
+
+set(LNFSTORE_VERSION_MAJOR 2)
+set(LNFSTORE_VERSION_MINOR 0)
+set(LNFSTORE_VERSION_PATCH 0)
+set(LNFSTORE_VERSION
+	${LNFSTORE_VERSION_MAJOR}.${LNFSTORE_VERSION_MINOR}.${LNFSTORE_VERSION_PATCH})
+
+include(CheckCCompilerFlag)
+include(CheckCXXCompilerFlag)
+include(GNUInstallDirs)
+# Include custom FindXXX modules
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMakeModules")
+
+# Find IPFIXcol and libnf
+find_package(IPFIXcol 2.0.0 REQUIRED)
+find_package(LibFds REQUIRED)
+find_package(LibNf REQUIRED)
+find_package(LibBFI REQUIRED)
+
+# Check capabilities of a compiler
+CHECK_C_COMPILER_FLAG(-std=gnu11 COMPILER_SUPPORT_GNU11)
+if (NOT COMPILER_SUPPORT_GNU11)
+	message(FATAL_ERROR "Compiler does NOT support C11 with GNU extension")
+endif()
+
+CHECK_CXX_COMPILER_FLAG(-std=gnu++11 COMPILER_SUPPORT_GNUXX11)
+if (NOT COMPILER_SUPPORT_GNUXX11)
+	message(FATAL_ERROR "Compiler does NOT support C++11 with GNU extension")
+endif()
+
+# Set default build type if not specified by user
+if (NOT CMAKE_BUILD_TYPE)
+	set (CMAKE_BUILD_TYPE Release
+		CACHE STRING "Choose type of build (Release/Debug/Coverage)." FORCE)
+endif()
+
+# Hard coded definitions
+set(CMAKE_C_FLAGS            "${CMAKE_C_FLAGS} -fvisibility=hidden -std=gnu11")
+set(CMAKE_C_FLAGS_RELEASE    "-O2 -DNDEBUG")
+set(CMAKE_C_FLAGS_DEBUG      "-g -O0 -Wall -Wextra -pedantic")
+set(CMAKE_CXX_FLAGS          "${CMAKE_CXX_FLAGS} -fvisibility=hidden -std=gnu++11")
+set(CMAKE_CXX_FLAGS_RELEASE  "-O2 -DNDEBUG")
+set(CMAKE_CXX_FLAGS_DEBUG    "-g -O0 -Wall -Wextra -pedantic")
+
+# Header files for source code building
+include_directories(
+	"${IPFIXCOL2_INCLUDE_DIRS}"  # IPFIXcol2 header files
+	"${FDS_INCLUDE_DIRS}"        # libfds header files
+	"${NF_INCLUDE_DIRS}"         # libnf header files
+	"${BFI_INCLUDE_DIRS}"        # libbfindex header files
+)
+
+# Create a linkable module
+add_library(lnfstore-output MODULE
+	configuration.c
+	configuration.h
+	files_manager.c
+	files_manager.h
+	idx_manager.c
+	idx_manager.h
+	lnfstore.c
+	lnfstore.h
+	storage_basic.c
+	storage_basic.h
+	storage_common.c
+	storage_common.h
+	translator.c
+	translator.h
+	utils.c
+	utils.h
+)
+
+target_link_libraries(lnfstore-output
+    ${NF_LIBRARIES}               # libnf
+    ${BFI_LIBRARIES}              # libbfindex
+    ${FDS_LIBRARIES}              # libfds
+)
+
+install(
+	TARGETS lnfstore-output
+	LIBRARY DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}/ipfixcol2/"
+)
