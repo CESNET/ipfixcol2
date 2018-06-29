@@ -1,4 +1,6 @@
-cmake_policy(SET CMP0063 NEW)
+if (POLICY CMP0063)
+	cmake_policy(SET CMP0063 NEW)
+endif()
 
 # Configure a header file to pass some CMake variables
 configure_file(

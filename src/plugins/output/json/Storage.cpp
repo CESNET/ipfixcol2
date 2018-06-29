@@ -42,10 +42,12 @@
 #include <stdexcept>
 #include <cstring>
 #include <limits>
-#include "Storage.hpp"
-#include "protocols.hpp"
 #include <cmath>
 #include <inttypes.h>
+
+using namespace std;
+#include "Storage.hpp"
+#include "protocols.hpp"
 
 /** Base size of the conversion buffer           */
 #define BUFFER_BASE   4096
@@ -305,7 +307,7 @@ Storage::to_float(const struct fds_drec_field &field)
         throw std::invalid_argument("Failed to convert a float number!");
     }
 
-    if (isfinite(value) != 0) {
+    if (std::isfinite(value)) {
         // Normal value
         const char *fmt = (field.size == sizeof(float))
             ? ("%." FDS_CONVERT_STRX(FLT_DIG) "g")  // float precision

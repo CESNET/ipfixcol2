@@ -98,7 +98,7 @@ private:
 
     /** Size of an array for formatting names of unknown fields                                  */
     static constexpr size_t raw_size = 32;
-    /** Array for formattting name of unknown fields                                             */
+    /** Array for formatting name of unknown fields                                             */
     char raw_name[raw_size];
 
     // Find a conversion function for an IPFIX field

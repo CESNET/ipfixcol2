@@ -159,7 +159,7 @@ Sender::connect()
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = (params.proto == cfg_send::proto::PROTO_TCP) ? SOCK_STREAM : SOCK_DGRAM;
+    hints.ai_socktype = (params.proto == cfg_send::SEND_PROTO_TCP) ? SOCK_STREAM : SOCK_DGRAM;
     hints.ai_protocol = 0;
     hints.ai_flags = AI_NUMERICSERV;
 

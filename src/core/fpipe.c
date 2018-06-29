@@ -39,7 +39,6 @@
  *
  */
 
-#include <stdatomic.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -61,8 +60,9 @@ struct ipx_fpipe {
     int fd_read;
     /** Pipe file descriptor for an IPFIX message parser                             */
     int fd_write;
+
     /** Control variable that will be set when a request is ready                    */
-    atomic_flag sync_flag;
+    volatile unsigned int lock;
     /** Records in the pipe                                                          */
     volatile uint32_t cnt;
 };
@@ -84,7 +84,7 @@ ipx_fpipe_create()
 
     ret->fd_write = pipefd[1];
     ret->fd_read = pipefd[0];
-    atomic_flag_clear(&ret->sync_flag);
+    ret->lock = 0; // unlocked by default
     ret->cnt = 0;
 
     return ret;
@@ -136,9 +136,9 @@ ipx_fpipe_write(ipx_fpipe_t *fpipe, ipx_msg_t *msg)
     }
 
     // Success - spin until the lock is acquired
-    while (atomic_flag_test_and_set_explicit(&fpipe->sync_flag, memory_order_acquire));
+    while (__sync_lock_test_and_set(&fpipe->lock, 1));
     fpipe->cnt++;
-    atomic_flag_clear_explicit(&fpipe->sync_flag, memory_order_release);
+    __sync_lock_release(&fpipe->lock);
     return;
 }
 
@@ -146,13 +146,13 @@ ipx_msg_t *
 ipx_fpipe_read(ipx_fpipe_t *fpipe)
 {
     // Spin until the lock is acquired
-    while (atomic_flag_test_and_set_explicit(&fpipe->sync_flag, memory_order_acquire));
+    while (__sync_lock_test_and_set(&fpipe->lock, 1));
     uint32_t cnt = fpipe->cnt;
     if (fpipe->cnt > 0) {
         fpipe->cnt--;
     }
     // Release the lock
-    atomic_flag_clear_explicit(&fpipe->sync_flag, memory_order_release);
+    __sync_lock_release(&fpipe->lock);
 
     if (cnt == 0) {
         return NULL;

@@ -1,7 +1,7 @@
 /**
- * \file src/core/utils.h
+ * \file src/core/utils.c
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
- * \brief Internal core utilities (header file)
+ * \brief Internal core utilities (source file)
  * \date 2018
  */
 
@@ -38,16 +38,23 @@
  * if advised of the possibility of such damage.
  *
  */
-#ifndef IPFIXCOL_UTILS_H
-#define IPFIXCOL_UTILS_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+// Make sure that XSI-version is used
+#undef _GNU_SOURCE
+#define _POSIX_C_SOURCE 200809L
 
-#include <ipfixcol2.h>
+#include <string.h>
+#include <stdio.h>
+#include "utils.h"
 
-#ifdef __cplusplus
+int
+ipx_strerror_fn(int errnum, char *buffer, size_t buffer_size)
+{
+    // Expecting XSI strerror_r version
+    if (strerror_r(errnum, buffer, buffer_size) == 0) {
+        return IPX_OK;
+    }
+
+    snprintf(buffer, buffer_size, "strerror_r() failed: Unable process error code %d!", errnum);
+    return IPX_ERR_ARG;
 }
-#endif
-#endif // IPFIXCOL_UTILS_H
