@@ -54,7 +54,7 @@ Mandatory parameters:
 :``localPort``:
     Local port on which the plugin listens. [default: 4739]
 :``localIPAddress``:
-    Local IPv4/IPv6 address an which the UDP input plugin listens. If the element
+    Local IPv4/IPv6 address on which the UDP input plugin listens. If the element
     is left empty, the plugin binds to all available network interfaces. The element can occur
     multiple times (one IP address per occurrence) to manually select multiple interfaces.
     [default: empty]
