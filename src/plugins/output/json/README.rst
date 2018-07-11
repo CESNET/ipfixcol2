@@ -186,7 +186,8 @@ Notes
 -----
 
 If one or more Information Element definitions are missing, you can easily add them.
-All definitions are provided by libfds library. See the project website for help.
+All definitions are provided by `libfds <https://github.com/CESNET/libfds/>`_ library.
+See the project website for help.
 
 For higher performance, it is advisable to use non-formatted conversion of IPFIX data types.
 If performance matters, you should prefer, for example, timestamps as numbers over ISO 8601 strings.
