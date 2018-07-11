@@ -5,6 +5,9 @@ IPFIXcol is a flexible, high-performance IPFIX flow data collector designed to b
 by plugins. The second generation of the collector includes many design and performance enhancements
 compared to the original `IPFIXcol <https://github.com/CESNET/ipfixcol/>`_.
 
+.. image:: doc/main_img.svg
+    :height: 400
+
 The collector allows you to choose combination of input, intermediate and output plugins that
 best suit your needs. Do you need to receive data over UDP/TCP and store them for long term
 preservation? Or, do you prefer conversion to JSON and processing by other systems?
@@ -16,9 +19,6 @@ No problem, pick any combination of plugins.
 - Parallelized design for high-performance
 - Support for bidirectional flows (biflow)
 - Built-in support for many Enterprise-Specific Information Elements (Cisco, Netscaler, etc.)
-
-.. image:: doc/main_img.svg
-    :height: 400
 
 Available plugins
 -----------------
