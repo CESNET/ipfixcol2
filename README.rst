@@ -6,7 +6,6 @@ by plugins. The second generation of the collector includes many design and perf
 compared to the original `IPFIXcol <https://github.com/CESNET/ipfixcol/>`_.
 
 .. image:: doc/main_img.svg
-    :height: 400
 
 The collector allows you to choose combination of input, intermediate and output plugins that
 best suit your needs. Do you need to receive data over UDP/TCP and store them for long term
