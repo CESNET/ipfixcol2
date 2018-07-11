@@ -17,6 +17,9 @@ No problem, pick any combination of plugins.
 - Support for bidirectional flows (biflow)
 - Built-in support for many Enterprise-Specific Information Elements (Cisco, Netscaler, etc.)
 
+.. image:: doc/main_img.svg
+    :height: 400
+
 Available plugins
 -----------------
 
@@ -101,10 +104,11 @@ be useful also for other users? Please, share your experience and thoughts.
 
 ----
 
-:Q: How to...?
+:Q: How to...? UDP or TCP
 :A: You should...
 
-----
+:Q: How to...? UDP and no records
+:A: You should...
 
 :Q: How can I add more IPFIX fields into records?
 :A: The collector receives flow records captured and prepared by an exporter. IPFIX is an
