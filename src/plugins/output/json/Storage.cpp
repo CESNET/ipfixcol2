@@ -663,8 +663,8 @@ Storage::add_field_name(const struct fds_drec_field &field)
     const struct fds_iemgr_elem *def = field.info->def;
 
     if (def == nullptr) {
-        // Unknown field - max length is "\"e" + 10x <en> + ":id" + 5x <id> + '\"\0'
-        snprintf(raw_name, raw_size, "\"e%" PRIu32 ":id%" PRIu16 "\":", field.info->en,
+        // Unknown field - max length is "\"en" + 10x <en> + ":id" + 5x <id> + '\"\0'
+        snprintf(raw_name, raw_size, "\"en%" PRIu32 ":id%" PRIu16 "\":", field.info->en,
             field.info->id);
         buffer_append(raw_name);
         return;
