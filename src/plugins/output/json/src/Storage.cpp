@@ -708,7 +708,7 @@ Storage::convert(struct fds_drec &rec)
     struct fds_drec_iter iter;
     fds_drec_iter_init(&iter, &rec, flags);
 
-    while (fds_drec_iter_next(&iter) != FDS_ERR_NOTFOUND) {
+    while (fds_drec_iter_next(&iter) != FDS_EOC) {
         // Separate fields
         if (added != 0) {
             // Add comma

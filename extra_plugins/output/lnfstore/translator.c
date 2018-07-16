@@ -513,7 +513,7 @@ translator_translate(translator_t *trans, struct fds_drec *ipfix_rec, lnf_rec_t 
     const size_t table_rec_size = sizeof(trans->table[0]);
     uint8_t * const buffer_ptr = trans->rec_buffer;
 
-    while (fds_drec_iter_next(&it) != FDS_ERR_NOTFOUND) {
+    while (fds_drec_iter_next(&it) != FDS_EOC) {
         // Find a conversion function
         const struct fds_tfield *info = it.field.info;
 
