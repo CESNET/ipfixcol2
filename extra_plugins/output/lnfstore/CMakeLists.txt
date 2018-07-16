@@ -59,22 +59,22 @@ include_directories(
 
 # Create a linkable module
 add_library(lnfstore-output MODULE
-	configuration.c
-	configuration.h
-	files_manager.c
-	files_manager.h
-	idx_manager.c
-	idx_manager.h
-	lnfstore.c
-	lnfstore.h
-	storage_basic.c
-	storage_basic.h
-	storage_common.c
-	storage_common.h
-	translator.c
-	translator.h
-	utils.c
-	utils.h
+	src/configuration.c
+	src/configuration.h
+	src/files_manager.c
+	src/files_manager.h
+	src/idx_manager.c
+	src/idx_manager.h
+	src/lnfstore.c
+	src/lnfstore.h
+	src/storage_basic.c
+	src/storage_basic.h
+	src/storage_common.c
+	src/storage_common.h
+	src/translator.c
+	src/translator.h
+	src/utils.c
+	src/utils.h
 )
 
 target_link_libraries(lnfstore-output
