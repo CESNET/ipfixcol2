@@ -25,8 +25,8 @@ Available plugins
 **Input plugins** - receive IPFIX data. Each can be configured to to listen on a specific
 network interface and a port. Multiple instances of these plugins can run concurrently.
 
-- UDP - receives IPFIX over UDP
-- TCP - receives IPFIX over TCP
+- `UDP <src/plugins/input/udp>`_ - receives IPFIX over UDP
+- `TCP <src/plugins/input/tcp>`_ - receives IPFIX over TCP
 
 **Intermediate plugins** - modify, enrich and filter flow records.
 
@@ -34,9 +34,9 @@ network interface and a port. Multiple instances of these plugins can run concur
 
 **Output plugins** - store or forward your flows.
 
-- json - convert flow records to JSON and send/store them
+- `JSON <src/plugins/output/json>`_ - convert flow records to JSON and send/store them
 - dummy - simple module example,
-- lnfstore (*) - store all flows in nfdump compatible format for long-term preservation
+- `lnfstore <extra_plugins/output/lnfstore>`_ (*) - store all flows in nfdump compatible format for long-term preservation
 
 \* Must be installed individually due to extra dependencies
 
