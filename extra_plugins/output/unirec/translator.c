@@ -41,7 +41,7 @@
 
 #include <string.h>
 #include <inttypes.h>
-#include "lnfstore.h"
+#include "unirecplugin.h"
 #include "translator.h"
 #include <unirec/unirec.h>
 

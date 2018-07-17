@@ -1,6 +1,7 @@
 /**
  * \file configuration.c
- * \author Lukas Hutak <lukas.hutak@cesnet.cz>
+ * \author Tomas Cejka <cejkat@cesnet.cz>
+ * \author Jaroslav Hlavac <hlavaj20@fit.cvut.cz>
  * \brief Configuration parser (source file)
  */
 
@@ -39,7 +40,7 @@
  */
 
 #include "configuration.h"
-#include "lnfstore.h"
+#include "unirecplugin.h"
 
 #include <stdlib.h>
 #include <inttypes.h>
@@ -130,44 +131,44 @@ configuration_validate(ipx_ctx_t *ctx, const struct conf_params *cfg)
 {
     int ret_code = IPX_OK;
 
-    if (!cfg->profiles.en && !cfg->files.path) {
-        IPX_CTX_ERROR(ctx, "Storage path is not set.", '\0');
-        ret_code = IPX_ERR_FORMAT;
-    }
+    //if (!cfg->profiles.en && !cfg->files.path) {
+    //    IPX_CTX_ERROR(ctx, "Storage path is not set.", '\0');
+    //    ret_code = IPX_ERR_FORMAT;
+    //}
 
-    if (!cfg->files.suffix) {
-        IPX_CTX_ERROR(ctx, "File suffix is not set.", '\0');
-        ret_code = IPX_ERR_FORMAT;
-    }
+    //if (!cfg->files.suffix) {
+    //    IPX_CTX_ERROR(ctx, "File suffix is not set.", '\0');
+    //    ret_code = IPX_ERR_FORMAT;
+    //}
 
-    if (!cfg->file_lnf.prefix) {
-        IPX_CTX_ERROR(ctx, "LNF file prefix is not set.", '\0');
-        ret_code = IPX_ERR_FORMAT;
-    }
+    //if (!cfg->file_lnf.prefix) {
+    //    IPX_CTX_ERROR(ctx, "LNF file prefix is not set.", '\0');
+    //    ret_code = IPX_ERR_FORMAT;
+    //}
 
-    if (cfg->file_index.en) {
-        if (!cfg->file_index.prefix) {
-            IPX_CTX_ERROR(ctx, "Index file prefix is not set.", '\0');
-            ret_code = IPX_ERR_FORMAT;
-        }
+    //if (cfg->file_index.en) {
+    //    if (!cfg->file_index.prefix) {
+    //        IPX_CTX_ERROR(ctx, "Index file prefix is not set.", '\0');
+    //        ret_code = IPX_ERR_FORMAT;
+    //    }
 
-        if (cfg->file_index.est_cnt == 0) {
-            IPX_CTX_ERROR(ctx, "Estimated item count in Bloom Filter Index must be greater "
-                "than 0.", '\0');
-            ret_code = IPX_ERR_FORMAT;
-        }
+    //    if (cfg->file_index.est_cnt == 0) {
+    //        IPX_CTX_ERROR(ctx, "Estimated item count in Bloom Filter Index must be greater "
+    //            "than 0.", '\0');
+    //        ret_code = IPX_ERR_FORMAT;
+    //    }
 
-        // Check output prefixes
-        if (strcmp(cfg->file_index.prefix, cfg->file_lnf.prefix) == 0) {
-            IPX_CTX_ERROR(ctx, "The same file prefix for LNF and Index file is not allowed");
-            ret_code = IPX_ERR_FORMAT;
-        }
-    }
+    //    // Check output prefixes
+    //    if (strcmp(cfg->file_index.prefix, cfg->file_lnf.prefix) == 0) {
+    //        IPX_CTX_ERROR(ctx, "The same file prefix for LNF and Index file is not allowed");
+    //        ret_code = IPX_ERR_FORMAT;
+    //    }
+    //}
 
-    if (cfg->window.size == 0) {
-        IPX_CTX_ERROR(ctx, "Window size must be greater than 0.", '\0');
-        ret_code = IPX_ERR_FORMAT;
-    }
+    //if (cfg->window.size == 0) {
+    //    IPX_CTX_ERROR(ctx, "Window size must be greater than 0.", '\0');
+    //    ret_code = IPX_ERR_FORMAT;
+    //}
 
     return ret_code;
 }
@@ -183,37 +184,37 @@ static int
 configuration_set_defaults(ipx_ctx_t *ctx, struct conf_params *cnf)
 {
     cnf->ctx = ctx;
-    cnf->profiles.en = false; // Disabled by default
+    //cnf->profiles.en = false; // Disabled by default
 
     // Dump interval
-    cnf->window.align = true;
-    cnf->window.size = WINDOW_SIZE;
+    //cnf->window.align = true;
+    //cnf->window.size = WINDOW_SIZE;
 
     // Files (common)
-    cnf->files.suffix = strdup(SUFFIX_MASK);
-    if (!cnf->files.suffix) {
-        IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
-        return 1;
-    }
+    //cnf->files.suffix = strdup(SUFFIX_MASK);
+    //if (!cnf->files.suffix) {
+    //    IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+    //    return 1;
+    //}
 
     // LNF file
-    cnf->file_lnf.compress = false;
-    cnf->file_lnf.prefix = strdup(LNF_FILE_PREFIX);
-    if (!cnf->file_lnf.prefix) {
-        IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
-        return 1;
-    }
+    //cnf->file_lnf.compress = false;
+    //cnf->file_lnf.prefix = strdup(LNF_FILE_PREFIX);
+    //if (!cnf->file_lnf.prefix) {
+    //    IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+    //    return 1;
+    //}
 
-    // Index file
-    cnf->file_index.en = false;
-    cnf->file_index.autosize = true;
-    cnf->file_index.est_cnt = BF_DEFAULT_ITEM_CNT_EST;
-    cnf->file_index.fp_prob = BF_DEFAULT_FP_PROB;
-    cnf->file_index.prefix = strdup(BF_FILE_PREFIX);
-    if (!cnf->file_index.prefix) {
-        IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
-        return 1;
-    }
+    //// Index file
+    //cnf->file_index.en = false;
+    //cnf->file_index.autosize = true;
+    //cnf->file_index.est_cnt = BF_DEFAULT_ITEM_CNT_EST;
+    //cnf->file_index.fp_prob = BF_DEFAULT_FP_PROB;
+    //cnf->file_index.prefix = strdup(BF_FILE_PREFIX);
+    //if (!cnf->file_index.prefix) {
+    //    IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+    //    return 1;
+    //}
 
     return 0;
 }
@@ -238,11 +239,11 @@ configuration_parse_dump(ipx_ctx_t *ctx, fds_xml_ctx_t *dump, struct conf_params
                 return IPX_ERR_DENIED;
             }
 
-            cnf->window.size = (uint32_t) content->val_uint;
+            //cnf->window.size = (uint32_t) content->val_uint;
             break;
         case DUMP_ALIGN:
             assert(content->type == FDS_OPTS_T_BOOL);
-            cnf->window.align = content->val_bool;
+            //cnf->window.align = content->val_bool;
             break;
         default:
             assert(false);
@@ -269,19 +270,19 @@ configuration_parse_idx(ipx_ctx_t *ctx, fds_xml_ctx_t *idx, struct conf_params *
         switch (content->id) {
         case IDX_ENABLE:
             assert(content->type == FDS_OPTS_T_BOOL);
-            cnf->file_index.en = content->val_bool;
+            //cnf->file_index.en = content->val_bool;
             break;
         case IDX_AUTOSIZE:
             assert(content->type == FDS_OPTS_T_BOOL);
-            cnf->file_index.autosize = content->val_bool;
+            //cnf->file_index.autosize = content->val_bool;
             break;
         case IDX_COUNT:
             assert(content->type == FDS_OPTS_T_UINT);
-            cnf->file_index.est_cnt = content->val_uint;
+            //cnf->file_index.est_cnt = content->val_uint;
             break;
         case IDX_PROB:
             assert(content->type == FDS_OPTS_T_DOUBLE);
-            cnf->file_index.fp_prob = content->val_double; // checked later in validator
+            //cnf->file_index.fp_prob = content->val_double; // checked later in validator
             break;
         default:
             assert(false);
@@ -306,22 +307,22 @@ configuration_parse_root(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct conf_params
         switch (content->id) {
         case NODE_STORAGE:
             assert(content->type == FDS_OPTS_T_STRING);
-            cnf->files.path = utils_path_preprocessor(content->ptr_string);
-            if (!cnf->files.path) {
-                const char *err_str;
-                ipx_strerror(errno, err_str);
-                IPX_CTX_ERROR(ctx, "Failed to process the <storagePath> expression: %s", err_str);
-                return IPX_ERR_DENIED;
-            }
+            //cnf->files.path = content->ptr_string;
+            //if (!cnf->files.path) {
+            //    const char *err_str;
+            //    ipx_strerror(errno, err_str);
+            //    IPX_CTX_ERROR(ctx, "Failed to process the <storagePath> expression: %s", err_str);
+            //    return IPX_ERR_DENIED;
+            //}
             break;
         case NODE_ID_FIELD:
             assert(content->type == FDS_OPTS_T_STRING);
-            free(cnf->file_lnf.ident);
-            cnf->file_lnf.ident = strdup(content->ptr_string);
+            //free(cnf->file_lnf.ident);
+            //cnf->file_lnf.ident = strdup(content->ptr_string);
             break;
         case NODE_COMPRESS:
             assert(content->type == FDS_OPTS_T_BOOL);
-            cnf->file_lnf.compress = content->val_bool;
+            //cnf->file_lnf.compress = content->val_bool;
             break;
         case NODE_DUMP:
             assert(content->type == FDS_OPTS_T_CONTEXT);
@@ -405,29 +406,26 @@ configuration_parse(ipx_ctx_t *ctx, const char *params)
 }
 
 void
-configuration_free(struct conf_params *config)
+configuration_free(struct conf_params *c)
 {
-    if (!config) {
+    if (!c) {
         return;
     }
 
-    free(config->files.path);
+    free(c->trap_ifc_socket);
+    c->trap_ifc_socket = NULL;
 
-    if (config->files.suffix) {
-        free(config->files.suffix);
-    }
+    free(c->trap_ifc_timeout);
+    c->trap_ifc_timeout = NULL;
 
-    if (config->file_lnf.prefix) {
-        free(config->file_lnf.prefix);
-    }
+    free(c->trap_ifc_autoflush);
+    c->trap_ifc_autoflush = NULL;
 
-    if (config->file_lnf.ident) {
-        free(config->file_lnf.ident);
-    }
+    free(c->trap_ifc_bufferswitch);
+    c->trap_ifc_bufferswitch = NULL;
 
-    if (config->file_index.prefix) {
-        free(config->file_index.prefix);
-    }
+    free(c->unirec_format);
+    c->unirec_format = NULL;
 
-    free(config);
+    free(c);
 }

@@ -1,9 +1,8 @@
 /**
- * \file lnfstore.h
- * \author Imrich Stoffa <xstoff02@stud.fit.vutbr.cz>
- * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
- * \author Pavel Krobot <Pavel.Krobot@cesnet.cz>
- * \brief lnfstore plugin interface (header file)
+ * \file unirecplugin.h
+ * \author Tomas Cejka <cejkat@cesnet.cz>
+ * \author Jaroslav Hlavac <hlavaj20@fit.cvut.cz>
+ * \brief UniRec plugin interface (header file)
  *
  * Copyright (C) 2015, 2016 CESNET, z.s.p.o.
  *
@@ -39,8 +38,8 @@
  *
  */
 
-#ifndef LS_LNFSTORE_H
-#define LS_LNFSTORE_H
+#ifndef IPFIX_UNIREC_H
+#define IPFIX_UNIREC_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -56,15 +55,11 @@ extern const char *msg_module;
 /**
  * \brief Plugin instance structure
  */
-struct conf_unirecstore {
+struct conf_unirec {
     struct conf_params *params; /**< Configuration from XML file             */
-    time_t window_start;        /**< Start of the current window             */
 
-    struct {
-        //lnf_rec_t *rec_ptr;       /**< LNF record (converted IPFIX record)   */
-        translator_t *translator; /**< IPFIX to LNF translator               */
-    } record; /**< Record conversion */
+    translator_t *translator; /**< IPFIX to UniRec translator               */
 };
 
 
-#endif //LS_LNFSTORE_H
+#endif //IPFIX_UNIREC_H

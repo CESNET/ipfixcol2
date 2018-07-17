@@ -1,6 +1,7 @@
 /**
- * \file configuration.c
+ * \file configuration.h
  * \author Tomas Cejka <cejkat@cesnet.cz>
+ * \author Jaroslav Hlavac <hlavaj20@fit.cvut.cz>
  * \brief Configuration parser (header file)
  */
 /* Copyright (C) 2018 CESNET, z.s.p.o.
@@ -59,38 +60,49 @@
 struct conf_params {
     ipx_ctx_t *ctx;     /**< Context of the instance (only for log!)         */
 
-    struct {
-        char *path;     /**< Storage directory template.
-                          *  This can be NULL only when profiles.en == true  */
-        char *suffix;   /**< Common file suffix                              */
-    } files;   /**< Common storage templates */
+    /**
+     * TRAP interface type, e.g. t is for TCP, see https://nemea.liberouter.org/trap-ifcspec/
+     */
+    char trap_ifc_type;
 
-    struct {
-        char *prefix;     /**< File prefix (can be NULL)                     */
-        char *ident;      /**< Internal file identification (can be NULL)    */
-        bool  compress;   /**< Enable/disable LZO compression                */
-    } file_lnf; /**< LNF configuration */
+    /**
+     * TRAP interface port / socket identifier. UniRec flows will be sent to this port
+     */
+    char *trap_ifc_socket;
 
-    struct {
-        bool  en;          /**< Enable/disable indexing. When disabled, other
-                             *  parameters in this structure are undefined. */
-        char *prefix;      /**< File prefix                                  */
-        bool  autosize;    /**< Enable autosize                              */
+    /**
+     * TRAP interface timeout. it can be "NO_WAIT"/"HALF_WAIT"/"WAIT"/<number>
+     */
+    char *trap_ifc_timeout;
 
-        uint64_t est_cnt;  /**< Estimated item count in the filter           */
-        double fp_prob;    /**< False positive probability of the filter     */
-    } file_index;          /**< Bloom Filter Index configuration  */
+    /**
+     * TRAP interface flush "off" or timeout in micro seconds
+     */
+    char *trap_ifc_autoflush;
 
-    struct {
-        bool     align;   /**< Enable/disable window alignment               */
-        uint32_t size;    /**< Time window size                              */
-    } window;   /**< Window alignment */
+    /**
+     * TRAP interface buffer "on"/"off" or timeout in micro seconds
+     */
+    char *trap_ifc_bufferswitch;
 
-    struct {
-        bool en;          /**< Enable/disable files generation based on
-                            * profiles. When it is enabled, files.path is
-                            * ignored                                        */
-    } profiles; /**< Profiles configuration                                  */
+    /**
+     * TRAP interface UniRec template, elements marked with '?' are optional and might not be filled (e.g. TCP_FLAGS)
+     * <UniRecFormat>DST_IP,SRC_IP,BYTES,DST_PORT,?TCP_FLAGS,SRC_PORT,PROTOCOL</UniRecFormat>
+     * all fields must be contained in unirec-elements.txt
+     */
+    char *unirec_format;
+
+    /**
+     * A bit map representing the UR template that has all required fields set to 1.
+     */
+    uint64_t bitmap_required;
+
+    /**
+     * A bit map representing the UR template with all fields that were not filled set to 1.
+     *
+     * Index of a field in bitmap_required and bitmap_tofill can be the same as in ur_template_t.
+     */
+    uint64_t bitmap_tofill;
 };
 
 /**

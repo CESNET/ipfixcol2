@@ -48,8 +48,8 @@ include_directories(
 add_library(unirec-output MODULE
 	configuration.c
 	configuration.h
-	lnfstore.h
-        unirecstore.c
+	unirecplugin.h
+	unirecplugin.c
 	translator.c
 	translator.h
 )

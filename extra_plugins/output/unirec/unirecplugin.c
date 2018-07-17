@@ -1,10 +1,10 @@
 /**
- * \file lnfstore.c
- * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
- * \author Pavel Krobot <Pavel.Krobot@cesnet.cz>
- * \brief lnfstore plugin interface (source file)
+ * \file unirecstore.c
+ * \author Tomas Cejka <cejkat@cesnet.cz>
+ * \author Jaroslav Hlavac <hlavaj20@fit.cvut.cz>
+ * \brief unirecstore plugin interface (source file)
  *
- * Copyright (C) 2015 - 2018 CESNET, z.s.p.o.
+ * Copyright (C) 2018 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,14 +42,14 @@
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 
-#include "lnfstore.h"
+#include "unirecplugin.h"
 
 /** Plugin description */
 IPX_API struct ipx_plugin_info ipx_plugin_info = {
     // Plugin type
     .type = IPX_PT_OUTPUT,
     // Plugin identification name
-    .name = "unirecstore",
+    .name = "unirec",
     // Brief description of plugin
     .dsc = "Output plugin that sends flow records in UniRec format via TRAP communication interface (into NEMEA modules).",
     // Configuration flags (reserved for future use)
@@ -63,23 +63,26 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
 // Storage plugin initialization function.
 int
 ipx_plugin_init(ipx_ctx_t *ctx, const char *params) {
+    IPX_CTX_INFO(ctx, "UniRec plugin initialization.");
     // Process XML configuration
-    struct conf_params *parsed_params = configuration_parse(ctx, params);
-    if (!parsed_params) {
-        IPX_CTX_ERROR(ctx, "Failed to parse the plugin configuration.", '\0');
+    //struct conf_params *parsed_params = configuration_parse(ctx, params);
+    //if (!parsed_params) {
+    //    IPX_CTX_ERROR(ctx, "Failed to parse the plugin configuration.", '\0');
+    //    return IPX_ERR_DENIED;
+    //}
+    /* TODO delete: */
+    struct conf_params *parsed_params = calloc(1, sizeof(*parsed_params));
+
+
+    //// Create main plugin structure
+    struct conf_unirec *conf = calloc(1, sizeof(*conf));
+    if (!conf) {
+        IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+        configuration_free(parsed_params);
         return IPX_ERR_DENIED;
     }
 
-    //// Create main plugin structure
-    struct conf_unirecstore *conf = calloc(1, sizeof(*conf));
-    //if (!conf) {
-    //    IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
-    //    configuration_free(parsed_params);
-    //    return IPX_ERR_DENIED;
-    //}
-
-    //conf->params = parsed_params;
-    //
+    conf->params = parsed_params;
 
     /* Load IPFIX2UniRec mapping file */
 
@@ -131,7 +134,9 @@ int
 ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
 {
     (void) ctx;
-    struct conf_unirecstore *conf = (struct conf_unirecstore *) cfg;
+    struct conf_unirec *conf = (struct conf_unirec *) cfg;
+
+    IPX_CTX_INFO(ctx, "UniRec plugin process IPFIX message.");
 
     //// Decide whether close files and create new time window
     //time_t now = time(NULL);
@@ -189,21 +194,17 @@ void
 ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
 {
     (void) ctx;
-    struct conf_unirecstore *conf = (struct conf_unirecstore *) cfg;
+    struct conf_unirec *conf = (struct conf_unirec *) cfg;
 
-    // Destroy mode resources
-    //if (conf->params->profiles.en) {
-    //    stg_profiles_destroy(conf->storage.profiles);
-    //} else {
-    //    stg_basic_destroy(conf->storage.basic);
-    //}
+    IPX_CTX_INFO(ctx, "UniRec plugin finalization.");
 
     // Destroy a translator and a record
-    translator_destroy(conf->record.translator);
-    //lnf_rec_free(conf->record.rec_ptr);
+    //translator_destroy(conf->record.translator);
 
     // Destroy parsed XML configuration
     configuration_free(conf->params);
+
+
 
     // Destroy instance structure
     free(conf);
