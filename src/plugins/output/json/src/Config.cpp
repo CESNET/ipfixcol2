@@ -268,7 +268,7 @@ void
 Config::parse_send(fds_xml_ctx_t *send)
 {
     struct cfg_send output;
-    output.proto = cfg_send::proto::PROTO_UDP;
+    output.proto = cfg_send::SEND_PROTO_UDP;
     output.addr = "127.0.0.1";
     output.port = 4739;
 
@@ -294,7 +294,7 @@ Config::parse_send(fds_xml_ctx_t *send)
         case SEND_PROTO:
             assert(content->type == FDS_OPTS_T_STRING);
             output.proto = check_or("protocol", content->ptr_string, "UDP", "TCP")
-                ? cfg_send::proto::PROTO_UDP : cfg_send::proto::PROTO_TCP;
+                ? cfg_send::SEND_PROTO_UDP: cfg_send::SEND_PROTO_TCP;
             break;
         case SEND_BLOCK:
             assert(content->type == FDS_OPTS_T_BOOL);

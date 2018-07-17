@@ -42,10 +42,12 @@
 #include <stdexcept>
 #include <cstring>
 #include <limits>
-#include "Storage.hpp"
-#include "protocols.hpp"
 #include <cmath>
 #include <inttypes.h>
+
+using namespace std;
+#include "Storage.hpp"
+#include "protocols.hpp"
 
 /** Base size of the conversion buffer           */
 #define BUFFER_BASE   4096
@@ -305,7 +307,7 @@ Storage::to_float(const struct fds_drec_field &field)
         throw std::invalid_argument("Failed to convert a float number!");
     }
 
-    if (isfinite(value) != 0) {
+    if (std::isfinite(value)) {
         // Normal value
         const char *fmt = (field.size == sizeof(float))
             ? ("%." FDS_CONVERT_STRX(FLT_DIG) "g")  // float precision
@@ -661,8 +663,8 @@ Storage::add_field_name(const struct fds_drec_field &field)
     const struct fds_iemgr_elem *def = field.info->def;
 
     if (def == nullptr) {
-        // Unknown field - max length is "\"e" + 10x <en> + ":id" + 5x <id> + '\"\0'
-        snprintf(raw_name, raw_size, "\"e%" PRIu32 ":id%" PRIu16 "\":", field.info->en,
+        // Unknown field - max length is "\"en" + 10x <en> + ":id" + 5x <id> + '\"\0'
+        snprintf(raw_name, raw_size, "\"en%" PRIu32 ":id%" PRIu16 "\":", field.info->en,
             field.info->id);
         buffer_append(raw_name);
         return;
@@ -706,7 +708,7 @@ Storage::convert(struct fds_drec &rec)
     struct fds_drec_iter iter;
     fds_drec_iter_init(&iter, &rec, flags);
 
-    while (fds_drec_iter_next(&iter) != FDS_ERR_NOTFOUND) {
+    while (fds_drec_iter_next(&iter) != FDS_EOC) {
         // Separate fields
         if (added != 0) {
             // Add comma

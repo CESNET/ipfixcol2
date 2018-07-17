@@ -82,9 +82,9 @@ struct cfg_send : cfg_output {
     /** Blocking communication                                                                   */
     bool blocking;
     /** Transport Protocol                                                                       */
-    enum class proto {
-        PROTO_UDP,
-        PROTO_TCP
+    enum {
+        SEND_PROTO_UDP,
+        SEND_PROTO_TCP
     } proto; /**< Communication protocol                                                         */
 };
 

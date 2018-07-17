@@ -45,7 +45,6 @@
 #include <inttypes.h>
 
 #include "config.h"
-#include "../../input/dummy/config.h"
 
 /** Plugin description */
 IPX_API struct ipx_plugin_info ipx_plugin_info = {

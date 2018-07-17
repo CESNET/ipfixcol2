@@ -35,6 +35,7 @@ set(CORE_SOURCE
 	session.c
 	verbose.c
 	verbose.h
+	utils.c
 	utils.h
 
 	"${PROJECT_BINARY_DIR}/src/build_config.h"

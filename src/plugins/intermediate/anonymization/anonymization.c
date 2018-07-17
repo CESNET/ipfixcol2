@@ -160,7 +160,7 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
         struct fds_drec_iter it;
         fds_drec_iter_init(&it, &rec->rec, 0);
 
-        while (fds_drec_iter_next(&it) != FDS_ERR_NOTFOUND) {
+        while (fds_drec_iter_next(&it) != FDS_EOC) {
             const struct fds_tfield *info = it.field.info;
             if (info->def == NULL) {
                 // Skip unknown fields

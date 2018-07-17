@@ -40,7 +40,7 @@ set(SRC_ARCHIVE
 )
 
 # New target that will pack all source codes into a SRPM package and build RPM packages
-add_custom_target(rpm_package
+add_custom_target(rpm
 	COMMENT "Generating SRPM and RPM packages..."
 	WORKING_DIRECTORY "${RPM_BUILD_DIR}"
 
@@ -52,12 +52,12 @@ add_custom_target(rpm_package
 )
 
 # RPM target must call TGZ builder first
-add_dependencies(rpm_package
-	tgz_package
+add_dependencies(rpm
+	tgz
 )
 
 # Post build (show a message where RPM files are located)
-add_custom_command(TARGET rpm_package POST_BUILD
+add_custom_command(TARGET rpm POST_BUILD
 	WORKING_DIRECTORY "${RPM_BUILD_DIR}"
 	COMMENT "SRPM and RPM packages are located in ${RPM_BUILD_DIR}/"
 	COMMAND ;

@@ -13,10 +13,10 @@ set(CPACK_PACKAGE_VENDOR   "CESNET z.s.p.o.")
 # Short package description
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY  "IPFIX Collector Toolset")
 # Long package description
-set(CPACK_PACKAGE_DESCRIPTION "\
-IPFIXcol is a flexible IPFIX (RFC 7011) flow data collector designed to \
-be extensible by plugins.\
-")
+set(CPACK_PACKAGE_DESCRIPTION
+	"IPFIXcol is a flexible IPFIX (RFC 7011) flow data collector designed to "
+	"be extensible by plugins."
+)
 
 # Create a top level directory in an archive with the same name as the archive
 set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY 1)
@@ -53,8 +53,6 @@ if (NOT CPACK_PACKAGE_CONTACT OR CPACK_PACKAGE_CONTACT STREQUAL "")
 			"- using a name and email from the git configuration")
 		string(CONCAT CPACK_PACKAGE_CONTACT
 			${GIT_USER_NAME} " <" ${GIT_USER_EMAIL} ">")
-	else()
-		message(WARNING "Maintainer contact for packages is not specified.")
 	endif()
 endif()
 

@@ -54,7 +54,7 @@ if (${BUILD_TYPE_UPPER} STREQUAL "COVERAGE")
 	set(TESTS_DEFAULT ON)
 endif()
 
-option(ENABLE_DOC            "Enable documentation building"            ON)
+option(ENABLE_DOC            "Enable documentation building"            OFF)
 option(ENABLE_TESTS          "Build Unit tests (make test)"     ${TESTS_DEFAULT})
 option(ENABLE_TESTS_VALGRIND "Build Unit tests with Valgrind Memcheck"  OFF)
 option(PACKAGE_BUILDER_RPM   "Enable RPM package builder (make rpm)"    OFF)

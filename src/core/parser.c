@@ -790,7 +790,7 @@ parser_parse_tset(struct ipx_parser_data *pdata, struct fds_ipfix_set_hdr *tset)
         return rc_parse;
     }
 
-    if (rc_iter != FDS_ERR_NOTFOUND) {
+    if (rc_iter != FDS_EOC) {
         const struct ipx_msg_ctx *msg_ctx = &pdata->ipfix_msg->ctx;
         PARSER_ERROR(pdata->parser, msg_ctx, "Failed to parse an IPFIX (Options) Template (%s).",
             fds_tset_iter_err(&it));
@@ -872,7 +872,7 @@ parser_parse_dset(struct ipx_parser_data *pdata, struct fds_ipfix_set_hdr *dset)
         pdata->data_recs++;
     }
 
-    if (rc == FDS_ERR_NOTFOUND) {
+    if (rc == FDS_EOC) {
         return IPX_OK;
     }
 
@@ -962,7 +962,7 @@ parser_parse_message(struct ipx_parser_data *pdata)
         return rc_parse;
     }
 
-    if (rc_iter != FDS_ERR_NOTFOUND) {
+    if (rc_iter != FDS_EOC) {
         const struct ipx_msg_ctx *msg_ctx = &pdata->ipfix_msg->ctx;
         PARSER_ERROR(pdata->parser, msg_ctx, "Failed to parse an IPFIX Set (%s).",
             fds_sets_iter_err(&it));

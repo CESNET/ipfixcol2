@@ -85,11 +85,11 @@ add_custom_target(deb_hierarchy
 
 # DEB hierarchy requires already prepared TGZ archive
 add_dependencies(deb_hierarchy
-	tgz_package
+	tgz
 )
 
 # New target that will pack all source codes into a source package and build DEB packages
-add_custom_target(deb_package
+add_custom_target(deb
 	COMMENT "Generating source and DEB packages..."
 	WORKING_DIRECTORY ${DEB_UNPACKED_DIR}
 
@@ -98,12 +98,12 @@ add_custom_target(deb_package
 )
 
 # The directory structure must be prepared before package building
-add_dependencies(deb_package
+add_dependencies(deb
 	deb_hierarchy
 )
 
 # Post build (show a message where DEB files are located)
-add_custom_command(TARGET deb_package POST_BUILD
+add_custom_command(TARGET deb POST_BUILD
 	WORKING_DIRECTORY "${DEB_BUILD_DIR}"
 	COMMENT "Source and DEB packages are located in ${DEB_BUILD_DIR}/"
 	COMMAND ;

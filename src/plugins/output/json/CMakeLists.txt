@@ -1,20 +1,20 @@
 # Create a linkable module
 add_library(json-output MODULE
-	json.cpp
-	Config.cpp
-	Config.hpp
-	Storage.cpp
-	Storage.hpp
-	protocols.hpp
-	protocols.cpp
-	Printer.cpp
-	Printer.hpp
-	File.cpp
-	File.hpp
-	Server.cpp
-	Server.hpp
-	Sender.cpp
-	Server.hpp
+	src/json.cpp
+	src/Config.cpp
+	src/Config.hpp
+	src/Storage.cpp
+	src/Storage.hpp
+	src/protocols.hpp
+	src/protocols.cpp
+	src/Printer.cpp
+	src/Printer.hpp
+	src/File.cpp
+	src/File.hpp
+	src/Server.cpp
+	src/Server.hpp
+	src/Sender.cpp
+	src/Server.hpp
 )
 
 install(

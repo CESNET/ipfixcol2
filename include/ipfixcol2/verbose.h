@@ -146,10 +146,20 @@ enum ipx_verb_level {
 IPX_API void
 ipx_verb_ctx_print(enum ipx_verb_level level, const ipx_ctx_t *ctx, const char *fmt, ...);
 
-
-#ifndef __cplusplus
 /** Size of an error buffer message                                               */
 #define IPX_STRERROR_SIZE 128
+
+/**
+* \brief Convert standard error code to an error string (internal function)
+* \param[in] errnum      Error code
+* \param[in] buffer      Buffer for the error string
+* \param[in] buffer_size Size of the buffer
+* \return #IPX_OK on success and the \p buffer is properly filled
+* \return #IPX_ERR_ARG in case of invalid error code and the \p buffer is filled with an error
+ *   message
+*/
+IPX_API int
+ipx_strerror_fn(int errnum, char *buffer, size_t buffer_size);
 
 /**
  * \def ipx_strerror
@@ -166,17 +176,10 @@ ipx_verb_ctx_print(enum ipx_verb_level level, const ipx_ctx_t *ctx, const char *
  * \param[in]  errnum An error code
  * \param[out] buffer Pointer to the local buffer
  */
-#define ipx_strerror(errnum, buffer)                                                     \
-    char ipx_strerror_buffer[IPX_STRERROR_SIZE];                                         \
-    (buffer) = _Generic((&strerror_r),                                                   \
-        char *(*)(int, char *, size_t): /* GNU-specific   */                             \
-            strerror_r((errnum), ipx_strerror_buffer, IPX_STRERROR_SIZE),                \
-        int   (*)(int, char *, size_t): /* XSI-compliant  */                             \
-            (strerror_r((errnum), ipx_strerror_buffer, IPX_STRERROR_SIZE) >= 0           \
-                ? ipx_strerror_buffer                                                    \
-                : "Unknown error (strerror_r failed!)")                                  \
-    )
-#endif
+#define ipx_strerror(errnum, buffer)                                                       \
+    char ipx_strerror_buffer[IPX_STRERROR_SIZE];                                           \
+    ipx_strerror_fn((errnum), ipx_strerror_buffer, IPX_STRERROR_SIZE);                     \
+    (buffer) = ipx_strerror_buffer;
 
 /**@}*/
 #ifdef __cplusplus
