@@ -78,12 +78,12 @@ enum params_xml_nodes {
 /** Definition of the \<params\> node  */
 static const struct fds_xml_args args_params[] = {
     FDS_OPTS_ROOT("params"),
-    FDS_OPTS_ELEM(NODE_TRAP_IFC_TYPE,          "trapIfcType",         FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_ELEM(NODE_TRAP_IFC_TYPE,          "trapIfcType",         FDS_OPTS_T_INT, 0),
     FDS_OPTS_ELEM(NODE_TRAP_IFC_SOCKET,        "trapIfcSocket",       FDS_OPTS_T_STRING, 0),
     FDS_OPTS_ELEM(NODE_TRAP_IFC_TIMEOUT,       "trapIfcTimeout",      FDS_OPTS_T_STRING, 0),
     FDS_OPTS_ELEM(NODE_TRAP_IFC_FLUSH_TIMEOUT, "trapIfcFlushTimeout", FDS_OPTS_T_STRING, 0),
     FDS_OPTS_ELEM(NODE_TRAP_IFC_BUFFER_SWITCH, "trapIfcBufferSwitch", FDS_OPTS_T_STRING, 0),
-    FDS_OPTS_ELEM(NODE_UNIREC FORMAT,          "UniRecFormat",        FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_ELEM(NODE_UNIREC_FORMAT,          "UniRecFormat",        FDS_OPTS_T_STRING, 0),
     FDS_OPTS_END
 };
 
@@ -98,7 +98,7 @@ configuration_validate(ipx_ctx_t *ctx, const struct conf_params *cfg)
 {
     int ret_code = IPX_OK;
 
-    if (!cfg.trap_ifc_type) {
+    if (!cfg->trap_ifc_type) {
         IPX_CTX_ERROR(ctx, "Trap interface type is not set.", '\0');
         ret_code = IPX_ERR_FORMAT;
     }
@@ -129,8 +129,8 @@ configuration_parse_root(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct conf_params
     while(fds_xml_next(root, &content) != FDS_EOC) {
         switch (content->id) {
         case NODE_TRAP_IFC_TYPE:
-            assert(content->type == FDS_OPTS_T_STRING);
-            cnf->trap_ifc_type = content->ptr_string;
+            assert(content->type == FDS_OPTS_T_INT);
+            cnf->trap_ifc_type = content->val_int;
             break;
         case NODE_TRAP_IFC_SOCKET:
             assert(content->type == FDS_OPTS_T_STRING);
@@ -164,7 +164,7 @@ configuration_parse_root(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct conf_params
                 return IPX_ERR_NOMEM;
             }
             break;
-        case NODE_TRAP_IFC_UNIREC_FORMAT:
+        case NODE_UNIREC_FORMAT:
             assert(content->type == FDS_OPTS_T_STRING);
             cnf->unirec_format = strdup(content->ptr_string);
             if(cnf->unirec_format == NULL) {
@@ -263,9 +263,9 @@ configuration_free(struct conf_params *config)
     }
 
     if (config->unirec_format) {
-        free(c->unirec_format);
-        c->unirec_format = NULL;
+        free(config->unirec_format);
+        config->unirec_format = NULL;
     }
 
-    free(c);
+    free(config);
 }
