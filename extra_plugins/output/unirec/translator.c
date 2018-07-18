@@ -102,6 +102,207 @@ struct translator_table_rec
     translator_func func;
 };
 
+//***************************** COPIED FROM OLD PLUGIN *****************************
+// Path to unirec elements config file
+const char *UNIREC_ELEMENTS_FILE = "unirec-elements.txt"; //TODO is this where it should be located
+
+// Possible UniRec data types
+const char *unirec_data_types_str[] = {
+   "string", /*UR_TYPE_STRING*/
+   "bytes", /*UR_TYPE_BYTES*/
+   "char", /*UR_TYPE_CHAR*/
+   "uint8", /*UR_TYPE_UINT8*/
+   "int8", /*UR_TYPE_INT8*/
+   "uint16", /*UR_TYPE_UINT16*/
+   "int16", /*UR_TYPE_INT16*/
+   "uint32", /*UR_TYPE_UINT32*/
+   "int32", /*UR_TYPE_INT32*/
+   "uint64", /*UR_TYPE_UINT64*/
+   "int64", /*UR_TYPE_INT64*/
+   "float", /*UR_TYPE_FLOAT*/
+   "double", /*UR_TYPE_DOUBLE*/
+   "ipaddr", /*UR_TYPE_IP*/
+   "time", /*UR_TYPE_TIME*/
+};
+
+/**
+ * \brief Creates IPFIX id from string
+ *
+ * @param ipfixToken String in eXXidYY format, where XX is enterprise number and YY is element ID
+ * @return Returns id that is used to compare field against IPFIX template
+ */
+static ipfixElement ipfix_from_string(char *ipfixToken)
+{
+   ipfixElement element;
+   char *endptr;
+
+   element.en = strtol(ipfixToken + 1, &endptr, 10);
+   element.id = strtol(endptr + 2, (char **) NULL, 10);
+
+   return element;
+}
+
+static int8_t checkUnirecType(const char *type)
+{
+   int i;
+   for (i = 0; i < UNIREC_DATA_TYPES_COUNT; i++) {
+      if (strcmp(type, unirec_data_types_str[i]) == 0) {
+         return i;
+      }
+   }
+   return -1;
+}
+
+/**
+ * \brief Convert ipfix element id to unirec type for faster processing ipfix messages
+ * \param ipfix_el Ipfix element structure.
+ * \return One value from enum `unirecFieldEnum`.
+ */
+static int8_t getUnirecFieldTypeFromIpfixId(ipfixElement ipfix_el)
+{
+   uint16_t id = ipfix_el.id;
+   uint32_t en = ipfix_el.en;
+
+   if ((en == 0 && (id == 8 || id == 12)) ||
+         (en == 39499 && id== 40) ||
+      (en == 0 && (id == 27 || id == 28)) ||
+         (en == 39499 && id == 41)) {
+      // IP or INVEA_SIP_RTP_IP
+      return UNIREC_FIELD_IP;
+   } else if (en == 0 && id == 2) {
+      // Packets
+      return UNIREC_FIELD_PACKET;
+   } else if (en == 0 && (id == 152 || id == 153)) {
+      // Timestamps
+      return UNIREC_FIELD_TS;
+   } else if (en == 0 && id == 10) {
+      // DIR_BIT_FIELD
+      return UNIREC_FIELD_DBF;
+   } else if (en == 0 && id == 405) {
+      // LINK_BIT_FIELD
+      return UNIREC_FIELD_LBF;
+   } else {
+      // Other
+      return UNIREC_FIELD_OTHER;
+   }
+}
+
+
+/**
+ * \brief Loads all available elements from configuration file
+ * @return List of UniRec elements on success, NULL otherwise
+ */
+static unirecField *load_elements()
+{
+    FILE *uef = NULL;
+    char *line;
+    size_t lineSize = 100;
+    ssize_t res;
+    char *token, *state; /* Variables for strtok  */
+    unirecField *fields = NULL, *currentField = NULL;
+
+    /* Open the file */
+    uef = fopen(UNIREC_ELEMENTS_FILE, "r");
+    if (uef == NULL) {
+        //TODO unable to open message
+        return NULL;
+    }
+
+    /* Init buffer */
+    line = malloc(lineSize);
+    if (line == NULL ){
+        //TODO memory allocation message
+        fclose(uef);
+        return NULL;
+    }
+
+    /* Process all lines */
+    while (1) {
+        /* Read one line */
+        res = getline(&line, &lineSize, uef);
+        if (res <= 0) {
+           break;
+        }
+
+        /* Exclude comments */
+        if (line[0] == '#') continue;
+
+        /* Create new element structure, make space for ipfixElCount ipfix elements and NULL */
+        currentField = malloc(sizeof(unirecField));
+        if (currentField == NULL ){
+            //TODO memory allocation message
+            fclose(uef);
+            free(line);
+            return NULL;
+        }
+        currentField->name = NULL;
+        currentField->value = NULL;
+        currentField->offset_ar = NULL;
+        currentField->required_ar = NULL;
+        currentField->included_ar = NULL;
+
+        /* Read individual tokens */
+        int position = 0;
+        for (token = strtok_r(line, " \t", &state); token != NULL; token = strtok_r(NULL, " \t", &state), position++) {
+            switch (position) {
+            case 0:
+                currentField->name = strdup(token);
+                break;
+            case 1:
+                currentField->unirec_type = checkUnirecType(token);
+                if (currentField->unirec_type < 0) {
+                    //MSG_ERROR(msg_module, "Unknown UniRec data type \"%s\" of field \"%s\"", token, currentField->name);
+                    fclose(uef);
+                    free(line);
+                    return NULL;
+                }
+                break;
+            case 2:
+                currentField->size = atoi(token);
+                break;
+            case 3: {
+                /* Split the string */
+                char *ipfixToken, *ipfixState; /* Variables for strtok  */
+                int ipfixPosition = 0;
+                currentField->ipfixCount = 0;
+                for (ipfixToken = strtok_r(token, ",", &ipfixState);
+                     ipfixToken != NULL;
+                     ipfixToken = strtok_r(NULL, ",", &ipfixState), ipfixPosition++) {
+                    /* Enlarge the element if necessary */
+                    if (ipfixPosition > 0) {
+                        currentField = realloc(currentField, sizeof(unirecField) + (ipfixPosition) * sizeof(uint64_t));
+                    }
+                    /* Store the ipfix element id */
+                    currentField->ipfix[ipfixPosition] = ipfix_from_string(ipfixToken);
+                    currentField->ipfixCount++;
+                    /* Fill in Unirec field type based on ipfix element id */
+                    currentField->type = getUnirecFieldTypeFromIpfixId(currentField->ipfix[ipfixPosition]);
+                }
+                break;
+                } // case 3 end
+            } // switch end
+        }
+
+        /* Check that all necessary data was provided */
+        if (position < 3) {
+            if (currentField->name) {
+                free(currentField->name);
+            }
+            free(currentField);
+            continue;
+        }
+
+        currentField->next = fields;
+        fields = currentField;
+    }
+
+    fclose(uef);
+    free(line);
+
+    return fields;
+}
+//********************** END OF COPIED FROM OLD PLUGIN *****************************
+
 /**
  * \brief Global translator table
  * \warning Size of each LNF field is always 0 because a user must create its

@@ -46,6 +46,52 @@
 /** Internal definition of translator */
 typedef struct translator_s translator_t;
 
+//***************************** COPIED FROM OLD PLUGIN *****************************
+
+#define UNIREC_DATA_TYPES_COUNT 15 ///< Count of UniRec data types
+
+enum unirecFieldEnum {
+   UNIREC_FIELD_OTHER,
+   UNIREC_FIELD_IP,
+   UNIREC_FIELD_PACKET,
+   UNIREC_FIELD_TS,
+   UNIREC_FIELD_DBF,
+   UNIREC_FIELD_LBF
+};
+
+/** struct for ipfix elements' 2 ids */
+typedef struct ipfixElement {
+   uint16_t id;
+   uint32_t en;
+} ipfixElement;
+
+/** linked list of UnirecFields */
+typedef struct unirecField {
+   char *name;
+   int ur_id;
+   int8_t type;			/**< Used for faster processing, possible value are in `unirefFieldEnum` */
+   int8_t unirec_type;		/**< Used for generating data format string */
+   int8_t size;
+   int8_t required;
+   int8_t *required_ar;		/**< Array of interfaces numbers where this element is required */
+   int8_t *included_ar;		/**< Array of interfaces numbers where this element is included */
+   uint16_t *offset_ar;
+   struct unirecField *next;
+   struct unirecField *nextIfc;
+   void *value;				/**< Pointer to value of the field */
+   uint16_t valueSize;			/**< Size of the value */
+   uint8_t valueFilled;		/**< Is the value filled? */
+
+
+
+
+   /**< Number of ipfix elements */
+   int ipfixCount;
+   /**< https://tools.ietf.org/html/rfc5101#section-3.2 with masked size and EN for IANA elements */
+   ipfixElement ipfix[1];
+} unirecField;
+//***************************** END OF COPIED FROM OLD PLUGIN *****************************
+
 /**
  * \brief Create a new instance of a translator
  * \return Pointer to the instance or NULL.
