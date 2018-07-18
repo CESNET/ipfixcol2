@@ -109,7 +109,7 @@ struct translator_table_rec
  *   lnf_fld_info API function.
  */
 static const struct translator_table_rec translator_table_global[] = {
-    //{{0,   1}, {LNF_FLD_DOCTETS,     0, 0}, translate_uint},
+    {{0,   1}, {0,     0, 0}, translate_uint},
     //{{0,   2}, {LNF_FLD_DPKTS,       0, 0}, translate_uint},
     //{{0,   3}, {LNF_FLD_AGGR_FLOWS,  0, 0}, translate_uint},
     //{{0,   4}, {LNF_FLD_PROT,        0, 0}, translate_uint},

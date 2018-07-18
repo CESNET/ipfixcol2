@@ -38,11 +38,27 @@
  *
  */
 
+#define _GNU_SOURCE
 #include <ipfixcol2.h>
 #include <libtrap/trap.h>
+#include <stdio.h>
+#include <pthread.h>
 #include <unirec/unirec.h>
 
 #include "unirecplugin.h"
+
+static pthread_mutex_t urp_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/**
+ * UniRec plugin reference counter
+ *
+ * This counter represents number of created instances (threads) of this plugin.
+ * It must be incremented in init() and decremented in destroy().
+ */
+static uint8_t urp_refcount = 0;
+
+/* TODO move into unirec.h !!! */
+int ur_get_field_type_from_str(const char *type);
 
 /** Plugin description */
 IPX_API struct ipx_plugin_info ipx_plugin_info = {
@@ -60,6 +76,24 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
     .ipx_min = "2.0.0"
 };
 
+static char *
+clean_define_urtempl(const char *ut, void *pointer_to_ipx2urmap)
+{
+    char *res = strdup(ut);
+    size_t i, t;
+    size_t len = strlen(ut);
+    for (i = 0, t = 0; i < len; i++, t++) {
+        if (res[i] == '?') {
+            i++;
+        }
+        if (i > t) {
+            res[t] = res[i];
+        }
+    }
+    res[t] = 0;
+    return res;
+}
+
 // Storage plugin initialization function.
 int
 ipx_plugin_init(ipx_ctx_t *ctx, const char *params) {
@@ -72,9 +106,27 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params) {
     //}
     /* TODO delete: */
     struct conf_params *parsed_params = calloc(1, sizeof(*parsed_params));
+    parsed_params->trap_ifc_type = 'u';
+    parsed_params->trap_ifc_socket = strdup("ipfix-ur");
+    parsed_params->unirec_format = strdup("SRC_IP,DST_IP,?SRC_PORT,?DST_PORT,?TCP_FLAGS");
 
+    if (pthread_mutex_lock(&urp_mutex) == -1) {
+        return IPX_ERR_DENIED;
+    }
 
-    //// Create main plugin structure
+    /* TODO replace with unirec-elements.txt */
+    ur_define_field("SRC_IP",    ur_get_field_type_from_str("ipaddr"));
+    ur_define_field("DST_IP",    ur_get_field_type_from_str("ipaddr"));
+    ur_define_field("SRC_PORT",  ur_get_field_type_from_str("uint16"));
+    ur_define_field("DST_PORT",  ur_get_field_type_from_str("uint16"));
+    ur_define_field("PROTOCOL",  ur_get_field_type_from_str("uint8"));
+    ur_define_field("TCP_FLAGS", ur_get_field_type_from_str("uint8"));
+
+    if (pthread_mutex_unlock(&urp_mutex) == -1) {
+        return IPX_ERR_DENIED;
+    }
+
+    // Create main plugin structure
     struct conf_unirec *conf = calloc(1, sizeof(*conf));
     if (!conf) {
         IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
@@ -86,9 +138,38 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params) {
 
     /* Load IPFIX2UniRec mapping file */
 
-    /* Allocate UniRec template */
+    /* Clean UniRec template from '?' (optional fields) */
+    char *cleaned_urtemplate = clean_define_urtempl(parsed_params->unirec_format, NULL);
+    IPX_CTX_INFO(ctx, "Cleaned UniRec template: '%s'.", cleaned_urtemplate);
 
     /* Initialize TRAP Ctx */
+    char *ifc_spec;
+    int ret = asprintf(&ifc_spec, "%c:%s", parsed_params->trap_ifc_type, parsed_params->trap_ifc_socket);
+    if (ret == -1) {
+        IPX_CTX_ERROR(ctx, "Unable to create IFC spec (%s:%d)", __FILE__, __LINE__);
+        configuration_free(parsed_params);
+        return IPX_ERR_DENIED;
+    }
+    IPX_CTX_INFO(ctx, "Initialization of TRAP with IFCSPEC: '%s'.", ifc_spec);
+    conf->tctx = trap_ctx_init3("IPFIXcol2-UniRec", "UniRec output plugin for IPFIXcol2.",
+                                0, 1, ifc_spec, NULL /* replace with uniq name of service IFC based on */);
+    free(ifc_spec);
+    if (conf->tctx == NULL) {
+        IPX_CTX_ERROR(ctx, "Failed to initialize TRAP (%s:%d)", __FILE__, __LINE__);
+        configuration_free(parsed_params);
+        return IPX_ERR_DENIED;
+    }
+
+    /* Allocate UniRec template */
+    IPX_CTX_INFO(ctx, "Initialization of UniRec template.", ifc_spec);
+    char *errstring = NULL;
+    conf->urtmpl = ur_ctx_create_output_template(conf->tctx, 0, cleaned_urtemplate, &errstring);
+    if (conf->urtmpl == NULL) {
+        IPX_CTX_ERROR(ctx, "Failed to create UniRec template '%s' (%s:%d)", cleaned_urtemplate, __FILE__, __LINE__);
+        ipx_plugin_destroy(ctx, conf);
+        return IPX_ERR_DENIED;
+    }
+    free(cleaned_urtemplate);
 
 
     //// Init a LNF record for conversion from IPFIX
@@ -124,8 +205,20 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params) {
     //    free(conf);
     //}
 
+
+    if (pthread_mutex_lock(&urp_mutex) == -1) {
+        return IPX_ERR_DENIED;
+    }
+    /* increase number of UniRec plugin references */
+    urp_refcount++;
+    if (pthread_mutex_unlock(&urp_mutex) == -1) {
+        return IPX_ERR_DENIED;
+    }
+
     // Save the configuration
-    //ipx_ctx_private_set(ctx, conf);
+    ipx_ctx_private_set(ctx, conf);
+
+    IPX_CTX_INFO(ctx, "Plugin is ready.");
     return IPX_OK;
 }
 
@@ -195,6 +288,9 @@ ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
 {
     (void) ctx;
     struct conf_unirec *conf = (struct conf_unirec *) cfg;
+    if (conf == NULL) {
+        IPX_CTX_ERROR(ctx, "configuration is NULL! Skipping ipx_plugin_destroy()");
+    }
 
     IPX_CTX_INFO(ctx, "UniRec plugin finalization.");
 
@@ -204,8 +300,21 @@ ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
     // Destroy parsed XML configuration
     configuration_free(conf->params);
 
+    trap_ctx_finalize(&conf->tctx);
 
+    ur_free_template(conf->urtmpl);
 
+    if (pthread_mutex_lock(&urp_mutex) == -1) {
+        IPX_CTX_ERROR(ctx, "Could not lock. (%s:%d)", __FILE__, __LINE__);
+    }
+
+    if (--urp_refcount == 0) {
+        ur_finalize();
+    }
+
+    if (pthread_mutex_unlock(&urp_mutex) == -1) {
+        IPX_CTX_ERROR(ctx, "Could not unlock. (%s:%d)", __FILE__, __LINE__);
+    }
     // Destroy instance structure
     free(conf);
 }

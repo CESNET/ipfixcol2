@@ -58,6 +58,16 @@ extern const char *msg_module;
 struct conf_unirec {
     struct conf_params *params; /**< Configuration from XML file             */
 
+    /**
+     * TRAP context
+     */
+    trap_ctx_t *tctx;
+
+    /**
+     * UniRec template
+     */
+    ur_template_t *urtmpl;
+
     translator_t *translator; /**< IPFIX to UniRec translator               */
 };
 
