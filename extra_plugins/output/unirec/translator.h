@@ -43,6 +43,9 @@
 #include <ipfixcol2.h>
 #include <unirec/unirec.h>
 
+// Path to unirec elements config file
+const char *UNIREC_ELEMENTS_FILE = "unirec-elements.txt"; //TODO is this where it should be located
+
 /** Internal definition of translator */
 typedef struct translator_s translator_t;
 
