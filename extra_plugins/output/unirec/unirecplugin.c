@@ -99,16 +99,11 @@ int
 ipx_plugin_init(ipx_ctx_t *ctx, const char *params) {
     IPX_CTX_INFO(ctx, "UniRec plugin initialization.");
     // Process XML configuration
-    //struct conf_params *parsed_params = configuration_parse(ctx, params);
-    //if (!parsed_params) {
-    //    IPX_CTX_ERROR(ctx, "Failed to parse the plugin configuration.", '\0');
-    //    return IPX_ERR_DENIED;
-    //}
-    /* TODO delete: */
-    struct conf_params *parsed_params = calloc(1, sizeof(*parsed_params));
-    parsed_params->trap_ifc_type = 'u';
-    parsed_params->trap_ifc_socket = strdup("ipfix-ur");
-    parsed_params->unirec_format = strdup("SRC_IP,DST_IP,?SRC_PORT,?DST_PORT,?TCP_FLAGS");
+    struct conf_params *parsed_params = configuration_parse(ctx, params);
+    if (!parsed_params) {
+        IPX_CTX_ERROR(ctx, "Failed to parse the plugin configuration.", '\0');
+        return IPX_ERR_DENIED;
+    }
 
     if (pthread_mutex_lock(&urp_mutex) == -1) {
         return IPX_ERR_DENIED;

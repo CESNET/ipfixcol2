@@ -78,7 +78,7 @@ enum params_xml_nodes {
 /** Definition of the \<params\> node  */
 static const struct fds_xml_args args_params[] = {
     FDS_OPTS_ROOT("params"),
-    FDS_OPTS_ELEM(NODE_TRAP_IFC_TYPE,          "trapIfcType",         FDS_OPTS_T_INT, 0),
+    FDS_OPTS_ELEM(NODE_TRAP_IFC_TYPE,          "trapIfcType",         FDS_OPTS_T_STRING, 0),
     FDS_OPTS_ELEM(NODE_TRAP_IFC_SOCKET,        "trapIfcSocket",       FDS_OPTS_T_STRING, 0),
     FDS_OPTS_ELEM(NODE_TRAP_IFC_TIMEOUT,       "trapIfcTimeout",      FDS_OPTS_T_STRING, 0),
     FDS_OPTS_ELEM(NODE_TRAP_IFC_FLUSH_TIMEOUT, "trapIfcFlushTimeout", FDS_OPTS_T_STRING, 0),
@@ -129,8 +129,20 @@ configuration_parse_root(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct conf_params
     while(fds_xml_next(root, &content) != FDS_EOC) {
         switch (content->id) {
         case NODE_TRAP_IFC_TYPE:
-            assert(content->type == FDS_OPTS_T_INT);
-            cnf->trap_ifc_type = content->val_int;
+            assert(content->type == FDS_OPTS_T_STRING);
+            if (strcmp(content->ptr_string, "UNIXSOCKET") == 0) {
+                cnf->trap_ifc_type = 'u';
+            } else if (strcmp(content->ptr_string, "TCP") == 0) {
+                cnf->trap_ifc_type = 't';
+            } else if (strcmp(content->ptr_string, "TLS") == 0) {
+                cnf->trap_ifc_type = 'T';
+            } else if (strcmp(content->ptr_string, "FILE") == 0) {
+                cnf->trap_ifc_type = 'f';
+            } else if (strcmp(content->ptr_string, "BLACKHOLE") == 0) {
+                cnf->trap_ifc_type = 'b';
+            } else {
+                IPX_CTX_ERROR(ctx, "Unsupported trapIfcType.");
+            }
             break;
         case NODE_TRAP_IFC_SOCKET:
             assert(content->type == FDS_OPTS_T_STRING);
