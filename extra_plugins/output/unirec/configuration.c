@@ -80,9 +80,9 @@ static const struct fds_xml_args args_params[] = {
     FDS_OPTS_ROOT("params"),
     FDS_OPTS_ELEM(NODE_TRAP_IFC_TYPE,          "trapIfcType",         FDS_OPTS_T_STRING, 0),
     FDS_OPTS_ELEM(NODE_TRAP_IFC_SOCKET,        "trapIfcSocket",       FDS_OPTS_T_STRING, 0),
-    FDS_OPTS_ELEM(NODE_TRAP_IFC_TIMEOUT,       "trapIfcTimeout",      FDS_OPTS_T_STRING, 0),
-    FDS_OPTS_ELEM(NODE_TRAP_IFC_FLUSH_TIMEOUT, "trapIfcFlushTimeout", FDS_OPTS_T_STRING, 0),
-    FDS_OPTS_ELEM(NODE_TRAP_IFC_BUFFER_SWITCH, "trapIfcBufferSwitch", FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_ELEM(NODE_TRAP_IFC_TIMEOUT,       "trapIfcTimeout",      FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(NODE_TRAP_IFC_FLUSH_TIMEOUT, "trapIfcFlushTimeout", FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(NODE_TRAP_IFC_BUFFER_SWITCH, "trapIfcBufferSwitch", FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(NODE_UNIREC_FORMAT,          "UniRecFormat",        FDS_OPTS_T_STRING, 0),
     FDS_OPTS_END
 };
@@ -148,7 +148,7 @@ configuration_parse_root(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct conf_params
             assert(content->type == FDS_OPTS_T_STRING);
             cnf->trap_ifc_socket = strdup(content->ptr_string);
             if(cnf->trap_ifc_socket == NULL) {
-                IPX_CTX_ERROR(ctx, "Unable to allocate memory for trap interface socket.");
+                IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
                 return IPX_ERR_NOMEM;
             }
             break;
@@ -156,7 +156,7 @@ configuration_parse_root(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct conf_params
             assert(content->type == FDS_OPTS_T_STRING);
             cnf->trap_ifc_timeout = strdup(content->ptr_string);
             if(cnf->trap_ifc_timeout == NULL) {
-                IPX_CTX_ERROR(ctx, "Unable to allocate memory for trap interface timeout.");
+                IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
                 return IPX_ERR_NOMEM;
             }
             break;
@@ -164,7 +164,7 @@ configuration_parse_root(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct conf_params
             assert(content->type == FDS_OPTS_T_STRING);
             cnf->trap_ifc_autoflush = strdup(content->ptr_string);
             if(cnf->trap_ifc_autoflush == NULL) {
-                IPX_CTX_ERROR(ctx, "Unable to allocate memory for trap interface autoflush.");
+                IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
                 return IPX_ERR_NOMEM;
             }
             break;
@@ -172,7 +172,7 @@ configuration_parse_root(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct conf_params
             assert(content->type == FDS_OPTS_T_STRING);
             cnf->trap_ifc_bufferswitch = strdup(content->ptr_string);
             if(cnf->trap_ifc_bufferswitch == NULL) {
-                IPX_CTX_ERROR(ctx, "Unable to allocate memory for trap interface buffer switch.");
+                IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
                 return IPX_ERR_NOMEM;
             }
             break;
@@ -180,7 +180,7 @@ configuration_parse_root(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct conf_params
             assert(content->type == FDS_OPTS_T_STRING);
             cnf->unirec_format = strdup(content->ptr_string);
             if(cnf->unirec_format == NULL) {
-                IPX_CTX_ERROR(ctx, "Unable to allocate memory for unirec format.");
+                IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
                 return IPX_ERR_NOMEM;
             }
             break;
