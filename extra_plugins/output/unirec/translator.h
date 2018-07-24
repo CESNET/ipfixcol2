@@ -43,61 +43,131 @@
 #include <ipfixcol2.h>
 #include <unirec/unirec.h>
 
-/** Internal definition of translator */
-typedef struct translator_s translator_t;
+// Size of conversion buffer
+#define REC_BUFF_SIZE (65535)
 
-//***************************** COPIED FROM OLD PLUGIN *****************************
+struct translator_table_rec;
+struct conf_unirec;
 
-#define UNIREC_DATA_TYPES_COUNT 15 ///< Count of UniRec data types
+/**
+ * \typedef translator_func
+ * \brief Definition of conversion function
+ * \param[in]  field      Pointer to an IPFIX field to convert
+ * \param[in]  def        Definition of data conversion
+ * \param[out] buffer_ptr Pointer to the conversion buffer where LNF value
+ *   will be stored
+ * \return On success return 0. Otherwise returns a non-zero value.
+ */
+typedef int (*translator_func)(const struct fds_drec_field *field,
+    struct conf_unirec *conf, const struct translator_table_rec *def);
 
-enum unirecFieldEnum {
-   UNIREC_FIELD_OTHER,
-   UNIREC_FIELD_IP,
-   UNIREC_FIELD_PACKET,
-   UNIREC_FIELD_TS,
-   UNIREC_FIELD_DBF,
-   UNIREC_FIELD_LBF
-};
+/**
+ * \brief Conversion record
+ */
+typedef struct translator_table_rec
+{
+    /** Identification of the IPFIX Information Element              */
+    struct ipfix_s {
+        /** Private Enterprise Number of the Information Element     */
+        uint32_t pen;
+        /** ID of the Information Element within the PEN             */
+        uint16_t ie;
+    } ipfix;
+    uint8_t ipfix_priority;
+
+    /** Identification of the corresponding LNF Field */
+    ur_field_id_t ur_field_id;
+
+    /** Conversion function */
+    translator_func func;
+} translator_table_rec_t;
+
+typedef struct translator_s {
+    /** Instance context (only for log!) */
+    ipx_ctx_t *ctx;
+
+    /** Created and initialized UniRec template */
+    const ur_template_t *urtmpl;
+
+    /** Required UniRec fields to be filled */
+    uint8_t *req_fields;
+
+    /** UniRec fields that still must be filled by translate, it must be reinitialized for every IPFIX record */
+    uint8_t *todo_fields;
+
+    /**
+     * Map of UniRec field id and index into UniRec template/req_fields/todo_fields.
+     *
+     * field_idx[UniRec_FieldID] is the index of the field in req_fields
+     */
+    ur_field_id_t *field_idx;
+
+    /** Allocated size of the Private conversion table         */
+    size_t table_capacity;
+
+    /** Number of entries in the Private conversion table         */
+    size_t table_count;
+
+    /** Private conversion table         */
+    translator_table_rec_t *table;
+} translator_t;
 
 /** struct for ipfix elements' 2 ids */
 typedef struct ipfixElement {
    uint16_t id;
    uint32_t en;
-} ipfixElement;
+} ipfixElement_t;
 
 /** linked list of UnirecFields */
 typedef struct unirecField {
+   /**
+    * Name of UniRec field
+    */
    char *name;
-   int ur_id;
-   int8_t type;			/**< Used for faster processing, possible value are in `unirefFieldEnum` */
-   int8_t unirec_type;		/**< Used for generating data format string */
-   int8_t size;
-   int8_t required;
-   int8_t *required_ar;		/**< Array of interfaces numbers where this element is required */
-   int8_t *included_ar;		/**< Array of interfaces numbers where this element is included */
-   uint16_t *offset_ar;
+
+   /**
+    * Type of UniRec field as string, used to generate data format string
+    */
+   char *unirec_type_str;
+
+   /**
+    * Type of UniRec field
+    */
+   ur_field_type_t unirec_type;
+
+   /**
+    * Pointer to the next UniRec field
+    */
    struct unirecField *next;
-   struct unirecField *nextIfc;
-   void *value;				/**< Pointer to value of the field */
-   uint16_t valueSize;			/**< Size of the value */
-   uint8_t valueFilled;		/**< Is the value filled? */
-
-
-
 
    /**< Number of ipfix elements */
-   int ipfixCount;
-   /**< https://tools.ietf.org/html/rfc5101#section-3.2 with masked size and EN for IANA elements */
-   ipfixElement ipfix[1];
-} unirecField;
-//***************************** END OF COPIED FROM OLD PLUGIN *****************************
+   uint32_t ipfixCount;
+
+   /**
+    * IPFIX elements that are mapped to this UniRec field
+    */
+   ipfixElement_t ipfix[1];
+} unirecField_t;
+
+unirecField_t *load_IPFIX2UR_mapping(ipx_ctx_t *ctx, uint32_t *urcount, uint32_t *ipfixcount);
+
+void free_IPFIX2UR_map(unirecField_t *map);
 
 /**
  * \brief Create a new instance of a translator
  * \return Pointer to the instance or NULL.
  */
-translator_t *
-translator_init(ipx_ctx_t *ctx);
+translator_t *translator_init(ipx_ctx_t *ctx, unirecField_t *map, uint32_t ipfixfieldcount);
+
+/**
+ * \brief Initialize arrays related to the UniRec template
+ * \param[in,out] tr Context of translator
+ * \param[in] urtmpl Initialized UniRec template
+ * \param[in] urspec String containing a comma-separated list of UniRec field names, optionally with '?' to mark optional fields
+ *
+ * \return 0 on success, 1 on error
+ */
+int translator_init_urtemplate(translator_t *tr, ur_template_t *urtmpl, char *urspec);
 
 /**
  * \brief Destroy instance of a translator
@@ -116,7 +186,6 @@ translator_destroy(translator_t *trans);
  * \return Number of converted fields
  */
 int
-translator_translate(translator_t *trans, struct fds_drec *ipfix_rec, ur_template_t *urtmplt, void *data,
-    uint16_t flags);
+translator_translate(translator_t *trans, struct conf_unirec *conf, struct fds_drec *ipfix_rec, uint16_t flags);
 
 #endif //LS_TRANSLATOR_H

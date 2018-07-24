@@ -5,37 +5,37 @@
  * \brief Configuration parser (header file)
  */
 /* Copyright (C) 2018 CESNET, z.s.p.o.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted provided that the following conditions
-* are met:
-* 1. Redistributions of source code must retain the above copyright
-*    notice, this list of conditions and the following disclaimer.
-* 2. Redistributions in binary form must reproduce the above copyright
-*    notice, this list of conditions and the following disclaimer in
-*    the documentation and/or other materials provided with the
-*    distribution.
-* 3. Neither the name of the Company nor the names of its contributors
-*    may be used to endorse or promote products derived from this
-*    software without specific prior written permission.
-*
-* ALTERNATIVELY, provided that this notice is retained in full, this
-* product may be distributed under the terms of the GNU General Public
-* License (GPL) version 2 or later, in which case the provisions
-* of the GPL apply INSTEAD OF those given above.
-*
-* This software is provided ``as is, and any express or implied
-* warranties, including, but not limited to, the implied warranties of
-* merchantability and fitness for a particular purpose are disclaimed.
-* In no event shall the company or contributors be liable for any
-* direct, indirect, incidental, special, exemplary, or consequential
-* damages (including, but not limited to, procurement of substitute
-* goods or services; loss of use, data, or profits; or business
-* interruption) however caused and on any theory of liability, whether
-* in contract, strict liability, or tort (including negligence or
-* otherwise) arising in any way out of the use of this software, even
-* if advised of the possibility of such damage.
-*/
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is, and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ */
 
 #ifndef CONFIGURATION_H
 #define CONFIGURATION_H
@@ -58,7 +58,10 @@
  *   where the channel belongs.
  */
 struct conf_params {
-    ipx_ctx_t *ctx;     /**< Context of the instance (only for log!)         */
+    /**
+     * Context of the instance (only for log!)
+     */
+    ipx_ctx_t *ctx;
 
     /**
      * TRAP interface type, e.g. t is for TCP, see https://nemea.liberouter.org/trap-ifcspec/
@@ -91,36 +94,32 @@ struct conf_params {
      * all fields must be contained in unirec-elements.txt
      */
     char *unirec_format;
-
-    /**
-     * A bit map representing the UR template that has all required fields set to 1.
-     */
-    uint64_t bitmap_required;
-
-    /**
-     * A bit map representing the UR template with all fields that were not filled set to 1.
-     *
-     * Index of a field in bitmap_required and bitmap_tofill can be the same as in ur_template_t.
-     */
-    uint64_t bitmap_tofill;
 };
 
 /**
  * \brief Parse the plugin configuration
  *
  * \warning The configuration MUST be free by configuration_free() function.
+ * \param[in,out] ctx IPFIXcol2 context for output messages
  * \param[in] params XML configuration
  * \return On success returns a pointer to the configuration. Otherwise returns
  *   NULL.
  */
-struct conf_params *
-configuration_parse(ipx_ctx_t *ctx, const char *params);
+struct conf_params *configuration_parse(ipx_ctx_t *ctx, const char *params);
 
 /**
  * \brief Destroy the plugin configuration
  * \param[in,out] config Configuration
  */
-void
-configuration_free(struct conf_params *config);
+void configuration_free(struct conf_params *config);
+
+/**
+ * Concatenate arguments from parsed configuration and create ifc_spec for trap_init()
+ * \param[in,out] ctx IPFIXcol2 context for output messages
+ * \param[in] parsed_params Information from configuration file
+ * \return IFC specifier that can be passed to trap_*init()
+ */
+char *configuration_create_ifcspec(ipx_ctx_t *ctx, const struct conf_params *parsed_params);
 
 #endif // CONFIGURATION_H
+

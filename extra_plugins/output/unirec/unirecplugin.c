@@ -46,6 +46,7 @@
 #include <unirec/unirec.h>
 
 #include "unirecplugin.h"
+#include "fields.h"
 
 static pthread_mutex_t urp_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -56,9 +57,6 @@ static pthread_mutex_t urp_mutex = PTHREAD_MUTEX_INITIALIZER;
  * It must be incremented in init() and decremented in destroy().
  */
 static uint8_t urp_refcount = 0;
-
-/* TODO move into unirec.h !!! */
-int ur_get_field_type_from_str(const char *type);
 
 /** Plugin description */
 IPX_API struct ipx_plugin_info ipx_plugin_info = {
@@ -77,9 +75,13 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
 };
 
 static char *
-clean_define_urtempl(const char *ut, void *pointer_to_ipx2urmap)
+clean_define_urtempl(const char *ut)
 {
     char *res = strdup(ut);
+    if (res == NULL) {
+        return NULL;
+    }
+
     size_t i, t;
     size_t len = strlen(ut);
     for (i = 0, t = 0; i < len; i++, t++) {
@@ -96,64 +98,78 @@ clean_define_urtempl(const char *ut, void *pointer_to_ipx2urmap)
 
 // Storage plugin initialization function.
 int
-ipx_plugin_init(ipx_ctx_t *ctx, const char *params) {
+ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
+{
     IPX_CTX_INFO(ctx, "UniRec plugin initialization.");
     // Process XML configuration
     struct conf_params *parsed_params = configuration_parse(ctx, params);
     if (!parsed_params) {
-        IPX_CTX_ERROR(ctx, "Failed to parse the plugin configuration.", '\0');
-        return IPX_ERR_DENIED;
-    }
-
-    if (pthread_mutex_lock(&urp_mutex) == -1) {
-        return IPX_ERR_DENIED;
-    }
-
-    /* TODO replace with unirec-elements.txt */
-    ur_define_field("SRC_IP",    ur_get_field_type_from_str("ipaddr"));
-    ur_define_field("DST_IP",    ur_get_field_type_from_str("ipaddr"));
-    ur_define_field("SRC_PORT",  ur_get_field_type_from_str("uint16"));
-    ur_define_field("DST_PORT",  ur_get_field_type_from_str("uint16"));
-    ur_define_field("PROTOCOL",  ur_get_field_type_from_str("uint8"));
-    ur_define_field("TCP_FLAGS", ur_get_field_type_from_str("uint8"));
-
-    if (pthread_mutex_unlock(&urp_mutex) == -1) {
-        return IPX_ERR_DENIED;
+        IPX_CTX_ERROR(ctx, "Failed to parse the plugin configuration.");
+        goto error;
     }
 
     // Create main plugin structure
     struct conf_unirec *conf = calloc(1, sizeof(*conf));
     if (!conf) {
         IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
-        configuration_free(parsed_params);
-        return IPX_ERR_DENIED;
+        goto error;
     }
 
     conf->params = parsed_params;
 
     /* Load IPFIX2UniRec mapping file */
+    IPX_CTX_INFO(ctx, "Load IPFIX to UniRec mapping file");
+    unirecField_t *p;
+    uint32_t urfieldcount, ipfixfieldcount;
+    unirecField_t *map = load_IPFIX2UR_mapping(ctx, &urfieldcount, &ipfixfieldcount);
+    if (map == NULL) {
+        IPX_CTX_ERROR(ctx, "Failed to load IPFIX to UniRec mapping file (%s:%d)", __FILE__, __LINE__);
+        goto error;
+    }
 
-    /* Clean UniRec template from '?' (optional fields) */
-    char *cleaned_urtemplate = clean_define_urtempl(parsed_params->unirec_format, NULL);
-    IPX_CTX_INFO(ctx, "Cleaned UniRec template: '%s'.", cleaned_urtemplate);
+    if (pthread_mutex_lock(&urp_mutex) == -1) {
+        goto error;
+    }
+
+    for (p = map; p != NULL; p = p->next) {
+        IPX_CTX_INFO(ctx, "Defining %s %s", p->unirec_type_str, p->name);
+        ur_define_field(p->name, p->unirec_type);
+    }
+
+    if (pthread_mutex_unlock(&urp_mutex) == -1) {
+        goto error;
+    }
 
     /* Initialize TRAP Ctx */
-    char *ifc_spec;
-    int ret = asprintf(&ifc_spec, "%c:%s", parsed_params->trap_ifc_type, parsed_params->trap_ifc_socket);
-    if (ret == -1) {
-        IPX_CTX_ERROR(ctx, "Unable to create IFC spec (%s:%d)", __FILE__, __LINE__);
-        configuration_free(parsed_params);
-        return IPX_ERR_DENIED;
+    char *ifc_spec = configuration_create_ifcspec(ctx, parsed_params);
+    if (ifc_spec == NULL) {
+        goto error;
     }
+
     IPX_CTX_INFO(ctx, "Initialization of TRAP with IFCSPEC: '%s'.", ifc_spec);
     conf->tctx = trap_ctx_init3("IPFIXcol2-UniRec", "UniRec output plugin for IPFIXcol2.",
-                                0, 1, ifc_spec, NULL /* replace with uniq name of service IFC based on */);
+                                0, 1, ifc_spec, NULL /* TODO replace with some uniq name of service IFC */);
+
     free(ifc_spec);
+    ifc_spec = NULL;
+
     if (conf->tctx == NULL) {
         IPX_CTX_ERROR(ctx, "Failed to initialize TRAP (%s:%d)", __FILE__, __LINE__);
-        configuration_free(parsed_params);
-        return IPX_ERR_DENIED;
+        goto error;
     }
+    if (trap_ctx_get_last_error(conf->tctx) != TRAP_E_OK) {
+        IPX_CTX_ERROR(ctx, "Failed to initialize TRAP: %s (%s:%d)",
+                      trap_ctx_get_last_error_msg(conf->tctx), __FILE__, __LINE__);
+        goto error;
+    }
+
+    /* Clean UniRec template from '?' (optional fields) */
+    char *cleaned_urtemplate = clean_define_urtempl(parsed_params->unirec_format);
+    if (cleaned_urtemplate == NULL) {
+        IPX_CTX_ERROR(ctx, "Could not allocate memory (%s:%d).", __FILE__, __LINE__);
+        goto error;
+    }
+    IPX_CTX_INFO(ctx, "Cleaned UniRec template: '%s'.", cleaned_urtemplate);
 
     /* Allocate UniRec template */
     IPX_CTX_INFO(ctx, "Initialization of UniRec template.", ifc_spec);
@@ -161,53 +177,50 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params) {
     conf->urtmpl = ur_ctx_create_output_template(conf->tctx, 0, cleaned_urtemplate, &errstring);
     if (conf->urtmpl == NULL) {
         IPX_CTX_ERROR(ctx, "Failed to create UniRec template '%s' (%s:%d)", cleaned_urtemplate, __FILE__, __LINE__);
-        ipx_plugin_destroy(ctx, conf);
-        return IPX_ERR_DENIED;
+        goto error;
     }
     free(cleaned_urtemplate);
+    cleaned_urtemplate = NULL;
 
+    conf->translator = translator_init(ctx, map, ipfixfieldcount);
+    if (conf->translator == NULL) {
+        IPX_CTX_ERROR(ctx, "Failed to initialize a record translator.");
+        goto error;
+    }
 
-    //// Init a LNF record for conversion from IPFIX
-    //if (lnf_rec_init(&conf->record.rec_ptr) != LNF_OK) {
-    //    IPX_CTX_ERROR(ctx, "Failed to initialize an internal structure for conversion of records",
-    //        '\0');
-    //    configuration_free(parsed_params);
-    //    free(conf);
-    //    return IPX_ERR_DENIED;
-    //}
+    /* map is no longer needed, there is no copy, it can be deallocated */
+    free_IPFIX2UR_map(map);
+    map = NULL;
 
-    //conf->record.translator = translator_init(ctx);
-    //if (!conf->record.translator) {
-    //    IPX_CTX_ERROR(ctx, "Failed to initialize a record translator.", '\0');
-    //    lnf_rec_free(conf->record.rec_ptr);
-    //    configuration_free(parsed_params);
-    //    free(conf);
-    //    return IPX_ERR_DENIED;
-    //}
+    char *urtmpl_str = ur_template_string_delimiter(conf->urtmpl, ',');
+    IPX_CTX_INFO(ctx, "Using the following created UniRec template: \"%s\"", urtmpl_str);
+    free(urtmpl_str);
 
-    //// Init basic/profile file storage
-    ////if (conf->params->profiles.en) {
-    ////    conf->storage.profiles = stg_profiles_create(parsed_params);
-    ////} else {
-    ////    conf->storage.basic = stg_basic_create(ctx, parsed_params);
-    ////}
+    if (translator_init_urtemplate(conf->translator, conf->urtmpl, parsed_params->unirec_format) != 0) {
+        IPX_CTX_ERROR(ctx, "Could not allocate memory (%s:%d)", __FILE__, __LINE__);
+        goto error;
+    }
 
-    //if (!conf->storage.basic/* && !conf->storage.profiles*/) {
-    //    IPX_CTX_ERROR(ctx, "Failed to initialize an internal structure for file storage(s).", '\0');
-    //    translator_destroy(conf->record.translator);
-    //    lnf_rec_free(conf->record.rec_ptr);
-    //    configuration_free(parsed_params);
-    //    free(conf);
-    //}
+    for (size_t i = 0; i < conf->urtmpl->count; ++i) {
+        IPX_CTX_INFO(ctx, "\t%s\t%s", ur_get_name(conf->urtmpl->ids[i]), conf->translator->req_fields[i] ? "required" : "optional");
+    }
 
+    conf->ur_message = ur_create_record(conf->urtmpl, UR_MAX_SIZE);
+
+    if (conf->ur_message == NULL) {
+        IPX_CTX_ERROR(ctx, "Failed to allocate an UniRec record message.");
+        goto error;
+    }
 
     if (pthread_mutex_lock(&urp_mutex) == -1) {
-        return IPX_ERR_DENIED;
+        IPX_CTX_ERROR(ctx, "Could not lock (%s:%d)", __FILE__, __LINE__);
+        goto error;
     }
     /* increase number of UniRec plugin references */
     urp_refcount++;
     if (pthread_mutex_unlock(&urp_mutex) == -1) {
-        return IPX_ERR_DENIED;
+        IPX_CTX_ERROR(ctx, "Could not unlock (%s:%d)", __FILE__, __LINE__);
+        goto error;
     }
 
     // Save the configuration
@@ -215,6 +228,18 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params) {
 
     IPX_CTX_INFO(ctx, "Plugin is ready.");
     return IPX_OK;
+
+error:
+    configuration_free(parsed_params);
+    ur_finalize();
+    free(ifc_spec);
+    trap_ctx_finalize(&conf->tctx);
+    free(cleaned_urtemplate);
+    ipx_plugin_destroy(ctx, conf);
+    free_IPFIX2UR_map(map);
+    free(conf->ur_message);
+    free(conf);
+    return IPX_ERR_DENIED;
 }
 
 // Pass IPFIX data with supplemental structures into the storage plugin.
@@ -226,53 +251,38 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
 
     IPX_CTX_INFO(ctx, "UniRec plugin process IPFIX message.");
 
-    //// Decide whether close files and create new time window
-    //time_t now = time(NULL);
-    //if (difftime(now, conf->window_start) > conf->params->window.size) {
-    //    time_t new_time = now;
+    ipx_msg_ipfix_t *ipfix = ipx_msg_base2ipfix(msg);
+    const uint32_t rec_cnt = ipx_msg_ipfix_get_drec_cnt(ipfix);
+    void *message = conf->ur_message;
+    for (uint32_t i = 0; i < rec_cnt; i++) {
+        // Get a pointer to the next record
+        struct ipx_ipfix_record *ipfix_rec = ipx_msg_ipfix_get_drec(ipfix, i);
+        bool biflow = (ipfix_rec->rec.tmplt->flags & FDS_TEMPLATE_BIFLOW) != 0;
 
-    //    if (conf->params->window.align) {
-    //        // We expect that new_time is integer
-    //        new_time /= conf->params->window.size;
-    //        new_time *= conf->params->window.size;
-    //    }
+        // Fill record
+        uint16_t flags = biflow ? FDS_DREC_BIFLOW_FWD : 0; // In case of biflow, forward fields only
+        if (translator_translate(conf->translator, conf, &ipfix_rec->rec, flags) <= 0) {
+            // Nothing to store
+            continue;
+        }
+        IPX_CTX_INFO(ctx, "Send via TRAP IFC.");
+        trap_ctx_send(conf->tctx, 0, message, ur_rec_size(conf->translator->urtmpl, message));
 
-    //    conf->window_start = new_time;
+        // Is it biflow? Store the reverse direction
+        if (!biflow) {
+            continue;
+        }
 
-    //    // Update storage files
-    //    stg_basic_new_window(conf->storage.basic, new_time);
-    //}
+        flags = FDS_DREC_BIFLOW_REV;
+        if (translator_translate(conf->translator, conf, &ipfix_rec->rec, flags) <= 0) {
+            // Nothing to store
+            continue;
+        }
 
-    //ipx_msg_ipfix_t *ipfix = ipx_msg_base2ipfix(msg);
-    //const uint32_t rec_cnt = ipx_msg_ipfix_get_drec_cnt(ipfix);
-    //for (uint32_t i = 0; i < rec_cnt; i++) {
-    //    // Get a pointer to the next record
-    //    struct ipx_ipfix_record *ipfix_rec = ipx_msg_ipfix_get_drec(ipfix, i);
-    //    bool biflow = (ipfix_rec->rec.tmplt->flags & FDS_TEMPLATE_BIFLOW) != 0;
-
-    //    // Fill record
-    //    uint16_t flags = biflow ? FDS_DREC_BIFLOW_FWD : 0; // In case of biflow, forward fields only
-    //    lnf_rec_t *lnf_rec = conf->record.rec_ptr;
-    //    if (translator_translate(conf->record.translator, &ipfix_rec->rec, lnf_rec, flags) <= 0) {
-    //        // Nothing to store
-    //        continue;
-    //    }
-
-    //    stg_basic_store(conf->storage.basic, lnf_rec);
-
-    //    // Is it biflow? Store the reverse direction
-    //    if (!biflow) {
-    //        continue;
-    //    }
-
-    //    flags = FDS_DREC_BIFLOW_REV;
-    //    if (translator_translate(conf->record.translator, &ipfix_rec->rec, lnf_rec, flags) <= 0) {
-    //        // Nothing to store
-    //        continue;
-    //    }
-
-    //    stg_basic_store(conf->storage.basic, lnf_rec);
-    //}
+        IPX_CTX_INFO(ctx, "Send via TRAP IFC.");
+        trap_ctx_send(conf->tctx, 0, message, ur_rec_size(conf->translator->urtmpl, message));
+        break;
+    }
 
     return 0;
 }
@@ -289,8 +299,10 @@ ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
 
     IPX_CTX_INFO(ctx, "UniRec plugin finalization.");
 
+    trap_ctx_terminate(conf->tctx);
+
     // Destroy a translator and a record
-    //translator_destroy(conf->record.translator);
+    translator_destroy(conf->translator);
 
     // Destroy parsed XML configuration
     configuration_free(conf->params);
@@ -298,6 +310,8 @@ ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
     trap_ctx_finalize(&conf->tctx);
 
     ur_free_template(conf->urtmpl);
+
+    free(conf->ur_message);
 
     if (pthread_mutex_lock(&urp_mutex) == -1) {
         IPX_CTX_ERROR(ctx, "Could not lock. (%s:%d)", __FILE__, __LINE__);

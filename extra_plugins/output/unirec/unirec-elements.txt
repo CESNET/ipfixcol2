@@ -1,86 +1,86 @@
-#unirec_name                   unirec_type   size    ipfix_ident      description
-SRC_IP                         ipaddr        16      e0id8,e0id27     IPv4 or IPv6 source address
-DST_IP                         ipaddr        16      e0id12,e0id28    IPv4 or IPv6 destination address
-SRC_PORT                       uint16         2      e0id7            Transport protocol source port
-DST_PORT                       uint16         2      e0id11           Transport protocol destination port
-PROTOCOL                       uint8          1      e0id4            Transport protocol
-TCP_FLAGS                      uint8          1      e0id6            TCP flags
-BYTES                          uint64         8      e0id1            Number of bytes in flow
-PACKETS                        uint32         4      e0id2            Number of packets in flow
-TIME_FIRST                     time           8      e0id152          Time of the first packet of a flow (ms since init of exporter, TODO: compute absolute time)
-TIME_LAST                      time           8      e0id153          Time of the last packet of a flow (ms since init of exporter, TODO: compute absolute time)
-DIR_BIT_FIELD                  uint8          1      e0id10           Bit field used for detemining incomming/outgoing flow (1 => Incomming, 0 => Outgoing)
-LINK_BIT_FIELD                 uint64         8      e0id405          Bit field of links on which was flow seen
-TTL                            uint8          1      e0id192          IP time to live
-TOS                            uint8          1      e0id5            IP type of service
-FLOWDIR_SYN                    uint8          1      e8057id299       Packet with SYN flag only flag
-DNS_ANSWERS                    uint16         2      e8057id0         DNS answers
-DNS_RCODE                      uint8          1      e8057id1         DNS rcode
-DNS_NAME                       string        -1      e8057id2         DNS name
-DNS_QTYPE                      uint16         2      e8057id3         DNS qtype
-DNS_CLASS                      uint16         2      e8057id4         DNS class
-DNS_RR_TTL                     uint32         4      e8057id5         DNS rr ttl
-DNS_RLENGTH                    uint16         2      e8057id6         DNS rlenght
-DNS_RDATA                      bytes         -1      e8057id7         DNS rdata
-DNS_PSIZE                      uint16         2      e8057id8         DNS payload size
-DNS_DO                         uint8          1      e8057id9         DNS DNSSEC OK bit
-DNS_ID                         uint16         2      e8057id10        DNS transaction id
-SMTP_FLAGS                     uint8          1      e8057id200       SMTP flags
-HB_TYPE                        uint8          1      e8057id700       TLS content type
-HB_DIR                         uint8          1      e8057id701       Heartbeat request/response byte
-HB_SIZE_MSG                    uint16 	      2      e8057id702       Heartbeat message size
-HB_SIZE_PAYLOAD                uint16 	      2      e8057id703       Heartbeat payload size 
+#unirec_name                   unirec_type   ipfix_ident      description
+SRC_IP                         ipaddr        e0id8,e0id27     IPv4 or IPv6 source address
+DST_IP                         ipaddr        e0id12,e0id28    IPv4 or IPv6 destination address
+SRC_PORT                       uint16        e0id7            Transport protocol source port
+DST_PORT                       uint16        e0id11           Transport protocol destination port
+PROTOCOL                       uint8         e0id4            Transport protocol
+TCP_FLAGS                      uint8         e0id6            TCP flags
+BYTES                          uint64        e0id1            Number of bytes in flow
+PACKETS                        uint32        e0id2            Number of packets in flow
+TIME_FIRST                     time          e0id152          Time of the first packet of a flow (ms since init of exporter, TODO: compute absolute time)
+TIME_LAST                      time          e0id153          Time of the last packet of a flow (ms since init of exporter, TODO: compute absolute time)
+DIR_BIT_FIELD                  uint8         e0id10           Bit field used for detemining incomming/outgoing flow (1 => Incomming, 0 => Outgoing)
+LINK_BIT_FIELD                 uint64        e0id405          Bit field of links on which was flow seen
+TTL                            uint8         e0id192          IP time to live
+TOS                            uint8         e0id5            IP type of service
+#FLOWDIR_SYN                    uint8        e8057id299       Packet with SYN flag only flag
+DNS_ANSWERS                    uint16        e8057id0         DNS answers
+DNS_RCODE                      uint8         e8057id1         DNS rcode
+DNS_NAME                       string        e8057id2         DNS name
+DNS_QTYPE                      uint16        e8057id3         DNS qtype
+DNS_CLASS                      uint16        e8057id4         DNS class
+DNS_RR_TTL                     uint32        e8057id5         DNS rr ttl
+DNS_RLENGTH                    uint16        e8057id6         DNS rlenght
+DNS_RDATA                      bytes         e8057id7         DNS rdata
+DNS_PSIZE                      uint16        e8057id8         DNS payload size
+DNS_DO                         uint8         e8057id9         DNS DNSSEC OK bit
+DNS_ID                         uint16        e8057id10        DNS transaction id
+#SMTP_FLAGS                     uint8        e8057id200       SMTP flags
+HB_TYPE                        uint8         e8057id700       TLS content type
+HB_DIR                         uint8         e8057id701       Heartbeat request/response byte
+HB_SIZE_MSG                    uint16 	     e8057id702       Heartbeat message size
+HB_SIZE_PAYLOAD                uint16 	     e8057id703       Heartbeat payload size 
 # HTTP elements from Flowmon HTTP plugin in MUNI PEN, and CESNET sdm-http and sdm-https plugins in CESNET PEN
-HTTP_REQUEST_METHOD_ID         uint32         4      e16982id500,e8057id800               HTTP request method id
-HTTP_REQUEST_HOST              string        -1      e16982id501,e8057id801,e8057id808    HTTP(S) request host
-HTTP_REQUEST_URL               string        -1      e16982id502,e8057id802               HTTP request url
-HTTP_REQUEST_AGENT_ID          uint32         4      e16982id503                          HTTP request agent id
-HTTP_REQUEST_AGENT             string        -1      e16982id504,e8057id804               HTTP request agent
-HTTP_REQUEST_REFERER           string        -1      e16982id505,e8057id803               HTTP referer
-HTTP_RESPONSE_STATUS_CODE      uint32         4      e16982id506,e8057id805               HTTP response status code
-HTTP_RESPONSE_CONTENT_TYPE     string        -1      e16982id507,e8057id806               HTTP response content type
-HTTP_REQUEST_RANGE             bytes         -1      e8057id821                           HTTP range
-HTTP_RESPONSE_TIME             uint64         8      e8057id807,e8057id809                HTTP(S) application response time
-IPV6_TUN_TYPE                  uint8          1      e16982id405      IPv6 tunnel type
-SMTP_COMMAND_FLAGS             uint32         4      e8057id810       SMTP command flags
-SMTP_MAIL_CMD_COUNT            uint32         4      e8057id811       SMTP MAIL command count
-SMTP_RCPT_CMD_COUNT            uint32         4      e8057id812       SMTP RCPT command count
-SMTP_FIRST_SENDER              string        -1      e8057id813       SMTP first sender
-SMTP_FIRST_RECIPIENT           string        -1      e8057id814       SMTP first recipient
-SMTP_STAT_CODE_FLAGS           uint32         4      e8057id815       SMTP status code flags
-SMTP_2XX_STAT_CODE_COUNT       uint32         4      e8057id816       SMTP 2XX status code count
-SMTP_3XX_STAT_CODE_COUNT       uint32         4      e8057id817       SMTP 3XX status code count
-SMTP_4XX_STAT_CODE_COUNT       uint32         4      e8057id818       SMTP 4XX status code count
-SMTP_5XX_STAT_CODE_COUNT       uint32         4      e8057id819       SMTP 5XX status code count
-SMTP_DOMAIN                    string        -1      e8057id820       SMTP domain
-INVEA_VOIP_PACKET_TYPE         uint8          1      e39499id32       VOIP packet type
-INVEA_SIP_CALL_ID              string        -1      e39499id33       SIP call ID
-INVEA_SIP_CALLING_PARTY        string        -1      e39499id34       SIP calling party
-INVEA_SIP_CALLED_PARTY         string        -1      e39499id35       SIP called party
-INVEA_SIP_VIA                  string        -1      e39499id36       SIP VIA
-INVEA_SIP_INVITE_RINGING_TIME  uint64         8      e39499id37       SIP INVITE ringing time
-INVEA_SIP_OK_TIME              uint64         8      e39499id38       SIP OK time
-INVEA_SIP_BYE_TIME             uint64         8      e39499id39       SIP BYE time
-INVEA_SIP_RTP_IP4              ipaddr        16      e39499id40       SIP RTP IPv4
-INVEA_SIP_RTP_IP6              ipaddr        16      e39499id41       SIP RTP IPv6
-INVEA_SIP_RTP_AUDIO            uint16         2      e39499id42       SIP RTP audio
-INVEA_SIP_RTP_VIDEO            uint16         2      e39499id43       SIP RTP video
-INVEA_SIP_STATS                uint64         8      e39499id44       SIP stats
-INVEA_RTP_CODEC                uint8          1      e39499id45       RTP codec
-INVEA_RTP_JITTER               uint32         4      e39499id46       RTP jitter
-INVEA_RTCP_LOST                uint32         4      e39499id47       RTCP lost
-INVEA_RTCP_PACKETS             uint64         8      e39499id48       RTCP packets
-INVEA_RTCP_OCTETS              uint64         8      e39499id49       RTCP octets
-INVEA_RTCP_SOURCE_COUNT        uint8          1      e39499id50       RTCP source count
-INVEA_SIP_USER_AGENT           string        -1      e39499id51       SIP User Agent
-INVEA_SIP_REQUEST_URI          string        -1      e39499id52       SIP Request-URI
-SIP_MSG_TYPE                   uint16         2      e8057id100       SIP message type
-SIP_STATUS_CODE                uint16         2      e8057id101       SIP status code
-SIP_CALL_ID                    string        -1      e8057id102       SIP call id
-SIP_CALLING_PARTY              string        -1      e8057id103       SIP from
-SIP_CALLED_PARTY               string        -1      e8057id104       SIP to
-SIP_VIA                        string        -1      e8057id105       SIP VIA
-SIP_USER_AGENT                 string        -1      e8057id106       SIP user agent
-SIP_REQUEST_URI                string        -1      e8057id107       SIP request uri
-SIP_CSEQ                       string        -1      e8057id108       SIP CSeq
-VENOM                          uint8          1      e8057id1001      Venom rootkit detection
+HTTP_REQUEST_METHOD_ID         uint32          e16982id500,e8057id800               HTTP request method id
+HTTP_REQUEST_HOST              string          e16982id501,e8057id801,e8057id808    HTTP(S) request host
+HTTP_REQUEST_URL               string          e16982id502,e8057id802               HTTP request url
+HTTP_REQUEST_AGENT_ID          uint32          e16982id503                          HTTP request agent id
+HTTP_REQUEST_AGENT             string          e16982id504,e8057id804               HTTP request agent
+HTTP_REQUEST_REFERER           string          e16982id505,e8057id803               HTTP referer
+HTTP_RESPONSE_STATUS_CODE      uint32          e16982id506,e8057id805               HTTP response status code
+HTTP_RESPONSE_CONTENT_TYPE     string          e16982id507,e8057id806               HTTP response content type
+HTTP_REQUEST_RANGE             bytes           e8057id821                           HTTP range
+HTTP_RESPONSE_TIME             uint64          e8057id807,e8057id809                HTTP(S) application response time
+IPV6_TUN_TYPE                  uint8           e16982id405      IPv6 tunnel type
+SMTP_COMMAND_FLAGS             uint32          e8057id810       SMTP command flags
+SMTP_MAIL_CMD_COUNT            uint32          e8057id811       SMTP MAIL command count
+SMTP_RCPT_CMD_COUNT            uint32          e8057id812       SMTP RCPT command count
+SMTP_FIRST_SENDER              string          e8057id813       SMTP first sender
+SMTP_FIRST_RECIPIENT           string          e8057id814       SMTP first recipient
+SMTP_STAT_CODE_FLAGS           uint32          e8057id815       SMTP status code flags
+SMTP_2XX_STAT_CODE_COUNT       uint32          e8057id816       SMTP 2XX status code count
+SMTP_3XX_STAT_CODE_COUNT       uint32          e8057id817       SMTP 3XX status code count
+SMTP_4XX_STAT_CODE_COUNT       uint32          e8057id818       SMTP 4XX status code count
+SMTP_5XX_STAT_CODE_COUNT       uint32          e8057id819       SMTP 5XX status code count
+SMTP_DOMAIN                    string          e8057id820       SMTP domain
+INVEA_VOIP_PACKET_TYPE         uint8           e39499id32       VOIP packet type
+INVEA_SIP_CALL_ID              string          e39499id33       SIP call ID
+INVEA_SIP_CALLING_PARTY        string          e39499id34       SIP calling party
+INVEA_SIP_CALLED_PARTY         string          e39499id35       SIP called party
+INVEA_SIP_VIA                  string          e39499id36       SIP VIA
+INVEA_SIP_INVITE_RINGING_TIME  time            e39499id37       SIP INVITE ringing time
+INVEA_SIP_OK_TIME              time            e39499id38       SIP OK time
+INVEA_SIP_BYE_TIME             time            e39499id39       SIP BYE time
+INVEA_SIP_RTP_IP4              ipaddr          e39499id40       SIP RTP IPv4
+INVEA_SIP_RTP_IP6              ipaddr          e39499id41       SIP RTP IPv6
+INVEA_SIP_RTP_AUDIO            uint16          e39499id42       SIP RTP audio
+INVEA_SIP_RTP_VIDEO            uint16          e39499id43       SIP RTP video
+INVEA_SIP_STATS                uint64          e39499id44       SIP stats
+INVEA_RTP_CODEC                uint8           e39499id45       RTP codec
+INVEA_RTP_JITTER               uint32          e39499id46       RTP jitter
+INVEA_RTCP_LOST                uint32          e39499id47       RTCP lost
+INVEA_RTCP_PACKETS             uint64          e39499id48       RTCP packets
+INVEA_RTCP_OCTETS              uint64          e39499id49       RTCP octets
+INVEA_RTCP_SOURCE_COUNT        uint8           e39499id50       RTCP source count
+INVEA_SIP_USER_AGENT           string          e39499id51       SIP User Agent
+INVEA_SIP_REQUEST_URI          string          e39499id52       SIP Request-URI
+SIP_MSG_TYPE                   uint16          e8057id100       SIP message type
+SIP_STATUS_CODE                uint16          e8057id101       SIP status code
+SIP_CALL_ID                    string          e8057id102       SIP call id
+SIP_CALLING_PARTY              string          e8057id103       SIP from
+SIP_CALLED_PARTY               string          e8057id104       SIP to
+SIP_VIA                        string          e8057id105       SIP VIA
+SIP_USER_AGENT                 string          e8057id106       SIP user agent
+SIP_REQUEST_URI                string          e8057id107       SIP request uri
+SIP_CSEQ                       string          e8057id108       SIP CSeq
+VENOM                          uint8           e8057id1001      Venom rootkit detection

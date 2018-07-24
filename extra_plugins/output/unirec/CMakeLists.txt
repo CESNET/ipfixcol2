@@ -52,6 +52,8 @@ add_library(unirec-output MODULE
 	unirecplugin.c
 	translator.c
 	translator.h
+	fields.c
+	fields.h
 )
 
 target_link_libraries(unirec-output

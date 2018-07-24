@@ -47,6 +47,11 @@
 #include "configuration.h"
 #include "translator.h"
 
+/* TODO move into unirec.h !!! */
+int ur_get_field_type_from_str(const char *type);
+extern const char *ur_field_type_str[];
+/* end */
+
 extern const char *msg_module;
 
 // Size of conversion buffer
@@ -56,7 +61,10 @@ extern const char *msg_module;
  * \brief Plugin instance structure
  */
 struct conf_unirec {
-    struct conf_params *params; /**< Configuration from XML file             */
+    /**
+     * Configuration from XML file
+     */
+    struct conf_params *params;
 
     /**
      * TRAP context
@@ -68,8 +76,15 @@ struct conf_unirec {
      */
     ur_template_t *urtmpl;
 
-    translator_t *translator; /**< IPFIX to UniRec translator               */
-};
+    /**
+     * UniRec message that is allocated in ipx_plugin_init()
+     */
+    void *ur_message;
 
+    /**
+     * IPFIX to UniRec translator
+     */
+    translator_t *translator;
+};
 
 #endif //IPFIX_UNIREC_H

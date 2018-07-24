@@ -5,7 +5,7 @@
  * \brief Configuration parser (source file)
  */
 
- /* Copyright (C) 2016-2018 CESNET, z.s.p.o.
+/* Copyright (C) 2016-2018 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,9 +39,12 @@
  *
  */
 
+#define _GNU_SOURCE
+#include <stdio.h>
 #include "configuration.h"
 #include "unirecplugin.h"
 
+#include <ipfixcol2.h>
 #include <stdlib.h>
 #include <inttypes.h>
 #include <string.h>
@@ -281,3 +284,55 @@ configuration_free(struct conf_params *config)
 
     free(config);
 }
+
+char *
+configuration_create_ifcspec(ipx_ctx_t *ctx, const struct conf_params *parsed_params)
+{
+    char *ifc_spec, *tmp_spec;
+    int ret = asprintf(&ifc_spec, "%c:%s", parsed_params->trap_ifc_type, parsed_params->trap_ifc_socket);
+    if (ret == -1) {
+        IPX_CTX_ERROR(ctx, "Unable to create IFC spec (%s:%d)", __FILE__, __LINE__);
+        return NULL;
+    }
+
+    if (parsed_params->trap_ifc_bufferswitch) {
+        int ret = asprintf(&tmp_spec, "%s:buffer=%s", ifc_spec, parsed_params->trap_ifc_bufferswitch);
+        if (ret == -1) {
+            IPX_CTX_ERROR(ctx, "Unable to create IFC spec (%s:%d)", __FILE__, __LINE__);
+            free(ifc_spec);
+            return NULL;
+        } else {
+            free(ifc_spec);
+            ifc_spec = tmp_spec;
+            tmp_spec = NULL;
+        }
+    }
+
+    if (parsed_params->trap_ifc_autoflush) {
+        int ret = asprintf(&tmp_spec, "%s:autoflush=%s", ifc_spec, parsed_params->trap_ifc_autoflush);
+        if (ret == -1) {
+            IPX_CTX_ERROR(ctx, "Unable to create IFC spec (%s:%d)", __FILE__, __LINE__);
+            free(ifc_spec);
+            return NULL;
+        } else {
+            free(ifc_spec);
+            ifc_spec = tmp_spec;
+            tmp_spec = NULL;
+        }
+    }
+
+    if (parsed_params->trap_ifc_timeout) {
+        int ret = asprintf(&tmp_spec, "%s:timeout=%s", ifc_spec, parsed_params->trap_ifc_timeout);
+        if (ret == -1) {
+            IPX_CTX_ERROR(ctx, "Unable to create IFC spec (%s:%d)", __FILE__, __LINE__);
+            free(ifc_spec);
+            return NULL;
+        } else {
+            free(ifc_spec);
+            ifc_spec = tmp_spec;
+            tmp_spec = NULL;
+        }
+    }
+    return ifc_spec;
+}
+

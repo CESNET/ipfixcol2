@@ -2,7 +2,7 @@
  * \file translator.c
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \author Imrich Stoffa <xstoff02@stud.fit.vutbr.cz>
- * \brief Conversion of IPFIX to LNF format (source file)
+ * \brief Conversion of IPFIX to UniRec format (source file)
  */
 
 /* Copyright (C) 2015 - 2017 CESNET, z.s.p.o.
@@ -43,87 +43,41 @@
 #include <inttypes.h>
 #include "unirecplugin.h"
 #include "translator.h"
+#include "fields.h"
 #include <unirec/unirec.h>
 
 // Prototypes
-struct translator_table_rec;
 static int
-translate_uint(const struct fds_drec_field *field,
-        const struct translator_table_rec *def, uint8_t *buffer_ptr);
+translate_uint(const struct fds_drec_field *field, struct conf_unirec *conf,
+        const struct translator_table_rec *def);
 static int
-translate_ip(const struct fds_drec_field *field,
-        const struct translator_table_rec *def, uint8_t *buffer_ptr);
+translate_ip(const struct fds_drec_field *field, struct conf_unirec *conf,
+        const struct translator_table_rec *def);
 static int
-translate_mac(const struct fds_drec_field *field,
-        const struct translator_table_rec *def, uint8_t *buffer_ptr);
+translate_mac(const struct fds_drec_field *field, struct conf_unirec *conf,
+        const struct translator_table_rec *def);
 static int
-translate_tcpflags(const struct fds_drec_field *field,
-        const struct translator_table_rec *def, uint8_t *buffer_ptr);
+translate_tcpflags(const struct fds_drec_field *field, struct conf_unirec *conf,
+        const struct translator_table_rec *def);
 static int
-translate_time(const struct fds_drec_field *field,
-        const struct translator_table_rec *def, uint8_t *buffer_ptr);
+translate_time(const struct fds_drec_field *field, struct conf_unirec *conf,
+        const struct translator_table_rec *def);
+static int
+translate_float(const struct fds_drec_field *field, struct conf_unirec *conf,
+        const struct translator_table_rec *def);
+static int
+translate_bytes(const struct fds_drec_field *field, struct conf_unirec *conf,
+        const struct translator_table_rec *def);
+static int
+translate_bool(const struct fds_drec_field *field, struct conf_unirec *conf,
+        const struct translator_table_rec *def);
+//TODO fds_iemgr_elem_find_id()
+//fds_iemgr_elem_find_id()
+//Element if exists, otherwise NULL.
 
-/**
- * \typedef translator_func
- * \brief Definition of conversion function
- * \param[in]  field      Pointer to an IPFIX field to convert
- * \param[in]  def        Definition of data conversion
- * \param[out] buffer_ptr Pointer to the conversion buffer where LNF value
- *   will be stored
- * \return On success return 0. Otherwise returns a non-zero value.
- */
-typedef int (*translator_func)(const struct fds_drec_field *field,
-    const struct translator_table_rec *def, uint8_t *buffer_ptr);
 
-/**
- * \brief Conversion record
- */
-struct translator_table_rec
-{
-    /** Identification of the IPFIX Information Element              */
-    struct ipfix_s {
-        /** Private Enterprise Number of the Information Element     */
-        uint32_t pen;
-        /** ID of the Information Element within the PEN             */
-        uint16_t ie;
-    } ipfix;
-
-    /** Identification of the corresponding LNF Field */
-    struct lnf_s {
-        /** Field identification                      */
-        int id;
-        /** Internal size of the Field                */
-        int size;
-        /** Internal type of the Field                */
-        int type;
-    } lnf;
-
-    /** Conversion function */
-    translator_func func;
-};
-
-//***************************** COPIED FROM OLD PLUGIN *****************************
 // Path to unirec elements config file
-const char *UNIREC_ELEMENTS_FILE = "unirec-elements.txt"; //TODO is this where it should be located
-
-// Possible UniRec data types
-const char *unirec_data_types_str[] = {
-   "string", /*UR_TYPE_STRING*/
-   "bytes", /*UR_TYPE_BYTES*/
-   "char", /*UR_TYPE_CHAR*/
-   "uint8", /*UR_TYPE_UINT8*/
-   "int8", /*UR_TYPE_INT8*/
-   "uint16", /*UR_TYPE_UINT16*/
-   "int16", /*UR_TYPE_INT16*/
-   "uint32", /*UR_TYPE_UINT32*/
-   "int32", /*UR_TYPE_INT32*/
-   "uint64", /*UR_TYPE_UINT64*/
-   "int64", /*UR_TYPE_INT64*/
-   "float", /*UR_TYPE_FLOAT*/
-   "double", /*UR_TYPE_DOUBLE*/
-   "ipaddr", /*UR_TYPE_IP*/
-   "time", /*UR_TYPE_TIME*/
-};
+const char *UNIREC_ELEMENTS_FILE = "./unirec-elements.txt"; //TODO is this where it should be located
 
 /**
  * \brief Creates IPFIX id from string
@@ -131,9 +85,9 @@ const char *unirec_data_types_str[] = {
  * @param ipfixToken String in eXXidYY format, where XX is enterprise number and YY is element ID
  * @return Returns id that is used to compare field against IPFIX template
  */
-static ipfixElement ipfix_from_string(char *ipfixToken)
+static ipfixElement_t ipfix_from_string(char *ipfixToken)
 {
-   ipfixElement element;
+   ipfixElement_t element;
    char *endptr;
 
    element.en = strtol(ipfixToken + 1, &endptr, 10);
@@ -142,76 +96,34 @@ static ipfixElement ipfix_from_string(char *ipfixToken)
    return element;
 }
 
-static int8_t checkUnirecType(const char *type)
-{
-   int i;
-   for (i = 0; i < UNIREC_DATA_TYPES_COUNT; i++) {
-      if (strcmp(type, unirec_data_types_str[i]) == 0) {
-         return i;
-      }
-   }
-   return -1;
-}
-
 /**
- * \brief Convert ipfix element id to unirec type for faster processing ipfix messages
- * \param ipfix_el Ipfix element structure.
- * \return One value from enum `unirecFieldEnum`.
- */
-static int8_t getUnirecFieldTypeFromIpfixId(ipfixElement ipfix_el)
-{
-   uint16_t id = ipfix_el.id;
-   uint32_t en = ipfix_el.en;
-
-   if ((en == 0 && (id == 8 || id == 12)) ||
-         (en == 39499 && id== 40) ||
-      (en == 0 && (id == 27 || id == 28)) ||
-         (en == 39499 && id == 41)) {
-      // IP or INVEA_SIP_RTP_IP
-      return UNIREC_FIELD_IP;
-   } else if (en == 0 && id == 2) {
-      // Packets
-      return UNIREC_FIELD_PACKET;
-   } else if (en == 0 && (id == 152 || id == 153)) {
-      // Timestamps
-      return UNIREC_FIELD_TS;
-   } else if (en == 0 && id == 10) {
-      // DIR_BIT_FIELD
-      return UNIREC_FIELD_DBF;
-   } else if (en == 0 && id == 405) {
-      // LINK_BIT_FIELD
-      return UNIREC_FIELD_LBF;
-   } else {
-      // Other
-      return UNIREC_FIELD_OTHER;
-   }
-}
-
-
-/**
- * \brief Loads all available elements from configuration file
+ * \brief Loads all available elements from configuration file UNIREC_ELEMENTS_FILE
+ * @param[in] ctx Instance of IPFIXcol2 context (only for log!)
+ * @param[out] count Number of parsed fields in the config file
  * @return List of UniRec elements on success, NULL otherwise
  */
-static unirecField *load_elements()
+unirecField_t *load_IPFIX2UR_mapping(ipx_ctx_t *ctx, uint32_t *urcount, uint32_t *ipfixcount)
 {
     FILE *uef = NULL;
     char *line;
     size_t lineSize = 100;
     ssize_t res;
     char *token, *state; /* Variables for strtok  */
-    unirecField *fields = NULL, *currentField = NULL;
+    unirecField_t *fields = NULL, *curfld = NULL;
+    uint32_t numurfields = 0;
+    uint32_t numipfixfields = 0;
 
     /* Open the file */
     uef = fopen(UNIREC_ELEMENTS_FILE, "r");
     if (uef == NULL) {
-        //TODO unable to open message
+        IPX_CTX_ERROR(ctx, "Could not open file \"%s\" (%s:%d)", UNIREC_ELEMENTS_FILE, __FILE__, __LINE__);
         return NULL;
     }
 
     /* Init buffer */
     line = malloc(lineSize);
     if (line == NULL ){
-        //TODO memory allocation message
+        IPX_CTX_ERROR(ctx, "Memory allocation failed. (%s:%d)", __FILE__, __LINE__);
         fclose(uef);
         return NULL;
     }
@@ -228,55 +140,51 @@ static unirecField *load_elements()
         if (line[0] == '#') continue;
 
         /* Create new element structure, make space for ipfixElCount ipfix elements and NULL */
-        currentField = malloc(sizeof(unirecField));
-        if (currentField == NULL ){
-            //TODO memory allocation message
+        curfld = malloc(sizeof(unirecField_t));
+        if (curfld == NULL ){
+            IPX_CTX_ERROR(ctx, "Memory allocation failed. (%s:%d)", __FILE__, __LINE__);
             fclose(uef);
             free(line);
             return NULL;
         }
-        currentField->name = NULL;
-        currentField->value = NULL;
-        currentField->offset_ar = NULL;
-        currentField->required_ar = NULL;
-        currentField->included_ar = NULL;
+        curfld->name = NULL;
 
         /* Read individual tokens */
         int position = 0;
+        int ret;
         for (token = strtok_r(line, " \t", &state); token != NULL; token = strtok_r(NULL, " \t", &state), position++) {
             switch (position) {
             case 0:
-                currentField->name = strdup(token);
+                curfld->name = strdup(token);
                 break;
             case 1:
-                currentField->unirec_type = checkUnirecType(token);
-                if (currentField->unirec_type < 0) {
-                    //MSG_ERROR(msg_module, "Unknown UniRec data type \"%s\" of field \"%s\"", token, currentField->name);
+                if ((ret = ur_get_field_type_from_str(token)) == UR_E_INVALID_TYPE) {
+                    IPX_CTX_ERROR(ctx, "Unknown UniRec type \"%s\" of field \"%s\"", token, curfld->name);
                     fclose(uef);
                     free(line);
                     return NULL;
+                } else {
+                    curfld->unirec_type_str = strdup(token);
+                    curfld->unirec_type = (ur_field_type_t) ret;
                 }
                 break;
-            case 2:
-                currentField->size = atoi(token);
-                break;
-            case 3: {
+            case 2: {
                 /* Split the string */
                 char *ipfixToken, *ipfixState; /* Variables for strtok  */
                 int ipfixPosition = 0;
-                currentField->ipfixCount = 0;
+                curfld->ipfixCount = 0;
                 for (ipfixToken = strtok_r(token, ",", &ipfixState);
                      ipfixToken != NULL;
                      ipfixToken = strtok_r(NULL, ",", &ipfixState), ipfixPosition++) {
                     /* Enlarge the element if necessary */
                     if (ipfixPosition > 0) {
-                        currentField = realloc(currentField, sizeof(unirecField) + (ipfixPosition) * sizeof(uint64_t));
+                        curfld = realloc(curfld, sizeof(unirecField_t) + (ipfixPosition) * sizeof(uint64_t));
                     }
                     /* Store the ipfix element id */
-                    currentField->ipfix[ipfixPosition] = ipfix_from_string(ipfixToken);
-                    currentField->ipfixCount++;
+                    curfld->ipfix[ipfixPosition] = ipfix_from_string(ipfixToken);
+                    curfld->ipfixCount++;
+                    numipfixfields++;
                     /* Fill in Unirec field type based on ipfix element id */
-                    currentField->type = getUnirecFieldTypeFromIpfixId(currentField->ipfix[ipfixPosition]);
                 }
                 break;
                 } // case 3 end
@@ -285,119 +193,29 @@ static unirecField *load_elements()
 
         /* Check that all necessary data was provided */
         if (position < 3) {
-            if (currentField->name) {
-                free(currentField->name);
+            if (curfld->name) {
+                free(curfld->name);
             }
-            free(currentField);
+            free(curfld);
             continue;
         }
 
-        currentField->next = fields;
-        fields = currentField;
+        numurfields++;
+        curfld->next = fields;
+        fields = curfld;
     }
 
     fclose(uef);
     free(line);
 
+    if (ipfixcount != NULL) {
+        *ipfixcount = numipfixfields;
+    }
+    if (urcount != NULL) {
+        *urcount = numurfields;
+    }
     return fields;
 }
-//********************** END OF COPIED FROM OLD PLUGIN *****************************
-
-/**
- * \brief Global translator table
- * \warning Size of each LNF field is always 0 because a user must create its
- *   own instance of the table and fill the correct size from LNF using
- *   lnf_fld_info API function.
- */
-static const struct translator_table_rec translator_table_global[] = {
-    {{0,   1}, {0,     0, 0}, translate_uint},
-    //{{0,   2}, {LNF_FLD_DPKTS,       0, 0}, translate_uint},
-    //{{0,   3}, {LNF_FLD_AGGR_FLOWS,  0, 0}, translate_uint},
-    //{{0,   4}, {LNF_FLD_PROT,        0, 0}, translate_uint},
-    //{{0,   5}, {LNF_FLD_TOS,         0, 0}, translate_uint},
-    //{{0,   6}, {LNF_FLD_TCP_FLAGS,   0, 0}, translate_tcpflags},
-    //{{0,   7}, {LNF_FLD_SRCPORT,     0, 0}, translate_uint},
-    //{{0,   8}, {LNF_FLD_SRCADDR,     0, 0}, translate_ip},
-    //{{0,   9}, {LNF_FLD_SRC_MASK,    0, 0}, translate_uint},
-    //{{0,  10}, {LNF_FLD_INPUT,       0, 0}, translate_uint},
-    //{{0,  11}, {LNF_FLD_DSTPORT,     0, 0}, translate_uint},
-    //{{0,  12}, {LNF_FLD_DSTADDR,     0, 0}, translate_ip},
-    //{{0,  13}, {LNF_FLD_DST_MASK,    0, 0}, translate_uint},
-    //{{0,  14}, {LNF_FLD_OUTPUT,      0, 0}, translate_uint},
-    //{{0,  15}, {LNF_FLD_IP_NEXTHOP,  0, 0}, translate_ip},
-    //{{0,  16}, {LNF_FLD_SRCAS,       0, 0}, translate_uint},
-    //{{0,  17}, {LNF_FLD_DSTAS,       0, 0}, translate_uint},
-    //{{0,  18}, {LNF_FLD_BGP_NEXTHOP, 0, 0}, translate_ip},
-    ///* These elements are not supported, because of implementation complexity.
-    // * However, these elements are not very common in IPFIX flows and in case
-    // * of Netflow flows, these elements are converted in the preprocessor to
-    // * timestamp in flowStartMilliseconds/flowEndMilliseconds.
-    //{{0,  21}, {LNF_FLD_LAST,        0, 0}, translate_time},
-    //{{0,  22}, {LNF_FLD_FIRST,       0, 0}, translate_time},
-    //*/
-    //{{0,  23}, {LNF_FLD_OUT_BYTES,   0, 0}, translate_uint},
-    //{{0,  24}, {LNF_FLD_OUT_PKTS,    0, 0}, translate_uint},
-    //{{0,  27}, {LNF_FLD_SRCADDR,     0, 0}, translate_ip},
-    //{{0,  28}, {LNF_FLD_DSTADDR,     0, 0}, translate_ip},
-    //{{0,  29}, {LNF_FLD_SRC_MASK,    0, 0}, translate_uint},
-    //{{0,  30}, {LNF_FLD_DST_MASK,    0, 0}, translate_uint},
-    ///* LNF_FLD_ specific id missing, DSTPORT overlaps
-    //{{0,  32}, {LNF_FLD_DSTPORT,     0, 0}, translate_uint },
-    //*/
-    //{{0,  38}, {LNF_FLD_ENGINE_TYPE, 0, 0}, translate_uint},
-    //{{0,  39}, {LNF_FLD_ENGINE_ID,   0, 0}, translate_uint},
-    //{{0,  55}, {LNF_FLD_DST_TOS,     0, 0}, translate_uint},
-    //{{0,  56}, {LNF_FLD_IN_SRC_MAC,  0, 0}, translate_mac},
-    //{{0,  57}, {LNF_FLD_OUT_DST_MAC, 0, 0}, translate_mac},
-    //{{0,  58}, {LNF_FLD_SRC_VLAN,    0, 0}, translate_uint},
-    //{{0,  59}, {LNF_FLD_DST_VLAN,    0, 0}, translate_uint},
-    //{{0,  61}, {LNF_FLD_DIR,         0, 0}, translate_uint},
-    //{{0,  62}, {LNF_FLD_IP_NEXTHOP,  0, 0}, translate_ip},
-    //{{0,  63}, {LNF_FLD_BGP_NEXTHOP, 0, 0}, translate_ip},
-    ///* Not implemented
-    //{{0,  70}, { LNF_FLD_MPLS_LABEL, 0, 0}, translate_mpls}, //this refers to base of stack
-    //{{0,  71}, { LNF_FLD_MPLS_LABEL, 0, 0}, translate_mpls},
-    //{{0,  72}, { LNF_FLD_MPLS_LABEL, 0, 0}, translate_mpls},
-    //{{0,  73}, { LNF_FLD_MPLS_LABEL, 0, 0}, translate_mpls},
-    //{{0,  74}, { LNF_FLD_MPLS_LABEL, 0, 0}, translate_mpls},
-    //{{0,  75}, { LNF_FLD_MPLS_LABEL, 0, 0}, translate_mpls},
-    //{{0,  76}, { LNF_FLD_MPLS_LABEL, 0, 0}, translate_mpls},
-    //{{0,  77}, { LNF_FLD_MPLS_LABEL, 0, 0}, translate_mpls},
-    //{{0,  78}, { LNF_FLD_MPLS_LABEL, 0, 0}, translate_mpls},
-    //{{0,  79}, { LNF_FLD_MPLS_LABEL, 0, 0}, translate_mpls},
-    //*/
-    //{{0,  80}, {LNF_FLD_OUT_SRC_MAC, 0, 0}, translate_mac},
-    //{{0,  81}, {LNF_FLD_IN_DST_MAC,  0, 0}, translate_mac},
-    //{{0,  89}, {LNF_FLD_FWD_STATUS,  0, 0}, translate_uint},
-    //{{0, 128}, {LNF_FLD_BGPNEXTADJACENTAS, 0, 0}, translate_uint},
-    //{{0, 129}, {LNF_FLD_BGPPREVADJACENTAS, 0, 0}, translate_uint},
-    //{{0, 130}, {LNF_FLD_IP_ROUTER,   0, 0}, translate_ip},
-    //{{0, 131}, {LNF_FLD_IP_ROUTER,   0, 0}, translate_ip},
-    //{{0, 148}, {LNF_FLD_CONN_ID,     0, 0}, translate_uint},
-    //{{0, 150}, {LNF_FLD_FIRST,       0, 0}, translate_time},
-    //{{0, 151}, {LNF_FLD_LAST,        0, 0}, translate_time},
-    //{{0, 152}, {LNF_FLD_FIRST,       0, 0}, translate_time},
-    //{{0, 153}, {LNF_FLD_LAST,        0, 0}, translate_time},
-    //{{0, 154}, {LNF_FLD_FIRST,       0, 0}, translate_time},
-    //{{0, 155}, {LNF_FLD_LAST,        0, 0}, translate_time},
-    //{{0, 156}, {LNF_FLD_FIRST,       0, 0}, translate_time},
-    //{{0, 157}, {LNF_FLD_LAST,        0, 0}, translate_time},
-    //{{0, 176}, {LNF_FLD_ICMP_TYPE,   0, 0}, translate_uint},
-    //{{0, 177}, {LNF_FLD_ICMP_CODE,   0, 0}, translate_uint},
-    //{{0, 178}, {LNF_FLD_ICMP_TYPE,   0, 0}, translate_uint},
-    //{{0, 179}, {LNF_FLD_ICMP_CODE,   0, 0}, translate_uint},
-    //{{0, 225}, {LNF_FLD_XLATE_SRC_IP,   0, 0}, translate_ip},
-    //{{0, 226}, {LNF_FLD_XLATE_DST_IP,   0, 0}, translate_ip},
-    //{{0, 227}, {LNF_FLD_XLATE_SRC_PORT, 0, 0}, translate_uint},
-    //{{0, 228}, {LNF_FLD_XLATE_DST_PORT, 0, 0}, translate_uint},
-    //{{0, 230}, {LNF_FLD_EVENT_FLAG,     0, 0}, translate_uint}, //not sure
-    //{{0, 233}, {LNF_FLD_FW_XEVENT,      0, 0}, translate_uint},
-    //{{0, 234}, {LNF_FLD_INGRESS_VRFID,  0, 0}, translate_uint},
-    //{{0, 235}, {LNF_FLD_EGRESS_VRFID,   0, 0}, translate_uint},
-    //{{0, 258}, {LNF_FLD_RECEIVED,       0, 0}, translate_time},
-    //{{0, 281}, {LNF_FLD_XLATE_SRC_IP,   0, 0}, translate_ip},
-    //{{0, 282}, {LNF_FLD_XLATE_DST_IP,   0, 0}, translate_ip}
-};
 
 /**
  * \brief Set a value of an unsigned integer
@@ -412,39 +230,39 @@ static const struct translator_table_rec translator_table_global[] = {
  *   #IPX_ERR_ARG.
  */
 static inline int
-translate_set_uint_lnf(void *field, int lnf_type, uint64_t value)
+translate_set_uint_lnf(void *field, ur_field_type_t urtype, uint64_t value)
 {
-    switch (lnf_type) {
-    //case LNF_UINT64:
-    //    *((uint64_t *) field) = value;
-    //    return IPX_OK;
+    switch (urtype) {
+    case UR_TYPE_UINT64:
+        *((uint64_t *) field) = value;
+        return IPX_OK;
 
-    //case LNF_UINT32:
-    //    if (value > UINT32_MAX) {
-    //        *((uint32_t *) field) = UINT32_MAX; // byte conversion not required
-    //        return IPX_ERR_TRUNC;
-    //    }
+    case UR_TYPE_UINT32:
+        if (value > UINT32_MAX) {
+            *((uint32_t *) field) = UINT32_MAX; // byte conversion not required
+            return IPX_ERR_TRUNC;
+        }
 
-    //    *((uint32_t *) field) = (uint32_t) value;
-    //    return IPX_OK;
+        *((uint32_t *) field) = (uint32_t) value;
+        return IPX_OK;
 
-    //case LNF_UINT16:
-    //    if (value > UINT16_MAX) {
-    //        *((uint16_t *) field) = UINT16_MAX; // byte conversion not required
-    //        return IPX_ERR_TRUNC;
-    //    }
+    case UR_TYPE_UINT16:
+        if (value > UINT16_MAX) {
+            *((uint16_t *) field) = UINT16_MAX; // byte conversion not required
+            return IPX_ERR_TRUNC;
+        }
 
-    //    *((uint16_t *) field) = (uint16_t) value;
-    //    return IPX_OK;
+        *((uint16_t *) field) = (uint16_t) value;
+        return IPX_OK;
 
-    //case LNF_UINT8:
-    //    if (value > UINT8_MAX) {
-    //        *((uint8_t *) field) = UINT8_MAX;
-    //        return IPX_ERR_TRUNC;
-    //    }
+    case UR_TYPE_UINT8:
+        if (value > UINT8_MAX) {
+            *((uint8_t *) field) = UINT8_MAX;
+            return IPX_ERR_TRUNC;
+        }
 
-    //    *((uint8_t *) field) = (uint8_t) value;
-    //    return IPX_OK;
+        *((uint8_t *) field) = (uint8_t) value;
+        return IPX_OK;
 
     default:
         return IPX_ERR_ARG;
@@ -456,18 +274,19 @@ translate_set_uint_lnf(void *field, int lnf_type, uint64_t value)
  * \details \copydetails ::translator_func
  */
 static int
-translate_uint(const struct fds_drec_field *field,
-    const struct translator_table_rec *def, uint8_t *buffer_ptr)
+translate_uint(const struct fds_drec_field *field, struct conf_unirec *conf,
+    const struct translator_table_rec *def)
 {
-    // Get a value of IPFIX field
-    uint64_t value;
+    uint64_t value = 0;
     if (fds_get_uint_be(field->data, field->size, &value) != FDS_OK) {
         // Failed
         return 1;
     }
 
+    void *fieldp = ur_get_ptr_by_id(conf->translator->urtmpl, conf->ur_message, def->ur_field_id);
+    ur_field_type_t urtype = ur_get_type(def->ur_field_id);
     // Store the value to the buffer
-    if (translate_set_uint_lnf(buffer_ptr, def->lnf.type, value) == IPX_ERR_ARG) {
+    if (translate_set_uint_lnf(fieldp, urtype, value) == IPX_ERR_ARG) {
         // Failed
         return 1;
     }
@@ -480,19 +299,17 @@ translate_uint(const struct fds_drec_field *field,
  * \details \copydetails ::translator_func
  */
 static int
-translate_ip(const struct fds_drec_field *field,
-    const struct translator_table_rec *def, uint8_t *buffer_ptr)
+translate_ip(const struct fds_drec_field *field, struct conf_unirec *conf,
+    const struct translator_table_rec *def)
 {
-    (void) def;
-
+    void *fieldp = ur_get_ptr_by_id(conf->translator->urtmpl, conf->ur_message, def->ur_field_id);
     switch (field->size) {
-    //case 4: // IPv4
-    //    memset(buffer_ptr, 0x0, sizeof(lnf_ip_t));
-    //    ((lnf_ip_t *) buffer_ptr)->data[3] = *(uint32_t *) field->data;
-    //    break;
-    //case 16: // IPv6
-    //    memcpy(buffer_ptr, field->data, field->size);
-    //    break;
+    case 4: // IPv4
+        *((ip_addr_t *) fieldp) = ip_from_4_bytes_be((char *) field->data);
+        break;
+    case 16: // IPv6
+        memcpy(fieldp, field->data, field->size);
+        break;
     default:
         // Invalid size of the field
         return 1;
@@ -508,18 +325,19 @@ translate_ip(const struct fds_drec_field *field,
  * \details \copydetails ::translator_func
  */
 static int
-translate_tcpflags(const struct fds_drec_field *field,
-    const struct translator_table_rec *def, uint8_t *buffer_ptr)
+translate_tcpflags(const struct fds_drec_field *field, struct conf_unirec *conf,
+    const struct translator_table_rec *def)
 {
     (void) def;
 
+    uint8_t *fieldp = (uint8_t *) ur_get_ptr_by_id(conf->translator->urtmpl, conf->ur_message, def->ur_field_id);
     switch (field->size) {
     case 1:
-        *buffer_ptr = *field->data;
+        *fieldp = *field->data;
         break;
     case 2: {
-        uint16_t new_value = ntohs(*(uint16_t *) field->data);
-        *buffer_ptr = (uint8_t) new_value; // Preserve only bottom 8 bites
+            uint16_t new_value = ntohs(*(uint16_t *) field->data);
+            *fieldp = (uint8_t) new_value; // Preserve only bottom 8 bites
         }
         break;
     default:
@@ -531,20 +349,103 @@ translate_tcpflags(const struct fds_drec_field *field,
 }
 
 /**
+ * \brief Convert bool field
+ * \details \copydetails ::translator_func
+ */
+static int
+translate_bool(const struct fds_drec_field *field, struct conf_unirec *conf,
+    const struct translator_table_rec *def)
+{
+    void *fieldp = ur_get_ptr_by_id(conf->translator->urtmpl, conf->ur_message, def->ur_field_id);
+
+    bool value;
+    if (fds_get_bool(field->data, field->size, &value) != FDS_OK) {
+        return 1;
+    }
+
+    ur_field_type_t urtype = ur_get_type(def->ur_field_id);
+    switch (urtype) {
+    case UR_TYPE_INT8:
+    case UR_TYPE_UINT8:
+        *((uint8_t *) fieldp) = value ? 1 : 0;
+        break;
+    case UR_TYPE_INT16:
+    case UR_TYPE_UINT16:
+        *((uint16_t *) fieldp) = value ? 1 : 0;
+        break;
+    case UR_TYPE_INT32:
+    case UR_TYPE_UINT32:
+        *((uint32_t *) fieldp) = value ? 1 : 0;
+        break;
+    case UR_TYPE_INT64:
+    case UR_TYPE_UINT64:
+        *((uint64_t *) fieldp) = value ? 1 : 0;
+        break;
+    default:
+        /* unsupported type */
+        return 1;
+    }
+
+    return 0;
+}
+
+/**
+ * \brief Convert float/double field
+ * \details \copydetails ::translator_func
+ */
+static int
+translate_float(const struct fds_drec_field *field, struct conf_unirec *conf,
+    const struct translator_table_rec *def)
+{
+    void *fieldp = ur_get_ptr_by_id(conf->translator->urtmpl, conf->ur_message, def->ur_field_id);
+
+    double value;
+    if (fds_get_float_be(field->data, field->size, &value) != FDS_OK) {
+        return 1;
+    }
+
+    ur_field_type_t urtype = ur_get_type(def->ur_field_id);
+    if (urtype == UR_TYPE_FLOAT) {
+        *((float *) fieldp) = (float) value;
+    } else if (urtype == UR_TYPE_DOUBLE) {
+        *((double *) fieldp) = value;
+    } else {
+        /* unsupported type */
+        return 1;
+    }
+
+    return 0;
+}
+
+/**
+ * \brief Convert a MAC address
+ * \details \copydetails ::translator_func
+ */
+static int
+translate_bytes(const struct fds_drec_field *field, struct conf_unirec *conf,
+    const struct translator_table_rec *def)
+{
+    ur_set_var(conf->translator->urtmpl, conf->ur_message, def->ur_field_id, field->data, field->size);
+
+    return 0;
+}
+
+/**
  * \brief Convert a MAC address
  * \note We have to keep the address in network byte order. Therefore, we
  *   cannot use a converter for unsigned int
  * \details \copydetails ::translator_func
  */
 static int
-translate_mac(const struct fds_drec_field *field,
-    const struct translator_table_rec *def, uint8_t *buffer_ptr)
+translate_mac(const struct fds_drec_field *field, struct conf_unirec *conf,
+    const struct translator_table_rec *def)
 {
-    if (field->size != 6 || def->lnf.size != 6) {
+    if (field->size != 6 || ur_get_type(def->ur_field_id) != UR_TYPE_MAC) {
         return 1;
     }
 
-    memcpy(buffer_ptr, field->data, 6U);
+    void *fieldp = ur_get_ptr_by_id(conf->translator->urtmpl, conf->ur_message, def->ur_field_id);
+    memcpy(fieldp, field->data, 6U);
     return 0;
 }
 
@@ -553,8 +454,8 @@ translate_mac(const struct fds_drec_field *field,
  * \details \copydetails ::translator_func
  */
 static int
-translate_time(const struct fds_drec_field *field,
-    const struct translator_table_rec *def, uint8_t *buffer_ptr)
+translate_time(const struct fds_drec_field *field, struct conf_unirec *conf,
+    const struct translator_table_rec *def)
 {
     if (field->info->en != 0) {
         // Non-standard field are not supported right now
@@ -588,36 +489,39 @@ translate_time(const struct fds_drec_field *field,
         return 1;
     }
 
-    // Get the timestamp in milliseconds
-    uint64_t value;
-    if (fds_get_datetime_lp_be(field->data, field->size, type, &value) != FDS_OK) {
-        // Failed
-        return 1;
-    }
+    ur_time_t *fieldp = ur_get_ptr_by_id(conf->translator->urtmpl, conf->ur_message, def->ur_field_id);
 
-    // Store the value
-    if (translate_set_uint_lnf(buffer_ptr, def->lnf.type, value) != IPX_OK) {
-        // Failed (note: truncation doesn't make sense)
+    switch (type) {
+    case FDS_ET_DATE_TIME_SECONDS:
+    case FDS_ET_DATE_TIME_MILLISECONDS: {
+           uint64_t value;
+           if (fds_get_datetime_lp_be(field->data, field->size, type, &value) != FDS_OK) {
+               // Failed
+               return 1;
+           }
+
+           *fieldp = ur_time_from_sec_msec(value / 1000, value % 1000);
+        }
+        break;
+    case FDS_ET_DATE_TIME_MICROSECONDS:
+    case FDS_ET_DATE_TIME_NANOSECONDS: {
+           struct timespec value;
+           if (fds_get_datetime_hp_be(field->data, field->size, type, &value) != FDS_OK) {
+               // Failed
+               return 1;
+           }
+
+           /* TODO create a better conversion function in UniRec API */
+           *fieldp = ur_time_from_sec_msec(value.tv_sec, value.tv_nsec / 1000);
+        }
+        break;
+    default:
+        /* Incompatible type of field */
         return 1;
     }
 
     return 0;
 }
-
-// Size of conversion buffer
-#define REC_BUFF_SIZE (65535)
-// Size of translator table
-#define TRANSLATOR_TABLE_SIZE \
-    (sizeof(translator_table_global) / sizeof(translator_table_global[0]))
-
-struct translator_s {
-    /** Instance context (only for log!) */
-    ipx_ctx_t *ctx;
-    /** Private conversion table         */
-    struct translator_table_rec table[TRANSLATOR_TABLE_SIZE];
-    /** Record conversion buffer         */
-    uint8_t rec_buffer[REC_BUFF_SIZE];
-};
 
 /**
  * \brief Compare conversion definitions
@@ -631,8 +535,8 @@ static int
 transtator_cmp(const void *p1, const void *p2)
 {
     const struct translator_table_rec *elem1, *elem2;
-    elem1 = (const struct translator_table_rec *) p1;
-    elem2 = (const struct translator_table_rec *) p2;
+    elem1 = (const translator_table_rec_t *) p1;
+    elem2 = (const translator_table_rec_t *) p2;
 
     uint64_t elem1_val = ((uint64_t) elem1->ipfix.pen) << 16 | elem1->ipfix.ie;
     uint64_t elem2_val = ((uint64_t) elem2->ipfix.pen) << 16 | elem2->ipfix.ie;
@@ -644,9 +548,83 @@ transtator_cmp(const void *p1, const void *p2)
     }
 }
 
-translator_t *
-translator_init(ipx_ctx_t *ctx)
+static translator_func
+get_func_by_elementtypes(ur_field_type_t urt, const struct fds_iemgr_elem *ielem)
 {
+    enum fds_iemgr_element_type ipt = ielem->data_type;
+
+    switch (urt) {
+    case UR_TYPE_STRING:
+    case UR_TYPE_BYTES:
+        if (ipt == FDS_ET_STRING ||
+                ipt == FDS_ET_OCTET_ARRAY) {
+            return translate_bytes;
+        }
+        break;
+    case UR_TYPE_CHAR:
+    case UR_TYPE_UINT8:
+    case UR_TYPE_INT8:
+    case UR_TYPE_UINT16:
+    case UR_TYPE_INT16:
+    case UR_TYPE_UINT32:
+    case UR_TYPE_INT32:
+    case UR_TYPE_UINT64:
+    case UR_TYPE_INT64:
+        if (strcmp(ielem->name, "tcpControlBits") == 0) {
+            return translate_tcpflags;
+        } else if (ipt == FDS_ET_BOOLEAN) {
+            return translate_bool;
+        } else if (ipt == FDS_ET_UNSIGNED_8 ||
+                ipt == FDS_ET_UNSIGNED_16 ||
+                ipt == FDS_ET_UNSIGNED_32 ||
+                ipt == FDS_ET_UNSIGNED_64 ||
+                ipt == FDS_ET_SIGNED_8 ||
+                ipt == FDS_ET_SIGNED_16 ||
+                ipt == FDS_ET_SIGNED_32 ||
+                ipt == FDS_ET_SIGNED_64) {
+            return translate_uint;
+        }
+        break;
+    case UR_TYPE_FLOAT:
+    case UR_TYPE_DOUBLE:
+            if (ipt == FDS_ET_FLOAT_32 ||
+                    ipt == FDS_ET_FLOAT_64) {
+                return translate_float;
+            }
+        break;
+    case UR_TYPE_IP:
+        if (ipt == FDS_ET_IPV4_ADDRESS || ipt == FDS_ET_IPV6_ADDRESS) {
+            return translate_ip;
+        }
+        break;
+    case UR_TYPE_MAC:
+        if (ipt == FDS_ET_MAC_ADDRESS) {
+            return translate_mac;
+        }
+        break;
+    case UR_TYPE_TIME:
+        if (ipt == FDS_ET_DATE_TIME_SECONDS ||
+                ipt == FDS_ET_DATE_TIME_MILLISECONDS ||
+                ipt == FDS_ET_DATE_TIME_MICROSECONDS ||
+                ipt == FDS_ET_DATE_TIME_NANOSECONDS) {
+            return translate_time;
+        }
+        break;
+    }
+    return NULL;
+}
+
+translator_t *
+translator_init(ipx_ctx_t *ctx, unirecField_t *map, uint32_t ipfixfieldcount)
+{
+    ur_field_id_t urfield;
+    int ret;
+    const fds_iemgr_t *iemgr = ipx_ctx_iemgr_get(ctx);
+    const struct fds_iemgr_elem *ielem = NULL;
+    translator_table_rec_t *t;
+
+    IPX_CTX_INFO(ctx, "Initialization of translator.");
+
     translator_t *instance = calloc(1, sizeof(*instance));
     if (!instance) {
         IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
@@ -654,67 +632,120 @@ translator_init(ipx_ctx_t *ctx)
     }
 
     // Copy conversion table and sort it (just for sure)
-    const size_t table_size = sizeof(translator_table_global);
-    memcpy(instance->table, translator_table_global, table_size);
+    instance->table_capacity = ipfixfieldcount;
+    instance->table = calloc(ipfixfieldcount, sizeof(*instance->table));
+    instance->table_count = ipfixfieldcount;
 
-    const size_t table_elem_size = sizeof(instance->table[0]);
-    qsort(instance->table, TRANSLATOR_TABLE_SIZE, table_elem_size, transtator_cmp);
+    unirecField_t *p;
+    size_t table_idx = 0;
+    for (p = map; p != NULL; p = p->next) {
+        ret = ur_get_id_by_name(p->name);
+        if (ret != UR_E_INVALID_NAME) {
+            urfield = ur_get_id_by_name(p->name);
+        } else {
+            IPX_CTX_ERROR(ctx, "Unknown name of the UniRec field '%s', something is corrupted because it must have been defined already. (%s:%d)", p->name, __FILE__, __LINE__);
+        }
 
-    // Update information about LNF fields
-    for (size_t i = 0; i < TRANSLATOR_TABLE_SIZE; ++i) {
-        struct translator_table_rec *rec = &instance->table[i];
+        for (uint32_t i = 0; i < p->ipfixCount; ++i) {
+            t = &instance->table[table_idx++];
+            t->ipfix.pen = p->ipfix[i].en;
+            t->ipfix.ie = p->ipfix[i].id;
+            t->ipfix_priority = i + 1;
+            t->ur_field_id = urfield;
 
-        int size = 0;
-        int type; // = LNF_NONE;
+            ielem = fds_iemgr_elem_find_id(iemgr, p->ipfix[i].en, p->ipfix[i].id);
+            if (ielem == NULL) {
+                IPX_CTX_ERROR(ctx, "Unknown IPFIX element in libfds (en%did%d)", p->ipfix[i].en, p->ipfix[i].id);
+                free(instance->table);
+                free(instance);
+                return NULL;
+            }
+            IPX_CTX_INFO(ctx, "\t%d:%d %s", p->ipfix[i].en, p->ipfix[i].id, ielem->name);
 
-        // Get the size and type of the LNF field
-        int size_ret;
-        int type_ret;
-
-        //size_ret = lnf_fld_info(rec->lnf.id, LNF_FLD_INFO_SIZE, &size, sizeof(size));
-        //type_ret = lnf_fld_info(rec->lnf.id, LNF_FLD_INFO_TYPE, &type, sizeof(type));
-        //if (size_ret == LNF_OK && type_ret == LNF_OK) {
-        //    rec->lnf.size = size;
-        //    rec->lnf.type = type;
-        //    continue;
-        //}
-
-        // Failed
-        IPX_CTX_ERROR(ctx, "lnf_fld_info(): Failed to get a size/type of a LNF element (id: %d)",
-            rec->lnf.id);
-        free(instance);
-        return NULL;
+            t->func = get_func_by_elementtypes(p->unirec_type, ielem);
+            if (t->func == translate_tcpflags) {
+                IPX_CTX_INFO(ctx, "!!!!!!! Using translate_tcpflags (%s, %d)", ur_field_type_str[p->unirec_type], ielem->data_type);
+            }
+            if (t->func == NULL) {
+                IPX_CTX_ERROR(ctx, "Unknown translation function for types (%s, %d)", ur_field_type_str[p->unirec_type], ielem->data_type);
+            }
+        }
     }
+    const size_t table_elem_size = sizeof(instance->table[0]);
+    qsort(instance->table, instance->table_count, table_elem_size, transtator_cmp);
 
     instance->ctx = ctx;
     return instance;
 }
 
+int
+translator_init_urtemplate(translator_t *tr, ur_template_t *urtmpl, char *urspec)
+{
+
+    tr->urtmpl = urtmpl;
+    tr->req_fields = calloc(urtmpl->count, sizeof(uint8_t));
+    tr->todo_fields = malloc(urtmpl->count * sizeof(uint8_t));
+    tr->field_idx = calloc(ur_field_specs.ur_last_id, sizeof(ur_field_id_t));
+
+    if (tr->req_fields == NULL || tr->todo_fields == NULL || tr->field_idx == NULL) {
+        free(tr->req_fields);
+        free(tr->todo_fields);
+        free(tr->field_idx);
+        return 1;
+    }
+
+    for (size_t i = 0; i < urtmpl->count; ++i) {
+        tr->field_idx[urtmpl->ids[i]] = i;
+    }
+
+    char *token, *state;
+    int ret;
+    for (token = strtok_r(urspec, ",", &state); token != NULL; token = strtok_r(NULL, ",", &state)) {
+        if (token[0] == '?') {
+            /* optional */
+        } else {
+            ret = ur_get_id_by_name(token);
+            if (ret != UR_FIELD_ID_MAX) {
+                tr->req_fields[tr->field_idx[ret]] = 1;
+            }
+        }
+    }
+    return 0;
+}
+
 void
 translator_destroy(translator_t *trans)
 {
+    free(trans->req_fields);
+    free(trans->todo_fields);
+    free(trans->field_idx);
+    free(trans->table);
     free(trans);
 }
 
 int
-translator_translate(translator_t *trans, struct fds_drec *ipfix_rec, ur_template_t *urtmplt, void *data,
-    uint16_t flags)
+translator_translate(translator_t *trans, struct conf_unirec *conf, struct fds_drec *ipfix_rec, uint16_t flags)
 {
-
+    size_t i;
+    void *data = conf->ur_message;
     // Initialize a record iterator
     struct fds_drec_iter it;
     fds_drec_iter_init(&it, ipfix_rec, flags);
 
     // Try to convert all IPFIX fields
-    struct translator_table_rec key;
-    struct translator_table_rec *def;
+    translator_table_rec_t key;
+    translator_table_rec_t *def;
     int converted_fields = 0;
 
-    const size_t table_rec_cnt = TRANSLATOR_TABLE_SIZE;
+    const size_t table_rec_cnt = trans->table_count;
     const size_t table_rec_size = sizeof(trans->table[0]);
-    uint8_t * const buffer_ptr = trans->rec_buffer;
 
-    while (fds_drec_iter_next(&it) != FDS_ERR_NOTFOUND) {
+    /* reinit UniRec */
+    memcpy(trans->todo_fields, trans->req_fields, trans->urtmpl->count * sizeof(uint8_t));
+    memset(data, 0, ur_rec_fixlen_size(trans->urtmpl));
+    ur_clear_varlen(trans->urtmpl, data);
+
+    while (fds_drec_iter_next(&it) != FDS_EOC) {
         // Find a conversion function
         const struct fds_tfield *info = it.field.info;
 
@@ -727,22 +758,46 @@ translator_translate(translator_t *trans, struct fds_drec *ipfix_rec, ur_templat
             continue;
         }
 
-        if (def->func(&it.field, def, buffer_ptr) != 0) {
+        IPX_CTX_INFO(trans->ctx, "Processing field: %s (%d) %s", ur_get_name(def->ur_field_id), def->ur_field_id, ur_is_fixlen(def->ur_field_id) ? "fixlen" : "varlen");
+        if (def->func(&it.field, conf, def) == 0) {
+            trans->todo_fields[trans->field_idx[def->ur_field_id]] = 0;
+        } else {
             // Conversion function failed
             IPX_CTX_WARNING(trans->ctx, "Failed to converter a IPFIX IE field  (ID: %" PRIu16 ", "
-                "PEN: %" PRIu32 ") to LNF field.", info->id, info->en);
-            continue;
+                    "PEN: %" PRIu32 ") to UniRec field.", info->id, info->en);
         }
 
-        //if (lnf_rec_fset(lnf_rec, def->lnf.id, buffer_ptr) != LNF_OK) {
-        //    // Setter failed
-        //    IPX_CTX_WARNING(trans->ctx, "Failed to store a IPFIX IE field (ID: %" PRIu16 ", "
-        //        "PEN: %" PRIu32 ") to a LNF record.", info->id, info->en);
-        //    continue;
-        //}
         converted_fields++;
     }
 
+    for (i = 0; i < trans->urtmpl->count && trans->todo_fields[i] == 0; ++i) {
+        /* just check the whole array */
+    }
+
+    if (trans->todo_fields[i] != 0) {
+        IPX_CTX_WARNING(trans->ctx, "There is some required field that was not filled (%s), processed %d fields.", ur_get_name(trans->urtmpl->ids[i]), converted_fields);
+        return 0;
+    }
+
+    IPX_CTX_INFO(trans->ctx, "Processed %d fields", converted_fields);
     // Cleanup
     return converted_fields;
 }
+
+void
+free_IPFIX2UR_map(unirecField_t *map)
+{
+    unirecField_t *tmp, *head = map;
+    if (map == NULL) {
+        return;
+    }
+
+    while (head != NULL) {
+        tmp = head->next;
+        free(head->name);
+        free(head->unirec_type_str);
+        free(head);
+        head = tmp;
+    }
+}
+
