@@ -47,16 +47,6 @@
 #include "configuration.h"
 #include "translator.h"
 
-/* TODO move into unirec.h !!! */
-int ur_get_field_type_from_str(const char *type);
-extern const char *ur_field_type_str[];
-/* end */
-
-extern const char *msg_module;
-
-// Size of conversion buffer
-#define REC_BUFF_SIZE (65535)
-
 /**
  * \brief Plugin instance structure
  */
