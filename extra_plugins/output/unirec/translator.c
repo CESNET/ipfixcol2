@@ -780,7 +780,7 @@ translator_translate(translator_t *trans, struct conf_unirec *conf, struct fds_d
         /* just check the whole array */
     }
 
-    if (trans->todo_fields[i] != 0) {
+    if (i < trans->urtmpl->count && trans->todo_fields[i] != 0) {
         IPX_CTX_WARNING(trans->ctx, "There is some required field that was not filled (%s), processed %d fields.", ur_get_name(trans->urtmpl->ids[i]), converted_fields);
         return 0;
     }
