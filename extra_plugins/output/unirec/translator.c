@@ -710,6 +710,12 @@ translator_init_urtemplate(translator_t *tr, ur_template_t *urtmpl, char *urspec
             }
         }
     }
+    /* disable translation of all fields that are not in the current UniRec template */
+    for (size_t i = 0; i < tr->table_count; ++i) {
+        if (ur_is_present(tr->urtmpl, tr->table[i].ur_field_id) == 0) {
+            tr->table[i].func = NULL;
+        }
+    }
     return 0;
 }
 
@@ -753,8 +759,8 @@ translator_translate(translator_t *trans, struct conf_unirec *conf, struct fds_d
         key.ipfix.pen = info->en;
 
         def = bsearch(&key, trans->table, table_rec_cnt, table_rec_size, transtator_cmp);
-        if (!def) {
-            // Conversion definition not found
+        if (!def || !def->func) {
+            // Conversion definition not found or translation disabled
             continue;
         }
 
