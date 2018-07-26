@@ -30,13 +30,15 @@ network interface and a port. Multiple instances of these plugins can run concur
 
 **Intermediate plugins** - modify, enrich and filter flow records.
 
-- anonymization - anonymize IP addresses (in flow records) with Crypto-PAn algorithm.
+- `anonymization <src/plugins/intermediate/anonymization/>`_ - anonymize IP addresses
+  (in flow records) with Crypto-PAn algorithm.
 
 **Output plugins** - store or forward your flows.
 
 - `JSON <src/plugins/output/json>`_ - convert flow records to JSON and send/store them
-- dummy - simple module example,
-- `lnfstore <extra_plugins/output/lnfstore>`_ (*) - store all flows in nfdump compatible format for long-term preservation
+- `dummy <src/plugins/output/dummy>`_ - simple module example,
+- `lnfstore <extra_plugins/output/lnfstore>`_ (*) - store all flows in nfdump compatible
+  format for long-term preservation
 
 \* Must be installed individually due to extra dependencies
 
