@@ -10,6 +10,7 @@ set(CORE_SOURCE
 	configurator/plugin_finder.hpp
 	configurator/model.cpp
 	configurator/model.hpp
+	api.c
 	context.c
 	context.h
 	fpipe.c

@@ -66,9 +66,12 @@
 #define IPX_BUILD_VERSION_FULL_STR \
     "@IPFIXCOL_VERSION_MAJOR@.@IPFIXCOL_VERSION_MINOR@.@IPFIXCOL_VERSION_PATCH@"
 
+/** \brief Path to the directory with configuration                       */
+#define IPX_DEFAULT_CONFIG_DIR \
+    "@CMAKE_INSTALL_FULL_SYSCONFDIR@/ipfixcol2/"
 /** \brief Path to default (if not specified) user configuration file     */
 #define IPX_DEFAULT_STARTUP_CONFIG \
-    "@CMAKE_INSTALL_FULL_SYSCONFDIR@/ipfixcol2/startup.xml"
+    IPX_DEFAULT_CONFIG_DIR "startup.xml"
 /** \brief Path to the directory with plugins                             */
 #define IPX_DEFAULT_PLUGINS_DIR \
     "@CMAKE_INSTALL_FULL_LIBDIR@/ipfixcol2/"

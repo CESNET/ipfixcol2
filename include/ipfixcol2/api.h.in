@@ -2,11 +2,11 @@
  * \file api.h
  * \author Petr Velan <petr.velan@cesnet.cz>
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
- * \brief Definitions for API functions
- * \date 2016
+ * \brief Definitions for API functions (header file)
+ * \date 2016-2018
  */
 
-/* Copyright (C) 2016 CESNET, z.s.p.o.
+/* Copyright (C) 2016-2018 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -57,7 +57,7 @@ extern "C" {
 
 /**
  * \def IPX_API
- * \brief Make an interface public outsite
+ * \brief Make an interface public outside
  *
  * If the compiler supports attribute to mark objects as hidden, mark all
  * objects as hidden and export only objects explicitly marked to be part of
@@ -129,6 +129,13 @@ extern "C" {
 #define IPX_ERR_EXISTS     (-12)
 /** Status code for reaching maximum capacity                             */
 #define IPX_ERR_LIMIT      (-13)
+
+/**
+ * \brief Get the default directory with configuration
+ * \return Statically allocated string
+ */
+IPX_API const char *
+ipx_api_cfg_dir();
 
 /**@}*/
 
