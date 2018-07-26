@@ -237,8 +237,10 @@ error:
     free(cleaned_urtemplate);
     ipx_plugin_destroy(ctx, conf);
     free_IPFIX2UR_map(map);
-    free(conf->ur_message);
-    free(conf);
+    if (conf != NULL) {
+        free(conf->ur_message);
+        free(conf);
+    }
     return IPX_ERR_DENIED;
 }
 
@@ -293,25 +295,7 @@ ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
 {
     (void) ctx;
     struct conf_unirec *conf = (struct conf_unirec *) cfg;
-    if (conf == NULL) {
-        IPX_CTX_ERROR(ctx, "configuration is NULL! Skipping ipx_plugin_destroy()");
-    }
-
     IPX_CTX_INFO(ctx, "UniRec plugin finalization.");
-
-    trap_ctx_terminate(conf->tctx);
-
-    // Destroy a translator and a record
-    translator_destroy(conf->translator);
-
-    // Destroy parsed XML configuration
-    configuration_free(conf->params);
-
-    trap_ctx_finalize(&conf->tctx);
-
-    ur_free_template(conf->urtmpl);
-
-    free(conf->ur_message);
 
     if (pthread_mutex_lock(&urp_mutex) == -1) {
         IPX_CTX_ERROR(ctx, "Could not lock. (%s:%d)", __FILE__, __LINE__);
@@ -324,7 +308,23 @@ ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
     if (pthread_mutex_unlock(&urp_mutex) == -1) {
         IPX_CTX_ERROR(ctx, "Could not unlock. (%s:%d)", __FILE__, __LINE__);
     }
-    // Destroy instance structure
-    free(conf);
+
+    if (conf != NULL) {
+        trap_ctx_terminate(conf->tctx);
+        // Destroy a translator and a record
+        translator_destroy(conf->translator);
+
+        // Destroy parsed XML configuration
+        configuration_free(conf->params);
+
+        trap_ctx_finalize(&conf->tctx);
+
+        ur_free_template(conf->urtmpl);
+
+        free(conf->ur_message);
+
+        // Destroy instance structure
+        free(conf);
+    }
 }
 
