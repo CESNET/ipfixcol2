@@ -1,6 +1,10 @@
 Collector configuration
 =======================
 
+.. image:: img/configuration.svg
+    :width: 60%
+    :align: right
+
 IPFIXcol is designed to be easily extensible by input, intermediate and output plugins.
 Therefore, the startup configuration of the collector consists of 3 parts, each for one type of
 plugins, as illustrated below. The collector typically receives data from exporters and stores
