@@ -1,0 +1,73 @@
+<!--
+  Receive flow data over UDP and store flows from different ODIDs to different
+  locations (multiple instances of the same output plugin)
+-->
+<ipfixcol2>
+  <!-- Input plugins -->
+  <inputPlugins>
+    <input>
+      <name>UDP collector</name>
+      <plugin>udp</plugin>
+      <params>
+        <!-- List on port 4739 -->
+        <localPort>4739</localPort>
+        <!-- Bind to all local adresses -->
+        <localIPAddress></localIPAddress>
+      </params>
+    </input>
+  </inputPlugins>
+
+  <!-- Output plugins -->
+  <outputPlugins>
+    <output>
+      <name>JSON output (ODID 1)</name>
+      <plugin>json</plugin>
+      <odidOnly>1</odidOnly>     <!-- Process only flows with ODID 1 -->
+      <params>
+        <outputs>
+          <file>
+            <name>Store to files</name>
+            <path>/tmp/ipfixcol/odid1/%Y/%m/%d/</path>
+            <prefix>json.</prefix>
+            <timeWindow>300</timeWindow>
+            <timeAlignment>yes</timeAlignment>
+          </file>
+        </outputs>
+      </params>
+    </output>
+
+    <output>
+      <name>JSON output (ODID 2-5)</name>
+      <plugin>json</plugin>
+      <odidOnly>2-5</odidOnly>    <!-- Process only flows with ODID 2 - 5 -->
+      <params>
+        <outputs>
+          <file>
+            <name>Store to files</name>
+            <path>/tmp/ipfixcol/odid2-5/%Y/%m/%d/</path>
+            <prefix>json.</prefix>
+            <timeWindow>300</timeWindow>
+            <timeAlignment>yes</timeAlignment>
+          </file>
+        </outputs>
+      </params>
+    </output>
+
+    <output>
+      <name>JSON output (ODID others)</name>
+      <plugin>json</plugin>
+      <odidExcept>1-5</odidExcept>     <!-- Process only flows with ODID different from 1 - 5 -->
+      <params>
+        <outputs>
+          <file>
+            <name>Store to files</name>
+            <path>/tmp/ipfixcol/odidOthers/%Y/%m/%d/</path>
+            <prefix>json.</prefix>
+            <timeWindow>300</timeWindow>
+            <timeAlignment>yes</timeAlignment>
+          </file>
+        </outputs>
+      </params>
+    </output>
+  </outputPlugins>
+</ipfixcol2>

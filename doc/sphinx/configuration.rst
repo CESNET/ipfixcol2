@@ -167,17 +167,17 @@ Example configuration files
 In this section you can see various example configuration files that demonstrate possibilities
 of IPFIXcol. Always keep in mind that you should modify a configuration to fit you needs.
 
-:`udp2json <TODO>`_:
+:`udp2json <../data/configs/udp2json.xml>`_:
     Receive flow data over UDP, convert them into JSON and provide them as a server on local port.
-:`tcp2anon2json <TODO>`_:
+:`tcp2anon2json <../data/configs/tcp2anon2json.xml>`_:
     Receive  flow data over TCP, anonymize them and store in JSON format on a local drive.
-:`tcpUdp2lnf <TODO>`_:
+:`tcpUdp2lnf <../data/configs/tcpUdp2lnf.xml>`_:
     Receive flow data simultaneously over TCP and UDP and store them on a local drive in
-    a nfdump compatible format (multiple instances of the same input plugin).
-:`odidFilter <TODO>`_:
-    Receive flow data over TCP and store flows from different ODIDs to different locations
+    a nfdump compatible format (multiple instances of input plugins).
+:`odidFilter <../data/configs/odidFilter.xml>`_:
+    Receive flow data over UDP and store flows from different ODIDs to different locations
     (multiple instances of the same output plugin).
-:`multiOutput <TODO>`_:
+:`multiOutput <../data/configs/multiOutput.xml>`_:
     Receive flow data over TCP and store them in a nfdump compatible format on a local drive
     and simultaneously send to a remote host as JSON.
 
@@ -198,10 +198,11 @@ increasing verbosity level to see also warning messages (parameter "``-v``") dur
   Note: Receiving flow data from an exporter *over UDP transport
   protocol* may lead due to IPFIX protocol structure to a situation when the collector
   is unable to interpret data immediately after start.
-  For more information, see documentation of `UDP <TODO>`_ plugin.
+  For more information, see documentation of `UDP <../../src/plugins/input/udp>`_ plugin.
 
 We prepared a file with few anonymized IPFIX flows, so you can try your configurations,
-even without running a flow exporter. Just download the `file <TODO>`_ and use ``ipfixsend2`` tool
+even without running a flow exporter. Just download the `file <../data/ipfix/example_flows.ipfix>`_
+and use ``ipfixsend2`` tool
 (distributed and installed together with IPFIXcol). For example, to send flow records over UDP
 protocol with real-time simulation use:
 
@@ -254,8 +255,12 @@ shown below. The same approach applies to other types of instances too.
 
 Available verbosity levels:
 
-:none:    Hide all messages
-:error:   Show only error messages (i.e. something went really wrong)
-:warning: Show error and warning messages (i.e. something is not right, but an action can continue)
-:info:    Show all previous types of messages and informational (status) messages
-:debug:   Show all types of messages (i.e. include messages interesting only for developers)
+=========== =========================================================================================
+Verbosity   Description
+=========== =========================================================================================
+``none``    Hide all messages
+``error``   Show only error messages (i.e. something went really wrong)
+``warning`` Show error and warning messages (i.e. something is not right, but an action can continue)
+``info``    Show all previous types of messages and informational (status) messages
+``debug``   Show all types of messages (i.e. include messages interesting only for developers)
+=========== =========================================================================================

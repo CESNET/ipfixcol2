@@ -1,0 +1,60 @@
+<!--
+  Receive flow data over TCP and store them in a nfdump compatible format on
+  a local drive and simultaneously send to a remote host as JSON.
+-->
+<ipfixcol2>
+  <!-- Input plugins -->
+  <inputPlugins>
+    <input>
+      <name>TCP collector</name>
+      <plugin>tcp</plugin>
+      <params>
+        <!-- List on port 4739 -->
+        <localPort>4739</localPort>
+        <!-- Bind to all local adresses -->
+        <localIPAddress></localIPAddress>
+      </params>
+    </input>
+  </inputPlugins>
+
+  <!-- Output plugins -->
+  <outputPlugins>
+    <output>
+      <name>LNF output</name>
+      <plugin>lnfstore</plugin>
+      <params>
+        <storagePath>/tmp/ipfixcol/lnf/</storagePath> <!-- WARNING: the directory MUST exist before start -->
+        <compress>yes</compress>
+        <dumpInterval>
+          <timeWindow>300</timeWindow>
+          <align>yes</align>
+        </dumpInterval>
+      </params>
+    </output>
+
+    <output>
+      <name>JSON output</name>
+      <plugin>json</plugin>
+      <params>
+        <tcpFlags>formatted</tcpFlags>
+        <timestamp>formatted</timestamp>
+        <protocol>formatted</protocol>
+        <ignoreUnknown>true</ignoreUnknown>
+        <ignoreOptions>false</ignoreOptions>
+        <nonPrintableChar>true</nonPrintableChar>
+
+        <!-- Output methods -->
+        <outputs>
+          <!-- Send to a remove host on IP address 127.0.0.1:8000 -->
+          <send>
+            <name>Send to a remove host</name>
+            <ip>127.0.0.1</ip>
+            <port>8000</port>
+            <protocol>tcp</protocol>
+            <blocking>no</blocking>
+          </send>
+        </outputs>
+      </params>
+    </output>
+  </outputPlugins>
+</ipfixcol2>

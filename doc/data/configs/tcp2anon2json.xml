@@ -1,0 +1,58 @@
+<!--
+  Receive flow data over TCP, anonymize them and store in JSON format
+  on a local drive.
+-->
+<ipfixcol2>
+  <!-- Input plugins -->
+  <inputPlugins>
+    <input>
+      <name>TCP collector</name>
+      <plugin>tcp</plugin>
+      <params>
+        <!-- List on port 4739 -->
+        <localPort>4739</localPort>
+        <!-- Bind to all local adresses -->
+        <localIPAddress></localIPAddress>
+      </params>
+    </input>
+  </inputPlugins>
+
+  <!-- Intermediate plugins -->
+  <intermediatePlugins>
+    <intermediate>
+      <name>Flow anonymization</name>
+      <plugin>anonymization</plugin>
+      <params>
+        <type>truncation</type>
+      </params>
+    </intermediate>
+  </intermediatePlugins>
+
+  <!-- Output plugins -->
+  <outputPlugins>
+    <output>
+      <name>JSON output</name>
+      <plugin>json</plugin>
+      <params>
+        <tcpFlags>formatted</tcpFlags>
+        <timestamp>formatted</timestamp>
+        <protocol>formatted</protocol>
+        <ignoreUnknown>true</ignoreUnknown>
+        <ignoreOptions>false</ignoreOptions>
+        <nonPrintableChar>true</nonPrintableChar>
+
+        <!-- Output methods -->
+        <outputs>
+          <!-- Store as files into /tmp/ipfixcol/... -->
+          <file>
+            <name>Store to files</name>
+            <path>/tmp/ipfixcol/flow/%Y/%m/%d/</path>
+            <prefix>json.</prefix>
+            <timeWindow>300</timeWindow>
+            <timeAlignment>yes</timeAlignment>
+          </file>
+        </outputs>
+      </params>
+    </output>
+  </outputPlugins>
+</ipfixcol2>

@@ -1,0 +1,47 @@
+<!--
+  Receive flow data simultaneously over TCP and UDP and store them on a local
+  drive in a nfdump compatible format (multiple instances of the same input
+  plugin).
+-->
+<ipfixcol2>
+  <!-- Input plugins -->
+  <inputPlugins>
+    <input>
+      <name>TCP collector</name>
+      <plugin>tcp</plugin>
+      <params>
+        <!-- List on port 4739 -->
+        <localPort>4739</localPort>
+        <!-- Bind to all local adresses -->
+        <localIPAddress></localIPAddress>
+      </params>
+    </input>
+
+    <input>
+      <name>UDP collector</name>
+      <plugin>udp</plugin>
+      <params>
+        <!-- List on port 4739 -->
+        <localPort>4739</localPort>
+        <!-- Bind to all local adresses -->
+        <localIPAddress></localIPAddress>
+      </params>
+    </input>
+  </inputPlugins>
+
+  <!-- Output plugins -->
+  <outputPlugins>
+    <output>
+      <name>LNF output</name>
+      <plugin>lnfstore</plugin>
+      <params>
+        <storagePath>/tmp/ipfixcol/</storagePath> <!-- WARNING: the directory MUST exist before start -->
+        <compress>yes</compress>
+        <dumpInterval>
+          <timeWindow>300</timeWindow>
+          <align>yes</align>
+        </dumpInterval>
+      </params>
+    </output>
+  </outputPlugins>
+</ipfixcol2>
