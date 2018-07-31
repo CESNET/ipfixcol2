@@ -38,11 +38,14 @@
  *
  */
 
+
 #include <iostream>
 #include <string>
 #include <vector>
 #include <sys/types.h> // getpid()
 #include <unistd.h>
+#include <cstdlib>
+#include <cinttypes>
 
 #include <ipfixcol2.h>
 #include <iostream>
@@ -90,10 +93,11 @@ print_help()
         << "            (default: " << fds_api_cfg_dir() << ")\n"
         << "  -P FILE   Path to a PID file (without this option, no PID file is created)\n"
         << "  -d        Run as a standalone daemon process\n"
+        << "  -r SIZE   Ring buffer size (default: " << ipx_configurator::RING_DEF_SIZE << ")\n"
         << "  -h        Show this help message and exit\n"
         << "  -V        Show version information and exit\n"
         << "  -v        Increase verbosity level (by default, show only error messages)\n"
-        << "            (can be used up to 3 times: adds warnings/infos/debug messages)\n";
+        << "            (can be used up to 3 times to add warning/info/debug messages)\n";
 }
 
 /**
@@ -155,6 +159,36 @@ pid_remove(const char *file)
 }
 
 /**
+ * \brief Change size of ring buffers
+ * \param[in] conf     IPFIXcol configurator
+ * \param[in] new_size New size (from command line)
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_FORMAT if the \p new_size is not valid size
+ */
+static int
+ring_size_change(ipx_configurator &conf, const char *new_size)
+{
+    char *end_ptr = nullptr;
+    errno = 0;
+    unsigned int size = std::strtoul(new_size, &end_ptr, 10);
+    if (errno != 0 || (end_ptr != nullptr && (*end_ptr) != '\0')) {
+        IPX_ERROR(module, "Size '%s' of the ring buffers is not a valid number!", new_size);
+        return IPX_ERR_FORMAT;
+    }
+
+    const uint32_t min_size = ipx_configurator::RING_MIN_SIZE;
+    if (size < min_size) {
+        IPX_ERROR(module, "Size of the ring buffers must be at least %" PRIu32 " messages.",
+            min_size);
+        return IPX_ERR_FORMAT;
+    }
+
+    conf.set_buffer_size(size);
+    IPX_INFO(module, "Ring buffer size set to %u messages", size);
+    return IPX_OK;
+}
+
+/**
  * \brief Main function
  * \param[in] argc Number of arguments
  * \param[in] argv Vector of the arguments
@@ -165,13 +199,14 @@ int main(int argc, char *argv[])
     const char *cfg_startup = nullptr;
     const char *cfg_iedir = nullptr;
     const char *pid_file = nullptr;
+    const char *ring_size = nullptr;
     bool daemon_en = false;
     ipx_configurator conf;
 
     // Parse configuration
     int opt;
     opterr = 0; // Disable default error messages
-    while ((opt = getopt(argc, argv, "c:vVhdp:e:P:")) != -1) {
+    while ((opt = getopt(argc, argv, "c:vVhdp:e:P:r:")) != -1) {
         switch (opt) {
         case 'c': // Configuration file
             cfg_startup = optarg;
@@ -196,6 +231,9 @@ int main(int argc, char *argv[])
             break;
         case 'P':
             pid_file = optarg;
+            break;
+        case 'r':
+            ring_size = optarg;
             break;
         default: // ?
             std::cerr << "Unknown parameter '" << static_cast<char>(optopt) << "'!" << std::endl;
@@ -222,6 +260,11 @@ int main(int argc, char *argv[])
             IPX_ERROR(module, "Failed to start as a standalone daemon: %s", err_str);
             return EXIT_FAILURE;
         }
+    }
+
+    if (ring_size != nullptr && ring_size_change(conf, ring_size) != IPX_OK) {
+        // Failed to set the size
+        return EXIT_FAILURE;
     }
 
     // Always use the default directory for looking for plugins, but with the lowest priority
