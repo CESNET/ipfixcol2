@@ -71,6 +71,7 @@ private:
     /** Search paths (files and directories) */
     std::vector<std::string> paths;
     std::vector<struct ipx_plugin_data *> loaded_plugins;
+    bool unload_on_exit;
 
     void find_in_paths(const std::string &name, uint16_t, struct ipx_ctx_callbacks &cbs);
     void *find_in_file(const std::string &name, uint16_t type, const char *path);
@@ -80,7 +81,7 @@ private:
 
 public:
     // Use default constructor and destructor
-    ipx_plugin_finder() = default;
+    ipx_plugin_finder();
     ~ipx_plugin_finder();
 
     /**
@@ -105,6 +106,18 @@ public:
     const struct ipx_plugin_data *
     find(const std::string &name, uint16_t type);
 
+    /**
+     * \brief Automatically unload all plugins on destroy
+     *
+     * This options allows plugin developers to disable automatic unload of plugins. Disabled
+     * unload leaves plugin symbols available even after the collector shutdown. This is necessary
+     * for analysis of performance and memory leaks. For example, valgrind is unable to identify
+     * position of memory leaks of unloaded plugins.
+     * \note By default, unload is enabled.
+     * \param[in] enable Enable/disable
+     */
+    void
+    auto_unload(bool enable);
 };
 
 #endif //IPFIXCOL_PLUGIN_FINDER_H

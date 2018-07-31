@@ -62,13 +62,28 @@ extern "C" {
 /** Component identification (for log) */
 static const char *comp_str = "Configurator (plugin finder)";
 
+ipx_plugin_finder::ipx_plugin_finder()
+{
+    // Enable automatic unload of plugins
+    unload_on_exit = true;
+}
+
 ipx_plugin_finder::~ipx_plugin_finder()
 {
     // Unload all plugins
     for (struct ipx_plugin_data *plugin : loaded_plugins) {
-        dlclose(plugin->cbs.handle);
+        if (unload_on_exit) {
+            dlclose(plugin->cbs.handle);
+        }
+
         delete plugin;
     }
+}
+
+void
+ipx_plugin_finder::auto_unload(bool enable)
+{
+    unload_on_exit = enable;
 }
 
 void

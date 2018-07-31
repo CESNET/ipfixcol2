@@ -84,7 +84,7 @@ print_help()
 {
     std::cout
         << "IPFIX Collector daemon\n"
-        << "Usage: ipfixcol [-c FILE] [-p PATH] [-e DIR] [-P FILE] [-vVhd]\n"
+        << "Usage: ipfixcol2 [-c FILE] [-p PATH] [-e DIR] [-P FILE] [-r SIZE] [-vVhdu]\n"
         << "  -c FILE   Path to the startup configuration file\n"
         << "            (default: " << IPX_DEFAULT_STARTUP_CONFIG << ")\n"
         << "  -p PATH   Add path to a directory with plugins or to a file\n"
@@ -97,7 +97,8 @@ print_help()
         << "  -h        Show this help message and exit\n"
         << "  -V        Show version information and exit\n"
         << "  -v        Increase verbosity level (by default, show only error messages)\n"
-        << "            (can be used up to 3 times to add warning/info/debug messages)\n";
+        << "            (can be used up to 3 times to add warning/info/debug messages)\n"
+        << "  -u        Disable plugins unload on exit (only for plugin developers)\n";
 }
 
 /**
@@ -206,7 +207,7 @@ int main(int argc, char *argv[])
     // Parse configuration
     int opt;
     opterr = 0; // Disable default error messages
-    while ((opt = getopt(argc, argv, "c:vVhdp:e:P:r:")) != -1) {
+    while ((opt = getopt(argc, argv, "c:vVhdp:e:P:r:u")) != -1) {
         switch (opt) {
         case 'c': // Configuration file
             cfg_startup = optarg;
@@ -220,20 +221,23 @@ int main(int argc, char *argv[])
         case 'h': // Help
             print_help();
             return EXIT_SUCCESS;
-        case 'd':
+        case 'd': // Run as a standalone process (daemon)
             daemon_en = true;
             break;
         case 'p': // Plugin search path
             conf.finder.path_add(std::string(optarg));
             break;
-        case 'e':
+        case 'e': // Redefine path to Information Elements definition
             cfg_iedir = optarg;
             break;
-        case 'P':
+        case 'P': // Create a PID file
             pid_file = optarg;
             break;
-        case 'r':
+        case 'r': // Change ring size
             ring_size = optarg;
+            break;
+        case 'u': // Disable automatic plugin unload
+            conf.finder.auto_unload(false);
             break;
         default: // ?
             std::cerr << "Unknown parameter '" << static_cast<char>(optopt) << "'!" << std::endl;
