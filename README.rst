@@ -31,12 +31,12 @@ network interface and a port. Multiple instances of these plugins can run concur
 **Intermediate plugins** - modify, enrich and filter flow records.
 
 - `anonymization <src/plugins/intermediate/anonymization/>`_ - anonymize IP addresses
-  (in flow records) with Crypto-PAn algorithm.
+  (in flow records) with Crypto-PAn algorithm
 
 **Output plugins** - store or forward your flows.
 
 - `JSON <src/plugins/output/json>`_ - convert flow records to JSON and send/store them
-- `dummy <src/plugins/output/dummy>`_ - simple module example,
+- `dummy <src/plugins/output/dummy>`_ - simple module example
 - `lnfstore <extra_plugins/output/lnfstore>`_ (*) - store all flows in nfdump compatible
   format for long-term preservation
 
@@ -85,37 +85,15 @@ Finally, build and install the collector:
     $ make
     # make install
 
-How to configure
-----------------
+How to configure and start IPFIXcol
+-----------------------------------
 
-TODO: Prepared configurations
-
-TODO: example configuration files
-
-TODO: description of information elements are
-
-
-FAQ
---------------
-
-Do you have any troubles? Unable to build and run the collector? *Feel free to submit a new issue.*
-
-We are open to new ideas! For example, are you missing a specific plugin that could
-be useful also for other users? Please, share your experience and thoughts.
-
-----
-
-:Q: How to...? UDP or TCP
-:A: You should...
-
-:Q: How to...? UDP and no records
-:A: You should...
-
-:Q: How can I add more IPFIX fields into records?
-:A: The collector receives flow records captured and prepared by an exporter. IPFIX is an
-    unidirectional protocol which means that the collector is not able to instruct the exporter
-    what to measure or how to behave. If you want to enhance your records, please, check
-    configuration of your exporter.
+Before you can start IPFIXcol, you have to prepare a configuration file. The file describes how
+IPFIXcol is configured at startup, which plugins are used and, for example, where flow data will
+be stored. The structure of the configuration is described
+`here <doc/sphinx/configuration.rst>`_. Several configuration examples that demonstrate features
+of the collector are given in the section
+"`Example configuration files <doc/sphinx/configuration.rst#example-configuration-files>`_".
 
 Coming soon
 -----------
@@ -123,3 +101,37 @@ Coming soon
 - Runtime reconfiguration (improved compared to the previous generation)
 - RPM/DEB packages
 - Support for structured data types (lists, etc.)
+
+FAQ
+--------------
+
+Do you have any troubles? Unable to build and run the collector? *Feel free to submit a new issue.*
+
+We are open to new ideas! For example, are you missing a specific plugin that could
+be useful also for other users? Please, share your experiences and thoughts.
+
+----
+
+:Q: My exporter sends flow data over UDP, however, the IPFIXcol doesn't process/store any data
+    immediately after start.
+:A: This is normal behaviour caused by UDP transport protocol. It may take up few minutes until
+    the first record is processed based on template refresh interval on the exporter.
+    For more information, see documentation of `UDP <src/plugins/input/udp>`_ plugin.
+
+:Q: How can I add more IPFIX fields into records?
+:A: The collector receives flow records captured and prepared by an exporter. IPFIX is an
+    unidirectional protocol which means that the collector is not able to instruct the exporter
+    what to measure or how to behave. If you want to enhance your records, please, check
+    configuration of your exporter.
+
+:Q: After *manual build and installation* the collector is unable to start and a message similar to
+    ``error while loading shared libraries: libfds.so.0: cannot open shared object file: No such file or directory``
+    is given.
+:A: Make sure that ``libfds`` is installed properly and your system is able to locate it.
+    Some systems (e.g. RHEL/CentOS/Fedora) for historical reason doesn't search for shared libraries
+    in the default installation directory where the ``libfds`` is installed. You can permanently
+    include this directory. For example, if the library is located in ``/usr/local/lib64``, use
+    as administrator "``echo "/usr/local/lib64" > /etc/ld.so.conf.d/local64.conf && ldconfig``"
+    or temporarily change an environment variable
+    "``export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib64/``"
+
