@@ -65,3 +65,8 @@ install(
 	TARGETS unirec-output
 	LIBRARY DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}/ipfixcol2/"
 )
+install(
+    FILES unirec-elements.txt
+    DESTINATION "${CMAKE_INSTALL_FULL_SYSCONFDIR}/ipfixcol2/"
+)
+
