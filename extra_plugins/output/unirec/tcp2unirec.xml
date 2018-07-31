@@ -1,0 +1,24 @@
+<ipfixcol2>
+  <inputPlugins>
+    <input>
+      <name>TCP collector</name>
+      <plugin>tcp</plugin>
+      <params>
+        <localPort>4739</localPort>
+        <localIPAddress></localIPAddress>
+      </params>
+    </input>
+  </inputPlugins>
+
+  <outputPlugins>
+    <output>
+      <name>UniRec output</name>
+      <plugin>unirec</plugin>
+      <params>
+      <trapIfcType>UNIXSOCKET</trapIfcType>
+      <trapIfcSocket>ipfix-ur</trapIfcSocket>
+      <UniRecFormat>TIME_FIRST,TIME_LAST,SRC_IP,DST_IP,PROTOCOL,?SRC_PORT,?DST_PORT,?TCP_FLAGS,PACKETS,BYTES</UniRecFormat>
+      </params>
+    </output>
+  </outputPlugins>
+</ipfixcol2>
