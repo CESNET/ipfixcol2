@@ -39,6 +39,8 @@
  *
  */
 
+#define _GNU_SOURCE         /* See feature_test_macros(7) */
+#include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
 #include "unirecplugin.h"
@@ -77,7 +79,7 @@ translate_bool(const struct fds_drec_field *field, struct conf_unirec *conf,
 
 
 // Path to unirec elements config file
-const char *UNIREC_ELEMENTS_FILE = "./unirec-elements.txt"; //TODO is this where it should be located
+const char *UNIREC_ELEMENTS_FILE = "unirec-elements.txt";
 
 /**
  * \brief Creates IPFIX id from string
@@ -113,12 +115,26 @@ unirecField_t *load_IPFIX2UR_mapping(ipx_ctx_t *ctx, uint32_t *urcount, uint32_t
     uint32_t numurfields = 0;
     uint32_t numipfixfields = 0;
 
-    /* Open the file */
-    uef = fopen(UNIREC_ELEMENTS_FILE, "r");
-    if (uef == NULL) {
-        IPX_CTX_ERROR(ctx, "Could not open file \"%s\" (%s:%d)", UNIREC_ELEMENTS_FILE, __FILE__, __LINE__);
+    const char *sysconfdir = ipx_api_cfg_dir();
+    if (sysconfdir == NULL) {
+        /* if the IPFIXcol2's path to config dir is not known, use current dir */
+        IPX_CTX_WARNING(ctx, "IPFIXcol2 did not supply path to config files, using \"./\" instead.");
+        sysconfdir = ".";
+    }
+    char *path_conf = NULL;
+    if (asprintf(&path_conf, "%s/%s", sysconfdir, UNIREC_ELEMENTS_FILE) == -1) {
+        IPX_CTX_ERROR(ctx, "Could not allocate memory (%s:%d).", __FILE__, __LINE__);
         return NULL;
     }
+
+    /* Open the file */
+    uef = fopen(path_conf, "r");
+    if (uef == NULL) {
+        IPX_CTX_ERROR(ctx, "Could not open file \"%s\" (%s:%d)", path_conf, __FILE__, __LINE__);
+        return NULL;
+    }
+    free(path_conf);
+    path_conf = NULL;
 
     /* Init buffer */
     line = malloc(lineSize);
