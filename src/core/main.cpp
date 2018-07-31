@@ -81,19 +81,19 @@ print_help()
 {
     std::cout
         << "IPFIX Collector daemon\n"
-        << "Usage: ipfixcol [-c FILE] [-d PATH] [-vVh]\n"
+        << "Usage: ipfixcol [-c FILE] [-p PATH] [-e DIR] [-P FILE] [-vVhd]\n"
         << "  -c FILE   Path to the startup configuration file\n"
         << "            (default: " << IPX_DEFAULT_STARTUP_CONFIG << ")\n"
         << "  -p PATH   Add path to a directory with plugins or to a file\n"
         << "            (default: " << IPX_DEFAULT_PLUGINS_DIR << ")\n"
         << "  -e DIR    Path to a directory with definitions of IPFIX Information Elements\n"
         << "            (default: " << fds_api_cfg_dir() << ")\n"
+        << "  -P FILE   Path to a PID file (without this option, no PID file is created)\n"
+        << "  -d        Run as a standalone daemon process\n"
         << "  -h        Show this help message and exit\n"
         << "  -V        Show version information and exit\n"
-        << "  -v        Be verbose (in addition, show warning messages)\n"
-        << "  -vv       Be more verbose (like previous + info messages)\n"
-        << "  -vvv      Be even more verbose (like previous + debug messages)\n"
-        << "  -P FILE   Path to a PID file (without this option, no PID file is created)\n";
+        << "  -v        Increase verbosity level (by default, show only error messages)\n"
+        << "            (can be used up to 3 times: adds warnings/infos/debug messages)\n";
 }
 
 /**
@@ -165,12 +165,13 @@ int main(int argc, char *argv[])
     const char *cfg_startup = nullptr;
     const char *cfg_iedir = nullptr;
     const char *pid_file = nullptr;
+    bool daemon_en = false;
     ipx_configurator conf;
 
     // Parse configuration
     int opt;
     opterr = 0; // Disable default error messages
-    while ((opt = getopt(argc, argv, "c:vVhp:e:P:")) != -1) {
+    while ((opt = getopt(argc, argv, "c:vVhdp:e:P:")) != -1) {
         switch (opt) {
         case 'c': // Configuration file
             cfg_startup = optarg;
@@ -184,6 +185,9 @@ int main(int argc, char *argv[])
         case 'h': // Help
             print_help();
             return EXIT_SUCCESS;
+        case 'd':
+            daemon_en = true;
+            break;
         case 'p': // Plugin search path
             conf.finder.path_add(std::string(optarg));
             break;
@@ -207,6 +211,17 @@ int main(int argc, char *argv[])
     if (!cfg_iedir) {
         // Use default directory of the library
         cfg_iedir = fds_api_cfg_dir();
+    }
+
+    if (daemon_en) {
+        // Run as a standalone daemon process
+        ipx_verb_syslog(true);
+        if (daemon(1, 0) == -1) {
+            const char *err_str;
+            ipx_strerror(errno, err_str);
+            IPX_ERROR(module, "Failed to start as a standalone daemon: %s", err_str);
+            return EXIT_FAILURE;
+        }
     }
 
     // Always use the default directory for looking for plugins, but with the lowest priority
