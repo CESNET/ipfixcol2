@@ -84,7 +84,7 @@ print_help()
 {
     std::cout
         << "IPFIX Collector daemon\n"
-        << "Usage: ipfixcol2 [-c FILE] [-p PATH] [-e DIR] [-P FILE] [-r SIZE] [-vVhdu]\n"
+        << "Usage: ipfixcol2 [-c FILE] [-p PATH] [-e DIR] [-P FILE] [-r SIZE] [-vVhLdu]\n"
         << "  -c FILE   Path to the startup configuration file\n"
         << "            (default: " << IPX_DEFAULT_STARTUP_CONFIG << ")\n"
         << "  -p PATH   Add path to a directory with plugins or to a file\n"
@@ -96,6 +96,7 @@ print_help()
         << "  -r SIZE   Ring buffer size (default: " << ipx_configurator::RING_DEF_SIZE << ")\n"
         << "  -h        Show this help message and exit\n"
         << "  -V        Show version information and exit\n"
+        << "  -L        List all available plugins and exit\n"
         << "  -v        Increase verbosity level (by default, show only error messages)\n"
         << "            (can be used up to 3 times to add warning/info/debug messages)\n"
         << "  -u        Disable plugins unload on exit (only for plugin developers)\n";
@@ -202,12 +203,13 @@ int main(int argc, char *argv[])
     const char *pid_file = nullptr;
     const char *ring_size = nullptr;
     bool daemon_en = false;
+    bool list_only = false;
     ipx_configurator conf;
 
     // Parse configuration
     int opt;
     opterr = 0; // Disable default error messages
-    while ((opt = getopt(argc, argv, "c:vVhdp:e:P:r:u")) != -1) {
+    while ((opt = getopt(argc, argv, "c:vVhLdp:e:P:r:u")) != -1) {
         switch (opt) {
         case 'c': // Configuration file
             cfg_startup = optarg;
@@ -221,11 +223,14 @@ int main(int argc, char *argv[])
         case 'h': // Help
             print_help();
             return EXIT_SUCCESS;
+        case 'L': // List of available plugins
+            list_only = true;
+            break;
         case 'd': // Run as a standalone process (daemon)
             daemon_en = true;
             break;
         case 'p': // Plugin search path
-            conf.finder.path_add(std::string(optarg));
+            conf.plugins.path_add(std::string(optarg));
             break;
         case 'e': // Redefine path to Information Elements definition
             cfg_iedir = optarg;
@@ -237,7 +242,7 @@ int main(int argc, char *argv[])
             ring_size = optarg;
             break;
         case 'u': // Disable automatic plugin unload
-            conf.finder.auto_unload(false);
+            conf.plugins.auto_unload(false);
             break;
         default: // ?
             std::cerr << "Unknown parameter '" << static_cast<char>(optopt) << "'!" << std::endl;
@@ -255,6 +260,15 @@ int main(int argc, char *argv[])
         cfg_iedir = fds_api_cfg_dir();
     }
 
+    // Always use the default directory for looking for plugins, but with the lowest priority
+    conf.plugins.path_add(IPX_DEFAULT_PLUGINS_DIR);
+    conf.iemgr_set_dir(cfg_iedir);
+
+    if (list_only) {
+        conf.plugins.plugin_list();
+        return EXIT_SUCCESS;
+    }
+
     if (daemon_en) {
         // Run as a standalone daemon process
         ipx_verb_syslog(true);
@@ -270,10 +284,6 @@ int main(int argc, char *argv[])
         // Failed to set the size
         return EXIT_FAILURE;
     }
-
-    // Always use the default directory for looking for plugins, but with the lowest priority
-    conf.finder.path_add(IPX_DEFAULT_PLUGINS_DIR);
-    conf.iemgr_set_dir(cfg_iedir);
 
     // Create a PID file
     if (pid_file != nullptr && pid_create(pid_file) != IPX_OK) {

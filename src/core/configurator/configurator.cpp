@@ -183,18 +183,18 @@ ipx_configurator::start(const ipx_config_model &model)
 
     // Phase 1. Create all instances (i.e. find plugins)
     for (const auto &output : model.outputs) {
-        const ipx_plugin_data *data = finder.find(output.plugin, IPX_PT_OUTPUT);
-        outputs.emplace_back(new ipx_instance_output(output.name, &data->cbs, ring_size));
+        ipx_plugin_mgr::plugin_ref *ref = plugins.plugin_get(IPX_PT_OUTPUT, output.plugin);
+        outputs.emplace_back(new ipx_instance_output(output.name, ref, ring_size));
     }
 
     for (const auto &inter : model.inters) {
-        const ipx_plugin_data *data = finder.find(inter.plugin, IPX_PT_INTERMEDIATE);
-        inters.emplace_back(new ipx_instance_intermediate(inter.name, &data->cbs, ring_size));
+        ipx_plugin_mgr::plugin_ref *ref = plugins.plugin_get(IPX_PT_INTERMEDIATE, inter.plugin);
+        inters.emplace_back(new ipx_instance_intermediate(inter.name, ref, ring_size));
     }
 
     for (const auto &input : model.inputs) {
-        const ipx_plugin_data *data = finder.find(input.plugin, IPX_PT_INPUT);
-        inputs.emplace_back(new ipx_instance_input(input.name, &data->cbs, ring_size));
+        ipx_plugin_mgr::plugin_ref *ref = plugins.plugin_get(IPX_PT_INPUT, input.plugin);
+        inputs.emplace_back(new ipx_instance_input(input.name, ref, ring_size));
     }
 
     // Insert the output manager as the last intermediate plugin
@@ -210,9 +210,9 @@ ipx_configurator::start(const ipx_config_model &model)
     }
 
     for (size_t i = 0; i < inters.size() - 1; ++i) { // Skip the last element
-        ipx_instance_intermediate *now = inters[i].get();
-        ipx_instance_intermediate *next = inters[i + 1].get();
-        now->connect_to(*next);
+        ipx_instance_intermediate *from = inters[i].get();
+        ipx_instance_intermediate *to = inters[i + 1].get();
+        from->connect_to(*to);
     }
 
     for (size_t i = 0; i < model.outputs.size(); ++i) {
@@ -234,7 +234,7 @@ ipx_configurator::start(const ipx_config_model &model)
         instance->init(cfg.params, iemgr, verbosity_str2level(cfg.verbosity));
     }
 
-    output_manager->init("", iemgr, ipx_verb_level_get());
+    output_manager->init(iemgr, ipx_verb_level_get());
     for (size_t i = 0; i < model.inters.size(); ++i) {
         ipx_instance_intermediate *instance = inters[i].get();
         const ipx_plugin_inter &cfg = model.inters[i];
@@ -249,7 +249,7 @@ ipx_configurator::start(const ipx_config_model &model)
 
     IPX_DEBUG(comp_str, "All instances have been successfully initialized.", '\0');
 
-    // Start threads of all plugins
+    // Phase 4. Start threads of all plugins
     for (auto &output : outputs) {
         output->start();
     }

@@ -4,10 +4,17 @@ set(CORE_SOURCE
 	configurator/config_file.hpp
 	configurator/configurator.cpp
 	configurator/configurator.hpp
-	configurator/instance.cpp
 	configurator/instance.hpp
-	configurator/plugin_finder.cpp
-	configurator/plugin_finder.hpp
+	configurator/instance_input.cpp
+	configurator/instance_input.hpp
+	configurator/instance_intermediate.cpp
+	configurator/instance_intermediate.hpp
+	configurator/instance_outmgr.cpp
+	configurator/instance_outmgr.hpp
+	configurator/instance_output.cpp
+	configurator/instance_output.hpp
+	configurator/plugin_mgr.cpp
+	configurator/plugin_mgr.hpp
 	configurator/model.cpp
 	configurator/model.hpp
 	api.c

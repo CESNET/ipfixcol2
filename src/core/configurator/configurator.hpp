@@ -45,9 +45,13 @@
 #include <stdint.h>
 #include <vector>
 #include <memory>
-#include "plugin_finder.hpp"
+
 #include "model.hpp"
-#include "instance.hpp"
+#include "instance_input.hpp"
+#include "instance_intermediate.hpp"
+#include "instance_outmgr.hpp"
+#include "instance_output.hpp"
+#include "plugin_mgr.hpp"
 
 extern "C" {
 #include <ipfixcol2.h>
@@ -90,8 +94,8 @@ public:
     ipx_configurator(const ipx_configurator &) = delete;
     ipx_configurator& operator=(const ipx_configurator &) = delete;
 
-    /** Modules finder */
-    ipx_plugin_finder finder;
+    /** Plugin manager */
+    ipx_plugin_mgr plugins;
 
     /**
      * \brief Start the configuration with a new model
@@ -122,6 +126,5 @@ public:
       */
      void set_buffer_size(uint32_t size);
 };
-
 
 #endif //IPFIXCOL_CONFIGURATOR_H
