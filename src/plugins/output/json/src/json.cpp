@@ -1,5 +1,5 @@
 /**
- * \file src/plugins/output/json/json.cpp
+ * \file src/plugins/output/json/src/json.cpp
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief JSON output plugin (source file)
  * \date 2018

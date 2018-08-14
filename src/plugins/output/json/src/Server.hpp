@@ -1,5 +1,5 @@
 /**
- * \file src/plugins/output/json/Server.hpp
+ * \file src/plugins/output/json/src/Server.hpp
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief Server output (header file)
  *

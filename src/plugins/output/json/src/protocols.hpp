@@ -1,5 +1,5 @@
 /**
- * \file src/plugins/output/json/protocols.hpp
+ * \file src/plugins/output/json/src/protocols.hpp
  * \author Petr Velan <petr.velan@cesnet.cz>
  * \brief Header for cpp file containing array of IP protocol names
  * generated from /etc/protocols

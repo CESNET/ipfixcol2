@@ -1,5 +1,5 @@
 /**
- * \file src/plugins/output/json/Printer.hpp
+ * \file src/plugins/output/json/src/Printer.hpp
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief Printer to standard output (header file)
  * \date 2018

@@ -1,5 +1,5 @@
 /**
- * \file src/plugins/output/json/Sender.cpp
+ * \file src/plugins/output/json/src/Sender.cpp
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief Sender output (source file)
  * \date 2018

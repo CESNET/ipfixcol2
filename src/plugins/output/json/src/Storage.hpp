@@ -1,5 +1,5 @@
 /**
- * \file src/plugins/output/json/Storage.hpp
+ * \file src/plugins/output/json/src/Storage.hpp
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief JSON converter and output manager (header file)
  * \date 2018
