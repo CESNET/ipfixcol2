@@ -48,10 +48,11 @@
 #include "unirecplugin.h"
 #include "fields.h"
 
+/** GLOBAL mutex shared across all plugin instances  */
 static pthread_mutex_t urp_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /**
- * UniRec plugin reference counter
+ * GLOBAL UniRec plugin reference counter
  *
  * This counter represents number of created instances (threads) of this plugin.
  * It must be incremented in init() and decremented in destroy().
@@ -65,7 +66,8 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
     // Plugin identification name
     .name = "unirec",
     // Brief description of plugin
-    .dsc = "Output plugin that sends flow records in UniRec format via TRAP communication interface (into NEMEA modules).",
+    .dsc = "Output plugin that sends flow records in UniRec format via TRAP communication "
+        "interface (into NEMEA modules).",
     // Configuration flags (reserved for future use)
     .flags = 0,
     // Plugin version string (like "1.2.3")
@@ -101,10 +103,11 @@ int
 ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
 {
     IPX_CTX_INFO(ctx, "UniRec plugin initialization.");
+
     // Process XML configuration
     struct conf_params *parsed_params = configuration_parse(ctx, params);
     if (!parsed_params) {
-        IPX_CTX_ERROR(ctx, "Failed to parse the plugin configuration.");
+        IPX_CTX_ERROR(ctx, "Failed to parse the plugin configuration.", '\0');
         goto error;
     }
 
@@ -141,18 +144,10 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
     }
 
     /* Initialize TRAP Ctx */
-    char *ifc_spec = configuration_create_ifcspec(ctx, parsed_params);
-    if (ifc_spec == NULL) {
-        goto error;
-    }
-
+    const char *ifc_spec = parsed_params->trap_ifc_spec;
     IPX_CTX_INFO(ctx, "Initialization of TRAP with IFCSPEC: '%s'.", ifc_spec);
     conf->tctx = trap_ctx_init3("IPFIXcol2-UniRec", "UniRec output plugin for IPFIXcol2.",
-                                0, 1, ifc_spec, NULL /* TODO replace with some uniq name of service IFC */);
-
-    free(ifc_spec);
-    ifc_spec = NULL;
-
+        0, 1, ifc_spec, NULL /* TODO replace with some uniq name of service IFC */);
     if (conf->tctx == NULL) {
         IPX_CTX_ERROR(ctx, "Failed to initialize TRAP (%s:%d)", __FILE__, __LINE__);
         goto error;
@@ -172,7 +167,7 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
     IPX_CTX_INFO(ctx, "Cleaned UniRec template: '%s'.", cleaned_urtemplate);
 
     /* Allocate UniRec template */
-    IPX_CTX_INFO(ctx, "Initialization of UniRec template.", ifc_spec);
+    IPX_CTX_INFO(ctx, "Initialization of UniRec template.", '\0');
     char *errstring = NULL;
     conf->urtmpl = ur_ctx_create_output_template(conf->tctx, 0, cleaned_urtemplate, &errstring);
     if (conf->urtmpl == NULL) {
@@ -230,9 +225,10 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
     return IPX_OK;
 
 error:
+
+    // TODO: fixme!!!
     configuration_free(parsed_params);
     ur_finalize();
-    free(ifc_spec);
     trap_ctx_finalize(&conf->tctx);
     free(cleaned_urtemplate);
     ipx_plugin_destroy(ctx, conf);

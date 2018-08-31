@@ -45,53 +45,17 @@
 #include <ipfixcol2.h>
 
 /**
- * \brief Structure for configuration parsed from XML
- *
- * \note
- *   Files are generated based on following rules. LNF (and Index) files have
- *   always filename based on the template 'file_lnf.prefix'.'files.suffix'
- *   (and 'file_index.prefix'.'files.suffix').
- *   When profiles i.e. 'profiles.en' are disabled, all records are stored
- *   into the directory 'files.path'/YY/MM/DD/.  When the profiles are enabled,
- *   records for each channel are stored into the directory
- *   'profile_dir'/'channel_name'/YY/MM/DD/ of an appropriate profile
- *   where the channel belongs.
+ * \brief Structure for a configuration parsed from XML
  */
 struct conf_params {
+    /** Prepared TRAP interface specification string                                             */
+    char *trap_ifc_spec;
     /**
-     * Context of the instance (only for log!)
-     */
-    ipx_ctx_t *ctx;
-
-    /**
-     * TRAP interface type, e.g. t is for TCP, see https://nemea.liberouter.org/trap-ifcspec/
-     */
-    char trap_ifc_type;
-
-    /**
-     * TRAP interface port / socket identifier. UniRec flows will be sent to this port
-     */
-    char *trap_ifc_socket;
-
-    /**
-     * TRAP interface timeout. it can be "NO_WAIT"/"HALF_WAIT"/"WAIT"/<number>
-     */
-    char *trap_ifc_timeout;
-
-    /**
-     * TRAP interface flush "off" or timeout in micro seconds
-     */
-    char *trap_ifc_autoflush;
-
-    /**
-     * TRAP interface buffer "on"/"off" or timeout in micro seconds
-     */
-    char *trap_ifc_bufferswitch;
-
-    /**
-     * TRAP interface UniRec template, elements marked with '?' are optional and might not be filled (e.g. TCP_FLAGS)
-     * <UniRecFormat>DST_IP,SRC_IP,BYTES,DST_PORT,?TCP_FLAGS,SRC_PORT,PROTOCOL</UniRecFormat>
-     * all fields must be contained in unirec-elements.txt
+     * TRAP interface UniRec template
+     *
+     * Elements marked with '?' are optional and might not be filled (e.g. TCP_FLAGS)
+     * For example, "DST_IP,SRC_IP,BYTES,DST_PORT,?TCP_FLAGS,SRC_PORT,PROTOCOL".
+     * All fields must be contained in unirec-elements.txt
      */
     char *unirec_format;
 };
@@ -105,21 +69,15 @@ struct conf_params {
  * \return On success returns a pointer to the configuration. Otherwise returns
  *   NULL.
  */
-struct conf_params *configuration_parse(ipx_ctx_t *ctx, const char *params);
+struct conf_params *
+configuration_parse(ipx_ctx_t *ctx, const char *params);
 
 /**
  * \brief Destroy the plugin configuration
  * \param[in,out] config Configuration
  */
-void configuration_free(struct conf_params *config);
-
-/**
- * Concatenate arguments from parsed configuration and create ifc_spec for trap_init()
- * \param[in,out] ctx IPFIXcol2 context for output messages
- * \param[in] parsed_params Information from configuration file
- * \return IFC specifier that can be passed to trap_*init()
- */
-char *configuration_create_ifcspec(ipx_ctx_t *ctx, const struct conf_params *parsed_params);
+void
+configuration_free(struct conf_params *cfg);
 
 #endif // CONFIGURATION_H
 
