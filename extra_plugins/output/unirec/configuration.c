@@ -52,12 +52,13 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdarg.h>
+#include <limits.h>
 
 /** Timeout configuration */
 enum cfg_timeout_mode {
-    CFG_TIMEOUT_WAIT,      /**< Block indefinitely                     */
-    CFG_TIMEOUT_NO_WAIT,   /**< Don't block                            */
-    CFG_TIMEOUT_HALF_WAIT  /**< Block only if some client is connected */
+    CFG_TIMEOUT_WAIT = -1,      /**< Block indefinitely                     */
+    CFG_TIMEOUT_NO_WAIT = -2,   /**< Don't block                            */
+    CFG_TIMEOUT_HALF_WAIT = -3  /**< Block only if some client is connected */
 };
 
 /** Default maximum number of connections over TCP/TCP-TLS/Unix */
@@ -76,7 +77,7 @@ struct ifc_common {
     /** Data buffering and sending in large bulks  */
     bool buffer;
     /** Timeout mode                               */
-    enum cfg_timeout_mode timeout;
+    long int timeout;
 };
 
 /*
@@ -84,25 +85,25 @@ struct ifc_common {
  *      <uniRecFormat>DST_IP,SRC_IP,BYTES,DST_PORT,?TCP_FLAGS,SRC_PORT,PROTOCOL</uniRecFormat>
  *      <trapIfcCommon>                                                           <!-- optional -->
  *          <timeout>NO_WAIT</timeout>                                            <!-- optional -->
- *          <buffer>on</buffer>                                                   <!-- optional -->
+ *          <buffer>true</buffer>                                                 <!-- optional -->
  *          <autoflush>500000</autoflush>                                         <!-- optional -->
  *      </trapIfcCommon>
  *
  *      <trapIfcSpec>
  *          <tcp>
  *              <port>8000</port>
- *              <maxClients>64<maxClients>                                        <!-- optional -->
+ *              <maxClients>64</maxClients>                                       <!-- optional -->
  *          </tcp>
  *          <tcp-tls>
  *              <port>8000</port>
- *              <maxClients>64<maxClients>                                        <!-- optional -->
+ *              <maxClients>64</maxClients>                                       <!-- optional -->
  *              <keyFile>...</keyFile>
  *              <certFile>...</certFile>
  *              <caFile>...</caFile>
  *          </tcp-tls>
  *          <unix>
  *              <name>ipfixcol-output</name>
- *              <maxClients>64<maxClients>                                        <!-- optional -->
+ *              <maxClients>64</maxClients>                                       <!-- optional -->
  *          </unix>
  *          <file>
  *              <name>/tmp/nemea/trapdata</name>
@@ -110,7 +111,7 @@ struct ifc_common {
  *              <time>0</time>                                                    <!-- optional -->
  *              <size>0</size>                                                    <!-- optional -->
  *          </file>
- *      <trapIfcSpec>
+ *      </trapIfcSpec>
  *  </params>
  */
 
@@ -260,6 +261,40 @@ cfg_str_append(char **str, const char *fmt, ...)
 }
 
 /**
+ * \brief Convert a string to long integer
+ *
+ * If the string contains unexpected characters, conversion fails.
+ * \param[in]  str String to convert
+ * \param[out] res Result
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_FORMAT on failure
+ */
+static int
+cfg_str2long(const char *str, long int *res)
+{
+    if (strlen(str) == 0) {
+        // Empty string
+        return IPX_ERR_FORMAT;
+    }
+
+    char *end_ptr = NULL;
+    errno = 0;
+    long int tmp = strtol(str, &end_ptr, 10);
+    if ((errno == ERANGE || (tmp == LONG_MAX || tmp == LONG_MIN)) || (errno != 0 && tmp == 0)) {
+        // Conversion failure
+        return IPX_ERR_FORMAT;
+    }
+
+    if (*end_ptr != '\0') {
+        // Unexpected characters after the number
+        return IPX_ERR_FORMAT;
+    }
+
+    *res = tmp;
+    return IPX_OK;
+}
+
+/**
  * \brief Process \<trapIfcCommon\> node
  *
  * The function processes the particular XML node and overwrites default parameters.
@@ -272,6 +307,8 @@ cfg_str_append(char **str, const char *fmt, ...)
 static int
 cfg_parse_common(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct ifc_common *common)
 {
+    long int val;
+
     const struct fds_xml_cont *content;
     while (fds_xml_next(root, &content) != FDS_EOC) {
         switch (content->id) {
@@ -287,10 +324,12 @@ cfg_parse_common(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct ifc_common *common)
             assert(content->type == FDS_OPTS_T_STRING);
             if (strcasecmp(content->ptr_string, "wait") == 0) {
                 common->timeout = CFG_TIMEOUT_WAIT;
-            } else if (strcasecmp(content->ptr_string, "no-wait") == 0) {
+            } else if (strcasecmp(content->ptr_string, "no_wait") == 0) {
                 common->timeout = CFG_TIMEOUT_NO_WAIT;
-            } else if (strcasecmp(content->ptr_string, "half-wait") == 0) {
+            } else if (strcasecmp(content->ptr_string, "half_wait") == 0) {
                 common->timeout = CFG_TIMEOUT_HALF_WAIT;
+            } else if (cfg_str2long(content->ptr_string, &val) == IPX_OK && val > 0) {
+                common->timeout = val;
             } else {
                 IPX_CTX_ERROR(ctx, "Invalid interface timeout value '%s'", content->ptr_string);
                 return IPX_ERR_FORMAT;
@@ -617,6 +656,7 @@ cfg_parse_spec(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct conf_params *cfg)
 static int
 cfg_add_ifc_common(ipx_ctx_t *ctx, struct conf_params *cfg, const struct ifc_common *common)
 {
+    int rc;
     char **ptr = &cfg->trap_ifc_spec;
     assert((*ptr) != NULL);
 
@@ -627,20 +667,26 @@ cfg_add_ifc_common(ipx_ctx_t *ctx, struct conf_params *cfg, const struct ifc_com
     }
 
     // Add timeout parameter
-    const char *timeout_str = NULL;
+    const char *timeout_str;
     switch (common->timeout) {
     case CFG_TIMEOUT_HALF_WAIT: timeout_str = "HALF_WAIT"; break;
     case CFG_TIMEOUT_NO_WAIT:   timeout_str = "NO_WAIT";   break;
     case CFG_TIMEOUT_WAIT:      timeout_str = "WAIT";      break;
+    default:                    timeout_str = NULL;        break;
     }
 
-    if (cfg_str_append(ptr, ":timeout=%s", timeout_str) != IPX_OK) {
+    if (timeout_str == NULL) {
+        rc = cfg_str_append(ptr, ":timeout=%ld", common->timeout);
+    } else {
+        rc = cfg_str_append(ptr, ":timeout=%s", timeout_str);
+    }
+
+    if (rc != IPX_OK) {
         IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
         return IPX_ERR_NOMEM;
     }
 
     // Add autoflush parameter
-    int rc;
     if (common->autoflush == 0) {
         rc = cfg_str_append(ptr, ":autoflush=off");
     }  else {
