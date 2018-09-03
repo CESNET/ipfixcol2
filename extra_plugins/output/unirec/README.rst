@@ -1,35 +1,108 @@
 UniRec (output plugin)
 ======================
 
-The plugin converts flow records into UniRec records and sends that via TRAP output interface.
+The plugin converts IPFIX flow records into UniRec format and sends them as UniRec records via
+a TRAP output interface. Structure of the output record is defined using an UniRec template that
+consists of one or more UniRec fields.
 
+Each flow record is converted individually. For each IPFIX field the plugin tries to find mapping
+to a particular UniRec field of the output record and performs data conversion. It is possible
+that the original IPFIX record doesn't contain of all required fields. In this case, a user could
+choose to drop the whole record or fill undefined UniRec fields with default values.
+Converted records are sent over a unix socket/tcp/tcp-tls for further processing or stored as
+files.
+
+An instance of the plugin can use only one TRAP output interface and one UniRec template at the
+same time. However, it is possible to create multiple instances of this plugin with different
+configuration. For example, one instance can convert all flows using an UniRec template that
+consists of common fields available in all flow records and another instance converts only
+flow records that consist of HTTP fields.
+
+How to build
+------------
+
+By default, the plugin is not distributed with the IPFIXcol itself due to extra dependencies.
+To build the plugin, IPFIXcol (and its header files) and the following dependencies must be
+installed on your system:
+
+- `Nemea Framework <https://github.com/CESNET/Nemea-Framework/tree/master>`_
+  (or `Nemea <https://github.com/CESNET/Nemea>`_ project)
+
+Finally, compile and install the plugin:
+
+.. code-block:: sh
+
+    $ mkdir build && cd build && cmake ..
+    $ make
+    # make install
 
 Example configuration
 ---------------------
 
-Below you can see a configuration with....
+The following output instance configuration describes all supported types of TRAP output
+interfaces, however, only one can be used. Therefore, remove all interfaces in ``<trapIfcSpec>``
+except the one you would like to use.
+
+.. code-block:: xml
+
+    <output>
+        <name>UniRec plugin</name>
+        <plugin>unirec</plugin>
+        <params>
+            <uniRecFormat>TIME_FIRST,TIME_LAST,SRC_IP,DST_IP,PROTOCOL,?SRC_PORT,?DST_PORT,?TCP_FLAGS,PACKETS,BYTES</uniRecFormat>
+            <trapIfcCommon>
+                <timeout>NO_WAIT</timeout>
+                <buffer>true</buffer>
+                <autoflush>500000</autoflush>
+            </trapIfcCommon>
+
+            <trapIfcSpec>
+                <!-- Only ONE of the following output interface! -->
+                <tcp>
+                    <port>8000</port>
+                    <maxClients>64</maxClients>
+                </tcp>
+                <tcp-tls>
+                    <port>8000</port>
+                    <maxClients>64</maxClients>
+                    <keyFile>...</keyFile>
+                    <certFile>...</certFile>
+                    <caFile>...</caFile>
+                </tcp-tls>
+                <unix>
+                    <name>ipfixcol-output</name>
+                    <maxClients>64</maxClients>
+                </unix>
+                <file>
+                    <name>/tmp/nemea/trapdata</name>
+                    <mode>write</mode>
+                </file>
+            </trapIfcSpec>
+        </params>
+    </output>
 
 Parameters
 ----------
 
 :``uniRecFormat``:
     Comma separated list of UniRec fields. All fields are mandatory be default, therefore, if
-    a flow record to convert doesn't contain all mandatory fields, it will be dropped.
-    UniRec fields that start with '?' are optional and they are filled with default values if
-    not present in the record (e.g. TCP_FLAGS).
-    For example, "DST_IP,SRC_IP,BYTES,DST_PORT,?TCP_FLAGS,SRC_PORT,PROTOCOL".
-    List of all supported UniRec fields is defined in `unirec-element.txt <unirec-elements.txt>`_
-    file.
+    a flow record to convert doesn't contain all mandatory fields, it is dropped.
+    However, UniRec fields that start with '?' are optional and if they are not present in the
+    record (e.g. TCP_FLAGS) default value (typically zero) is used. List of all supported UniRec
+    fields is defined in `unirec-element.txt <unirec-elements.txt>`_ file.
+    Example value: "DST_IP,SRC_IP,BYTES,DST_PORT,?TCP_FLAGS,SRC_PORT,PROTOCOL".
 
 :``trapIfcCommon``:
     The following parameters can be used with any type of a TRAP interface. There are parameters
-    of the interface that are normally let default. It is possible to override them by user. The
-    available parameters are:
+    of the interface that are normally let default. However, it is possible to override them
+    by user:
 
     :``timeout``:
         Time in microseconds that the output interface can block waiting for message to be send.
         There are also special values: "WAIT" (block indefinitely), "NO_WAIT" (don't block),
-        "HALF_WAIT" (block only if some client is connected). [default: "HALF_WAIT"]
+        "HALF_WAIT" (block only if some client is connected). Be very careful, inappropriate
+        configuration can significantly slowdown the collector and lead to loss of data.
+        [default: "HALF_WAIT"]
 
     :``buffer``:
         Enable buffering of data and sending in larger bulks (increases throughput)
@@ -41,12 +114,13 @@ Parameters
         [default: 500000]
 
 :``trapIfcSpec``:
-    Specification of interface type and its parameters. Only one of the following output type can
-    be used at the same time: unix, tcp, tcp-tls, file. For more details, see section
+    Specification of interface type and its parameters. For more details, see section
     "Output interface types".
 
 Output interface types
 ----------------------
+Exactly one of the following output type must be defined in the instance configuration of this
+plugin.
 
 :``unix``:
     Communicates through a UNIX socket. The output interface creates a socket and listens, input
@@ -54,7 +128,8 @@ Output interface types
     interface, every input interface will get the same data. Parameters:
 
     :``name``:
-        Socket name. Any string usable as a file name.
+        Socket name i.e. any string usable as a file name. The name MUST not include colon
+        character.
 
     :``maxClients``:
         Maximal number of connected clients (input interfaces). [default: 64]
@@ -72,10 +147,11 @@ Output interface types
 
 :``tcp-tls``:
     Communicates through a TCP socket after establishing encrypted connection. You have to
-    provide a certificate, a private key and a CA chain file with trusted CAs. Otherwise same
+    provide a certificate, a private key and a CA chain file with trusted CAs. Otherwise, same
     as TCP: The output interface listens on a given port, input interface connects to it.
     There may be more than one input interfaces connected to the output interface,
-    every input interface will get the same data. Parameters:
+    every input interface will get the same data. Paths to files MUST not include colon character.
+    Parameters:
 
     :``port``:
         Local port number
@@ -93,14 +169,14 @@ Output interface types
         Path to a file of trusted CA certificates in PEM format.
 
 :``file``:
-    Store UniRec records into a file. The interface allows to split data into multiple files
+    Stores UniRec records into a file. The interface allows to split data into multiple files
     after a specified time or a size of the file. If both options are enabled at the same time,
     the data are split primarily by time, and only if a file of one time interval exceeds
-    the size limit, it is further splitted. The index of size-splitted file is appended after the
+    the size limit, it is further split. The index of size-split file is appended after the
     time. Parameters:
 
     :``name``:
-        Name of the output file.
+        Name of the output file. The name MUST not include colon character.
 
     :``mode``:
         Output mode: ``write``/``append``. If the specified file exists, mode ``write`` overwrites
@@ -117,3 +193,28 @@ Output interface types
         files after a size of a current file (in MB) exceeds given threshold. Numeric suffix is
         added to the original file name for each file in ascending order starting with 0.
         [default: 0]
+
+
+UniRec configuration file
+-------------------------
+
+Conversion from IPFIX fields to UniRec fields is defined in the configuration file
+`unirec-element.txt <unirec-elements.txt>`_. The file is distributed and installed together
+with the plugin and it is usually placed in the same directory as the default IPFIXcol startup
+configuration (see ``ipfixcol2 -h`` for help).
+
+The structure of the file is simple. Every line corresponds to one UniRec field and consists of
+four mandatory columns (name, type, IPFIX IEs, description). For example,
+a line: ``"BYTES   uint64   e0id1   Number of bytes in flow"``:
+
+- First column specifies an UniRec name. This name is used in a plugin configuration in
+  the ``<uniRecFormat>`` element.
+- Second column specifies a data type of the UniRec field. List of all supported types is available
+  in `UniRec documentation <https://github.com/CESNET/Nemea-Framework/tree/master/unirec>`_.
+- The third column is identification of corresponding IPFIX Information Elements (IE). In this case,
+  "e0id1" means IPFIX IE with Enterprise ID 0 and ID 1 (which is "octetDeltaCount").
+- The last column is a user description.
+
+To map more than one IPFIX IE to one UniRec element, IPFIX IEs may be written as a comma
+separated list of individual IEs (no space before and after comma). For example,
+``"SRC_IP  ipaddr  e0id8,e0id27  IPv4 or IPv6 source address"``.
