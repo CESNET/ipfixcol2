@@ -47,34 +47,6 @@
 #include "configuration.h"
 #include "translator.h"
 
-/**
- * \brief Plugin instance structure
- */
-struct conf_unirec {
-    /**
-     * Configuration from XML file
-     */
-    struct conf_params *params;
 
-    /**
-     * TRAP context
-     */
-    trap_ctx_t *tctx;
-
-    /**
-     * UniRec template
-     */
-    ur_template_t *urtmpl;
-
-    /**
-     * UniRec message that is allocated in ipx_plugin_init()
-     */
-    void *ur_message;
-
-    /**
-     * IPFIX to UniRec translator
-     */
-    translator_t *translator;
-};
 
 #endif //IPFIX_UNIREC_H
