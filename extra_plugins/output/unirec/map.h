@@ -82,6 +82,8 @@ map_destroy(map_t *map);
 
 /**
  * \brief Load a mapping database from a file
+ *
+ * \note In case of an error, an error message is filled (see map_last_error())
  * \param[in] map  Mapping database
  * \param[in] file Path to the file
  * \return #IPX_OK on success

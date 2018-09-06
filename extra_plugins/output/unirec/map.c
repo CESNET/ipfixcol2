@@ -45,6 +45,7 @@
 #include <ipfixcol2.h>
 #include <ctype.h>
 #include <inttypes.h>
+#include <errno.h>
 
 /** Default size of the mapping database */
 #define DEF_SIZE 32
@@ -289,6 +290,10 @@ map_load(map_t *map, const char *file)
     // Open the file
     FILE *ur_file = fopen(file, "r");
     if (!ur_file) {
+        const char *err_str;
+        ipx_strerror(errno, err_str);
+        snprintf(map->err_buffer, ERR_SIZE, "Failed to open configuration file '%s': %s",
+            file, err_str);
         return IPX_ERR_DENIED;
     }
 
