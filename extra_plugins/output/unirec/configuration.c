@@ -53,6 +53,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <limits.h>
+#include <ctype.h>
 
 /** Timeout configuration */
 enum cfg_timeout_mode {
@@ -292,6 +293,63 @@ cfg_str2long(const char *str, long int *res)
 
     *res = tmp;
     return IPX_OK;
+}
+
+/**
+ * \brief Remove all whitespace characters from the UniRec template specification
+ * \note The returned string must be freed by user when no longer needed
+ * \param[in] raw Pointer to the string to sanitize
+ * \return New sanitized string or NULL (memory allocation error)
+ */
+static char *
+cfg_str_sanitize(const char *raw)
+{
+    char *res = strdup(raw);
+    if (!res) {
+        return NULL;
+    }
+
+    size_t w_idx;
+    for (w_idx = 0; (*raw) != '\0'; ++raw) {
+        if (isspace((int) *raw)) {
+            continue;
+        }
+        res[w_idx++] = *raw;
+    }
+
+    res[w_idx] = '\0';
+    return res;
+}
+
+/**
+ * \brief Sanitize UniRec template
+ *
+ * The function removes all whitespace characters and question marks
+ * \note The returned string must be freed by user when no longer needed
+ * \param[in] raw Template string to sanitize
+ * \return New sanitized string or NULL (memory allocation error)
+ */
+static char *
+cfg_ur_tmplt_sanitize(const char *raw)
+{
+    // Remove all whitespaces
+    char *res = cfg_str_sanitize(raw);
+    if (!res) {
+        return NULL;
+    }
+
+    // Remove questions marks
+    char *r_ptr, *w_ptr;
+    for (r_ptr = w_ptr = res; (*r_ptr) != '\0'; r_ptr++) {
+        if (*r_ptr == '?') {
+            continue;
+        }
+
+        *(w_ptr++) = *r_ptr;
+    }
+
+    *w_ptr = '\0';
+    return res;
 }
 
 /**
@@ -729,8 +787,9 @@ cfg_parse_params(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct conf_params *cfg)
         case NODE_UNIREC_FMT:
             // UniRec output format
             assert(content->type == FDS_OPTS_T_STRING);
-            cfg->unirec_format = strdup(content->ptr_string);
-            if(cfg->unirec_format == NULL) {
+            cfg->unirec_fmt = cfg_ur_tmplt_sanitize(content->ptr_string);
+            cfg->unirec_spec = cfg_str_sanitize(content->ptr_string);
+            if (cfg->unirec_fmt == NULL || cfg->unirec_spec == NULL) {
                 IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
                 return IPX_ERR_NOMEM;
             }
@@ -780,7 +839,8 @@ cfg_validate(ipx_ctx_t *ctx, const struct conf_params *cfg)
         rc = IPX_ERR_FORMAT;
     }
 
-    if (!cfg->unirec_format || strlen(cfg->unirec_format) == 0) {
+    if (!cfg->unirec_fmt || strlen(cfg->unirec_fmt) == 0
+        || !cfg->unirec_spec || strlen(cfg->unirec_spec) == 0) {
         IPX_CTX_ERROR(ctx, "UniRec template is not specified!", '\0');
         rc = IPX_ERR_FORMAT;
     }
@@ -848,6 +908,7 @@ configuration_free(struct conf_params *cfg)
     }
 
     free(cfg->trap_ifc_spec);
-    free(cfg->unirec_format);
+    free(cfg->unirec_fmt);
+    free(cfg->unirec_spec);
     free(cfg);
 }

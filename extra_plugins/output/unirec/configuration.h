@@ -56,8 +56,11 @@ struct conf_params {
      * Elements marked with '?' are optional and might not be filled (e.g. TCP_FLAGS)
      * For example, "DST_IP,SRC_IP,BYTES,DST_PORT,?TCP_FLAGS,SRC_PORT,PROTOCOL".
      * All fields must be contained in unirec-elements.txt
+     * \note All whitespaces has been removed
      */
-    char *unirec_format;
+    char *unirec_spec;
+    /** The same as \ref conf_params.unirec_spec, however, question marks has been removed  */
+    char *unirec_fmt;
 };
 
 /**
