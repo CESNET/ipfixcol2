@@ -54,6 +54,9 @@
 
 /** Internal structure of the mapping database */
 struct map_s {
+    /** Manager of IPFIX Information Elements  */
+    const fds_iemgr_t *iemgr;
+
     /** Size of valid records                  */
     size_t rec_size;
     /** Size of pre-allocated array            */
@@ -66,8 +69,12 @@ struct map_s {
 };
 
 map_t *
-map_init()
+map_init(const fds_iemgr_t *ie_mgr)
 {
+    if (!ie_mgr) {
+        return NULL;
+    }
+
     struct map_s *res = calloc(1, sizeof(*res));
     if (!res) {
         return NULL;
@@ -82,6 +89,7 @@ map_init()
     }
 
     snprintf(res->err_buffer, ERR_SIZE, "No error");
+    res->iemgr = ie_mgr;
     return res;
 }
 
@@ -91,6 +99,7 @@ map_clear(map_t *map)
     for (size_t i = 0; i < map->rec_size; ++i) {
         struct map_rec *rec = map->rec_array[i];
         free(rec->unirec.name);
+        free(rec->unirec.type_str);
         free(rec);
     }
 
@@ -159,8 +168,11 @@ map_rec_add(map_t *map, const struct map_rec *rec)
 
     *new_rec = *rec;
     new_rec->unirec.name = strdup(rec->unirec.name);
-    if (!new_rec->unirec.name) {
+    new_rec->unirec.type_str = strdup(rec->unirec.type_str);
+    if (!new_rec->unirec.name || !new_rec->unirec.type_str) {
         snprintf(map->err_buffer, ERR_SIZE, "Memory allocation error");
+        free(new_rec->unirec.name);
+        free(new_rec->unirec.type_str);
         free(new_rec);
         return IPX_ERR_NOMEM;
     }
@@ -170,10 +182,39 @@ map_rec_add(map_t *map, const struct map_rec *rec)
 }
 
 /**
+ * \brief Get the definition of an IPFIX Information Element
+ * \param[in] mgr  Manager of IPFIX Information Elements (IE)
+ * \param[in] elem Information Element to find
+ * \return Pointer to the definition or NULL (unknown or invalid IE specifier)
+ */
+static const struct fds_iemgr_elem *
+map_elem_get(fds_iemgr_t *mgr, const char *elem)
+{
+    const struct fds_iemgr_elem *res;
+
+    // Try to find the identifier
+    res = fds_iemgr_elem_find_name(mgr, elem);
+    if (res != NULL) {
+        return res;
+    }
+
+    // Try to parse "old style" specifier
+    uint32_t ipfix_en;
+    uint16_t ipfix_id;
+
+    char aux;
+    if (sscanf(elem, "e%"SCNu32"id%"SCNu16"%c", &ipfix_en, &ipfix_id, &aux) != 2) {
+        return NULL;
+    }
+
+    return fds_iemgr_elem_find_id(map->iemgr, ipfix_en, ipfix_id);
+}
+
+/**
  * \brief Parse a line of a configuration file and add records to the database
- * \param[in] map     Mapping database
- * \param[in] line    Line to parse
- * \param[in] line_id Line ID (just for error messages)
+ * \param[in]     map     Mapping database
+ * \param[in,out] line    Line to parse (could be modified!)
+ * \param[in]     line_id Line ID (just for error messages)
  * \return #IPX_OK on success
  * \return #IPX_ERR_FORMAT or #IPX_ERR_NOMEM on failure (an error message is set)
  */
@@ -216,14 +257,23 @@ map_load_line(map_t *map, char *line, size_t line_id)
     }
     ur_type = type;
 
+    char *ur_type_str = strdup(token);
+    if (!ur_type_str) {
+        snprintf(map->err_buffer, ERR_SIZE, "Memory allocation error");
+        free(ur_name);
+        return IPX_ERR_NOMEM;
+    }
+
     struct map_rec rec;
     rec.unirec.name = ur_name;
     rec.unirec.type = ur_type;
+    rec.unirec.type_str = ur_type_str;
 
     // Get list of IPFIX fields
     token = strtok_r(NULL, delim, &save_ptr);
     if (!token) {
         snprintf(map->err_buffer, ERR_SIZE, "Line %zu: Unexpected end of line!", line_id);
+        free(ur_type_str);
         free(ur_name);
         return IPX_ERR_FORMAT;
     }
@@ -239,18 +289,23 @@ map_load_line(map_t *map, char *line, size_t line_id)
         }
 
         // Parse IPFIX specifier
-        char aux;
-        if (sscanf(subtoken, "e%"SCNu32"id%"SCNu16"%c", &rec.ipfix.en, &rec.ipfix.id, &aux) != 2) {
-            snprintf(map->err_buffer, ERR_SIZE, "Line %zu: Invalid IPFIX specifier '%s'",
-                line_id, subtoken);
+        const struct fds_iemgr_elem *elem_def = map_elem_get(map, subtoken);
+        if (!elem_def) {
+            snprintf(map->err_buffer, ERR_SIZE, "Line %zu: IPFIX specifier '%s' is invalid or "
+                "a definition of the Information Element is missing! For more information, see "
+                "the plugin documentation.", line_id, subtoken);
             rc = IPX_ERR_FORMAT;
             break;
         }
 
         // Store the record
+        rec.ipfix.def = elem_def;
+        rec.ipfix.id = elem_def->id;
+        rec.ipfix.en = elem_def->scope->pen;
         rc = map_rec_add(map, &rec);
     }
 
+    free(ur_type_str);
     free(ur_name);
     return rc;
 }
@@ -349,9 +404,10 @@ map_load(map_t *map, const char *file)
         }
 
         // Collision detected!
-        snprintf(map->err_buffer, ERR_SIZE, "The same IPFIX IE (PEN %" PRIu32 ", ID %" PRIu16 ") "
-            "is mapped to different UniRec fields ('%s' and '%s')",
-            rec_now->ipfix.en, rec_now->ipfix.id, rec_now->unirec.name, rec_prev->unirec.name);
+        snprintf(map->err_buffer, ERR_SIZE, "The IPFIX IE '%s' (PEN %" PRIu32 ", ID %" PRIu16 ") "
+            "is mapped to multiple different UniRec fields ('%s' and '%s')",
+            rec_now->ipfix.def->name, rec_now->ipfix.en, rec_now->ipfix.id,
+            rec_now->unirec.name, rec_prev->unirec.name);
         map_clear(map);
         return IPX_ERR_FORMAT;
     }

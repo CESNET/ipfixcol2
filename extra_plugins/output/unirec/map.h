@@ -49,29 +49,34 @@
 /** Internal map type */
 typedef struct map_s map_t;
 
-/** IPFIX-to-UniRec mapping record          */
+/** IPFIX-to-UniRec mapping record                    */
 struct map_rec {
     struct {
-        /** Private Enterprise Number       */
+        /** Private Enterprise Number                 */
         uint32_t en;
-        /** Information Element ID          */
+        /** Information Element ID                    */
         uint16_t id;
-    } ipfix; /**< IPFIX specific parameters */
+        /** Definition of the IE (MUST not be NULL)   */
+        const struct fds_iemgr_elem *def;
+    } ipfix; /**< IPFIX specific parameters           */
 
     struct {
-        /** Field name                      */
+        /** Field name                                */
         char *name;
-        /** Data type                       */
+        /** Data type                                 */
         ur_field_type_t type;
+        /** Data type (string, for log!)              */
+        char *type_str;
     } unirec;
 };
 
 /**
  * \brief Initialize a mapping database
+ * \param[in] ie_mgr Reference to a manager of Information Elements
  * \return Pointer to the new DB
  */
 map_t *
-map_init();
+map_init(const fds_iemgr_t *ie_mgr);
 
 /**
  * \brief Destroy a mapping database
