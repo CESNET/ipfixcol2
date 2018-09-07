@@ -42,6 +42,7 @@
 #include "map.h"
 #include <stdio.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <ipfixcol2.h>
 #include <ctype.h>
 #include <inttypes.h>
@@ -188,7 +189,7 @@ map_rec_add(map_t *map, const struct map_rec *rec)
  * \return Pointer to the definition or NULL (unknown or invalid IE specifier)
  */
 static const struct fds_iemgr_elem *
-map_elem_get(fds_iemgr_t *mgr, const char *elem)
+map_elem_get(const fds_iemgr_t *mgr, const char *elem)
 {
     const struct fds_iemgr_elem *res;
 
@@ -207,81 +208,50 @@ map_elem_get(fds_iemgr_t *mgr, const char *elem)
         return NULL;
     }
 
-    return fds_iemgr_elem_find_id(map->iemgr, ipfix_en, ipfix_id);
+    return fds_iemgr_elem_find_id(mgr, ipfix_en, ipfix_id);
 }
 
 /**
- * \brief Parse a line of a configuration file and add records to the database
- * \param[in]     map     Mapping database
- * \param[in,out] line    Line to parse (could be modified!)
- * \param[in]     line_id Line ID (just for error messages)
+ * \brief Parse list of IPFIX IE and add mapping records to the database
+ * \param[in] map         Mapping database
+ * \param[in] ur_name     UniRec name
+ * \param[in] ur_type     UniRec type
+ * \param[in] ur_type_str UniRec type string
+ * \param[in] ie_defs     Definition of IPFIX IEs (comma separated list of definitions)
+ * \param[in] line_id Line ID (just for error messages)
  * \return #IPX_OK on success
- * \return #IPX_ERR_FORMAT or #IPX_ERR_NOMEM on failure (an error message is set)
+ * \return #IPX_ERR_NOMEM or #IPX_ERR_FORMAT on failure
  */
 static int
-map_load_line(map_t *map, char *line, size_t line_id)
+map_load_line_ie_defs(map_t *map, char *ur_name, int ur_type, char *ur_type_str,
+    const char *ie_defs, size_t line_id)
 {
-    const char *delim = " \t";
-    char *save_ptr = NULL;
-
-    char *ur_name;
-    ur_field_type_t ur_type;
-
-    // Get the name
-    char *token = strtok_r(line, delim, &save_ptr);
-    if (!token) {
-        // Skip empty line
-        return IPX_OK;
-    }
-
-    ur_name = strdup(token);
-    if (!ur_name) {
+    char *defs_cpy = strdup(ie_defs);
+    if (!defs_cpy) {
         snprintf(map->err_buffer, ERR_SIZE, "Memory allocation error");
         return IPX_ERR_NOMEM;
     }
 
-    // Get the type
-    token = strtok_r(NULL, delim, &save_ptr);
-    if (!token) {
-        snprintf(map->err_buffer, ERR_SIZE, "Line %zu: Unexpected end of line!", line_id);
-        free(ur_name);
-        return IPX_ERR_FORMAT;
+    // Remove whitespaces from list of IPFIX IE definitions
+    size_t w_idx;
+    for (w_idx = 0; (*ie_defs) != '\0'; ++ie_defs) {
+        if (isspace((int) *ie_defs)) {
+            continue;
+        }
+        defs_cpy[w_idx++] = *ie_defs;
     }
+    defs_cpy[w_idx] = '\0';
 
-    int type = ur_get_field_type_from_str(token);
-    if (type == UR_E_INVALID_TYPE) {
-        snprintf(map->err_buffer, ERR_SIZE, "Line %zu: Invalid type '%s' of UniRec field '%s'",
-            line_id, token, ur_name);
-        free(ur_name);
-        return IPX_ERR_FORMAT;
-    }
-    ur_type = type;
-
-    char *ur_type_str = strdup(token);
-    if (!ur_type_str) {
-        snprintf(map->err_buffer, ERR_SIZE, "Memory allocation error");
-        free(ur_name);
-        return IPX_ERR_NOMEM;
-    }
-
+    // Prepare the mapping record
     struct map_rec rec;
     rec.unirec.name = ur_name;
     rec.unirec.type = ur_type;
     rec.unirec.type_str = ur_type_str;
 
-    // Get list of IPFIX fields
-    token = strtok_r(NULL, delim, &save_ptr);
-    if (!token) {
-        snprintf(map->err_buffer, ERR_SIZE, "Line %zu: Unexpected end of line!", line_id);
-        free(ur_type_str);
-        free(ur_name);
-        return IPX_ERR_FORMAT;
-    }
-
     // Process IPFIX fields
     char *subsave_ptr = NULL;
     int rc = IPX_OK;
-    for (char *ies = token; rc == IPX_OK; ies = NULL) {
+    for (char *ies = defs_cpy; rc == IPX_OK; ies = NULL) {
         // Get the next token
         char *subtoken = strtok_r(ies, ",", &subsave_ptr);
         if (!subtoken) {
@@ -289,7 +259,7 @@ map_load_line(map_t *map, char *line, size_t line_id)
         }
 
         // Parse IPFIX specifier
-        const struct fds_iemgr_elem *elem_def = map_elem_get(map, subtoken);
+        const struct fds_iemgr_elem *elem_def = map_elem_get(map->iemgr, subtoken);
         if (!elem_def) {
             snprintf(map->err_buffer, ERR_SIZE, "Line %zu: IPFIX specifier '%s' is invalid or "
                 "a definition of the Information Element is missing! For more information, see "
@@ -305,8 +275,89 @@ map_load_line(map_t *map, char *line, size_t line_id)
         rc = map_rec_add(map, &rec);
     }
 
+    free(defs_cpy);
+    return rc;
+}
+
+/**
+ * \brief Parse a line of a configuration file and add records to the database
+ * \param[in] map     Mapping database
+ * \param[in] line    Line to parse
+ * \param[in] line_id Line ID (just for error messages)
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_FORMAT or #IPX_ERR_NOMEM on failure (an error message is set)
+ */
+static int
+map_load_line(map_t *map, const char *line, size_t line_id)
+{
+    int rc = IPX_OK;
+    char *ur_name = NULL;
+    char *ur_type_str = NULL;
+    ur_field_type_t ur_type;
+
+    char *line_cpy = strdup(line);
+    if (!line_cpy) {
+        snprintf(map->err_buffer, ERR_SIZE, "Memory allocation error");
+        return IPX_ERR_NOMEM;
+    }
+
+    const char *delim = " \t";
+    char *save_ptr = NULL;
+
+    // Get the name
+    char *token = strtok_r(line_cpy, delim, &save_ptr);
+    if (!token) {
+        // Skip empty line
+        goto end;
+    }
+
+    ur_name = strdup(token);
+    if (!ur_name) {
+        snprintf(map->err_buffer, ERR_SIZE, "Memory allocation error");
+        rc = IPX_ERR_NOMEM;
+        goto end;
+    }
+
+    // Get the type
+    token = strtok_r(NULL, delim, &save_ptr);
+    if (!token) {
+        snprintf(map->err_buffer, ERR_SIZE, "Line %zu: Unexpected end of line!", line_id);
+        rc = IPX_ERR_FORMAT;
+        goto end;
+    }
+
+    int type = ur_get_field_type_from_str(token);
+    if (type == UR_E_INVALID_TYPE) {
+        snprintf(map->err_buffer, ERR_SIZE, "Line %zu: Invalid type '%s' of UniRec field '%s'",
+            line_id, token, ur_name);
+        rc = IPX_ERR_FORMAT;
+        goto end;
+    }
+    ur_type = type;
+
+    ur_type_str = strdup(token);
+    if (!ur_type_str) {
+        snprintf(map->err_buffer, ERR_SIZE, "Memory allocation error");
+        rc = IPX_ERR_NOMEM;
+        goto end;
+    }
+
+    // Get the start position of the list of IPFIX fields
+    token = strtok_r(NULL, delim, &save_ptr);
+    if (!token) {
+        snprintf(map->err_buffer, ERR_SIZE, "Line %zu: Unexpected end of line!", line_id);
+        rc = IPX_ERR_FORMAT;
+        goto end;
+    }
+
+    ptrdiff_t offset = token - line_cpy;
+    const char *ie_defs = line + offset;
+    rc = map_load_line_ie_defs(map, ur_name, ur_type, ur_type_str, ie_defs, line_id);
+
+end:
     free(ur_type_str);
     free(ur_name);
+    free(line_cpy);
     return rc;
 }
 
@@ -361,14 +412,20 @@ map_load(map_t *map, const char *file)
     while (rc == IPX_OK && getline(&line_ptr, &line_size, ur_file) != -1) {
         line_cnt++;
 
+        // Remove possible comments
+        char *comm_pos = strchr(line_ptr, '#');
+        if (comm_pos != NULL) {
+            *comm_pos = '\0'; // Terminate the line here
+        }
+
         // Trim leading whitespaces
         char *line_trim = line_ptr;
         while (isspace((int) (*line_trim))) {
             line_trim++;
         }
 
-        if (line_trim[0] == '#') {
-            // Skip a comment
+        if (strlen(line_trim) == 0) {
+            // Skip empty line
             continue;
         }
 

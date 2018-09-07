@@ -218,3 +218,15 @@ a line: ``"BYTES   uint64   e0id1   Number of bytes in flow"``:
 To map more than one IPFIX IE to one UniRec element, IPFIX IEs may be written as a comma
 separated list of individual IEs (no space before and after comma). For example,
 ``"SRC_IP  ipaddr  e0id8,e0id27  IPv4 or IPv6 source address"``.
+
+
+
+TODO: how to add new element!! lnf + unirec
+
+
+Note
+----
+
+TODO: bidirectional flows are automatically split into two unidirectional flows
+TODO: if multiple IPFIX elements are mapped to the same UniRec field and the result is .....
+

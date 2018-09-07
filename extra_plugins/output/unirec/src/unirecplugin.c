@@ -38,15 +38,14 @@
  *
  */
 
-#define _GNU_SOURCE
 #include <ipfixcol2.h>
 #include <libtrap/trap.h>
 #include <stdio.h>
 #include <pthread.h>
 #include <unirec/unirec.h>
 
-#include "unirecplugin.h"
-#include "fields.h"
+#include "translator.h"
+#include "configuration.h"
 #include "map.h"
 
 /** Filename of IPFIX-to-UniRec                                */
@@ -100,7 +99,7 @@ struct conf_unirec {
 
 /**
  * \brief Get the IPFIX-to-UniRec conversion database
- * \param ctx Plugin context (only for log!)
+ * \param ctx Plugin context
  * \return Conversion table or NULL (an error has occurred)
  */
 static map_t *
@@ -121,7 +120,7 @@ ipfix2unirec_db(ipx_ctx_t *ctx)
         return NULL;
     }
 
-    map_t *map = map_init();
+    map_t *map = map_init(ipx_ctx_iemgr_get(ctx));
     if (!map) {
         IPX_CTX_ERROR(ctx, "Failed to initialize conversion map! (%s:%d)", __FILE__, __LINE__);
         free(full_path);
@@ -188,7 +187,7 @@ core_initialize_inter(ipx_ctx_t *ctx, struct conf_unirec *cfg, const map_t *map)
 
     // Create a UniRec template and set it as TRAP output template
     const char *tmplt_str = cfg->params->unirec_fmt;
-    IPX_CTX_INFO(ctx, "Initialization of UniRec template: %s", tmplt_str);
+    IPX_CTX_INFO(ctx, "Initialization of UniRec template: '%s'", tmplt_str);
     char *err_str = NULL;
     cfg->ur_tmplt = ur_ctx_create_output_template(cfg->trap_ctx, 0, tmplt_str, &err_str);
     if (!cfg->ur_tmplt) {
@@ -203,8 +202,10 @@ core_initialize_inter(ipx_ctx_t *ctx, struct conf_unirec *cfg, const map_t *map)
     free(ur_tmplt_str);
 
     // Prepare a translator
-    IPX_CTX_INFO(ctx, "Initialization of IPFIX to UniRec translator: %s", tmplt_str);
-    if (translator_init(ctx, map, cfg->ur_tmplt, cfg->params->unirec_spec) != IPX_OK) {
+    const char *tmplt_spec = cfg->params->unirec_spec;
+    IPX_CTX_INFO(ctx, "Initialization of IPFIX to UniRec translator: '%s'", tmplt_spec );
+    cfg->trans = translator_init(ctx, map, cfg->ur_tmplt, tmplt_spec);
+    if (!cfg->trans) {
         IPX_CTX_ERROR(ctx, "Failed to initialize IPFIX to UniRec translator.", '\0');
         trap_ctx_finalize(&cfg->trap_ctx);
         ur_free_template(cfg->ur_tmplt); // Template MUST be destroyed after the TRAP ifc!
@@ -293,7 +294,7 @@ core_destroy(ipx_ctx_t *ctx, struct conf_unirec *cfg)
     cfg->trans = NULL;
 }
 
-// Storage plugin initialization function
+// Output plugin initialization function
 int
 ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
 {
@@ -333,73 +334,9 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
     map_destroy(conv_db); // Destroy the mapping database (we don't need it anymore)
     ipx_ctx_private_set(ctx, conf);
     return IPX_OK;
-
-
-/*
-    if (translator_init_urtemplate(conf->translator, conf->urtmpl, parsed_params->unirec_fmt) != 0) {
-        IPX_CTX_ERROR(ctx, "Could not allocate memory (%s:%d)", __FILE__, __LINE__);
-        goto error;
-    }
-
-    for (size_t i = 0; i < conf->urtmpl->count; ++i) {
-        IPX_CTX_INFO(ctx, "\t%s\t%s", ur_get_name(conf->urtmpl->ids[i]), conf->translator->req_fields[i] ? "required" : "optional");
-    }
-
-    conf->ur_message = ur_create_record(conf->urtmpl, UR_MAX_SIZE);
-
-    if (conf->ur_message == NULL) {
-        IPX_CTX_ERROR(ctx, "Failed to allocate an UniRec record message.");
-        goto error;
-    }
-*/
 }
 
-// Pass IPFIX data with supplemental structures into the storage plugin.
-int
-ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
-{
-    (void) ctx;
-    struct conf_unirec *conf = (struct conf_unirec *) cfg;
-
-    IPX_CTX_DEBUG(ctx, "UniRec plugin process IPFIX message.");
-
-    ipx_msg_ipfix_t *ipfix = ipx_msg_base2ipfix(msg);
-    const uint32_t rec_cnt = ipx_msg_ipfix_get_drec_cnt(ipfix);
-    void *message = conf->ur_message;
-    for (uint32_t i = 0; i < rec_cnt; i++) {
-        // Get a pointer to the next record
-        struct ipx_ipfix_record *ipfix_rec = ipx_msg_ipfix_get_drec(ipfix, i);
-        bool biflow = (ipfix_rec->rec.tmplt->flags & FDS_TEMPLATE_BIFLOW) != 0;
-
-        // Fill record
-        uint16_t flags = biflow ? FDS_DREC_BIFLOW_FWD : 0; // In case of biflow, forward fields only
-        if (translator_translate(conf->translator, conf, &ipfix_rec->rec, flags) <= 0) {
-            // Nothing to store
-            continue;
-        }
-        IPX_CTX_DEBUG(ctx, "Send via TRAP IFC.");
-        trap_ctx_send(conf->tctx, 0, message, ur_rec_size(conf->translator->urtmpl, message));
-
-        // Is it biflow? Store the reverse direction
-        if (!biflow) {
-            continue;
-        }
-
-        flags = FDS_DREC_BIFLOW_REV;
-        if (translator_translate(conf->translator, conf, &ipfix_rec->rec, flags) <= 0) {
-            // Nothing to store
-            continue;
-        }
-
-        IPX_CTX_DEBUG(ctx, "Send via TRAP IFC.");
-        trap_ctx_send(conf->tctx, 0, message, ur_rec_size(conf->translator->urtmpl, message));
-        break;
-    }
-
-    return 0;
-}
-
-// Storage plugin "destructor"
+// Output plugin destruction function
 void
 ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
 {
@@ -408,3 +345,52 @@ ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
     configuration_free(conf->params);
     free(conf);
 }
+
+// Pass IPFIX data with supplemental structures into the storage plugin.
+int
+ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
+{
+    (void) ctx;
+    struct conf_unirec *conf = (struct conf_unirec *) cfg;
+    IPX_CTX_DEBUG(ctx, "Received a new message to process.");
+
+    uint16_t msg_size = 0;
+    const void *msg_data = NULL;
+
+    ipx_msg_ipfix_t *ipfix = ipx_msg_base2ipfix(msg);
+    const uint32_t rec_cnt = ipx_msg_ipfix_get_drec_cnt(ipfix);
+    for (uint32_t i = 0; i < rec_cnt; i++) {
+        // Get a pointer to the next record
+        struct ipx_ipfix_record *ipfix_rec = ipx_msg_ipfix_get_drec(ipfix, i);
+        bool biflow = (ipfix_rec->rec.tmplt->flags & FDS_TEMPLATE_BIFLOW) != 0;
+
+        // Fill record
+        uint16_t flags = biflow ? FDS_DREC_BIFLOW_FWD : 0; // In case of biflow, forward fields only
+        msg_data = translator_translate(conf->trans, &ipfix_rec->rec, flags, &msg_size);
+        if (!msg_data) {
+            // Nothing to send
+            continue;
+        }
+
+        IPX_CTX_DEBUG(ctx, "Send via TRAP IFC.");
+        trap_ctx_send(conf->trap_ctx, 0, msg_data, msg_size);
+
+        // Is it biflow? Send the reverse direction
+        if (!biflow) {
+            continue;
+        }
+
+        flags = FDS_DREC_BIFLOW_REV;
+        msg_data = translator_translate(conf->trans, &ipfix_rec->rec, flags, &msg_size);
+        if (!msg_data) {
+            // Nothing to send
+            continue;
+        }
+
+        IPX_CTX_DEBUG(ctx, "Send via TRAP IFC.");
+        trap_ctx_send(conf->trap_ctx, 0, msg_data, msg_size);
+    }
+
+    return 0;
+}
+

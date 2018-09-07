@@ -40,8 +40,6 @@
 #ifndef CONFIGURATION_H
 #define CONFIGURATION_H
 
-#include <stdint.h>
-#include <stdbool.h>
 #include <ipfixcol2.h>
 
 /**
@@ -56,10 +54,10 @@ struct conf_params {
      * Elements marked with '?' are optional and might not be filled (e.g. TCP_FLAGS)
      * For example, "DST_IP,SRC_IP,BYTES,DST_PORT,?TCP_FLAGS,SRC_PORT,PROTOCOL".
      * All fields must be contained in unirec-elements.txt
-     * \note All whitespaces has been removed
+     * \note All whitespaces have been removed
      */
     char *unirec_spec;
-    /** The same as \ref conf_params.unirec_spec, however, question marks has been removed  */
+    /** The same as \ref conf_params.unirec_spec, however, question marks have been removed  */
     char *unirec_fmt;
 };
 
@@ -67,7 +65,7 @@ struct conf_params {
  * \brief Parse the plugin configuration
  *
  * \warning The configuration MUST be free by configuration_free() function.
- * \param[in,out] ctx IPFIXcol2 context for output messages
+ * \param[in] ctx    Instance context
  * \param[in] params XML configuration
  * \return On success returns a pointer to the configuration. Otherwise returns
  *   NULL.

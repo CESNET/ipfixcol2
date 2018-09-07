@@ -1,10 +1,11 @@
 /**
- * \file unirecplugin.h
+ * \file translator.c
+ * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \author Tomas Cejka <cejkat@cesnet.cz>
- * \author Jaroslav Hlavac <hlavaj20@fit.cvut.cz>
- * \brief UniRec plugin interface (header file)
- *
- * Copyright (C) 2015, 2016 CESNET, z.s.p.o.
+ * \brief Conversion of IPFIX to UniRec format (source file)
+ */
+
+/* Copyright (C) 2015-2018 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,7 +25,7 @@
  * License (GPL) version 2 or later, in which case the provisions
  * of the GPL apply INSTEAD OF those given above.
  *
- * This software is provided ``as is``, and any express or implied
+ * This software is provided ``as is, and any express or implied
  * warranties, including, but not limited to, the implied warranties of
  * merchantability and fitness for a particular purpose are disclaimed.
  * In no event shall the company or contributors be liable for any
@@ -38,15 +39,42 @@
  *
  */
 
-#ifndef IPFIX_UNIREC_H
-#define IPFIX_UNIREC_H
+#ifndef UR_TRANSLATOR_H
+#define UR_TRANSLATOR_H
 
-#include <stdbool.h>
-#include <stdint.h>
+#include <ipfixcol2.h>
+#include "map.h"
 
-#include "configuration.h"
-#include "translator.h"
+/** Internal translator structure        */
+typedef struct translator_s translator_t;
 
+/**
+ * \brief Create a new instance of a translator
+ * \param[in] ctx
+ * \param[in] map
+ * \param[in]
+ * \return Pointer to the instance or NULL.
+ */
+translator_t *
+translator_init(ipx_ctx_t *ctx, const map_t *map, const ur_template_t *tmplt, const char *tmplt_spec);
 
+/**
+ * \brief Destroy instance of a translator
+ * \param[in] trans Instance
+ */
+void
+translator_destroy(translator_t *trans);
 
-#endif //IPFIX_UNIREC_H
+/**
+ * \brief Convert a IPFIX record to an UniRec message
+ * \param[in]  trans     Translator instance
+ * \param[in]  ipfix_rec IPFIX record (read only!)
+ * \param[in]  flags     Flags for iterator over the IPFIX record
+ * \param[out] size      Size of the converted message
+ * \return Number of converted fields
+ */
+const void *
+translator_translate(translator_t *trans, struct fds_drec *ipfix_rec, uint16_t flags,
+    uint16_t *size);
+
+#endif // UR_TRANSLATOR_H

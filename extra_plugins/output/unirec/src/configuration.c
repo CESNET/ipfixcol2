@@ -43,10 +43,10 @@
 #define _GNU_SOURCE
 #include <stdio.h>
 #include "configuration.h"
-#include "unirecplugin.h"
 
 #include <ipfixcol2.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <inttypes.h>
 #include <string.h>
 #include <errno.h>
@@ -54,6 +54,7 @@
 #include <stdarg.h>
 #include <limits.h>
 #include <ctype.h>
+#include <stdbool.h>
 
 /** Timeout configuration */
 enum cfg_timeout_mode {

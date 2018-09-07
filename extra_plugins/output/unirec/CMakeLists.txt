@@ -3,14 +3,14 @@ project(unirec)
 
 # Description of the project
 set(UNIREC_DESCRIPTION
-	"Output plugin for IPFIXcol2 that sends flow records in UniRec format into NEMEA modules."
+    "Output plugin for IPFIXcol2 that sends flow records in UniRec format into NEMEA modules."
 )
 
 set(UNIREC_VERSION_MAJOR 1)
 set(UNIREC_VERSION_MINOR 0)
 set(UNIREC_VERSION_PATCH 0)
 set(UNIREC_VERSION
-	${UNIREC_VERSION_MAJOR}.${UNIREC_VERSION_MINOR}.${UNIREC_VERSION_PATCH})
+    ${UNIREC_VERSION_MAJOR}.${UNIREC_VERSION_MINOR}.${UNIREC_VERSION_PATCH})
 
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
@@ -25,8 +25,8 @@ find_package(Unirec REQUIRED)
 
 # Set default build type if not specified by user
 if (NOT CMAKE_BUILD_TYPE)
-	set (CMAKE_BUILD_TYPE Release
-		CACHE STRING "Choose type of build (Release/Debug/Coverage)." FORCE)
+    set (CMAKE_BUILD_TYPE Release
+        CACHE STRING "Choose type of build (Release/Debug)." FORCE)
 endif()
 
 # Hard coded definitions
@@ -39,36 +39,36 @@ set(CMAKE_CXX_FLAGS_DEBUG    "-g -O0 -Wall -Wextra -pedantic")
 
 # Header files for source code building
 include_directories(
-	"${IPFIXCOL2_INCLUDE_DIRS}"  # IPFIXcol2 header files
-	"${LIBTRAP_INCLUDE_DIRS}"        # libtrap header files
-	"${UNIREC_INCLUDE_DIRS}"        # unirec header files
+    "${IPFIXCOL2_INCLUDE_DIRS}"  # IPFIXcol2 header files
+    "${LIBTRAP_INCLUDE_DIRS}"    # libtrap header files
+    "${UNIREC_INCLUDE_DIRS}"     # unirec header files
 )
 
 # Create a linkable module
 add_library(unirec-output MODULE
-	configuration.c
-	configuration.h
-	unirecplugin.h
-	unirecplugin.c
-	translator.c
-	translator.h
-	fields.c
-	fields.h
-	map.c
-	map.h
+    src/configuration.c
+    src/configuration.h
+    src/unirecplugin.c
+    src/translator.c
+    src/translator.h
+    src/fields.c
+    src/fields.h
+    src/map.c
+    src/map.h
 )
 
 target_link_libraries(unirec-output
     ${LIBTRAP_LIBRARIES}               # libtrap
-    ${UNIREC_LIBRARIES}               # unirec
+    ${UNIREC_LIBRARIES}                # unirec
+    m                                  # standard math library
 )
 
 install(
-	TARGETS unirec-output
-	LIBRARY DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}/ipfixcol2/"
+    TARGETS unirec-output
+    LIBRARY DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}/ipfixcol2/"
 )
 install(
-    FILES unirec-elements.txt
+    FILES config/unirec-elements.txt
     DESTINATION "${CMAKE_INSTALL_FULL_SYSCONFDIR}/ipfixcol2/"
 )
 
