@@ -180,6 +180,9 @@ of IPFIXcol. Always keep in mind that you should modify a configuration to fit y
 :`multiOutput <../data/configs/multiOutput.xml>`_:
     Receive flow data over TCP and store them in a nfdump compatible format on a local drive
     and simultaneously send to a remote host as JSON.
+:`tcp2unirec <../data/configs/tcp2unirec.xml>_`:
+    Receive flow data over TCP, convert them into UniRec format and send via TCP TRAP
+    communication interface (port 8000).
 
 Try your configuration
 ----------------------

@@ -39,6 +39,8 @@ network interface and a port. Multiple instances of these plugins can run concur
 - `dummy <src/plugins/output/dummy>`_ - simple module example
 - `lnfstore <extra_plugins/output/lnfstore>`_ (*) - store all flows in nfdump compatible
   format for long-term preservation
+- `UniRec <extra_plugins/output/unirec>`_ (*)  - send flow records in UniRec format
+  via TRAP communication interface (into Nemea modules)
 
 \* Must be installed individually due to extra dependencies
 

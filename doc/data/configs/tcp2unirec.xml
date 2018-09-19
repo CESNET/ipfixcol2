@@ -1,0 +1,42 @@
+<!--
+  Receive flow data over TCP, convert them into UniRec format and send via 
+  TCP TRAP communication interface (port 8000).
+-->
+<ipfixcol2>
+  <!-- Input plugins -->
+  <inputPlugins>
+    <input>
+      <name>TCP collector</name>
+      <plugin>tcp</plugin>
+      <params>
+        <localPort>4739</localPort>
+        <localIPAddress></localIPAddress>
+      </params>
+    </input>
+  </inputPlugins>
+
+  <!-- Output plugins -->
+  <outputPlugins>
+    <output>
+      <name>UniRec output</name>
+      <plugin>unirec</plugin>
+      <params>
+        <!-- UniRec template -->
+        <uniRecFormat>TIME_FIRST,TIME_LAST,SRC_IP,DST_IP,PROTOCOL,?SRC_PORT,?DST_PORT,?TCP_FLAGS,PACKETS,BYTES</uniRecFormat>
+        <!-- TRAP interface configuration -->
+        <trapIfcCommon>
+          <timeout>HALF_WAIT</timeout>
+          <buffer>true</buffer>
+          <autoflush>500000</autoflush>
+        </trapIfcCommon>
+        <!-- TRAP interface specification -->
+        <trapIfcSpec>
+          <tcp>
+            <port>8000</port>
+            <maxClients>64</maxClients>
+          </tcp>
+        </trapIfcSpec>
+      </params>
+    </output>
+  </outputPlugins>
+</ipfixcol2>
