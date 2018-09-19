@@ -2,19 +2,19 @@ UniRec (output plugin)
 ======================
 
 The plugin converts IPFIX flow records into UniRec format and sends them as UniRec records via
-a TRAP output interface. Structure of the output record is defined using an UniRec template that
+a TRAP output interface. Structure of the output record is defined using a UniRec template that
 consists of one or more UniRec fields.
 
 Each flow record is converted individually. For each IPFIX field the plugin tries to find mapping
 to a particular UniRec field of the output record and performs data conversion. It is possible
-that the original IPFIX record doesn't contain of all required fields. In this case, a user could
+that the original IPFIX record doesn't contain all required fields. In this case, a user could
 choose to drop the whole record or fill undefined UniRec fields with default values.
 Converted records are sent over a unix socket/tcp/tcp-tls for further processing or stored as
 files.
 
 An instance of the plugin can use only one TRAP output interface and one UniRec template at the
 same time. However, it is possible to create multiple instances of this plugin with different
-configuration. For example, one instance can convert all flows using an UniRec template that
+configuration. For example, one instance can convert all flows using a UniRec template that
 consists of common fields available in all flow records and another instance converts only
 flow records that consist of HTTP fields.
 
@@ -89,7 +89,7 @@ Parameters
     a flow record to convert doesn't contain all mandatory fields, it is dropped.
     However, UniRec fields that start with '?' are optional and if they are not present in the
     record (e.g. TCP_FLAGS) default value (typically zero) is used. List of all supported UniRec
-    fields is defined in `unirec-element.txt <unirec-elements.txt>`_ file.
+    fields is defined in `unirec-element.txt <config/unirec-elements.txt>`_ file.
     Example value: "DST_IP,SRC_IP,BYTES,DST_PORT,?TCP_FLAGS,SRC_PORT,PROTOCOL".
 
 :``trapIfcCommon``:
@@ -199,34 +199,55 @@ UniRec configuration file
 -------------------------
 
 Conversion from IPFIX fields to UniRec fields is defined in the configuration file
-`unirec-element.txt <unirec-elements.txt>`_. The file is distributed and installed together
+`unirec-element.txt <config/unirec-elements.txt>`_. The file is distributed and installed together
 with the plugin and it is usually placed in the same directory as the default IPFIXcol startup
 configuration (see ``ipfixcol2 -h`` for help).
 
 The structure of the file is simple. Every line corresponds to one UniRec field and consists of
-four mandatory columns (name, type, IPFIX IEs, description). For example,
-a line: ``"BYTES   uint64   e0id1   Number of bytes in flow"``:
+three mandatory parameters (name, type, list of IPFIX Information Elements). For example,
+a line: ``"BYTES uint64 e0id1"``:
 
-- First column specifies an UniRec name. This name is used in a plugin configuration in
+- First parameter specifies an UniRec name. This name is used in a plugin configuration in
   the ``<uniRecFormat>`` element.
-- Second column specifies a data type of the UniRec field. List of all supported types is available
+- Second parameter specifies a data type of the UniRec field. List of all supported types is available
   in `UniRec documentation <https://github.com/CESNET/Nemea-Framework/tree/master/unirec>`_.
-- The third column is identification of corresponding IPFIX Information Elements (IE). In this case,
-  "e0id1" means IPFIX IE with Enterprise ID 0 and ID 1 (which is "octetDeltaCount").
-- The last column is a user description.
+- The third parameter is comma separated list of corresponding IPFIX Information Elements (IEs). In
+  this case, "e0id1" means IPFIX IE with Private Enterprise ID 0 and IE ID 1 (which is
+  "octetDeltaCount"). Instead of numeric identification an IE name in "<scope>:<name>" format
+  can be also used, for example, ``"BYTES uint64 iana:octetDeltaCount"``.
 
-To map more than one IPFIX IE to one UniRec element, IPFIX IEs may be written as a comma
-separated list of individual IEs (no space before and after comma). For example,
-``"SRC_IP  ipaddr  e0id8,e0id27  IPv4 or IPv6 source address"``.
+How to add a new conversion record
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+First of all, make sure that definitions of IPFIX Information Elements to convert are known to
+the IPFIXcol. The plugin needs to know the definitions to find appropriate conversion functions
+from IPFIX to UniRec data types. All definitions of IEs are provided
+by `libfds <https://github.com/CESNET/libfds/>`_ library and if any definition is missing, it is
+possible to add it manually to configuration. See the project website for help.
 
+Now you can create a new entry in the configuration file. All three parameters, i.e. UniRec field
+name, UniRec type and list of IPFIX IEs, must be defined. If the mapping is configured correctly
+the new UniRec field can be used in the template specification i.e. ``<uniRecFormat>``.
 
-TODO: how to add new element!! lnf + unirec
+Be aware that data types of IPFIX IEs and corresponding UniRec fields could be slightly different.
+When a value of an IPFIX field cannot fit into a UniRec field (e.g. conversion from 64b
+to 32b unsigned integer), the converted value is saturated (the maximum/minimum possible
+value is used) or extra bits are discarded. To distinguish these situation, the data semantic
+of used IPFIX IE is used. If its semantic is ``flags`` or ``identifier``, extra bits are
+discarded. Otherwise, the value is saturated.
 
+  Note: If saturation is applied and a negative integer is converted from signed to unsigned
+  integer type, the result value is zero.
+
+To see conversion warnings, add the UniRec field to ``<uniRecFormat>`` and run the collector
+with increased verbosity level i.e. ``ipfixcol2 -v``.
 
 Note
 ----
 
-TODO: bidirectional flows are automatically split into two unidirectional flows
-TODO: if multiple IPFIX elements are mapped to the same UniRec field and the result is .....
+Bidirectional flows are now currently supported by UniRec, therefore, biflow records are
+automatically split into two unidirectional flow records during conversion.
 
+When multiple IPFIX Information Elements are mapped to the same UniRec field and those IPFIX fields
+are present in an IPFIX record, the last field occurrence (in the appropriate IPFIX Template)
+is converted to the UniRec field.
