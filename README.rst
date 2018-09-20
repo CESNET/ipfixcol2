@@ -67,17 +67,19 @@ Second, install build dependencies of the collector
 
 .. code-block::
 
-    yum install gcc gcc-c++ cmake make
-    # Optionally: doxygen, pkg-config
+    yum install gcc gcc-c++ cmake make python-docutils
+    # Optionally: doxygen pkg-config
 
 * Note: latest systems (e.g. Fedora) use ``dnf`` instead of ``yum``.
+* Note: package ``python-docutils`` may by also named as ``python2-docutils``
+* Note: package ``pkg-config`` may by also named as ``pkgconfig``
 
 **Debian/Ubuntu:**
 
 .. code-block::
 
-    apt-get install gcc g++ cmake make
-    # Optionally: doxygen
+    apt-get install gcc g++ cmake make python-docutils
+    # Optionally: doxygen pkg-config
 
 Finally, build and install the collector:
 
