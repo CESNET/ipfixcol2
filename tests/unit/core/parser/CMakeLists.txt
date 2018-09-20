@@ -2,15 +2,15 @@
 include_directories(tools)
 
 set(AUX_TOOLS
-	"tools/MsgGen.cpp"
-	"tools/MsgGen.h"
+    "tools/MsgGen.cpp"
+    "tools/MsgGen.h"
 )
 
 # Copy auxiliary files for tests
 configure_file(
-	"${CMAKE_CURRENT_SOURCE_DIR}/data/iana_part.xml"
-	"${CMAKE_CURRENT_BINARY_DIR}/data/iana_part.xml"
-	COPYONLY
+    "${CMAKE_CURRENT_SOURCE_DIR}/data/iana_part.xml"
+    "${CMAKE_CURRENT_BINARY_DIR}/data/iana_part.xml"
+    COPYONLY
 )
 
 # Register tests

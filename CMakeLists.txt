@@ -3,13 +3,13 @@ project(ipfixcol)
 
 # Description of the project
 set(
-	IPFIXCOL_DESCRIPTION
-	"IPFIXcol is an implementation of an IPFIX (RFC 7011) collector."
-	)
+    IPFIXCOL_DESCRIPTION
+    "IPFIXcol is an implementation of an IPFIX (RFC 7011) collector."
+)
 
 # Check the platform
 if (NOT UNIX)
-	message(FATAL_ERROR "Only Unix like systems are supported.")
+    message(FATAL_ERROR "Only Unix like systems are supported.")
 endif()
 
 # Versions and other informations
@@ -17,7 +17,7 @@ set(IPFIXCOL_VERSION_MAJOR 2)
 set(IPFIXCOL_VERSION_MINOR 0)
 set(IPFIXCOL_VERSION_PATCH 0)
 set(IPFIXCOL_VERSION
-	${IPFIXCOL_VERSION_MAJOR}.${IPFIXCOL_VERSION_MINOR}.${IPFIXCOL_VERSION_PATCH})
+    ${IPFIXCOL_VERSION_MAJOR}.${IPFIXCOL_VERSION_MINOR}.${IPFIXCOL_VERSION_PATCH})
 
 # Include modules
 include(CMakeModules/git_info.cmake)
@@ -30,12 +30,12 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMakeModules")
 
 CHECK_C_COMPILER_FLAG(-std=gnu11 COMPILER_SUPPORT_GNU11)
 if (NOT COMPILER_SUPPORT_GNU11)
-	message(FATAL_ERROR "Compiler does NOT support C11 with GNU extension")
+    message(FATAL_ERROR "Compiler does NOT support C11 with GNU extension")
 endif()
 
 CHECK_CXX_COMPILER_FLAG(-std=gnu++11 COMPILER_SUPPORT_GNUXX11)
 if (NOT COMPILER_SUPPORT_GNUXX11)
-	message(FATAL_ERROR "Compiler does NOT support C++11 with GNU extension")
+    message(FATAL_ERROR "Compiler does NOT support C++11 with GNU extension")
 endif()
 
 # ------------------------------------------------------------------------------
@@ -44,14 +44,14 @@ set(TESTS_DEFAULT    OFF)
 
 # Set default build type if not specified by user
 if (NOT CMAKE_BUILD_TYPE)
-	set (CMAKE_BUILD_TYPE Release
-		CACHE STRING "Choose type of build (Release/Debug/Coverage)." FORCE)
+    set (CMAKE_BUILD_TYPE Release
+        CACHE STRING "Choose type of build (Release/Debug/Coverage)." FORCE)
 endif()
 
 string(TOUPPER ${CMAKE_BUILD_TYPE} BUILD_TYPE_UPPER)
 # Enable unit tests, by default, for coverage builds
 if (${BUILD_TYPE_UPPER} STREQUAL "COVERAGE")
-	set(TESTS_DEFAULT ON)
+    set(TESTS_DEFAULT ON)
 endif()
 
 option(ENABLE_DOC_MANPAGE    "Enable manual page building"              ON)
@@ -82,19 +82,19 @@ add_subdirectory(doc)
 add_subdirectory(pkg)
 
 if (ENABLE_TESTS)
-	enable_testing()
-	add_subdirectory(tests/unit)
+    enable_testing()
+    add_subdirectory(tests/unit)
 endif()
 
 # ------------------------------------------------------------------------------
 # Status messages
 MESSAGE(STATUS
-	"\n\n"
-	"IPFIXcol version.:   ${IPFIXCOL_VERSION}\n"
-	"Install prefix...:   ${CMAKE_INSTALL_PREFIX}\n"
-	"Build type.......:   ${BUILD_TYPE_UPPER}\n"
-	"C Compiler.......:   ${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}\n"
-	"C Flags..........:   ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${BUILD_TYPE_UPPER}}\n"
-	"C++ Compiler.....:   ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}\n"
-	"C++ Flags........:   ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${BUILD_TYPE_UPPER}}\n"
+    "\n\n"
+    "IPFIXcol version.:   ${IPFIXCOL_VERSION}\n"
+    "Install prefix...:   ${CMAKE_INSTALL_PREFIX}\n"
+    "Build type.......:   ${BUILD_TYPE_UPPER}\n"
+    "C Compiler.......:   ${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}\n"
+    "C Flags..........:   ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${BUILD_TYPE_UPPER}}\n"
+    "C++ Compiler.....:   ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}\n"
+    "C++ Flags........:   ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${BUILD_TYPE_UPPER}}\n"
 )

@@ -10,15 +10,15 @@ pkg_check_modules(PC_FDS QUIET libfds)
 set(FDS_DEFINITIONS ${PC_FDS_CFLAGS_OTHER})
 
 find_path(
-	FDS_INCLUDE_DIR libfds.h
-	HINTS ${PC_FDS_INCLUDEDIR} ${PC_FDS_INCLUDE_DIRS}
-	PATH_SUFFIXES include
+    FDS_INCLUDE_DIR libfds.h
+    HINTS ${PC_FDS_INCLUDEDIR} ${PC_FDS_INCLUDE_DIRS}
+    PATH_SUFFIXES include
 )
 
 find_library(
-	FDS_LIBRARY NAMES fds libfds
-	HINTS ${PC_FDS_LIBDIR} ${PC_FDS_LIBRARY_DIRS}
-	PATH_SUFFIXES lib lib64
+    FDS_LIBRARY NAMES fds libfds
+    HINTS ${PC_FDS_LIBDIR} ${PC_FDS_LIBRARY_DIRS}
+    PATH_SUFFIXES lib lib64
 )
 
 if (PC_FDS_VERSION)
@@ -38,8 +38,8 @@ endif()
 # if all listed variables are TRUE
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(LibFds
-	REQUIRED_VARS FDS_LIBRARY FDS_INCLUDE_DIR
-	VERSION_VAR FDS_VERSION_STRING
+    REQUIRED_VARS FDS_LIBRARY FDS_INCLUDE_DIR
+    VERSION_VAR FDS_VERSION_STRING
 )
 
 set(FDS_LIBRARIES ${FDS_LIBRARY})
