@@ -14,7 +14,7 @@ files and provide query results faster.
 How to build
 ------------
 
-By default, the plugin is not distributed with the IPFIXcol itself due to extra dependencies.
+By default, the plugin is not distributed with IPFIXcol due to extra dependencies.
 To build the plugin, IPFIXcol (and its header files) and the following dependencies must be
 installed on your system:
 

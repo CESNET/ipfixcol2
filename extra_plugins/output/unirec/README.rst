@@ -21,7 +21,7 @@ flow records that consist of HTTP fields.
 How to build
 ------------
 
-By default, the plugin is not distributed with the IPFIXcol itself due to extra dependencies.
+By default, the plugin is not distributed with IPFIXcol due to extra dependencies.
 To build the plugin, IPFIXcol (and its header files) and the following dependencies must be
 installed on your system:
 
@@ -245,7 +245,7 @@ with increased verbosity level i.e. ``ipfixcol2 -v``.
 Note
 ----
 
-Bidirectional flows are now currently supported by UniRec, therefore, biflow records are
+Bidirectional flows are not currently supported by UniRec, therefore, biflow records are
 automatically split into two unidirectional flow records during conversion.
 
 When multiple IPFIX Information Elements are mapped to the same UniRec field and those IPFIX fields

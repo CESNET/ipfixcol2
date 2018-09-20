@@ -29,6 +29,8 @@ if (NOT CMAKE_BUILD_TYPE)
         CACHE STRING "Choose type of build (Release/Debug)." FORCE)
 endif()
 
+option(ENABLE_DOC_MANPAGE    "Enable manual page building"              ON)
+
 # Hard coded definitions
 set(CMAKE_C_FLAGS            "${CMAKE_C_FLAGS} -fvisibility=hidden -std=gnu11")
 set(CMAKE_C_FLAGS_RELEASE    "-O2 -DNDEBUG")
@@ -72,3 +74,24 @@ install(
     DESTINATION "${CMAKE_INSTALL_FULL_SYSCONFDIR}/ipfixcol2/"
 )
 
+if (ENABLE_DOC_MANPAGE)
+    find_package(Rst2Man)
+    if (NOT RST2MAN_FOUND)
+        message(FATAL_ERROR "rst2man is not available. Install python-docutils or disable manual page generation (-DENABLE_DOC_MANPAGE=False)")
+    endif()
+
+    # Build a manual page
+    set(SRC_FILE "${CMAKE_CURRENT_SOURCE_DIR}/doc/ipfixcol2-unirec-output.7.rst")
+    set(DST_FILE "${CMAKE_CURRENT_BINARY_DIR}/ipfixcol2-unirec-output.7")
+
+    add_custom_command(TARGET unirec-output PRE_BUILD
+        COMMAND ${RST2MAN_EXECUTABLE} --syntax-highlight=none ${SRC_FILE} ${DST_FILE}
+        DEPENDS ${SRC_FILE}
+        VERBATIM
+    )
+
+    install(
+        FILES "${DST_FILE}"
+        DESTINATION "${CMAKE_INSTALL_FULL_MANDIR}/man7"
+    )
+endif()

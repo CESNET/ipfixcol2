@@ -1,5 +1,5 @@
-# Build documentation
-if (ENABLE_DOC)
+# Build code documentation
+if (ENABLE_DOC_DOXYGEN)
 	find_package(Doxygen)
 	if (NOT DOXYGEN_FOUND)
 		message(FATAL_ERROR "Doxygen is not available.")
@@ -28,4 +28,4 @@ if (ENABLE_DOC)
 		COMMENT "Generating API documentation with Doxygen to ${DOXYGEN_DIRECTORY}"
 		VERBATIM
     )
-endif(ENABLE_DOC)
+endif(ENABLE_DOC_DOXYGEN)

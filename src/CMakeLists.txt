@@ -10,6 +10,15 @@ configure_file(
 
 # Find libfds
 find_package(LibFds 0.1.0 REQUIRED)
+# Find rst2man
+
+if (ENABLE_DOC_MANPAGE)
+	find_package(Rst2Man)
+	if (NOT RST2MAN_FOUND)
+		message(FATAL_ERROR "rst2man is not available. Install python-docutils or disable manual page generation (-DENABLE_DOC_MANPAGE=False)")
+	endif()
+endif()
+
 # Find pthreads
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
