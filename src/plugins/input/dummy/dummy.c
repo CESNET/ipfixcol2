@@ -55,7 +55,7 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
     // Configuration flags (reserved for future use)
     .flags = 0,
     // Plugin version string (like "1.2.3")
-    .version = "0.1.0",
+    .version = "2.0.0",
     // Minimal IPFIXcol version string (like "1.2.3")
     .ipx_min = "2.0.0"
 };
