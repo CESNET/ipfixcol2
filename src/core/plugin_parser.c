@@ -118,37 +118,46 @@ ipx_plugin_parser_destroy(ipx_ctx_t *ctx, void *cfg)
  *
  * If the event is of close type, information about the particular Transport Session will be
  * removed, i.e. all template managers and counters of sequence numbers.
- * \param[in] ctx    Plugin context
- * \param[in] parser IPFIX Message parser
- * \param[in] msg    Transport Session message
+ * \param[in] ctx         Plugin context
+ * \param[in] parser      IPFIX Message parser
+ * \param[in] msg_session Transport Session message
  * \return Always #IPX_OK
  */
 static inline int
-parser_plugin_process_session(ipx_ctx_t *ctx, ipx_parser_t *parser, ipx_msg_session_t *msg)
+parser_plugin_process_session(ipx_ctx_t *ctx, ipx_parser_t *parser, ipx_msg_session_t *msg_session)
 {
-    if (ipx_msg_session_get_event(msg) != IPX_MSG_SESSION_CLOSE) {
+    if (ipx_msg_session_get_event(msg_session) != IPX_MSG_SESSION_CLOSE) {
         // Ignore non-close events
+        ipx_ctx_msg_pass(ctx, ipx_msg_session2base(msg_session));
         return IPX_OK;
     }
 
     int rc;
-    const struct ipx_session *session = ipx_msg_session_get_session(msg);
+    const struct ipx_session *session = ipx_msg_session_get_session(msg_session);
 
-    ipx_msg_garbage_t *g_msg;
-    if ((rc = ipx_parser_session_remove(parser, session, &g_msg)) == IPX_OK) {
-        // Send garbage
-        if (g_msg == NULL) {
+    ipx_msg_garbage_t *msg_garbage;
+    if ((rc = ipx_parser_session_remove(parser, session, &msg_garbage)) == IPX_OK) {
+        // Everything is fine, pass the message(s)
+        ipx_ctx_msg_pass(ctx, ipx_msg_session2base(msg_session));
+
+        /* Send garbage
+         * Garbage MUST be send after the Transport Session (TS) Message because other plugins can
+         * have references to the templates linked to this TS. Otherwise there is a chance that
+         * any template that is present in the garbage message is dereferenced by the plugins.
+         */
+        if (msg_garbage == NULL) {
             IPX_CTX_WARNING(ctx, "A memory allocation failed (%s:%d).", __FILE__, __LINE__);
             return IPX_OK;
         }
 
-        ipx_ctx_msg_pass(ctx, ipx_msg_garbage2base(g_msg));
+        ipx_ctx_msg_pass(ctx, ipx_msg_garbage2base(msg_garbage));
         return IPX_OK;
     }
 
+    // Possible internal errors
     switch (rc) {
     case IPX_ERR_NOTFOUND:
-        IPX_CTX_WARNING(ctx, "Received an event about closing of unknown Transport Session '%s'.",
+        IPX_CTX_ERROR(ctx, "Received an event about closing of unknown Transport Session '%s'.",
             session->ident);
         break;
     default:
@@ -157,6 +166,8 @@ parser_plugin_process_session(ipx_ctx_t *ctx, ipx_parser_t *parser, ipx_msg_sess
         break;
     }
 
+    // In case of an internal error always pass the TS message
+    ipx_ctx_msg_pass(ctx, ipx_msg_session2base(msg_session));
     return IPX_OK;
 }
 
@@ -286,7 +297,6 @@ ipx_plugin_parser_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
     case IPX_MSG_SESSION:
         // Process Transport Session
         rc = parser_plugin_process_session(ctx, parser, ipx_msg_base2session(msg));
-        ipx_ctx_msg_pass(ctx, msg);
         break;
     default:
         // Unexpected type of the message
