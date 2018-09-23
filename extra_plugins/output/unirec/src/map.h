@@ -49,9 +49,27 @@
 /** Internal map type */
 typedef struct map_s map_t;
 
+/** Source field                                      */
+enum MAP_SRC {
+    /** Invalid (internal value)                      */
+    MAP_SRC_INVALID,
+    /** IPFIX field                                   */
+    MAP_SRC_IPFIX,
+    /** Internal "link bit field" converter           */
+    MAP_SRC_INTERNAL_LBF,
+    /** Internal "dir bit field" converter            */
+    MAP_SRC_INTERNAL_DBF
+};
+
 /** IPFIX-to-UniRec mapping record                    */
 struct map_rec {
     struct {
+        /**
+         * \brief Data source
+         * \note If the field is not ::MAP_SRC_IPFIX, parameters en, id and def are NOT defined!
+         */
+        enum MAP_SRC source;
+
         /** Private Enterprise Number                 */
         uint32_t en;
         /** Information Element ID                    */

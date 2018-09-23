@@ -189,7 +189,7 @@ map_rec_add(map_t *map, const struct map_rec *rec)
  * \return Pointer to the definition or NULL (unknown or invalid IE specifier)
  */
 static const struct fds_iemgr_elem *
-map_elem_get(const fds_iemgr_t *mgr, const char *elem)
+map_elem_get_ipfix(const fds_iemgr_t *mgr, const char *elem)
 {
     const struct fds_iemgr_elem *res;
 
@@ -209,6 +209,23 @@ map_elem_get(const fds_iemgr_t *mgr, const char *elem)
     }
 
     return fds_iemgr_elem_find_id(mgr, ipfix_en, ipfix_id);
+}
+
+/**
+ * \brief Get the type of internal function
+ * \param[in] elem Identification of an internal function to find
+ * \return Function identifier or ::MAP_SRC_INVALID in case or failure
+ */
+static enum MAP_SRC
+map_elem_get_internal(const char *elem)
+{
+    if (strcmp(elem, "_internal_lbf_") == 0) {
+        return MAP_SRC_INTERNAL_LBF;
+    } else if (strcmp(elem, "_internal_dbf_") == 0) {
+        return MAP_SRC_INTERNAL_DBF;
+    } else {
+        return MAP_SRC_INVALID;
+    }
 }
 
 /**
@@ -259,20 +276,33 @@ map_load_line_ie_defs(map_t *map, char *ur_name, int ur_type, char *ur_type_str,
         }
 
         // Parse IPFIX specifier
-        const struct fds_iemgr_elem *elem_def = map_elem_get(map->iemgr, subtoken);
-        if (!elem_def) {
-            snprintf(map->err_buffer, ERR_SIZE, "Line %zu: IPFIX specifier '%s' is invalid or "
-                "a definition of the Information Element is missing! For more information, see "
-                "the plugin documentation.", line_id, subtoken);
-            rc = IPX_ERR_FORMAT;
-            break;
+        const struct fds_iemgr_elem *elem_def = map_elem_get_ipfix(map->iemgr, subtoken);
+        if (elem_def != NULL) {
+            // Store the "IPFIX element" record
+            rec.ipfix.source = MAP_SRC_IPFIX;
+            rec.ipfix.def = elem_def;
+            rec.ipfix.id = elem_def->id;
+            rec.ipfix.en = elem_def->scope->pen;
+            rc = map_rec_add(map, &rec);
+            continue;
         }
 
-        // Store the record
-        rec.ipfix.def = elem_def;
-        rec.ipfix.id = elem_def->id;
-        rec.ipfix.en = elem_def->scope->pen;
-        rc = map_rec_add(map, &rec);
+        enum MAP_SRC fn_id = map_elem_get_internal(subtoken);
+        if (fn_id != MAP_SRC_INVALID) {
+            // Store the "Internal function" record
+            rec.ipfix.source = fn_id;
+            rec.ipfix.def = NULL;
+            rec.ipfix.id = 0;
+            rec.ipfix.en = 0;
+            rc = map_rec_add(map, &rec);
+            continue;
+        }
+
+        snprintf(map->err_buffer, ERR_SIZE, "Line %zu: IPFIX specifier '%s' is invalid or "
+            "a definition of the Information Element is missing! For more information, see "
+            "the plugin documentation.", line_id, subtoken);
+        rc = IPX_ERR_FORMAT;
+        break;
     }
 
     free(defs_cpy);
@@ -374,6 +404,10 @@ map_sort_fn(const void *p1, const void *p2)
     struct map_rec *rec1 = *(struct map_rec **) p1;
     struct map_rec *rec2 = *(struct map_rec **) p2;
 
+    if (rec1->ipfix.source != rec2->ipfix.source) {
+        return (rec1->ipfix.source < rec2->ipfix.source) ? (-1) : 1;
+    }
+
     // Primary sort by PEN
     if (rec1->ipfix.en != rec2->ipfix.en) {
         return (rec1->ipfix.en < rec2->ipfix.en) ? (-1) : 1;
@@ -455,6 +489,11 @@ map_load(map_t *map, const char *file)
     for (size_t i = 1; i < map->rec_size; i++) {
         // Records are sorted, therefore, the same IPFIX IEs should be next to each other
         const struct map_rec *rec_now = map->rec_array[i];
+        if (rec_prev->ipfix.source != MAP_SRC_IPFIX || rec_now->ipfix.source != MAP_SRC_IPFIX) {
+            rec_prev = rec_now;
+            continue;
+        }
+
         if (rec_prev->ipfix.en != rec_now->ipfix.en || rec_prev->ipfix.id != rec_now->ipfix.id) {
             rec_prev = rec_now;
             continue;

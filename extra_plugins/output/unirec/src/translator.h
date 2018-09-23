@@ -50,13 +50,20 @@ typedef struct translator_s translator_t;
 
 /**
  * \brief Create a new instance of a translator
- * \param[in] ctx
- * \param[in] map
- * \param[in]
+ *
+ * \note
+ *   UniRec template \p tmplt MUST exists and cannot be modified if the
+ *   translator exists.
+ * \param[in] ctx        Plugin instance context (only for log!)
+ * \param[in] map        Mapping database with already loaded mapping file
+ * \param[in] tmplt      Parsed UniRec template that will be used to format records
+ * \param[in] tmplt_spec UniRec template specification with question marks (describes
+ *   optional UniRec fields)
  * \return Pointer to the instance or NULL.
  */
 translator_t *
-translator_init(ipx_ctx_t *ctx, const map_t *map, const ur_template_t *tmplt, const char *tmplt_spec);
+translator_init(ipx_ctx_t *ctx, const map_t *map, const ur_template_t *tmplt,
+    const char *tmplt_spec);
 
 /**
  * \brief Destroy instance of a translator
@@ -64,6 +71,17 @@ translator_init(ipx_ctx_t *ctx, const map_t *map, const ur_template_t *tmplt, co
  */
 void
 translator_destroy(translator_t *trans);
+
+/**
+ * \brief Set IPFIX message context
+ *
+ * This function MUST be called before processing each IPFIX Message to set proper record
+ * parameters. The message header is required for determine ODID or other parameters.
+ * \param[in] trans Translator instance
+ * \param[in] hdr   IPFIX message header
+ */
+void
+translator_set_context(translator_t *trans, const struct fds_ipfix_msg_hdr *hdr);
 
 /**
  * \brief Convert a IPFIX record to an UniRec message

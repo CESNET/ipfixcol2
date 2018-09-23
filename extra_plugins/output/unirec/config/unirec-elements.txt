@@ -10,6 +10,10 @@
 #      ("eXXidYY" where XX is Private Enterprise Number and YY is field ID)
 #
 # See ipfixcol2-unirec-output(1) for details
+#
+# Note:
+#   IPFIX IEs "_internal_dbf_" and "_internal_lbf_" represents internal
+#   conversion functions of UniRec plugin.
 
 #UNIREC NAME                   UNIREC TYPE   IPFIX IEs        DESCRIPTION
 # --- Basic fields ---
@@ -21,12 +25,12 @@ PROTOCOL                       uint8         e0id4            # Transport protoc
 TCP_FLAGS                      uint8         e0id6            # TCP flags
 BYTES                          uint64        e0id1            # Number of bytes in flow
 PACKETS                        uint32        e0id2            # Number of packets in flow
-TIME_FIRST                     time          e0id152          # Time of the first packet of a flow
-TIME_LAST                      time          e0id153          # Time of the last packet of a flow
-DIR_BIT_FIELD                  uint8         e0id10           # Bit field used for determining incoming/outgoing flow (1 => Incoming, 0 => Outgoing)
-LINK_BIT_FIELD                 uint64        e0id405          # Bit field of links on which was flow seen
 TTL                            uint8         e0id192          # IP time to live
 TOS                            uint8         e0id5            # IP type of service
+TIME_FIRST                     time          e0id150,e0id152,e0id154,e0id156 # Time of the first packet of a flow
+TIME_LAST                      time          e0id151,e0id153,e0id155,e0id157 # Time of the last packet of a flow
+DIR_BIT_FIELD                  uint8         _internal_dbf_   # Bit field used for determining incoming/outgoing flow (1 => Incoming, 0 => Outgoing)
+LINK_BIT_FIELD                 uint64        _internal_lbf_   # Bit field of links on which was flow seen
 
 # --- DNS specific fields ---
 DNS_ANSWERS                    uint16        e8057id0         # DNS answers

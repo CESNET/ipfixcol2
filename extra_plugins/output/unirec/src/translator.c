@@ -103,14 +103,14 @@ struct translator_s {
         struct translator_rec *recs;
         /** Number of records                                           */
         size_t size;
-    } table; /** Conversion table                                       */
+    } table; /**< Conversion table                                      */
 
     struct {
         /** Record structure                                            */
         void *data;
         /** Reference to a UniRec template                              */
         const ur_template_t *ur_tmplt;
-    } record;
+    } record; /**< UniRec record structure                              */
 
     struct {
         /**
@@ -131,6 +131,23 @@ struct translator_s {
         /** Number of fields (of above arrays)                          */
         size_t size;
     } progress; /**< Auxiliary conversion variables                     */
+
+    struct {
+        /** IPFIX Message header                                        */
+        const struct fds_ipfix_msg_hdr *hdr;
+    } msg_context; /**< IPFIX context of the record to translate        */
+
+    struct {
+        /* Following structures contains converters that takes data
+         * from an IPFIX Message header (i.e. not from a record!)
+         */
+        struct {
+            bool en;                    /**< Enabled/disabled           */
+            int  req_idx;               /**< Index in the template      */
+            int  field_size;            /**< UniRec field size          */
+            ur_field_id_t field_id;     /**< UniRec field ID            */
+        } lbf; /**< ODID to 'link bit field' converter                  */
+    } extra_conv; /**< Special internal conversion functions            */
 };
 
 /**
@@ -451,6 +468,86 @@ translate_time(translator_t *trans, const struct translator_rec *rec,
     }
 
     return 1;
+}
+
+/**
+ * \brief Convert "ingressInterface" (EN: 0, ID: 10) to dir_bif_field
+ * \copydetails translate_uint()
+ */
+static int
+translate_internal_dbf(translator_t *trans, const struct translator_rec *rec,
+    const struct fds_drec_field *field)
+{
+    uint64_t value;
+    if (fds_get_uint_be(field->data, field->size, &value) != FDS_OK) {
+        return 1; // Conversion failed
+    }
+
+    const ur_field_id_t ur_id = rec->unirec.id;
+    void *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
+
+    uint8_t res = value & 0x1;
+    switch (rec->unirec.size) {
+    case 1:
+        *((uint8_t  *) field_ptr) = res;
+        break;
+    case 2:
+        *((uint16_t *) field_ptr) = res;
+        break;
+    case 4:
+        *((uint32_t *) field_ptr) = res;
+        break;
+    case 8:
+        *((uint64_t *) field_ptr) = res;
+        break;
+    default:
+        // Invalid size of the field
+        return 1;
+    }
+
+    return 0;
+}
+
+/**
+ * \brief Convert ODID to 'link bit field'
+ *
+ * \note This function uses a message context configured by the user. It's independent on the
+ *   content of an IPFIX record.
+ * \param[in] trans Internal translator structure
+ * \return On success returns 0. Otherwise returns non-zero value!
+ */
+static int
+translate_internal_lbf(translator_t *trans)
+{
+    if (!trans->msg_context.hdr) {
+        return 1; // Message header is not available!
+    }
+
+    // Get the ODID value
+    uint32_t odid = ntohl(trans->msg_context.hdr->odid);
+
+    // Store the value is 'link bit field'
+    ur_field_type_t ur_id = trans->extra_conv.lbf.field_id;
+    void *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
+
+    switch (trans->extra_conv.lbf.field_size) {
+    case 1:
+        *((uint8_t *) field_ptr)  = ((uint8_t) 1U)  << (odid & 0x07);
+        break;
+    case 2:
+        *((uint16_t *) field_ptr) = ((uint16_t) 1U) << (odid & 0x0F);
+        break;
+    case 4:
+        *((uint32_t *) field_ptr) = ((uint32_t) 1U) << (odid & 0x1F);
+        break;
+    case 8:
+        *((uint64_t *) field_ptr) = ((uint64_t) 1U) << (odid & 0x3F);
+        break;
+    default:
+        return 1;
+    }
+
+    return 0;
 }
 
 /**
@@ -833,13 +930,145 @@ translator_cmp(const void *p1, const void *p2)
 }
 
 /**
+ * \brief Fill a table record with conversion from IPFIX field to UniRec field
+ *
+ * The function tries to find conversion function from IPFIX to UniRec data type and fills
+ * the \p trans_rec record.
+ * \param[in]  trans     Translator internal structure
+ * \param[in]  map_rec   IPFIX-to-UniRec mapping record
+ * \param[in]  ur_id     UniRec field ID
+ * \param[in]  field_idx Index of the UniRec field in the record
+ * \param[out] trans_rec Translator record to fill
+ * \return #IPX_OK on success (the \p trans_rec is filled)
+ * \return #IPX_ERR_NOTFOUND if the corresponding UniRec field is not in the template
+ *   (the \p trans_rec is NOT filled)
+ * \return #IPX_ERR_DENIED if there is an error (invalid conversion, etc.)
+ */
+static int
+translator_table_fill_rec(translator_t *trans, const struct map_rec *map_rec,
+    ur_field_id_t ur_id, int field_idx, struct translator_rec *trans_rec)
+{
+    assert(map_rec->ipfix.source == MAP_SRC_IPFIX); // Only mapping from IPFIX definitions
+
+    // Try to find conversion function
+    trans_rec->func = translator_get_func(trans->ctx, map_rec);
+    if (!trans_rec->func) {
+        const struct fds_iemgr_elem *el = map_rec->ipfix.def;
+        IPX_CTX_ERROR(trans->ctx, "Conversion from IPFIX IE '%s:%s' (PEN: %" PRIu32", IE: "
+            "%" PRIu16 ", type: %s) to UniRec field '%s' (type: %s) is not supported!",
+            el->scope->name, el->name, el->scope->pen, el->id, fds_iemgr_type2str(el->data_type),
+            map_rec->unirec.name, map_rec->unirec.type_str)
+        return IPX_ERR_DENIED;
+    }
+
+    // Fill the rest
+    trans_rec->unirec.id   = (ur_field_id_t) ur_id;
+    trans_rec->unirec.size = ur_get_size(ur_id);
+    trans_rec->unirec.type = ur_get_type(ur_id);
+    trans_rec->unirec.req_idx = field_idx;
+    trans_rec->ipfix.pen   = map_rec->ipfix.en;
+    trans_rec->ipfix.id    = map_rec->ipfix.id;
+    trans_rec->ipfix.type  = map_rec->ipfix.def->data_type;
+    trans_rec->ipfix.sem   = map_rec->ipfix.def->data_semantic;
+
+    IPX_CTX_DEBUG(trans->ctx, "Added conversion from IPFIX IE '%s:%s' to UniRec '%s'",
+        map_rec->ipfix.def->scope->name, map_rec->ipfix.def->name, map_rec->unirec.name);
+    return IPX_OK;
+}
+
+/**
+ * \brief Fill a table record with an internal converter or enable internal conversion function
+ *
+ * Based on the type of the required internal function, the record is filled or a special converter
+ * in the translator is enabled.
+ * \param[in]  trans     Translator internal structure
+ * \param[in]  map_rec   IPFIX-to-UniRec mapping record
+ * \param[in]  ur_id     UniRec field ID
+ * \param[in]  field_idx Index of the UniRec field in the record
+ * \param[out] trans_rec Translator record to fill
+ * \return #IPX_OK on success (the \p trans_rec is filled)
+ * \return #IPX_ERR_NOTFOUND if the corresponding UniRec field is not in the template
+ *   or an extra internal converter is enabled (the \p trans_rec is NOT filled)
+ * \return #IPX_ERR_DENIED if there is an error (invalid conversion, etc.)
+ */
+static int
+translator_table_fill_internal(translator_t *trans, const struct map_rec *map_rec,
+    ur_field_id_t ur_id, int field_idx, struct translator_rec *trans_rec)
+{
+    enum MAP_SRC src = map_rec->ipfix.source;
+    assert(src != MAP_SRC_IPFIX); // Only internal converters can be processed
+
+    const ur_field_type_t ur_type = ur_get_type(ur_id);
+    bool ur_is_uint = (ur_type == UR_TYPE_UINT64 || ur_type == UR_TYPE_UINT32
+        || ur_type == UR_TYPE_UINT16 || ur_type == UR_TYPE_UINT8);
+
+    /* Internal "Link bit field" function (ODID -> Link bit field)
+     * Implemented as a special converter that must be enabled in the translator because
+     * ODID is not defined in the IPFIX record but in the IPFIX Message header
+     */
+    if (src == MAP_SRC_INTERNAL_LBF) {
+        if (trans->extra_conv.lbf.en) {
+            // The function is already enabled!
+            IPX_CTX_ERROR(trans->ctx, "Internal 'link bit field' function can be mapped only "
+                "to one UniRec field!", '\0');
+            return IPX_ERR_DENIED;
+        }
+
+        if (!ur_is_uint) {
+            IPX_CTX_ERROR(trans->ctx, "Internal 'link bit field' function supports only UniRec "
+                "uintX types but UniRec field '%s' is '%s'!", map_rec->unirec.name,
+                map_rec->unirec.type_str);
+            return IPX_ERR_DENIED;
+        }
+
+        // Enable the internal converter
+        trans->extra_conv.lbf.en = true;
+        trans->extra_conv.lbf.req_idx = field_idx;
+        trans->extra_conv.lbf.field_id = ur_id;
+        trans->extra_conv.lbf.field_size = ur_get_size(ur_id);
+        IPX_CTX_DEBUG(trans->ctx, "Added conversion from internal 'link_bit_field' to UniRec '%s'",
+            map_rec->unirec.name);
+        return IPX_ERR_NOTFOUND; // Do NOT add the record!
+    }
+
+    /* Internal "Dir bit field" function (ingressInterface -> Dir bit field)
+     * Implemented as a usual converter from an IPFIX field
+     */
+    if (src == MAP_SRC_INTERNAL_DBF) {
+        // Check UniRec field type
+        if (!ur_is_uint) {
+            IPX_CTX_ERROR(trans->ctx, "Internal 'dir bit field' function supports only UniRec "
+                "uintX types but UniRec field '%s' is '%s'!", map_rec->unirec.name,
+                map_rec->unirec.type_str);
+            return IPX_ERR_DENIED;
+        }
+
+        trans_rec->unirec.id   = ur_id;
+        trans_rec->unirec.size = ur_get_size(ur_id);
+        trans_rec->unirec.type = ur_type;
+        trans_rec->unirec.req_idx = field_idx;
+        trans_rec->ipfix.pen   = 0;
+        trans_rec->ipfix.id    = 10; // iana:ingressInterface
+        trans_rec->ipfix.type  = FDS_ET_UNSIGNED_32;
+        trans_rec->ipfix.sem   = FDS_ES_IDENTIFIER;
+        trans_rec->func        = translate_internal_dbf;
+        IPX_CTX_DEBUG(trans->ctx, "Added conversion from internal 'dir_bit_field' to UniRec '%s'",
+            map_rec->unirec.name);
+        return IPX_OK;
+    }
+
+    IPX_CTX_ERROR(trans->ctx, "Unimplemented internal mapping function!", '\0');
+    return IPX_ERR_DENIED;
+}
+
+/**
  * \brief Initialize a conversion table
  *
  * The function will initialize a conversion table of fields from IPFIX to UniRec format.
  * The table will only consist of records that represent conversion to UniRec fields present in
  * a corresponding UniRec template. Each record includes identification of a source IPFIX IE and
  * destination UniRec ID, type and size.
- * \param[in] trans Translator internal function
+ * \param[in] trans Translator internal structure
  * \param[in] map   Mapping
  * \param[in] tmplt UniRec template
  * \return #IPX_OK on success
@@ -863,48 +1092,46 @@ translator_init_table(translator_t *trans, const map_t *map, const ur_template_t
     for (size_t i = 0; i < rec_max; ++i) {
         // Get the mapping record
         const struct map_rec *mapping = map_get(map, i);
+        assert(mapping->ipfix.source != MAP_SRC_INVALID);
+
+        // Get ID of the UniRec field and its index in the template
         int ur_id = ur_get_id_by_name(mapping->unirec.name);
-        int req_idx = translator_idx_by_id(tmplt, ur_id);
-        if (req_idx == IPX_ERR_ARG) {
+        int field_idx = translator_idx_by_id(tmplt, ur_id);
+        if (field_idx == IPX_ERR_ARG) {
             IPX_CTX_ERROR(trans->ctx, "Unable to get ID of UniRec field '%s' "
-                "(internal error, %s:%d)", mapping->unirec.name, __FILE__, __LINE__);
+               "(internal error, %s:%d)", mapping->unirec.name, __FILE__, __LINE__);
             ret_val = IPX_ERR_DENIED;
             break;
         }
 
         // Add only mapping of UniRec fields present in the UniRec template
-        if (req_idx == IPX_ERR_NOTFOUND) {
+        if (field_idx == IPX_ERR_NOTFOUND) {
             assert(!ur_is_present(tmplt, ur_id));
             continue;
         }
 
-        // Try to find conversion function
+        int status;
         struct translator_rec *rec_ptr = &table[rec_cnt];
-        rec_ptr->func = translator_get_func(trans->ctx, mapping);
-        if (!rec_ptr->func) {
-            const struct fds_iemgr_elem *el = mapping->ipfix.def;
-            IPX_CTX_ERROR(trans->ctx, "Conversion from IPFIX IE '%s:%s' (PEN: %" PRIu32", IE: "
-                "%" PRIu16 ", type: %s) to UniRec field '%s' (type: %s) is not supported!",
-                el->scope->name, el->name, el->scope->pen, el->id, fds_iemgr_type2str(el->data_type),
-                mapping->unirec.name, mapping->unirec.type_str)
-            ret_val = IPX_ERR_DENIED;
-            break;
+        if (mapping->ipfix.source == MAP_SRC_IPFIX) {
+            // Mapping from IPFIX to UniRec field
+            status = translator_table_fill_rec(trans, mapping, ur_id, field_idx, rec_ptr);
+        } else {
+            // Internal function
+            status = translator_table_fill_internal(trans, mapping, ur_id, field_idx, rec_ptr);
         }
 
-        // Fill the rest
-        rec_ptr->unirec.id = (ur_field_id_t) ur_id;
-        rec_ptr->unirec.size = ur_get_size(ur_id);
-        rec_ptr->unirec.type = ur_get_type(ur_id);
-        rec_ptr->unirec.req_idx = req_idx;
-        rec_ptr->ipfix.pen = mapping->ipfix.en;
-        rec_ptr->ipfix.id = mapping->ipfix.id;
-        rec_ptr->ipfix.type = mapping->ipfix.def->data_type;
-        rec_ptr->ipfix.sem = mapping->ipfix.def->data_semantic;
+        if (status == IPX_OK) {
+            // Translator record has been successfully filled
+            rec_cnt++;
+            continue;
+        } else if (status == IPX_ERR_NOTFOUND) {
+            // Translator record not filled (typically enabled internal function)
+            continue;
+        }
 
-        // Success
-        IPX_CTX_DEBUG(trans->ctx, "Added conversion from IPFIX IE '%s:%s' to UniRec '%s'",
-            mapping->ipfix.def->scope->name, mapping->ipfix.def->name, mapping->unirec.name);
-        rec_cnt++;
+        // Something bad happened!
+        ret_val = IPX_ERR_DENIED;
+        break;
     }
 
     if (ret_val != IPX_OK) { // Failed
@@ -933,6 +1160,36 @@ static void
 translator_destroy_table(translator_t *trans)
 {
     free(trans->table.recs);
+}
+
+/**
+ * \brief Call special internal conversion functions
+ *
+ * These functions represents converters that data from IPFIX record, but usually use IPFIX Message
+ * header or Transport Session of the record.
+ *
+ * \param[in] trans Internal translator function
+ * \return Number of filled UniRec fileds
+ */
+static int
+translator_call_internals(translator_t *trans)
+{
+    int converted_fields = 0;
+
+    if (trans->extra_conv.lbf.en) {
+        // Call internal 'link bit field' converter
+        int field_idx = trans->extra_conv.lbf.req_idx;
+        if (translate_internal_lbf(trans) == 0) {
+            // Success
+            trans->progress.req_fields[field_idx] = 0; // Filled!
+            converted_fields++;
+        } else {
+            IPX_CTX_WARNING(trans->ctx, "Internal function 'link bit field' failed to fill "
+                "UniRec field '%s'", trans->progress.req_names[field_idx]);
+        }
+    }
+
+    return converted_fields;
 }
 
 translator_t *
@@ -967,6 +1224,12 @@ translator_destroy(translator_t *trans)
     free(trans);
 }
 
+void
+translator_set_context(translator_t *trans, const struct fds_ipfix_msg_hdr *hdr)
+{
+    trans->msg_context.hdr = hdr;
+}
+
 const void *
 translator_translate(translator_t *trans, struct fds_drec *ipfix_rec, uint16_t flags, uint16_t *size)
 {
@@ -987,7 +1250,9 @@ translator_translate(translator_t *trans, struct fds_drec *ipfix_rec, uint16_t f
     const struct translator_rec *def;
     const size_t table_rec_cnt = trans->table.size;
     const size_t table_rec_size = sizeof(*trans->table.recs);
-    int converted_fields = 0;
+
+    // First, call special internal conversion functions, if enabled
+    int converted_fields = translator_call_internals(trans);
 
     // Try to convert all IPFIX fields
     while (fds_drec_iter_next(&it) != FDS_EOC) {

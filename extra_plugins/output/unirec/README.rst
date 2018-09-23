@@ -242,8 +242,8 @@ discarded. Otherwise, the value is saturated.
 To see conversion warnings, add the UniRec field to ``<uniRecFormat>`` and run the collector
 with increased verbosity level i.e. ``ipfixcol2 -v``.
 
-Note
-----
+Notes
+-----
 
 Bidirectional flows are not currently supported by UniRec, therefore, biflow records are
 automatically split into two unidirectional flow records during conversion.
@@ -251,3 +251,6 @@ automatically split into two unidirectional flow records during conversion.
 When multiple IPFIX Information Elements are mapped to the same UniRec field and those IPFIX fields
 are present in an IPFIX record, the last field occurrence (in the appropriate IPFIX Template)
 is converted to the UniRec field.
+
+TODO: describe "link_bit_field" + "dir_bit_field"
+
