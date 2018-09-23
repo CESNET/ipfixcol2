@@ -123,7 +123,7 @@ config_parse(ipx_ctx_t *ctx, const char *params)
         return NULL;
     }
 
-    if (fds_xml_set_args(parser, args_params) != IPX_OK) {
+    if (fds_xml_set_args(parser, args_params) != FDS_OK) {
         IPX_CTX_ERROR(ctx, "Failed to parse the description of an XML document!", '\0');
         fds_xml_destroy(parser);
         free(cfg);
