@@ -19,7 +19,7 @@ include(GNUInstallDirs)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMakeModules")
 
 # Find IPFIXcol and libnf
-find_package(IPFIXcol 2.0.0 REQUIRED)
+find_package(IPFIXcol2 2.0.0 REQUIRED)
 find_package(LibTrap REQUIRED)
 find_package(Unirec REQUIRED)
 
