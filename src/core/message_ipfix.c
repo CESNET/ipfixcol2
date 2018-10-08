@@ -128,7 +128,7 @@ ipx_msg_ipfix_get_drec_cnt(const ipx_msg_ipfix_t *msg)
 }
 
 struct ipx_ipfix_record *
-ipx_msg_ipfix_get_drec(ipx_msg_ipfix_t *msg, uint16_t idx)
+ipx_msg_ipfix_get_drec(ipx_msg_ipfix_t *msg, uint32_t idx)
 {
     if (idx >= msg->rec_info.cnt_valid) {
         return NULL;

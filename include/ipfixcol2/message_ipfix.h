@@ -183,7 +183,7 @@ ipx_msg_ipfix_get_drec_cnt(const ipx_msg_ipfix_t *msg);
  *   Otherwise (usually the index is out-of-range) returns NULL.
  */
 IPX_API struct ipx_ipfix_record *
-ipx_msg_ipfix_get_drec(ipx_msg_ipfix_t *msg, uint16_t idx);
+ipx_msg_ipfix_get_drec(ipx_msg_ipfix_t *msg, uint32_t idx);
 
 /**
  * \brief Cast from a source session message to a base message
