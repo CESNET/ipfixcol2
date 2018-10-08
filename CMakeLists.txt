@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.8)
-project(ipfixcol)
+project(ipfixcol2)
 
 # Description of the project
 set(

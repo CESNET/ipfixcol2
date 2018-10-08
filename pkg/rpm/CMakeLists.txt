@@ -26,8 +26,8 @@ file(MAKE_DIRECTORY
 )
 
 # Create a configuration for CPack
-set(FILE_SPEC_IN  "${CMAKE_CURRENT_SOURCE_DIR}/ipfixcol.spec.in")
-set(FILE_SPEC_OUT "${RPM_BUILD_DIR}/SPECS/ipfixcol.spec")
+set(FILE_SPEC_IN  "${CMAKE_CURRENT_SOURCE_DIR}/ipfixcol2.spec.in")
+set(FILE_SPEC_OUT "${RPM_BUILD_DIR}/SPECS/ipfixcol2.spec")
 
 configure_file(
     "${FILE_SPEC_IN}"
