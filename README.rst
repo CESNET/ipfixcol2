@@ -57,7 +57,7 @@ However, you have to typically do following steps: (extra dependencies may be re
 
     $ git clone https://github.com/CESNET/libfds.git
     $ cd libfds
-    $ mkdir build && cd build && cmake ..
+    $ mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX=/usr
     $ make
     # make install
 
