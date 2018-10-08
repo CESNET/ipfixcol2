@@ -11,8 +11,8 @@ Vendor:         @CPACK_PACKAGE_VENDOR@
 Packager:       @CPACK_PACKAGE_CONTACT@
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}
-BuildRequires:  gcc, gcc-c++, cmake >= 2.8.8, make, doxygen, pkg-config
-BuildRequires:  libfds-devel, gtest >= 1.6.0, gtest-devel
+BuildRequires:  gcc >= 4.8, gcc-c++ >= 4.8, cmake >= 2.8.8, make
+BuildRequires:  libfds-devel, python2-docutils
 Requires:       libfds >= 0.1.0
 
 %description
@@ -61,6 +61,7 @@ make install DESTDIR=%{buildroot}
 %{_bindir}/ipfixcol2
 %{_bindir}/ipfixsend2
 %{_libdir}/ipfixcol2/*.so*
+%{_mandir}/man7/*.7.gz
 
 %files devel
 %{_includedir}/ipfixcol2.h
@@ -68,5 +69,5 @@ make install DESTDIR=%{buildroot}
 %{_libdir}/pkgconfig/ipfixcol2.pc
 
 %changelog
-* Tue Jun  6 2017 Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
--
+* Mon Oct  8 2018 Lukas Hutak <lukas.hutak@cesnet.cz> 2.0.0-1
+- Initial RPM release
