@@ -252,5 +252,12 @@ When multiple IPFIX Information Elements are mapped to the same UniRec field and
 are present in an IPFIX record, the last field occurrence (in the appropriate IPFIX Template)
 is converted to the UniRec field.
 
-TODO: describe "link_bit_field" + "dir_bit_field"
+Due to historical reasons, special UniRec fields ``LINK_BIT_FIELD`` and ``DIR_BIT_FIELD`` are
+implemented using internal conversion functions. ``LINK_BIT_FIELD`` represents Observation Domain
+ID (ODID) of a flow record as bit field. For example, ODID 5 is binary stored as ...00100000
+(i.e. 32). Keep on mind that, maximum size of the UniRec field is 2^64, therefore modulo 64 is
+applied to ODID before the conversion. The purpose of ``DIR_BIT_FIELD`` is to distinguish ingress
+and egress flows. For this reason, the lowest bit of IPFIX field ``iana:ingressInterface``
+(PEN: 0, ID: 10) is copied to the particular UniRec field (Nemea modules expects that
+1 = ingress flow and 0 = egress flow).
 
