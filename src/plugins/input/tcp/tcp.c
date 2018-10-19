@@ -894,7 +894,7 @@ socket_process(ipx_ctx_t *ctx, struct tcp_pair *pair)
     msg_ctx.odid = msg_odid;
     msg_ctx.stream = 0; // Streams are not supported over TCP
 
-    ipx_msg_ipfix_t *msg = ipx_msg_ipfix_create(ctx, &msg_ctx, buffer);
+    ipx_msg_ipfix_t *msg = ipx_msg_ipfix_create(ctx, &msg_ctx, buffer, msg_size);
     if (!msg) {
         IPX_CTX_ERROR(ctx, "Connection from '%s' closed due to memory allocation "
             "failure! (%s:%d).", pair->session->ident, __FILE__, __LINE__);

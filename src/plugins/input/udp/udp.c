@@ -870,7 +870,7 @@ process_socket(struct udp_data *instance, int sd)
         return;
     }
 
-    if (msg_size < FDS_IPFIX_MSG_HDR_LEN) {
+    if (msg_size < FDS_IPFIX_MSG_HDR_LEN || msg_size > UINT16_MAX) {
         // Remove the malformed message from the buffer
         ssize_t ret = recvfrom(sd, &hdr, sizeof(hdr), 0, NULL, NULL);
         if (ret == -1) {
@@ -946,7 +946,7 @@ process_socket(struct udp_data *instance, int sd)
     msg_ctx.odid = ntohl(msg_hdr->odid);
     msg_ctx.stream = 0; // Streams are not supported over UDP
 
-    ipx_msg_ipfix_t *msg = ipx_msg_ipfix_create(instance->ctx, &msg_ctx, buffer);
+    ipx_msg_ipfix_t *msg = ipx_msg_ipfix_create(instance->ctx, &msg_ctx, buffer, (uint16_t) msg_size);
     if (!msg) {
         IPX_CTX_ERROR(instance->ctx, "Memory allocation failed! (%s:%d)", __FILE__, __LINE__);
         free(buffer);

@@ -139,8 +139,9 @@ TEST_P(Common, simple)
 
     uint32_t odid = 1;
     struct ipx_msg_ctx msg_ctx = {session, odid, 0};
+    uint16_t msg_size = msg.size();
     uint8_t *msg_data = reinterpret_cast<uint8_t *>(msg.release());
-    ipx_msg_ipfix_t *ipfix_msg = ipx_msg_ipfix_create(ctx, &msg_ctx, msg_data);
+    ipx_msg_ipfix_t *ipfix_msg = ipx_msg_ipfix_create(ctx, &msg_ctx, msg_data, msg_size);
     ASSERT_NE(ipfix_msg, nullptr);
 
     ipx_msg_garbage *garbage;
