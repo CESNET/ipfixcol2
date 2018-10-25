@@ -67,7 +67,7 @@ if (PKG_CONFIG_FOUND)
         @ONLY)
     install(
         FILES "${CMAKE_CURRENT_BINARY_DIR}/ipfixcol2.pc"
-        DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}/pkgconfig/")
+        DESTINATION "${INSTALL_DIR_LIB}/pkgconfig/")
 endif()
 
 # Package builders

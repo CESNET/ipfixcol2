@@ -7,7 +7,7 @@ add_library(udp-input MODULE
 
 install(
     TARGETS udp-input
-    LIBRARY DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}/ipfixcol2/"
+    LIBRARY DESTINATION "${INSTALL_DIR_LIB}/ipfixcol2/"
 )
 
 if (ENABLE_DOC_MANPAGE)
@@ -23,6 +23,6 @@ if (ENABLE_DOC_MANPAGE)
 
     install(
         FILES "${DST_FILE}"
-        DESTINATION "${CMAKE_INSTALL_FULL_MANDIR}/man7"
+        DESTINATION "${INSTALL_DIR_MAN}/man7"
     )
 endif()
