@@ -4,8 +4,8 @@ Homepage:          http://www.liberouter.org/
 Section:           net
 Priority:          optional
 Standards-Version: 3.9.8
-Build-Depends:     debhelper (>= 10), cmake (>= 2.8.8), doxygen, pkg-config,
-                   libfds-dev
+Build-Depends:     debhelper (>= 10), cmake (>= 2.8.8), doxygen, make,
+                   libfds-dev, gcc (>= 4.8), g++ (>= 4.8), pkg-config
 
 Package:           @CPACK_PACKAGE_NAME@
 Architecture:      any
