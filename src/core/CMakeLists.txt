@@ -17,6 +17,14 @@ set(CORE_SOURCE
     configurator/plugin_mgr.hpp
     configurator/model.cpp
     configurator/model.hpp
+	netflow2ipfix/netflow2ipfix.h
+	netflow2ipfix/netflow5.c
+	netflow2ipfix/netflow9.c
+	netflow2ipfix/netflow9_templates.c
+	netflow2ipfix/netflow9_templates.h
+	netflow2ipfix/netflow_parsers.c
+	netflow2ipfix/netflow_parsers.h
+	netflow2ipfix/netflow_structs.h
     api.c
     context.c
     context.h
