@@ -101,6 +101,7 @@ void read_set(struct ipx_ipfix_set *set, ipx_msg_ipfix_t *msg, const fds_iemgr_t
     // Data set
     if (set_id >= FDS_IPFIX_SET_MIN_DSET){
         struct ipx_ipfix_record *ipfix_rec = ipx_msg_ipfix_get_drec(msg,*rec_i);
+        if (ipfix_rec == NULL) return;
 
         //All the records in the set has same template id, so we extract it from the first record and print it
         printf("\ttemplate id: %"PRIu16"\n", ipfix_rec->rec.tmplt->id);
@@ -174,7 +175,7 @@ void read_template_set(struct fds_tset_iter *tset_iter, uint16_t set_id, const f
 
         // Unknown field definition
         if (current.def == NULL){
-            printf("<Unknown field name>\n");
+            printf("<Unknown field name>");
         }
         // Known field definition
         else {
@@ -195,18 +196,15 @@ void print_indent(unsigned int n){
 void read_record(struct fds_drec *rec, unsigned int indent, const fds_iemgr_t *iemgr) {
     // Write info from header about the record template
     print_indent(indent);
-    printf("field count: %"PRIu16"\n", rec->tmplt->fields_cnt_total);
-    print_indent(indent);
-    printf("data length: %"PRIu16"\n", rec->tmplt->data_length);
-    print_indent(indent);
-    printf("size       : %"PRIu16"\n", rec->size);
+    printf("[templateID: %-*"PRIu16" ", 10, rec->tmplt->id);
+    printf("field count: %-*"PRIu16" ", 10, rec->tmplt->fields_cnt_total);
+    printf("data length: %-*"PRIu16" ", 10, rec->tmplt->data_length);
+    printf("size: %"PRIu16"]\n", 10, rec->size);
 
     // Iterate through all the fields in record
     struct fds_drec_iter iter;
     fds_drec_iter_init(&iter, rec, 0);
 
-    print_indent(indent);
-    printf("fields:\n");
     while (fds_drec_iter_next(&iter) != FDS_EOC) {
         struct fds_drec_field field = iter.field;
         read_field(&field,indent, iemgr, rec->snap, false); // add iemgr
@@ -234,7 +232,7 @@ void read_field(struct fds_drec_field *field, unsigned int indent, const fds_iem
     // Write info from header about field
     print_indent(indent);
     if (!in_basicList) {
-        printf("en:%*" PRIu32 " id:%*" PRIu16" ", WRITER_EN_SPACE, field->info->en, WRITER_ID_SPACE, field->info->id);
+        printf("en:%*"PRIu32" id:%*"PRIu16" ", WRITER_EN_SPACE, field->info->en, WRITER_ID_SPACE, field->info->id);
     }
 
     enum fds_iemgr_element_type type;
@@ -264,38 +262,49 @@ void read_field(struct fds_drec_field *field, unsigned int indent, const fds_iem
     switch(type){
     case FDS_ET_BASIC_LIST: {
         // Iteration through the basic list
-        bool did_read = false;
         struct fds_blist_iter blist_it;
 
         printf("%*s %s", WRITER_ORG_NAME_SPACE, org, field_name);
         fds_blist_iter_init(&blist_it,field, iemgr);
-        printf("%4s[semantic: %s]"," ",fds_semantic2str(blist_it.semantic)); // Semantic is known after initialization
-
-        while (fds_blist_iter_next(&blist_it) == FDS_OK){
-            if (!did_read){
-                putchar('\n');
-                did_read = true;
-            }
-            read_field(&blist_it.field,indent+1, iemgr, snap, true);
+        // Before printing the frist record, we need to print semantics of list
+        // only function _next returns the state of the iterator
+        int ret = fds_blist_iter_next(&blist_it);
+        if (ret == FDS_OK || ret == FDS_EOC){
+            printf(" (semantic: %s[%d])", fds_semantic2str(blist_it.semantic), blist_it.semantic);
         }
-        if (!did_read){ // if we didn't read a single field
-            printf("%4s : empty\n"," ");
+        if (ret == FDS_OK) {
+            putchar('\n');
+            read_field(&blist_it.field,indent+1, iemgr, snap, true);
+        } else if(ret == FDS_EOC){
+            printf(" - empty\n");
+        }
+        while (fds_blist_iter_next(&blist_it) == FDS_OK){
+            read_field(&blist_it.field,indent+1, iemgr, snap, true);
         }
         return;
     }
     case FDS_ET_SUB_TEMPLATE_LIST:
     case FDS_ET_SUB_TEMPLATE_MULTILIST: {
         // Iteration through the subTemplate and subTemplateMulti lists
-        printf("%*s %s\n", WRITER_ORG_NAME_SPACE, org, field_name);
-        struct fds_stlist_iter stlist_iter;
+        printf("%*s %s", WRITER_ORG_NAME_SPACE, org, field_name);
+        struct fds_stlist_iter stlist_it;
         print_indent(indent);
-        fds_stlist_iter_init(&stlist_iter, field, snap, 0);
-        printf("- semantic: %d\n",stlist_iter.semantic);
-        while (fds_stlist_iter_next(&stlist_iter) == FDS_OK){
-            read_record(&stlist_iter.rec, indent+1, iemgr);
-            putchar('\n');
+        fds_stlist_iter_init(&stlist_it, field, snap, 0);
+        // Before printing the first record, we need to print the semantic of the list
+        // only _next function returns state of the iterator
+        int ret = fds_stlist_iter_next(&stlist_it);
+        if (ret == FDS_OK || ret == FDS_EOC){
+            printf(" (semantic: %s[%d])", fds_semantic2str(stlist_it.semantic), stlist_it.semantic);
         }
-        putchar('\b');
+        if (ret == FDS_OK) {
+            putchar('\n');
+            read_record(&stlist_it.rec, indent+1, iemgr);
+        } else if (ret == FDS_EOC){
+            printf(" - empty\n");
+        }
+        while (fds_stlist_iter_next(&stlist_it) == FDS_OK){
+            read_record(&stlist_it.rec, indent+1, iemgr);
+        }
         return;
     }
     default:
@@ -310,8 +319,9 @@ void read_field(struct fds_drec_field *field, unsigned int indent, const fds_iem
         // Conversion was successful
         if (type == FDS_ET_STRING){
             printf("\"%s\"", buffer);
-        }
-        else {
+        } else if (type == FDS_ET_OCTET_ARRAY){
+            printf("0x%s",buffer);
+        } else {
             printf("%s", buffer);
         }
 
