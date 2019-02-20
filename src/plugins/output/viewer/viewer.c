@@ -60,9 +60,9 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
     // Configuration flags (reserved for future use)
     .flags = 0,
     // Plugin version string (like "1.2.3")
-    .version = "0.1.0",
+    .version = "2.0.0",
     // Minimal IPFIXcol version string (like "1.2.3")
-    .ipx_min = "2.0.0"
+    .ipx_min = "2.1.0"
 };
 
 /** Instance */
@@ -119,15 +119,5 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
     ipx_msg_ipfix_t *ipfix_msg = ipx_msg_base2ipfix(msg);
     read_packet(ipfix_msg, iemgr);
 
-
-    // This part of code is not used just because the delay was implemented but not used yet
-//    Delay between messages printing - can be setup in config file
-//    struct instance_data *data = (struct instance_data *) cfg;
-//    const struct timespec *delay = &data->config->sleep_time;
-//    if (delay->tv_sec != 0 || delay->tv_nsec != 0) {
-//        nanosleep(delay, NULL);
-//    }
-
     return IPX_OK;
-
 }

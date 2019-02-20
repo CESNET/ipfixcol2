@@ -53,7 +53,7 @@
 /**
  * \brief Spaces in output for size field
  */
-#define WRITER_SIZE_SPACE 7
+#define WRITER_SIZE_SPACE 6
 /**
  * \brief Spaces in output for Field name
  */
@@ -64,61 +64,104 @@
 #define WRITER_ORG_NAME_SPACE 12
 
 /**
- * \brief Reads the data inside of ipfix message
+ * \brief Print all data of an IPFIX Message
  *
- * Function reads and prints header of the packet and then iterates through the records.
- * Information printed from header of packet are:
+ * Function reads and prints the header of the packet and then iterates through the Sets and their
+ * records. Information printed from the header of the packet are:
  * version, length, export time, sequence number and Observation Domain ID
- * \param[in] msg ipfix message which will be printed
+ * \param[in] msg   IPFIX message which will be printed
+ * \param[in] iemgr Information Element manager
  */
 void
 read_packet(ipx_msg_ipfix_t *msg, const fds_iemgr_t *iemgr);
 
 /**
- * \brief Reads data inside the single record of IPFIX message
+ * \brief Print all values inside the single Data Record of an IPFIX message
  *
- * Reads and prints the header of the record and then iterates through the fields.
- * Information printed from header of record are:
- * Template ID and number of the fields inside the record
- * \param[in] rec record which will be printed
+ * Reads and prints the header of the Data Record and then iterates through its fields.
+ * \param[in] rec    Record which will be printed
+ * \param[in] indent Additional output indentation
+ * \param[in] iemgr  Information Element manager
  */
 void
 read_record(struct fds_drec *rec, unsigned int indent, const fds_iemgr_t *iemgr);
 
 /**
- * \brief Reads the data inside the field of IPFIX message
+ * \brief Print the value of the Data Record field
  *
- * Reads and prints all the information about the data in the field
- * if the detailed definition is known, data are printed in readable format
- * as well as the information about the data (organisation name and name of the data).
- * Otherwise data are printed in the raw format (hexadecimal)
- * In both cases Enterprise number and ID will be printed.
- * \param[in] field Field which will be printed
+ * Reads and prints all information about the data in the field. If the detailed definition is
+ * known, value is printed in human readable format. Otherwise data are printed in the raw
+ * format (hexadecimal). In both cases Enterprise number and ID will be printed.
+ * \param[in] field  Field which will be printed
+ * \param[in] indent Additional output indentation
+ * \param[in] iemgr  Information Element manager
+ * \param[in] snap   Template snapshot of the Data Record
  */
 void
-read_field(struct fds_drec_field *field, unsigned int indent, const fds_iemgr_t *iemgr, const fds_tsnapshot_t *snap, bool in_basicList);
+read_field(struct fds_drec_field *field, unsigned int indent, const fds_iemgr_t *iemgr,
+    const fds_tsnapshot_t *snap);
 
 /**
- * \brief Reads set which contains template
+ * \brief Print the content of basicList data type
  *
- * Reads template type of sets which has set id == 2 or set id == 3. Uses Information Element manager from
- * parameters for parsing the data inside of the template.
- * \param tset_iter Template iterator
- * \param set_id ID of the whole set
- * \param iemgr IE Manager
+ * Iterates through the list and prints all values.
+ * \param[in] field  Field which will be printed
+ * \param[in] indent Additional output indentation
+ * \param[in] iemgr  Information Element manager
+ * \param[in] snap   Template snapshot of the Data Record
+ */
+void
+read_list_basic(struct fds_drec_field *field, unsigned int indent, const fds_iemgr_t *iemgr,
+    const fds_tsnapshot_t *snap);
+
+/**
+ * \brief Print the content of subTemplateList data type
+ *
+ * Iterates through the list and prints all Data Records.
+ * \param[in] field  Field which will be printed
+ * \param[in] indent Additional output indentation
+ * \param[in] iemgr  Information Element manager
+ * \param[in] snap   Template snapshot of the Data Record
+ */
+void
+read_list_stl(struct fds_drec_field *field, unsigned int indent, const fds_iemgr_t *iemgr,
+    const fds_tsnapshot_t *snap);
+
+/**
+ * \brief Print the content of subTemplateMultiList data type
+ *
+ * Iterates through the list and prints all top-level lists and their content i.e. Data Records.
+ * \param[in] field  Field which will be printed
+ * \param[in] indent Additional output indentation
+ * \param[in] iemgr  Information Element manager
+ * \param[in] snap   Template snapshot of the Data Record
+ */
+void
+read_list_stml(struct fds_drec_field *field, unsigned int indent, const fds_iemgr_t *iemgr,
+    const fds_tsnapshot_t *snap);
+
+/**
+ * \brief Print the (Options) Template Record
+ *
+ * Reads and prints content of the (Options) Template Record. Uses Information Element manager
+ * for determine description of present Information Elements.
+ * \param[in] tset_iter Template iterator
+ * \param[in] set_id    ID of the Set to which the record belongs
+ * \param[in] iemgr     Information Element manager
  */
 void
 read_template_set(struct fds_tset_iter *tset_iter, uint16_t set_id, const fds_iemgr_t *iemgr);
 
 /**
- * \brief Reads single set
+ * \brief Print the IPFIX Set and its content
  *
- * Reads single set and determines what kind of set it is and which read_xxx function to use for reading the fields.
+ * Reads and prints single IPFIX Set and determines what kind of IPFIX Set it is and which
+ * read_xxx function to use for reading its content.
  *
- * \param sets_iter Sets iterator
- * \param msg  IPFix message
- * \param iemgr  IE Manager for parsing the fields
- * \param rec_i Number of record
+ * \param[in]     sets_iter Sets iterator
+ * \param[in]     msg       IPFIX message
+ * \param[in]     iemgr     Information Element manager
+ * \param[in/out] rec_i     Number of processed Data Records
  */
 void
 read_set(struct ipx_ipfix_set *set, ipx_msg_ipfix_t *msg, const fds_iemgr_t *iemgr, uint32_t *rec_i);
