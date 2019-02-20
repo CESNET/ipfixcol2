@@ -9,7 +9,7 @@ configure_file(
 )
 
 # Find libfds
-find_package(LibFds 0.1.0 REQUIRED)
+find_package(LibFds 0.2.0 REQUIRED)
 # Find rst2man
 
 if (ENABLE_DOC_MANPAGE)
