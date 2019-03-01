@@ -157,9 +157,9 @@ ipx_msg_ipfix_get_ctx(ipx_msg_ipfix_t *msg);
 
 /**
  * \brief Get reference to all (Data/Template/Options Template) sets in the message
- * \param msg  Message
- * \param sets Pointer to the array of sets
- * \param size Number of sets in the array
+ * \param[in]  msg  Message
+ * \param[out] sets Pointer to the array of sets
+ * \param[out] size Number of sets in the array
  */
 IPX_API void
 ipx_msg_ipfix_get_sets(ipx_msg_ipfix_t *msg, struct ipx_ipfix_set **sets, size_t *size);
