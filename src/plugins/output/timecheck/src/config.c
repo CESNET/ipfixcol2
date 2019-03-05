@@ -123,7 +123,7 @@ config_validate(ipx_ctx_t *ctx, const struct instance_config *cfg)
     }
 
     if (cfg->dev_past < 300) {
-        IPX_CTX_WARNING(ctx, "The configuration might cause many false warnings!");
+        IPX_CTX_WARNING(ctx, "The configuration might cause many false warnings!", '\0');
     }
 
     return IPX_OK;
