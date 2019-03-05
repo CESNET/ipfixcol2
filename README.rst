@@ -38,7 +38,8 @@ network interface and a port. Multiple instances of these plugins can run concur
 - `JSON <src/plugins/output/json>`_ - convert flow records to JSON and send/store them
 - `Viewer <src/plugins/output/viewer>`_ - convert IPFIX into plain text and print
   it on standard output
-- `dummy <src/plugins/output/dummy>`_ - simple module example
+- `Time Check <src/plugins/output/timecheck>`_ - flow timestamp check
+- `Dummy <src/plugins/output/dummy>`_ - simple module example
 - `lnfstore <extra_plugins/output/lnfstore>`_ (*) - store all flows in nfdump compatible
   format for long-term preservation
 - `UniRec <extra_plugins/output/unirec>`_ (*)  - send flow records in UniRec format
