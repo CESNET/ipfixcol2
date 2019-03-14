@@ -317,6 +317,22 @@ translate_bytes(translator_t *trans, const struct translator_rec *rec,
 }
 
 /**
+ * \brief Convert IPFIX string to trimmed UniRec string
+ *
+ * The function will copy only characters up to the first occurrence of '\0' (excluding).
+ * \copydetails translate_uint()
+ */
+static int
+translator_string_trim(translator_t *trans, const struct translator_rec *rec,
+    const struct fds_drec_field *field)
+{
+    ur_field_id_t  ur_id = rec->unirec.id;
+    size_t copy_len = strnlen((const char *) field->data, field->size);
+    ur_set_var(trans->record.ur_tmplt, trans->record.data, ur_id, field->data, copy_len);
+    return 0;
+}
+
+/**
  * \brief Convert IPFIX boolean to UniRec char/(un)signed integer
  * \copydetails translate_uint()
  */
@@ -699,6 +715,11 @@ translator_get_func(ipx_ctx_t *ctx, const struct map_rec *rec)
 
     switch (type_ur) {
     case UR_TYPE_STRING:
+        // String array
+        if (type_ipx == FDS_ET_STRING && (rec->unirec.flags & MAP_FLAGS_STR_TRIM) != 0) {
+            return translator_string_trim;
+        }
+        // Fall through
     case UR_TYPE_BYTES:
         // String/byte array
         if (type_ipx == FDS_ET_STRING || type_ipx == FDS_ET_OCTET_ARRAY) {
