@@ -1,7 +1,17 @@
 IPFIX (output plugin)
 =====================
 
-The plugin outputs incoming IPFIX data to a file or a series of files in the IPFIX format. 
+The plugin outputs incoming IPFIX Data to an IPFIX File or a series of IPFIX Files. 
+
+An IPFIX File is a serialized stream of IPFIX Messages. Simply put, the plugin stores all valid packets received by the collector into one or more IPFIX Files. Although this is not an optimal way to store flows, it can be quite useful for testing purposes - capture flow records into IPFIX File(s) and replay them using ipfixsend2 tool.
+
+After a new file is started, all the (options) templates seen in the (options) template sets of an ODID that are still available are written to the file once the first IPFIX Message corresponding to the ODID arrives with at least one successfully parsed data record. This is necessary so each file can be used individually independent of the (options) template sets from previous files.    
+
+
+Limitations
+-----------
+As there is no session information in raw IPFIX Data, we can't distinguish messages from multiple sessions using the same ODID. For this reason, the same ODID can only be used by one session at a time, and all messages from other sessions using the ODID that's already in use are ignored and a warning message is printed. All ODIDs used by a session are released once the session closes and they can be used by another session. 
+
 
 Example configuration
 ---------------------
