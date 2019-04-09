@@ -50,19 +50,20 @@
 class Config {
 
 private:
-	void set_defaults();
-	void parse_params(fds_xml_ctx_t *params);
-	void check_validity();
+    void set_defaults();
+    void parse_params(fds_xml_ctx_t *params);
+    void check_validity();
 
 public:
-	std::string filename;
-	bool use_utc_for_filename_time;
-	uint64_t window_size;
-	bool align_windows;
-	bool skip_unknown_datasets;
+    std::string filename;
+    bool use_localtime;
+    uint64_t window_size;
+    bool align_windows;
+    bool skip_unknown_datasets;
+    bool split_on_export_time;
 
-	Config(const char *params);
-	~Config();
+    Config(const char *params);
+    ~Config();
 };
 
 #endif // CONFIG_HPP

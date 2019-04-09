@@ -14,8 +14,8 @@ install(
 
 if (ENABLE_DOC_MANPAGE)
     # Build a manual page
-    set(SRC_FILE "${CMAKE_CURRENT_SOURCE_DIR}/doc/ipfixcol2-ipfix.7.rst")
-    set(DST_FILE "${CMAKE_CURRENT_BINARY_DIR}/ipfixcol2-ipfix.7")
+    set(SRC_FILE "${CMAKE_CURRENT_SOURCE_DIR}/doc/ipfixcol2-ipfix-output.7.rst")
+    set(DST_FILE "${CMAKE_CURRENT_BINARY_DIR}/ipfixcol2-ipfix-output.7")
 
     add_custom_command(TARGET ipfix PRE_BUILD
         COMMAND ${RST2MAN_EXECUTABLE} --syntax-highlight=none ${SRC_FILE} ${DST_FILE}

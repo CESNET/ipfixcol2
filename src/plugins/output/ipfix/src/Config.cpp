@@ -45,29 +45,32 @@
 #include <memory>
 
 enum params_xml_nodes {
-	PARAM_FILENAME,
-    PARAM_USE_UTC_FOR_FILENAME_TIME,
-	PARAM_WINDOW_SIZE,
+    PARAM_FILENAME,
+    PARAM_USE_LOCALTIME,
+    PARAM_WINDOW_SIZE,
     PARAM_ALIGN_WINDOWS,
-    PARAM_SKIP_UNKNOWN_DATASETS
+    PARAM_SKIP_UNKNOWN_DATASETS,
+    PARAM_SPLIT_ON_EXPORT_TIME
 };
 
 static const struct fds_xml_args args_params[] = {
     FDS_OPTS_ROOT("params"),
     FDS_OPTS_ELEM(PARAM_FILENAME, "filename", FDS_OPTS_T_STRING, 0),
-    FDS_OPTS_ELEM(PARAM_USE_UTC_FOR_FILENAME_TIME, "useUtcForFilenameTime", FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(PARAM_USE_LOCALTIME, "useLocalTime", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(PARAM_WINDOW_SIZE, "windowSize", FDS_OPTS_T_UINT, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(PARAM_ALIGN_WINDOWS, "alignWindows", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(PARAM_SKIP_UNKNOWN_DATASETS, "skipUnknownDataSets", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(PARAM_SPLIT_ON_EXPORT_TIME, "splitOnExportTime", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
     FDS_OPTS_END
 };
 
 void Config::set_defaults() {
     filename = "";
-    use_utc_for_filename_time = false;
+    use_localtime = false;
     window_size = 0;
     align_windows = true;
     skip_unknown_datasets = false;
+    split_on_export_time = false;
 }
 
 void Config::parse_params(fds_xml_ctx_t *params)
@@ -79,9 +82,9 @@ void Config::parse_params(fds_xml_ctx_t *params)
             assert(content->type == FDS_OPTS_T_STRING);
             filename = std::string(content->ptr_string);
             break;
-        case PARAM_USE_UTC_FOR_FILENAME_TIME:
+        case PARAM_USE_LOCALTIME:
             assert(content->type == FDS_OPTS_T_BOOL);
-            use_utc_for_filename_time = content->val_bool;
+            use_localtime = content->val_bool;
             break;
         case PARAM_WINDOW_SIZE:
             assert(content->type == FDS_OPTS_T_UINT);
@@ -95,6 +98,10 @@ void Config::parse_params(fds_xml_ctx_t *params)
             assert(content->type == FDS_OPTS_T_BOOL);
             skip_unknown_datasets = content->val_bool;
             break;
+        case PARAM_SPLIT_ON_EXPORT_TIME:
+            assert(content->type == FDS_OPTS_T_BOOL);
+            split_on_export_time = content->val_bool;
+            break;
         default:
             throw std::invalid_argument("Unexpected element within <params>!");
         }
@@ -104,9 +111,9 @@ void Config::parse_params(fds_xml_ctx_t *params)
 void 
 Config::check_validity() 
 {
-	if (filename.empty()) {
-		throw std::invalid_argument("Filename cannot be empty!");
-	}
+    if (filename.empty()) {
+        throw std::invalid_argument("Filename cannot be empty!");
+    }
 }
 
 Config::Config(const char *params)

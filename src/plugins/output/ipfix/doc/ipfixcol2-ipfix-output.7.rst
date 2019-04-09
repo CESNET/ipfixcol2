@@ -1,16 +1,15 @@
 ========================
- ipfixcol2-dummy-output
+ ipfixcol2-ipfix-output
 ========================
 
 ---------------------
-Dummy (output plugin)
+IPFIX (output plugin)
 ---------------------
 
-:Author: Lukáš Huták (lukas.hutak@cesnet.cz)
-:Author: Petr Velan (petr.velan@cesnet.cz)
-:Date:   2018-09-20
-:Copyright: Copyright © 2018 CESNET, z.s.p.o.
-:Version: 2.0
+:Author: Michal Sedlák (xsedla0v@stud.fit.vutbr.cz)
+:Date:   2019-03-28
+:Copyright: Copyright © 2019 CESNET, z.s.p.o.
+:Version: 1.0
 :Manual section: 7
 :Manual group: IPFIXcol collector
 

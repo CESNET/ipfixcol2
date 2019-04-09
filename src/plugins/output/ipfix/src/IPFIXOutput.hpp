@@ -47,6 +47,7 @@
 #include <map>
 #include <vector>
 #include <cstdio>
+#include <ctime>
 
 #include <ipfixcol2.h>
 #include <libfds.h>
@@ -68,12 +69,12 @@ private:
 
     std::map<uint32_t, odid_context_s> odid_contexts;
     std::FILE *output_file = NULL;
-    uint32_t file_start_export_time;
+    std::time_t file_start_time = 0;
 
     bool
-    should_start_new_file(uint32_t export_time);
+    should_start_new_file(std::time_t current_time);
     void 
-    new_file(uint32_t export_time);
+    new_file(std::time_t  current_time);
     void
     write_bytes(const void *bytes, size_t bytes_count);
     void
@@ -84,7 +85,7 @@ private:
     int
     write_template_set(uint16_t set_id, const fds_tsnapshot_t *templates_snapshot, 
                        std::set<uint16_t>::iterator template_ids, std::set<uint16_t>::iterator template_ids_end, 
-                       int size_limit, int *out_set_length);
+                       unsigned size_limit, unsigned *out_set_length);
     void
     write_templates(odid_context_s *odid_context, const fds_tsnapshot_t *templates_snapshot,
                     uint32_t export_time, uint32_t sequence_number);

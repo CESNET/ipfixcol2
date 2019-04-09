@@ -106,13 +106,13 @@ make_directories(char *dir_name)
  * \return     true or false
  */
 bool
-IPFIXOutput::should_start_new_file(uint32_t export_time)
+IPFIXOutput::should_start_new_file(std::time_t current_time)
 {
     if (config->window_size == 0 && output_file != NULL) {
         return false;
     }
 
-    uint32_t time_difference = export_time - file_start_export_time;
+    uint32_t time_difference = current_time - file_start_time;
     if (time_difference >= config->window_size) {
         return true;
     } else {
@@ -126,23 +126,19 @@ IPFIXOutput::should_start_new_file(uint32_t export_time)
  * \param[in]  export_time  Current export time
  */
 void
-IPFIXOutput::new_file(uint32_t export_time) 
+IPFIXOutput::new_file(std::time_t current_time) 
 {
-    file_start_export_time = export_time;
     if (config->align_windows) {
         // Round down to the nearest multiple of window size
-        file_start_export_time = (export_time / config->window_size) * config->window_size;
+        current_time = (current_time / config->window_size) * config->window_size;
     }
+    file_start_time = current_time;
 
     constexpr size_t max_filename_size = 4096;
     char filename[max_filename_size];
 
-    // Warning: assigning uint32_t to time_t 
-    std::time_t export_time_t = export_time;
-    assert(export_time_t >= 0 && sizeof (export_time_t) >= sizeof (export_time));
-    std::tm *export_time_tm = (config->use_utc_for_filename_time ? std::gmtime(&export_time_t) : std::localtime(&export_time_t));
-    
-    if (std::strftime(filename, max_filename_size, config->filename.c_str(), export_time_tm) == 0) {
+    std::tm *current_time_tm = (config->use_localtime ? std::localtime(&current_time) : std::gmtime(&current_time));
+    if (std::strftime(filename, max_filename_size, config->filename.c_str(), current_time_tm) == 0) {
         throw std::runtime_error("Max filename size exceeded (" + std::to_string(max_filename_size) + " b)!");
     }
 
@@ -182,6 +178,9 @@ IPFIXOutput::write_bytes(const void *bytes, size_t bytes_count)
 void
 IPFIXOutput::close_file()
 {
+    if (!output_file) {
+        return;
+    }
     int return_code = std::fclose(output_file);
     if (return_code != 0) {
         IPX_CTX_WARNING(plugin_context, "Error closing output file", 0);
@@ -240,7 +239,7 @@ int
 IPFIXOutput::write_template_set(uint16_t set_id, const fds_tsnapshot_t *templates_snapshot, 
                              std::set<uint16_t>::iterator template_ids, 
                              std::set<uint16_t>::iterator template_ids_end,
-                             int size_limit, int *out_set_length)
+                             unsigned size_limit, unsigned *out_set_length)
 {
     assert(set_id == FDS_IPFIX_SET_TMPLT || set_id == FDS_IPFIX_SET_OPTS_TMPLT);
     
@@ -258,7 +257,7 @@ IPFIXOutput::write_template_set(uint16_t set_id, const fds_tsnapshot_t *template
         return 0;
     }
 
-    unsigned int set_length = 0;
+    unsigned set_length = 0;
 
     // Set header
     fds_ipfix_set_hdr set_header;
@@ -314,7 +313,7 @@ IPFIXOutput::write_templates(odid_context_s *odid_context, const fds_tsnapshot_t
                           uint32_t export_time, uint32_t sequence_number)
 {
     // TODO
-    unsigned int message_size_limit = 512;
+    unsigned message_size_limit = 512;
 
     std::set<uint16_t>::iterator template_ids_iter = odid_context->templates_seen.begin();
     std::set<uint16_t>::iterator template_ids_end = odid_context->templates_seen.end();
@@ -328,7 +327,7 @@ IPFIXOutput::write_templates(odid_context_s *odid_context, const fds_tsnapshot_t
     }
 
     while (template_ids_iter != template_ids_end) {
-        unsigned int message_length = 0;
+        unsigned message_length = 0;
 
         // Message header
         fds_ipfix_msg_hdr message_header;
@@ -345,14 +344,25 @@ IPFIXOutput::write_templates(odid_context_s *odid_context, const fds_tsnapshot_t
 
         // Write templates
         int templates_written;
-        int set_length;
+        int templates_written_total = 0;
+        unsigned set_length;
         do {
             templates_written = write_template_set(set_id, templates_snapshot, template_ids_iter, template_ids_end, 
                                                    message_size_limit - message_length, &set_length);
+            templates_written_total += templates_written;
+            if (templates_written_total == 0) {
+                // We can't even fit the first template into the message
+                IPX_CTX_WARNING(plugin_context, "[ODID: %u] Template with ID %hu is bigger than the message size limit! Skipping...", 
+                                odid_context->odid, *template_ids_iter);
+                templates_written = 1;
+                set_length = 0;
+            }
+
             message_length += set_length;
             for (int i = 0; i < templates_written; i++) {
                 template_ids_iter++;
-            }
+            }                
+
             if (template_ids_iter == template_ids_end) {
                 if (set_id == FDS_IPFIX_SET_TMPLT) {
                     // Switch to options templates if all the regular templates are written
@@ -392,12 +402,19 @@ IPFIXOutput::on_ipfix_message(ipx_msg_ipfix *message)
     uint32_t export_time = ntohl(original_message_header->export_time);
     uint32_t odid = ntohl(original_message_header->odid);
 
+    std::time_t current_time;
+    if (!config->split_on_export_time) {
+        current_time = std::time(NULL);
+    } else {
+        // Warning: assigning uint32_t to time_t 
+        current_time = export_time;
+        assert(current_time >= 0 && sizeof (current_time) >= sizeof (export_time));
+    }
+
     // Start a new file if needed
-    if (should_start_new_file(export_time)) {
-        if (output_file != NULL) {
-            close_file();
-        }
-        new_file(export_time);
+    if (should_start_new_file(current_time)) {
+        close_file();
+        new_file(current_time);
     }
 
     // Find context corresponding to the ODID
@@ -415,7 +432,7 @@ IPFIXOutput::on_ipfix_message(ipx_msg_ipfix *message)
             // the messages from the first session using the ODID through and skip the others.
             if (odid_context->colliding_sessions.find(message_ipx_ctx->session) != odid_context->colliding_sessions.end()) {
                 // We only want to print the warning message once
-                IPX_CTX_WARNING(plugin_context, "ODID collision detected! Messages will be skipped.", '\0');
+                IPX_CTX_WARNING(plugin_context, "[ODID: %u] ODID collision detected! Messages will be skipped.", odid_context->odid);
                 odid_context->colliding_sessions.insert(message_ipx_ctx->session);
             }
             return;
@@ -445,7 +462,7 @@ IPFIXOutput::on_ipfix_message(ipx_msg_ipfix *message)
     }
 
     // Message header, copy the original
-    unsigned int message_length = 0;
+    unsigned message_length = 0;
     fds_ipfix_msg_hdr message_header;
     std::memcpy(&message_header, original_message_header, sizeof (message_header));
     // ??? why does message_header = *original_message_header not work and memcpy does?
@@ -506,7 +523,7 @@ IPFIXOutput::on_ipfix_message(ipx_msg_ipfix *message)
     }
 
     // Finish message header
-    assert(message_length > sizeof (message_header) && message_length <= UINT_MAX);
+    assert(message_length >= sizeof (message_header) && message_length <= UINT_MAX);
     assert(message_length <= ntohs(message_header.length));
     message_header.length = htons(message_length);
     if (config->skip_unknown_datasets) {
