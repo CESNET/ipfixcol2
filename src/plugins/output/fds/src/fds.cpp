@@ -30,7 +30,7 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
     // Plugin version string (like "1.2.3")
     "2.0.0",
     // Minimal IPFIXcol version string (like "1.2.3")
-    "2.0.0"
+    "2.1.0"
 };
 
 /// Instance
@@ -106,6 +106,7 @@ int
 ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
 {
     auto *inst = reinterpret_cast<Instance *>(cfg);
+    bool failed = false;
 
     try {
         // Check if the current time window should be closed
@@ -114,12 +115,19 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
         inst->storage_ptr->process_msg(msg_ipfix);
     } catch (const FDS_exception &ex) {
         IPX_CTX_ERROR(ctx, "%s", ex.what());
-        inst->storage_ptr->window_close();
+        failed = true;
     } catch (std::exception &ex) {
         IPX_CTX_ERROR(ctx, "Unexpected error has occurred: %s", ex.what());
-        inst->storage_ptr->window_close();
+        failed = true;
     } catch (...) {
         IPX_CTX_ERROR(ctx, "Unknown error has occurred!");
+        failed = true;
+    }
+
+    if (failed) {
+        IPX_CTX_ERROR(ctx, "Due to the previous error(s), the output file is possibly corrupted. "
+            "Therefore, no flow records are stored until a new file is automatically opened "
+            "after current window expiration.");
         inst->storage_ptr->window_close();
     }
 
