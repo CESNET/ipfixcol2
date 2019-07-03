@@ -14,6 +14,7 @@
 #include <ipfixcol2.h>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <libfds.h>
 
@@ -74,10 +75,25 @@ public:
     process_msg(ipx_msg_ipfix_t *msg);
 
 private:
+    /// Information about Templates in a snapshot
+    struct snap_info {
+        /// Last seen snapshot (might be already freed, do NOT dereference!)
+        const fds_tsnapshot_t *ptr;
+        /// Set of Template IDs in the snapshot
+        std::set<uint16_t> tmplt_ids;
+
+        snap_info() {
+            ptr = nullptr;
+            tmplt_ids.clear();
+        }
+    };
+
     /// Description parameters of a Transport Session
     struct session_ctx {
-        /// FDS file ID
+        /// Session ID used in the FDS file
         fds_file_sid_t id;
+        /// Last seen snapshot for a specific ODID of the Transport Session
+        std::map<uint32_t, struct snap_info> odid2snap;
     };
 
     /// Plugin context only for logging!
@@ -100,6 +116,8 @@ private:
     session_get(const struct ipx_session *sptr);
     void
     session_ipx2fds(const struct ipx_session *ipx_desc, struct fds_file_session *fds_desc);
+    void
+    tmplts_update(struct snap_info &info, const fds_tsnapshot_t *snap);
 };
 
 
