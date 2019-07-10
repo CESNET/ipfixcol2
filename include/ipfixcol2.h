@@ -63,6 +63,7 @@
 
 #include <ipfixcol2/plugins.h>
 #include <ipfixcol2/session.h>
+#include <ipfixcol2/utils.h>
 #include <ipfixcol2/verbose.h>
 
 
