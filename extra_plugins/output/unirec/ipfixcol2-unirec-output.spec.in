@@ -1,0 +1,47 @@
+Name:           ipfixcol2-unirec-output
+Version:        @UNIREC_VERSION@
+Release:        1%{?dist}
+Summary:        Plugin for converting IPFIX data to UniRec format.
+
+License:        BSD
+URL:            http://www.liberouter.org/
+Source0:        %{name}-%{version}.tar.gz
+Group:          Liberouter
+Vendor:         CESNET, z.s.p.o.
+Packager:
+
+BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}
+BuildRequires:  gcc >= 4.8, cmake >= 2.8.8, make
+BuildRequires:  ipfixcol2-devel, libfds-devel, python2-docutils
+BuildRequires:  libtrap-devel, unirec >= 2.3.0
+Requires:       libtrap >= 0.12.0, ipfixcol2 >= 2.0.0, libfds >= 0.1.0
+
+%description
+Plugin for converting IPFIX data to UniRec format.
+
+%prep
+%autosetup
+
+#%post
+#/sbin/ldconfig
+
+#%postun
+#/sbin/ldconfig
+
+# Build source code
+%build
+%cmake .
+make %{?_smp_mflags}
+
+# Perform installation into build directory
+%install
+make install DESTDIR=%{buildroot}
+
+%files
+%{_libdir}/ipfixcol2/*.so*
+%{_mandir}/man7/*.7.gz
+%config(noreplace) %{_sysconfdir}/ipfixcol2/unirec-elements.txt
+
+%changelog
+* Wed Nov  21 2018 Lukas Hutak <lukas.hutak@cesnet.cz> 2.0.0-1
+- Initial RPM release

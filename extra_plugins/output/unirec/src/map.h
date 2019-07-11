@@ -61,6 +61,11 @@ enum MAP_SRC {
     MAP_SRC_INTERNAL_DBF
 };
 
+enum MAP_FLAGS {
+    /** Perform trim of an IPFIX string (convert only characters before the first '\0')  */
+    MAP_FLAGS_STR_TRIM = (1 << 0)
+};
+
 /** IPFIX-to-UniRec mapping record                    */
 struct map_rec {
     struct {
@@ -85,6 +90,11 @@ struct map_rec {
         ur_field_type_t type;
         /** Data type (string, for log!)              */
         char *type_str;
+        /**
+         * \brief Additional conversion flags
+         * \note See ::MAP_FLAGS
+         */
+        uint32_t flags;
     } unirec;
 };
 

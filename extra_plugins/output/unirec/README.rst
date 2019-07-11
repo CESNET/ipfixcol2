@@ -211,6 +211,8 @@ a line: ``"BYTES uint64 e0id1"``:
   the ``<uniRecFormat>`` element.
 - Second parameter specifies a data type of the UniRec field. List of all supported types is available
   in `UniRec documentation <https://github.com/CESNET/Nemea-Framework/tree/master/unirec>`_.
+  The plugin also supports additional virtual type "string_trimmed" that converts data to UniRec
+  string type, but only characters up to the first occurrence of '\\0' (excluding) are copied.
 - The third parameter is comma separated list of corresponding IPFIX Information Elements (IEs). In
   this case, "e0id1" means IPFIX IE with Private Enterprise ID 0 and IE ID 1 (which is
   "octetDeltaCount"). Instead of numeric identification an IE name in "<scope>:<name>" format

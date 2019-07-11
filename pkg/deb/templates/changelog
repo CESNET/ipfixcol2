@@ -1,5 +1,5 @@
-ipfixcol (2.0.0-1) unstable; urgency=low
+ipfixcol2 (2.1.0-1) unstable; urgency=low
 
   * Initial release.
 
- -- Lukas Hutak <lukas.hutak@cesnet.cz>  Mon, 19 Jun 2017 14:24:56 +0200
+ -- Lukas Hutak <lukas.hutak@cesnet.cz>  Thu, 25 Oct 2018 10:17:56 +0200

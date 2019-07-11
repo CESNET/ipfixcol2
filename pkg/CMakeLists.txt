@@ -51,8 +51,7 @@ if (NOT CPACK_PACKAGE_CONTACT OR CPACK_PACKAGE_CONTACT STREQUAL "")
     if (GIT_USER_NAME AND GIT_USER_EMAIL)
         message(STATUS "Maintainer contact for packages is not specified "
             "- using a name and email from the git configuration")
-        string(CONCAT CPACK_PACKAGE_CONTACT
-            ${GIT_USER_NAME} " <" ${GIT_USER_EMAIL} ">")
+        set(CPACK_PACKAGE_CONTACT "${GIT_USER_NAME} <${GIT_USER_EMAIL}>")
     endif()
 endif()
 
@@ -67,7 +66,7 @@ if (PKG_CONFIG_FOUND)
         @ONLY)
     install(
         FILES "${CMAKE_CURRENT_BINARY_DIR}/ipfixcol2.pc"
-        DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}/pkgconfig/")
+        DESTINATION "${INSTALL_DIR_LIB}/pkgconfig/")
 endif()
 
 # Package builders

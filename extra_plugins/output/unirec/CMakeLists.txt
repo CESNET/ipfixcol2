@@ -1,20 +1,20 @@
 cmake_minimum_required(VERSION 2.8.8)
-project(unirec)
+project(ipfixcol2-unirec-output)
 
 # Description of the project
 set(UNIREC_DESCRIPTION
     "Output plugin for IPFIXcol2 that sends flow records in UniRec format into NEMEA modules."
 )
 
-set(UNIREC_VERSION_MAJOR 1)
+set(UNIREC_VERSION_MAJOR 2)
 set(UNIREC_VERSION_MINOR 0)
 set(UNIREC_VERSION_PATCH 0)
 set(UNIREC_VERSION
     ${UNIREC_VERSION_MAJOR}.${UNIREC_VERSION_MINOR}.${UNIREC_VERSION_PATCH})
 
+include(CMakeModules/install_dirs.cmake)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
-include(GNUInstallDirs)
 # Include custom FindXXX modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMakeModules")
 
@@ -38,6 +38,12 @@ set(CMAKE_C_FLAGS_DEBUG      "-g -O0 -Wall -Wextra -pedantic")
 set(CMAKE_CXX_FLAGS          "${CMAKE_CXX_FLAGS} -fvisibility=hidden -std=gnu++11")
 set(CMAKE_CXX_FLAGS_RELEASE  "-O2 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG    "-g -O0 -Wall -Wextra -pedantic")
+
+# Prepare SPEC file
+configure_file(
+    "${PROJECT_SOURCE_DIR}/ipfixcol2-unirec-output.spec.in"
+    "${PROJECT_BINARY_DIR}/ipfixcol2-unirec-output.spec"
+)
 
 # Header files for source code building
 include_directories(
@@ -67,11 +73,11 @@ target_link_libraries(unirec-output
 
 install(
     TARGETS unirec-output
-    LIBRARY DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}/ipfixcol2/"
+    LIBRARY DESTINATION "${INSTALL_DIR_LIB}/ipfixcol2/"
 )
 install(
     FILES config/unirec-elements.txt
-    DESTINATION "${CMAKE_INSTALL_FULL_SYSCONFDIR}/ipfixcol2/"
+    DESTINATION "${INSTALL_DIR_SYSCONF}/ipfixcol2/"
 )
 
 if (ENABLE_DOC_MANPAGE)
@@ -92,6 +98,6 @@ if (ENABLE_DOC_MANPAGE)
 
     install(
         FILES "${DST_FILE}"
-        DESTINATION "${CMAKE_INSTALL_FULL_MANDIR}/man7"
+        DESTINATION "${INSTALL_DIR_MAN}/man7"
     )
 endif()

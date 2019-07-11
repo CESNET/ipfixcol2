@@ -7,5 +7,5 @@ add_library(dummy-input MODULE
 
 install(
     TARGETS dummy-input
-    LIBRARY DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}/ipfixcol2/"
+    LIBRARY DESTINATION "${INSTALL_DIR_LIB}/ipfixcol2/"
 )

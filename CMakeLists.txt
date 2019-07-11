@@ -14,16 +14,16 @@ endif()
 
 # Versions and other informations
 set(IPFIXCOL_VERSION_MAJOR 2)
-set(IPFIXCOL_VERSION_MINOR 0)
+set(IPFIXCOL_VERSION_MINOR 1)
 set(IPFIXCOL_VERSION_PATCH 0)
 set(IPFIXCOL_VERSION
     ${IPFIXCOL_VERSION_MAJOR}.${IPFIXCOL_VERSION_MINOR}.${IPFIXCOL_VERSION_PATCH})
 
 # Include modules
 include(CMakeModules/git_info.cmake)
+include(CMakeModules/install_dirs.cmake)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
-include(GNUInstallDirs)
 
 # Include custom FindXXX modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMakeModules")
