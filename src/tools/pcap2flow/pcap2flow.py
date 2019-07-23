@@ -180,7 +180,7 @@ if __name__ == "__main__":
         description="Simple tool for replaying NetFlow v5/v9 and IPFIX packets to a collector.",
     )
     parser.add_argument("-i", dest="file",    help="PCAP with NetFlow/IPFIX packets", required=True)
-    parser.add_argument("-d", dest="addr",    help="Destination IP address (default: %(default)s)",
+    parser.add_argument("-d", dest="addr",    help="Destination IP address or hostname (default: %(default)s)",
         default="127.0.0.1")
     parser.add_argument("-p", dest="port",    help="Destination port number (default: %(default)d)",
         default=4739, type=arg_check_port)
