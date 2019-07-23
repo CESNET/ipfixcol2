@@ -57,5 +57,5 @@ Note
 
 The only purpose of this tool is to test the collector and its plugins on
 previously captured flow packets. Performance of the tool is not ideal and it's
-not itendent to be used in producion environment.
+not intended to be used in production environment.
 
