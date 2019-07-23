@@ -15,7 +15,7 @@ Dependencies
 ------------
 
 - python3
-- `python3-scapy <pypi.org/project/scapy/>`_
+- `python3-scapy <https://pypi.org/project/scapy/>`_
 
 Parameters
 ----------
