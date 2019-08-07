@@ -2,49 +2,17 @@
  * \file src/core/netflow2ipfix/netflow_parsers.c
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief NetFlow v9 parsers (source file)
- * \date 2018
- */
-
-/*
- * Copyright (C) 2018 CESNET, z.s.p.o.
+ * \date 2018-2019
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name of the Company nor the names of its contributors
- *    may be used to endorse or promote products derived from this
- *    software without specific prior written permission.
- *
- * ALTERNATIVELY, provided that this notice is retained in full, this
- * product may be distributed under the terms of the GNU General Public
- * License (GPL) version 2 or later, in which case the provisions
- * of the GPL apply INSTEAD OF those given above.
- *
- * This software is provided ``as is``, and any express or implied
- * warranties, including, but not limited to, the implied warranties of
- * merchantability and fitness for a particular purpose are disclaimed.
- * In no event shall the company or contributors be liable for any
- * direct, indirect, incidental, special, exemplary, or consequential
- * damages (including, but not limited to, procurement of substitute
- * goods or services; loss of use, data, or profits; or business
- * interruption) however caused and on any theory of liability, whether
- * in contract, strict liability, or tort (including negligence or
- * otherwise) arising in any way out of the use of this software, even
- * if advised of the possibility of such damage.
- *
+ * Copyright(c) 2019 CESNET z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <limits.h>
 #include <assert.h>
 #include "netflow_parsers.h"
 
-/** Internal error codes  */
+/// Internal error codes
 enum error_codes {
     // No error
     ERR_OK,
@@ -65,7 +33,7 @@ enum error_codes {
     ERR_TSET_DATA
 };
 
-/** Error messages  */
+/// Error messages
 static const char *err_msg[] = {
     [ERR_OK]          = "No error.",
     // FlowSets iterator
@@ -147,9 +115,9 @@ ipx_nf9_sets_iter_err(const struct ipx_nf9_sets_iter *it)
 
 // -------------------------------------------------------------------------------------------------
 
-/** \brief Internal iterator flags                      */
+/// Internal iterator flags
 enum ipx_nf9_dset_iter_flags {
-    /** Initialization fail and an error message is set */
+    /// Initialization fail and an error message is set
     IPX_NF9_DSET_ITER_FAILED = (1 << 0)
 };
 
@@ -201,10 +169,10 @@ ipx_nf9_dset_iter_err(const struct ipx_nf9_dset_iter *it)
 
 // -------------------------------------------------------------------------------------------------
 
-/** \brief Internal iterator flags      */
+/// Internal iterator flags
 enum ipx_nf9_tset_iter_flags {
-    /** Initialization fail and an error message is set */
-        IPX_NF9_TSET_ITER_FAILED = (1 << 0)
+    /// Initialization fail and an error message is set
+    IPX_NF9_TSET_ITER_FAILED = (1 << 0)
 };
 
 void

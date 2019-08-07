@@ -2,7 +2,7 @@
  * @file src/core/netflow2ipfix/netflow_structs.h
  * @author Lukas Hutak <lukas.hutak@cesnet.cz>
  * @brief NetFlow v5/v9 structures
- * @date 2018
+ * @date 2018-2019
  *
  * Copyright(c) 2019 CESNET z.s.p.o.
  * SPDX-License-Identifier: BSD-3-Clause

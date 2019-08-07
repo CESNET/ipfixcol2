@@ -1,43 +1,11 @@
 /**
- * \file src/core/netflow2ipfix/netflow9.c
- * \author Lukas Hutak <lukas.hutak@cesnet.cz>
- * \brief Converter from NetFlow v9 to IPFIX Message (source code)
- * \date 2018
- */
-
-/*
- * Copyright (C) 2018 CESNET, z.s.p.o.
+ * @file src/core/netflow2ipfix/netflow9.c
+ * @author Lukas Hutak <lukas.hutak@cesnet.cz>
+ * @brief Converter from NetFlow v9 to IPFIX Message (source code)
+ * @date 2018
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name of the Company nor the names of its contributors
- *    may be used to endorse or promote products derived from this
- *    software without specific prior written permission.
- *
- * ALTERNATIVELY, provided that this notice is retained in full, this
- * product may be distributed under the terms of the GNU General Public
- * License (GPL) version 2 or later, in which case the provisions
- * of the GPL apply INSTEAD OF those given above.
- *
- * This software is provided ``as is``, and any express or implied
- * warranties, including, but not limited to, the implied warranties of
- * merchantability and fitness for a particular purpose are disclaimed.
- * In no event shall the company or contributors be liable for any
- * direct, indirect, incidental, special, exemplary, or consequential
- * damages (including, but not limited to, procurement of substitute
- * goods or services; loss of use, data, or profits; or business
- * interruption) however caused and on any theory of liability, whether
- * in contract, strict liability, or tort (including negligence or
- * otherwise) arising in any way out of the use of this software, even
- * if advised of the possibility of such damage.
- *
+ * Copyright(c) 2019 CESNET z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <stdint.h>
@@ -57,15 +25,15 @@
 #include "../message_ipfix.h"
 #include "../verbose.h"
 
-/** ID of the first incompatible NetFlow Information Element                      */
+/// ID of the first incompatible NetFlow Information Element
 #define NF_INCOMP_ID_MIN  128
-/** IPFIX Enterprise Number for incompatible NetFlow IEs (128 <= ID <= 32767)     */
+/// IPFIX Enterprise Number for incompatible NetFlow IEs (128 <= ID <= 32767)
 #define NF_INCOMP_EN_LOW  4294967294UL
-/** IPFIX Enterprise Number for incompatible NetFlow IEs (32767 <= ID <= 65535)   */
+/// IPFIX Enterprise Number for incompatible NetFlow IEs (32767 <= ID <= 65535)
 #define NF_INCOMP_EN_HIGH 4294967295UL
 /**
  * Maximum length of any IPFIX Message Set
- * \note
+ * @note
  *   The length represents maximum IPFIX Message size without IPFIX Message header and
  *   IPFIX Set header size
  */
@@ -76,21 +44,21 @@
 static_assert(IPX_NF9_MSG_HDR_LEN == 20U, "NetFlow v9 Message header size is not valid!");
 static_assert(IPX_NF9_SET_HDR_LEN == 4U,  "NetFlow v9 Set header size is not valid!");
 
-/** Auxiliary conversion structure from NetFlow Options Field to IPFIX Inf. Element ID */
+/// Auxiliary conversion structure from NetFlow Options Field to IPFIX Inf. Element ID
 struct nf2ipx_opts {
-    /** (Source) NetFlow scope field type      */
+    /// (Source) NetFlow scope field type
     uint16_t nf_id;
-    /** (Target) IPFIX Information Element ID  */
+    /// (Target) IPFIX Information Element ID
     uint16_t ipx_id;
-    /** Maximal size of IPFIX IE               */
+    /// Maximal size of IPFIX IE
     uint16_t ipx_max_size;
 };
 
 /**
- * \brief Options conversion table
+ * @brief Options conversion table
  *
  * Each records represents mapping from NetFlow Scope Field Type to IPFIX IE.
- * \remark Based on RFC3954, Section 6.1. and available IPFIX IE from IANA
+ * @remark Based on RFC3954, Section 6.1. and available IPFIX IE from IANA
  */
 static const struct nf2ipx_opts nf2ipx_opts_table[] = {
     // "System"    -> iana:exportingProcessId
@@ -105,35 +73,35 @@ static const struct nf2ipx_opts nf2ipx_opts_table[] = {
     {5U, 145U, 2U}
 };
 
-/** Number of record the the Options conversion table */
+/// Number of record the the Options conversion table
 #define NF2IPX_OPTS_TABLE_SIZE (sizeof(nf2ipx_opts_table) / sizeof(nf2ipx_opts_table[0]))
 
-/** Auxiliary conversion structure from NetFlow Field to IPFIX Inf. Element ID        */
+/// Auxiliary conversion structure from NetFlow Field to IPFIX Inf. Element ID
 struct nf2ipx_data {
     struct {
-        /** NetFlow Field identification                                              */
+        /// NetFlow Field identification
         uint16_t id;
         /**
          * Required size of the field
-         * \note If the field doesn't have this size, conversion cannot be performed.
+         * @note If the field doesn't have this size, conversion cannot be performed.
          */
         uint16_t size;
-    } netflow; /**< NetFlow Field definition                                          */
+    } netflow; ///< NetFlow Field definition
     struct {
-        /** New IPFIX IE ID                                                           */
+        /// New IPFIX IE ID
         uint16_t id;
-        /** New IPFIX IE Enterprise Number                                            */
+        /// New IPFIX IE Enterprise Number
         uint32_t en;
-        /** Size of converted field                                                   */
+        /// Size of converted field
         uint16_t size;
-    } ipfix; /**< IPFIX Field Definition*/
+    } ipfix; ///< IPFIX Field Definition
 
-    /** Conversion instruction                                                        */
+    /// Conversion instruction
     struct nf2ipx_instr instr;
 };
 
 /**
- * \brief NetFlow Data conversion table
+ * @brief NetFlow Data conversion table
  *
  * Each field represents mapping from NetFlow v9 to IPFIX IE and conversion instruction.
  * Only incompatible fields that MUST be converted should go here.
@@ -145,50 +113,50 @@ static const struct nf2ipx_data nf2ipx_data_table[] = {
     {{22U, 4U}, {152U, 0U, 8U}, {NF2IPX_ITYPE_TS, 8U}}
 };
 
-/** Number of record the the Data conversion table */
+/// Number of record the the Data conversion table */
 #define NF2IPX_DATA_TABLE_SIZE (sizeof(nf2ipx_data_table) / sizeof(nf2ipx_data_table[0]))
 
-/** Internal converter structure                                */
+/// Internal converter structure
 struct ipx_nf9_conv {
-    /** Instance identification (only for log!)                 */
+    /// Instance identification (only for log!)
     char *ident;
-    /** Verbosity level                                         */
+    /// Verbosity level
     enum ipx_verb_level vlevel;
 
-    /** Sequence number of the next expected NetFlow Message    */
+    /// Sequence number of the next expected NetFlow Message
     uint32_t nf9_seq_next;
-    /** Have we already processed at least one NetFlow message  */
+    /// Have we already processed at least one NetFlow message
     bool nf9_seq_valid;
-    /** Sequence number of the next converted IPFIX Message     */
+    /// Sequence number of the next converted IPFIX Message
     uint32_t ipx_seq_next;
 
     struct {
-        /** Pointer to newly generated IPFIX Message            */
+        /// Pointer to newly generated IPFIX Message
         uint8_t *ipx_msg;
-        /** Pointer to the first byte after committed memory    */
+        /// Pointer to the first byte after committed memory
         uint8_t *write_ptr;
-        /** Allocated size of the IPFIX Message                 */
+        /// Allocated size of the IPFIX Message
         size_t ipx_size_alloc;
-        /** Used (i.e. filled) size of the IPFIX Message        */
+        /// Used (i.e. filled) size of the IPFIX Message
         size_t ipx_size_used;
-        /** Message context (Source, ODID, Stream)              */
+        /// Message context (Source, ODID, Stream)
         const struct ipx_msg_ctx *msg_ctx;
-        /** Number of all processed NetFlow records (Data + Templates) during conversion */
+        /// Number of all processed NetFlow records (Data + Templates) during conversion
         uint16_t recs_processed;
-        /** Number of converted and added "Data" NetFlow records into the IPFIX Message  */
+        /// Number of converted and added "Data" NetFlow records into the IPFIX Message
         uint16_t drecs_converted;
-    } data; /**< Data of currently converted messages           */
+    } data; ///< Data of currently converted messages
 
-    /** Template lookup table - 2-level table  (256 x 256)      */
+    /// Template lookup table - 2-level table  (256 x 256)
     struct tmplts_l1_table l1_table;
 };
 
 /**
- * \def CONV_ERROR
- * \brief Macro for printing an error message of a converter
- * \param[in] conv    Converter
- * \param[in] fmt     Format string (see manual page for "printf" family)
- * \param[in] ...     Variable number of arguments for the format string
+ * @def CONV_ERROR
+ * @brief Macro for printing an error message of a converter
+ * @param[in] conv    Converter
+ * @param[in] fmt     Format string (see manual page for "printf" family)
+ * @param[in] ...     Variable number of arguments for the format string
  */
 #define CONV_ERROR(conv, fmt, ...)                                                               \
     if ((conv)->vlevel >= IPX_VERB_ERROR) {                                                      \
@@ -198,11 +166,11 @@ struct ipx_nf9_conv {
     }
 
 /**
- * \def CONV_WARNING
- * \brief Macro for printing a warning message of a converter
- * \param[in] conv    Converter
- * \param[in] fmt     Format string (see manual page for "printf" family)
- * \param[in] ...     Variable number of arguments for the format string
+ * @def CONV_WARNING
+ * @brief Macro for printing a warning message of a converter
+ * @param[in] conv    Converter
+ * @param[in] fmt     Format string (see manual page for "printf" family)
+ * @param[in] ...     Variable number of arguments for the format string
  */
 #define CONV_WARNING(conv, fmt, ...)                                                             \
     if ((conv)->vlevel >= IPX_VERB_WARNING) {                                                    \
@@ -212,11 +180,11 @@ struct ipx_nf9_conv {
     }
 
 /**
- * \def CONV_INFO
- * \brief Macro for printing an info message of a converter
- * \param[in] conv    Converter
- * \param[in] fmt     Format string (see manual page for "printf" family)
- * \param[in] ...     Variable number of arguments for the format string
+ * @def CONV_INFO
+ * @brief Macro for printing an info message of a converter
+ * @param[in] conv    Converter
+ * @param[in] fmt     Format string (see manual page for "printf" family)
+ * @param[in] ...     Variable number of arguments for the format string
  */
 #define CONV_INFO(conv, fmt, ...)                                                                \
     if ((conv)->vlevel >= IPX_VERB_INFO) {                                                       \
@@ -226,11 +194,11 @@ struct ipx_nf9_conv {
     }
 
 /**
- * \def CONV_DEBUG
- * \brief Macro for printing a debug message of a converter
- * \param[in] conv    Converter
- * \param[in] fmt     Format string (see manual page for "printf" family)
- * \param[in] ...     Variable number of arguments for the format string
+ * @def CONV_DEBUG
+ * @brief Macro for printing a debug message of a converter
+ * @param[in] conv    Converter
+ * @param[in] fmt     Format string (see manual page for "printf" family)
+ * @param[in] ...     Variable number of arguments for the format string
  */
 #define CONV_DEBUG(conv, fmt, ...)                                                               \
     if ((conv)->vlevel >= IPX_VERB_DEBUG) {                                                      \
@@ -271,8 +239,8 @@ ipx_nf9_conv_destroy(struct ipx_nf9_conv *conv)
 }
 
 /**
- * \brief Initialize an internal memory buffer for a new IPFIX Message
- * \param[in] conv Converter internals
+ * @brief Initialize an internal memory buffer for a new IPFIX Message
+ * @param[in] conv Converter internals
  */
 static inline void
 conv_mem_init(ipx_nf9_conv_t *conv)
@@ -284,8 +252,8 @@ conv_mem_init(ipx_nf9_conv_t *conv)
 }
 
 /**
- * \brief Destroy the internal memory buffer for a new IPFIX Message
- * \param conv Converter internals
+ * @brief Destroy the internal memory buffer for a new IPFIX Message
+ * @param conv Converter internals
  */
 static inline void
 conv_mem_destroy(ipx_nf9_conv_t *conv)
@@ -295,10 +263,10 @@ conv_mem_destroy(ipx_nf9_conv_t *conv)
 }
 
 /**
- * \brief Release IPFIX Message from the
- * \warning Do not use any buffer manipulation functions after call, except conv_mem_init()
- * \param conv Converter internals
- * \return Pointer to the IPFIX Message
+ * @brief Release IPFIX Message from the
+ * @warning Do not use any buffer manipulation functions after call, except conv_mem_init()
+ * @param conv Converter internals
+ * @return Pointer to the IPFIX Message
  */
 static inline uint8_t *
 conv_mem_release(ipx_nf9_conv_t *conv)
@@ -309,17 +277,17 @@ conv_mem_release(ipx_nf9_conv_t *conv)
 }
 
 /**
- * \brief Reserve a memory in the new IPFIX Message
+ * @brief Reserve a memory in the new IPFIX Message
  *
- * The function makes sure that at least \p size bytes of the memory after the pointer
+ * The function makes sure that at least @p size bytes of the memory after the pointer
  * (i.e. conv_mem_ptr_now()) will be prepared for user modification.
  *
- * \warning The buffer can be reallocated and a user MUST consider that all pointers
+ * @warning The buffer can be reallocated and a user MUST consider that all pointers
  *   to the IPFIX Message are not valid anymore!
- * \param[in] conv Converter internals
- * \param[in] size Required size (in bytes)
- * \return #IPX_OK on success
- * \return #IPX_ERR_NOMEM in case of memory allocation error
+ * @param[in] conv Converter internals
+ * @param[in] size Required size (in bytes)
+ * @return #IPX_OK on success
+ * @return #IPX_ERR_NOMEM in case of memory allocation error
  */
 static inline int
 conv_mem_reserve(ipx_nf9_conv_t *conv, size_t size)
@@ -343,12 +311,12 @@ conv_mem_reserve(ipx_nf9_conv_t *conv, size_t size)
 }
 
 /**
- * \brief Commit a user defined part of the new IPFIX Message
+ * @brief Commit a user defined part of the new IPFIX Message
  *
  * User defined size of the memory after the current position pointer (i.e. conv_mem_ptr_now()) will
  * be marked as filled and the pointer will be moved forward.
- * \param[in] conv Converter internals
- * \param[in] size Memory size to commit
+ * @param[in] conv Converter internals
+ * @param[in] size Memory size to commit
  */
 static inline void
 conv_mem_commit(ipx_nf9_conv_t *conv, size_t size)
@@ -359,14 +327,14 @@ conv_mem_commit(ipx_nf9_conv_t *conv, size_t size)
 }
 
 /**
- * \brief Get a pointer into the new IPFIX Message after the last committed byte
+ * @brief Get a pointer into the new IPFIX Message after the last committed byte
  *
- * \warning
+ * @warning
  *   Keep on mind, the returned pointer MUST be considered as invalid after calling
  *   conv_mem_reserve() function. There is a chance that the returned address doesn't point
  *   to the IPFIX Message anymore!
- * \param[in] conv Converter internals
- * \return Pointer
+ * @param[in] conv Converter internals
+ * @return Pointer
  */
 void *
 conv_mem_ptr_now(ipx_nf9_conv_t *conv)
@@ -375,17 +343,17 @@ conv_mem_ptr_now(ipx_nf9_conv_t *conv)
 }
 
 /**
- * \brief Get a pointer into the new IPFIX Message with a given offset
+ * @brief Get a pointer into the new IPFIX Message with a given offset
  *
- * \warning
+ * @warning
  *   Keep on mind, the returned pointer MUST be considered as invalid after calling
  *   conv_mem_reserve() function. There is a chance that the returned address doesn't point
  *   to the IPFIX Message anymore!
- * \warning
+ * @warning
  *   Accessing offsets after reserved memory is undefined!
- * \param[in] conv   Converter internals
- * \param[in] offset Offset from the start of the Message
- * \return Pointer
+ * @param[in] conv   Converter internals
+ * @param[in] offset Offset from the start of the Message
+ * @return Pointer
  */
 void *
 conv_mem_ptr_offset(ipx_nf9_conv_t *conv, size_t offset)
@@ -394,9 +362,9 @@ conv_mem_ptr_offset(ipx_nf9_conv_t *conv, size_t offset)
 }
 
 /**
- * \brief Get offset of the "commit" pointer (represents memory area labeled as filled)
- * \param[in] conv Converter internals
- * \return Offset from the start of the Message
+ * @brief Get offset of the "commit" pointer (represents memory area labeled as filled)
+ * @param[in] conv Converter internals
+ * @return Offset from the start of the Message
  */
 static inline size_t
 conv_mem_pos_get(ipx_nf9_conv_t *conv)
@@ -405,16 +373,16 @@ conv_mem_pos_get(ipx_nf9_conv_t *conv)
 }
 
 /**
- * \brief Move the "commit" pointer back to the specific place in the IPFIX Message
+ * @brief Move the "commit" pointer back to the specific place in the IPFIX Message
  *
- * Memory after a user given \p offset from the beginning of IPFIX Message is considered as
+ * Memory after a user given @p offset from the beginning of IPFIX Message is considered as
  * unspecified (not committed). User can move the pointer only back in the memory, to make sure
  * that there are no undefined regions. Typical usage is to "remove" already committed IPFIX
  * Message parts.
  *
- * \warning Setting position after reserved memory is undefined operation!
- * \param[in] conv   Converter internals
- * \param[in] offset Offset from the start of the Message
+ * @warning Setting position after reserved memory is undefined operation!
+ * @param[in] conv   Converter internals
+ * @param[in] offset Offset from the start of the Message
  */
 static inline void
 conv_mem_pos_set(ipx_nf9_conv_t *conv, size_t offset)
@@ -427,9 +395,9 @@ conv_mem_pos_set(ipx_nf9_conv_t *conv, size_t offset)
 // -----------------------------------------------------------------------------------------
 
 /**
- * \brief Get a conversion instruction for conversion from NetFlow to IPFIX Data Field
- * \param[in] nf_id NetFlow Field ID
- * \return Pointer to the instruction or NULL (no conversion required)
+ * @brief Get a conversion instruction for conversion from NetFlow to IPFIX Data Field
+ * @param[in] nf_id NetFlow Field ID
+ * @return Pointer to the instruction or NULL (no conversion required)
  */
 static inline const struct nf2ipx_data *
 conv_data_map(uint16_t nf_id)
@@ -449,9 +417,9 @@ conv_data_map(uint16_t nf_id)
 }
 
 /**
- * \brief Get a conversion instruction for conversion from NetFlow to IPFIX Scope Field ID
- * \param[in] nf_id NetFlow Scope Field ID
- * \return Pointer to the instruction or NULL (unsupported scope field)
+ * @brief Get a conversion instruction for conversion from NetFlow to IPFIX Scope Field ID
+ * @param[in] nf_id NetFlow Scope Field ID
+ * @return Pointer to the instruction or NULL (unsupported scope field)
  */
 static inline const struct nf2ipx_opts *
 conv_opts_map(uint16_t nf_id)
@@ -469,14 +437,14 @@ conv_opts_map(uint16_t nf_id)
 }
 
 /**
- * \brief Append an IPFIX Template to the new IPFIX Message
+ * @brief Append an IPFIX Template to the new IPFIX Message
  *
  * Place the template right after the last committed byte and commit the size of the added template.
- * \warning The IPFIX Message might be reallocated!
- * \param[in] conv Converter internals
- * \param[in] trec Template record to append
- * \return #IPX_OK on success
- * \return #IPX_ERR_NOMEM in case of memory allocation error
+ * @warning The IPFIX Message might be reallocated!
+ * @param[in] conv Converter internals
+ * @param[in] trec Template record to append
+ * @return #IPX_OK on success
+ * @return #IPX_ERR_NOMEM in case of memory allocation error
  */
 static inline int
 conv_tmplt_append(ipx_nf9_conv_t *conv, const struct nf9_trec *trec)
@@ -497,20 +465,20 @@ conv_tmplt_append(ipx_nf9_conv_t *conv, const struct nf9_trec *trec)
 }
 
 /**
- * \brief Add IPFIX (Options) Template from the Template table
+ * @brief Add IPFIX (Options) Template from the Template table
  *
  * Try to find the NetFlow template and compare it with a previously parsed Template with the same
  * ID. If the templates are the same, append its IPFIX Template counterpart to the IPFIX Message.
  *
- * \warning The IPFIX Message might be reallocated!
- * \param[in] conv Converter internals
- * \param[in] it   Template Set iterator with a template to convert
- * \param[in] type Template type (::IPX_NF9_SET_TMPLT or ::IPX_NF9_SET_OPTS_TMPLT)
- * \return #IPX_OK on success and the IPFIX Template has been added to the Set.
- * \return #IPX_ERR_NOTFOUND if the template is unknown or doesn't match previously defined one.
- * \return #IPX_ERR_DENIED if the templates match but for format compatibility reasons its
+ * @warning The IPFIX Message might be reallocated!
+ * @param[in] conv Converter internals
+ * @param[in] it   Template Set iterator with a template to convert
+ * @param[in] type Template type (::IPX_NF9_SET_TMPLT or ::IPX_NF9_SET_OPTS_TMPLT)
+ * @return #IPX_OK on success and the IPFIX Template has been added to the Set.
+ * @return #IPX_ERR_NOTFOUND if the template is unknown or doesn't match previously defined one.
+ * @return #IPX_ERR_DENIED if the templates match but for format compatibility reasons its
  *   conversion is disabled (i.e. no template is added to the (Options) Template Set)
- * \return #IPX_ERR_NOMEM in case of memory allocation error
+ * @return #IPX_ERR_NOMEM in case of memory allocation error
  */
 static inline int
 conv_tmplt_from_table(ipx_nf9_conv_t *conv, const struct ipx_nf9_tset_iter *it, uint16_t type)
@@ -535,26 +503,26 @@ conv_tmplt_from_table(ipx_nf9_conv_t *conv, const struct ipx_nf9_tset_iter *it, 
     return conv_tmplt_append(conv, trec);
 }
 
-/** Auxiliary structure for template conversion                      */
+/// Auxiliary structure for template conversion
 struct conv_tmplt_aux {
-    /** New converter template                                       */
+    /// New converter template
     struct nf9_trec *tmplt;
-    /** Template Set iterator with the current template to process   */
+    /// Template Set iterator with the current template to process
     const struct ipx_nf9_tset_iter *it;
 
-    /** Pointer to the start of NetFlow field definitions to process */
+    /// Pointer to the start of NetFlow field definitions to process
     const struct ipx_nf9_tmplt_ie *ie_nf9_ptr;
-    /** Pointer to the start of IPFIX field definitions to add       */
+    /// Pointer to the start of IPFIX field definitions to add
     fds_ipfix_tmplt_ie *ie_ipx_ptr;
 };
 
 /**
- * \brief Convert a NetFlow Template header to an IPFIX Template header (aux. function)
+ * @brief Convert a NetFlow Template header to an IPFIX Template header (aux. function)
  *
  * Pointers to the template field definitions to be process by conv_tmplt_process_field() are set
  * appropriately.
- * \param[in] aux     Auxiliary conversion structure
- * \param[in] fset_id FlowSet ID (::IPX_NF9_SET_TMPLT or ::IPX_NF9_SET_OPTS_TMPLT)
+ * @param[in] aux     Auxiliary conversion structure
+ * @param[in] fset_id FlowSet ID (::IPX_NF9_SET_TMPLT or ::IPX_NF9_SET_OPTS_TMPLT)
  */
 static inline void
 conv_tmplt_process_hdr(struct conv_tmplt_aux *aux, uint16_t fset_id)
@@ -586,21 +554,21 @@ conv_tmplt_process_hdr(struct conv_tmplt_aux *aux, uint16_t fset_id)
 }
 
 /**
- * \brief Convert a NetFlow (Options) Template into an IPFIX (Options) Template (aux. function)
+ * @brief Convert a NetFlow (Options) Template into an IPFIX (Options) Template (aux. function)
  *
  * The (Options) Template header is converted to the new format, followed by conversion of
  * template field definitions. In case Options Scope fields, a lookup function is used to
  * find new IPFIX IE definitions instead of incompatible NetFlow enumeration.
  *
- * \warning
+ * @warning
  *   The Template conversion structure (aux->tmplt) can be reallocated during conversion!
  *   Pointers to its records must be considered as invalid after calling this function!
- * \param[in] conv    Converter internals
- * \param[in] aux     Auxiliary conversion parameters (the Template, converter internals, etc.)
- * \param[in] fset_id FlowSet ID (::IPX_NF9_SET_TMPLT or ::IPX_NF9_SET_OPTS_TMPLT)
- * \return #IPX_OK on success and the template is successfully converted to IPFIX
- * \return #IPX_ERR_DENIED IPFIX if the Template cannot be converted due to format incompatibility
- * \return #IPX_ERR_NOMEM in case of memory allocation error
+ * @param[in] conv    Converter internals
+ * @param[in] aux     Auxiliary conversion parameters (the Template, converter internals, etc.)
+ * @param[in] fset_id FlowSet ID (::IPX_NF9_SET_TMPLT or ::IPX_NF9_SET_OPTS_TMPLT)
+ * @return #IPX_OK on success and the template is successfully converted to IPFIX
+ * @return #IPX_ERR_DENIED IPFIX if the Template cannot be converted due to format incompatibility
+ * @return #IPX_ERR_NOMEM in case of memory allocation error
  */
 static inline int
 conv_tmplt_process(ipx_nf9_conv_t *conv, struct conv_tmplt_aux *aux, uint16_t fset_id)
@@ -752,20 +720,20 @@ conv_tmplt_process(ipx_nf9_conv_t *conv, struct conv_tmplt_aux *aux, uint16_t fs
 }
 
 /**
- * \brief Parse and add IPFIX (Options) Template from a NetFlow (Options) Template record
+ * @brief Parse and add IPFIX (Options) Template from a NetFlow (Options) Template record
  *
  * The function tries to parse and convert a NetFlow (Options) Template record to IPFIX (Options)
  * Template record and append it to the new IPFIX Message. Once the Template is parsed, it is
  * also added into the internal Template table of already parsed templates and the next time
  * the template must be converted, it is possible to find it using conv_tmplt_from_table().
  *
- * \param[in] conv    Converter internals
- * \param[in] it      Template iterator (points to Template to be parsed)
- * \param[in] fset_id Template type (::IPX_NF9_SET_TMPLT or ::IPX_NF9_SET_OPTS_TMPLT)
- * \return #IPX_OK on success
- * \return #IPX_ERR_DENIED if the IPFIX Template cannot be added due to format incompatibility.
+ * @param[in] conv    Converter internals
+ * @param[in] it      Template iterator (points to Template to be parsed)
+ * @param[in] fset_id Template type (::IPX_NF9_SET_TMPLT or ::IPX_NF9_SET_OPTS_TMPLT)
+ * @return #IPX_OK on success
+ * @return #IPX_ERR_DENIED if the IPFIX Template cannot be added due to format incompatibility.
  *   However, a dummy record that signalizes unsupported conversion is added into the Template table.
- * \return #IPX_ERR_NOMEM in case of a memory allocation error
+ * @return #IPX_ERR_NOMEM in case of a memory allocation error
  */
 static inline int
 conv_tmplt_from_data(ipx_nf9_conv_t *conv, const struct ipx_nf9_tset_iter *it, uint16_t fset_id)
@@ -828,17 +796,17 @@ conv_tmplt_from_data(ipx_nf9_conv_t *conv, const struct ipx_nf9_tset_iter *it, u
 }
 
 /**
- * \brief Convert NetFlow (Options) Template FlowSet to IPFIX (Options) Template Set
+ * @brief Convert NetFlow (Options) Template FlowSet to IPFIX (Options) Template Set
  *
  * The function creates and appends a new IPFIX (Options) Template Set with converted
  * (Options) Template records to the new IPFIX Message. For each NetFlow (Options) Template
  * record a conversion function is called and the new IPFIX Template record is stored for future
  * using during parsing and Data record conversions.
- * \param[in] conv        Converter internals
- * \param[in] flowset_hdr NetFlow (Options) Template Set to be converted
- * \return #IPX_OK on success
- * \return #IPX_ERR_NOMEM in case of a memory allocation error
- * \return #IPX_ERR_FORMAT if the NetFlow (Options) Template FlowSet is malformed and cannot be
+ * @param[in] conv        Converter internals
+ * @param[in] flowset_hdr NetFlow (Options) Template Set to be converted
+ * @return #IPX_OK on success
+ * @return #IPX_ERR_NOMEM in case of a memory allocation error
+ * @return #IPX_ERR_FORMAT if the NetFlow (Options) Template FlowSet is malformed and cannot be
  *   converted.
  */
 int
@@ -952,10 +920,10 @@ conv_process_tset(ipx_nf9_conv_t *conv, const struct ipx_nf9_set_hdr *flowset_hd
 }
 
 /**
- * \brief Convert (NetFlow) relative timestamp to absolute timestamp
- * \param[in] hdr   NetFlow Message header (required for an exporter timestamps)
- * \param[in] nf_ts Relative NetFlow timestamp stored in a Data record (in Network byte order)
- * \return Converted absolute timestamp (Unix timestamp in milliseconds) (in Host byte order)
+ * @brief Convert (NetFlow) relative timestamp to absolute timestamp
+ * @param[in] hdr   NetFlow Message header (required for an exporter timestamps)
+ * @param[in] nf_ts Relative NetFlow timestamp stored in a Data record (in Network byte order)
+ * @return Converted absolute timestamp (Unix timestamp in milliseconds) (in Host byte order)
  */
 static inline uint64_t
 conv_ts_rel2abs(const struct ipx_nf9_msg_hdr *hdr, const uint32_t *nf_ts)
@@ -967,16 +935,16 @@ conv_ts_rel2abs(const struct ipx_nf9_msg_hdr *hdr, const uint32_t *nf_ts)
 }
 
 /**
- * \brief Convert a NetFlow data record to IPFIX Data record
+ * @brief Convert a NetFlow data record to IPFIX Data record
  *
  * The function executes instructions described in the internal Template record to perform Data
  * record conversion. After conversion the IPFIX Data record is appended to the new IPFIX Message.
- * \param[in] conv    Converter internals
- * \param[in] nf9_msg NetFlow Message header (necessary for timestamp conversion)
- * \param[in] nf9_rec NetFlow Data record to convert
- * \param[in] tmplt   Internal template record with conversion instructions
- * \return #IPX_OK on success
- * \return #IPX_ERR_NOMEM in case of a memory allocation error
+ * @param[in] conv    Converter internals
+ * @param[in] nf9_msg NetFlow Message header (necessary for timestamp conversion)
+ * @param[in] nf9_rec NetFlow Data record to convert
+ * @param[in] tmplt   Internal template record with conversion instructions
+ * @return #IPX_OK on success
+ * @return #IPX_ERR_NOMEM in case of a memory allocation error
  */
 static inline int
 conv_process_drec(ipx_nf9_conv_t *conv, const struct ipx_nf9_msg_hdr *nf9_msg,
@@ -1024,16 +992,16 @@ conv_process_drec(ipx_nf9_conv_t *conv, const struct ipx_nf9_msg_hdr *nf9_msg,
 }
 
 /**
- * \brief Convert NetFlow Data FlowSet to IPFIX Data Set
+ * @brief Convert NetFlow Data FlowSet to IPFIX Data Set
  *
  * The function creates and appends a new IPFIX Data Set (with converted Data records) to the new
  * IPFIX Message. For each NetFlow Data record a conversion function is called.
- * \param[in] conv        Converter internals
- * \param[in] flowset_hdr NetFlow Data FlowSet to be converted
- * \param[in] nf9_hdr     NetFlow Message header (necessary for timestamp conversions)
- * \return #IPX_OK on success
- * \return #IPX_ERR_NOMEM in case of a memory allocation error
- * \return #IPX_ERR_FORMAT if the NetFlow Data FlowSet is malformed and cannot be converted.
+ * @param[in] conv        Converter internals
+ * @param[in] flowset_hdr NetFlow Data FlowSet to be converted
+ * @param[in] nf9_hdr     NetFlow Message header (necessary for timestamp conversions)
+ * @return #IPX_OK on success
+ * @return #IPX_ERR_NOMEM in case of a memory allocation error
+ * @return #IPX_ERR_FORMAT if the NetFlow Data FlowSet is malformed and cannot be converted.
  */
 int
 conv_process_dset(ipx_nf9_conv_t *conv, const struct ipx_nf9_set_hdr *flowset_hdr,
@@ -1113,18 +1081,18 @@ conv_process_dset(ipx_nf9_conv_t *conv, const struct ipx_nf9_set_hdr *flowset_hd
 }
 
 /**
- * \brief Convert a NetFlow Message to an IPFIX Message
+ * @brief Convert a NetFlow Message to an IPFIX Message
  *
  * For each FlowSet in the NetFlow Message is called a particular converter to equivalent IPFIX Set.
  * The converted message is stored to the internal IPFIX Message buffer, however, the header of
  * the IPFIX Message header is not filled.
  *
- * \param[in] conv     Converter internals
- * \param[in] nf9_msg  NetFlow v9 Message data
- * \param[in] nf9_size NetFlow v9 Message size (in bytes)
- * \return #IPX_OK on success
- * \return #IPX_ERR_FORMAT if the NetFlow Message is malformed
- * \return #IPX_ERR_NOMEM in case of a memory allocation error
+ * @param[in] conv     Converter internals
+ * @param[in] nf9_msg  NetFlow v9 Message data
+ * @param[in] nf9_size NetFlow v9 Message size (in bytes)
+ * @return #IPX_OK on success
+ * @return #IPX_ERR_FORMAT if the NetFlow Message is malformed
+ * @return #IPX_ERR_NOMEM in case of a memory allocation error
  */
 int
 conv_process_msg(ipx_nf9_conv_t *conv, const struct ipx_nf9_msg_hdr *nf9_msg, uint16_t nf9_size)
@@ -1183,11 +1151,11 @@ conv_process_msg(ipx_nf9_conv_t *conv, const struct ipx_nf9_msg_hdr *nf9_msg, ui
 }
 
 /**
- * \brief Compare sequence numbers (with wraparound support)
- * \param t1 First number
- * \param t2 Second number
- * \return  The  function  returns an integer less than, equal to, or greater than zero if the
- *   first number \p t1 is found, respectively, to be less than, to match, or be greater than
+ * @brief Compare sequence numbers (with wraparound support)
+ * @param t1 First number
+ * @param t2 Second number
+ * @return  The  function  returns an integer less than, equal to, or greater than zero if the
+ *   first number @p t1 is found, respectively, to be less than, to match, or be greater than
  *   the second number.
  */
 static inline int
