@@ -1,43 +1,11 @@
 /**
- * \file src/core/netflow2ipfix/netflow_structs.h
- * \author Lukas Hutak <lukas.hutak@cesnet.cz>
- * \brief NetFlow v5/v9 structures
- * \date 2018
- */
-
-/*
- * Copyright (C) 2018 CESNET, z.s.p.o.
+ * @file src/core/netflow2ipfix/netflow_structs.h
+ * @author Lukas Hutak <lukas.hutak@cesnet.cz>
+ * @brief NetFlow v5/v9 structures
+ * @date 2018
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name of the Company nor the names of its contributors
- *    may be used to endorse or promote products derived from this
- *    software without specific prior written permission.
- *
- * ALTERNATIVELY, provided that this notice is retained in full, this
- * product may be distributed under the terms of the GNU General Public
- * License (GPL) version 2 or later, in which case the provisions
- * of the GPL apply INSTEAD OF those given above.
- *
- * This software is provided ``as is``, and any express or implied
- * warranties, including, but not limited to, the implied warranties of
- * merchantability and fitness for a particular purpose are disclaimed.
- * In no event shall the company or contributors be liable for any
- * direct, indirect, incidental, special, exemplary, or consequential
- * damages (including, but not limited to, procurement of substitute
- * goods or services; loss of use, data, or profits; or business
- * interruption) however caused and on any theory of liability, whether
- * in contract, strict liability, or tort (including negligence or
- * otherwise) arising in any way out of the use of this software, even
- * if advised of the possibility of such damage.
- *
+ * Copyright(c) 2019 CESNET z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #ifndef IPFIXCOL2_NETFLOW_H
@@ -51,91 +19,90 @@ extern "C" {
 #include <stddef.h>
 
 /**
- * \brief NetFlow v5 Packet Header structure
- * \warning All values are stored in Network Byte Order!
+ * @brief NetFlow v5 Packet Header structure
+ * @warning All values are stored in Network Byte Order!
  */
 struct __attribute__((__packed__)) ipx_nf5_hdr {
-    /** NetFlow export format version number                               */
+    /// NetFlow export format version number
     uint16_t version;
-    /** Number of flows exported in this packet (1 - 30)                   */
+    /// Number of flows exported in this packet (1 - 30)
     uint16_t count;
-    /** Current time in milliseconds since the export device booted        */
+    /// Current time in milliseconds since the export device booted
     uint32_t sys_uptime;
-    /** Current count of seconds since 0000 UTC 1970                       */
+    /// Current count of seconds since 0000 UTC 1970
     uint32_t unix_sec;
-    /** Residual nanoseconds since 0000 UTC 1970                           */
+    /// Residual nanoseconds since 0000 UTC 1970
     uint32_t unix_nsec;
-    /** Sequence counter of total flows seen                               */
+    /// Sequence counter of total flows seen
     uint32_t flow_seq;
-    /** Type of flow-switching engine                                      */
+    /// Type of flow-switching engine
     uint8_t  engine_type;
-    /** Slot number of the flow-switching engine                           */
+    /// Slot number of the flow-switching engine
     uint8_t  engine_id;
-    /** First two bits hold the sampling mode.
-     *  Remaining 14 bits hold value of sampling interval                  */
+    /// First two bits hold the sampling mode. Remaining 14 bits hold value of sampling interval
     uint16_t sampling_interval;
 };
 
 /**
- * \brief NetFlow v5 Record structure
- * \warning All values are stored in Network Byte Order!
+ * @brief NetFlow v5 Record structure
+ * @warning All values are stored in Network Byte Order!
  */
 struct __attribute__((__packed__)) ipx_nf5_rec {
-    /** Source IPv4 address                                                */
+    /// Source IPv4 address
     uint32_t addr_src;
-    /** Destination IPv4 address                                           */
+    /// Destination IPv4 address
     uint32_t addr_dst;
-    /** IPv4 address of next hop router                                    */
+    /// IPv4 address of next hop router
     uint32_t nexthop;
-    /** SNMP index of input interface                                      */
+    /// SNMP index of input interface
     uint16_t snmp_input;
-    /** SNMP index of output interface                                     */
+    /// SNMP index of output interface
     uint16_t snmp_output;
-    /** Packets in the flow                                                */
+    /// Packets in the flow
     uint32_t delta_pkts;
-    /** Total number of Layer 3 bytes in the packets of the flow           */
+    /// Total number of Layer 3 bytes in the packets of the flow
     uint32_t delta_octets;
-    /** SysUptime at start of flow                                         */
+    /// SysUptime at start of flow
     uint32_t ts_first;
-    /** SysUptime at the time the last packet of the flow was received     */
+    /// SysUptime at the time the last packet of the flow was received
     uint32_t ts_last;
-    /** TCP/UDP source port number or equivalent                           */
+    /// TCP/UDP source port number or equivalent
     uint16_t port_src;
-    /** TCP/UDP destination port number or equivalent                      */
+    /// TCP/UDP destination port number or equivalent
     uint16_t port_dst;
-    /** Unused (zero) bytes                                                */
+    /// Unused (zero) bytes
     uint8_t  _pad1;
-    /** Cumulative OR of TCP flags                                         */
+    /// Cumulative OR of TCP flags
     uint8_t  tcp_flags;
-    /** IP protocol type (for example, TCP = 6; UDP = 17)                  */
+    /// IP protocol type (for example, TCP = 6; UDP = 17)
     uint8_t  proto;
-    /** IP type of service (ToS)                                           */
+    /// IP type of service (ToS)
     uint8_t  tos;
-    /** Autonomous system number of the source, either origin or peer      */
+    /// Autonomous system number of the source, either origin or peer
     uint16_t as_src;
-    /** Autonomous system number of the destination, either origin or peer */
+    /// Autonomous system number of the destination, either origin or peer
     uint16_t as_dst;
-    /** Source address prefix mask bits                                    */
+    /// Source address prefix mask bits
     uint8_t  mask_src;
-    /** Destination address prefix mask bits                               */
+    /// Destination address prefix mask bits
     uint8_t  mask_dst;
-    /** Unused (zero) bytes                                                */
+    /// Unused (zero) bytes
     uint16_t _pad2;
 };
 
-/** NetFlow v5 version number                                              */
+/// NetFlow v5 version number
 #define IPX_NF5_VERSION 0x5
-/** Size of NetFlow v5 Packet Header                                       */
+/// Size of NetFlow v5 Packet Header
 #define IPX_NF5_MSG_HDR_LEN sizeof(struct ipx_nf5_hdr)
-/** Size of NetFlow v5 Packet Record                                       */
+/// Size of NetFlow v5 Packet Record
 #define IPX_NF5_MSG_REC_LEN sizeof(struct ipx_nf5_rec)
 
 // ------------------------------------------------------------------------------------------------
 
 /**
- * \struct ipx_nf9_msg_hdr
- * \brief NetFlow v9 Packet Header structure
- * \warning All values are stored in Network Byte Order!
+ * @struct ipx_nf9_msg_hdr
+ * @brief NetFlow v9 Packet Header structure
+ * @warning All values are stored in Network Byte Order!
  */
 struct __attribute__((__packed__)) ipx_nf9_msg_hdr {
     /** Version of Flow Record format exported in this packet                                    */
@@ -162,23 +129,23 @@ struct __attribute__((__packed__)) ipx_nf9_msg_hdr {
     uint32_t source_id;
 };
 
-/** NetFlow v9 version number                                                                    */
+/// NetFlow v9 version number
 #define IPX_NF9_VERSION 0x9
-/** Size of NetFlow v5 Packet Header                                                             */
+/// Size of NetFlow v5 Packet Header
 #define IPX_NF9_MSG_HDR_LEN sizeof(struct ipx_nf9_msg_hdr)
 
-/** Flowset type identifiers */
+/// Flowset type identifiers
 enum ipx_nf9_set_id {
-    IPX_NF9_SET_TMPLT       = 0,  /**< Template FlowSet ID                                       */
-    IPX_NF9_SET_OPTS_TMPLT  = 1,  /**< Options Template FlowSet ID                               */
-    IPX_NF9_SET_MIN_DSET    = 256 /**< Minimum FlowSet ID for any Data FlowSet                   */
+    IPX_NF9_SET_TMPLT       = 0,  ///< Template FlowSet ID
+    IPX_NF9_SET_OPTS_TMPLT  = 1,  ///< Options Template FlowSet ID
+    IPX_NF9_SET_MIN_DSET    = 256 ///< Minimum FlowSet ID for any Data FlowSet
 };
 
 /**
- * \struct ipx_nf9_set_hdr
- * \brief NetFlow v9 Set Header structure
- * \remark Based on RFC 3954, Section 5.1.
- * \warning All values are stored in Network Byte Order!
+ * @struct ipx_nf9_set_hdr
+ * @brief NetFlow v9 Set Header structure
+ * @remark Based on RFC 3954, Section 5.1.
+ * @warning All values are stored in Network Byte Order!
  */
 struct __attribute__((__packed__)) ipx_nf9_set_hdr {
     /** FlowSet ID                                                                               */
@@ -193,19 +160,19 @@ struct __attribute__((__packed__)) ipx_nf9_set_hdr {
     uint16_t length;
 };
 
-/** Length of NetFlow FlowSet header (in bytes)  */
+/// Length of NetFlow FlowSet header (in bytes)
 #define IPX_NF9_SET_HDR_LEN sizeof(struct ipx_nf9_set_hdr)
 
 /**
- * \struct ipx_nf9_tmplt_ie
- * \brief NetFlow v9 Field definition structure
- * \remark Based on RFC 3954, Section 5.2.
- * \warning All values are stored in Network Byte Order!
+ * @struct ipx_nf9_tmplt_ie
+ * @brief NetFlow v9 Field definition structure
+ * @remark Based on RFC 3954, Section 5.2.
+ * @warning All values are stored in Network Byte Order!
  */
 struct __attribute__((__packed__)) ipx_nf9_tmplt_ie {
-    /** A numeric value that represents the type of the field.                                   */
+    /// A numeric value that represents the type of the field.
     uint16_t id;
-    /** The length of the corresponding Field Type, in bytes.                                    */
+    /// The length of the corresponding Field Type, in bytes.
     uint16_t length;
 };
 
@@ -213,14 +180,14 @@ struct __attribute__((__packed__)) ipx_nf9_tmplt_ie {
 #define IPX_NF9_TMPLT_IE_LEN sizeof(struct ipx_nf9_tmplt_ie)
 
 /**
- * \struct ipx_nf9_trec
- * \brief NetFlow v9 Template record structure
- * \remark Based on RFC 3954, Section 5.2.
- * \warning All values are stored in Network Byte Order!
+ * @struct ipx_nf9_trec
+ * @brief NetFlow v9 Template record structure
+ * @remark Based on RFC 3954, Section 5.2.
+ * @warning All values are stored in Network Byte Order!
  */
 struct __attribute__((__packed__)) ipx_nf9_trec {
     /**
-     * \brief Template ID of this Template.
+     * @brief Template ID of this Template.
      *
      * Each of the newly generated Template Records is given a unique Template ID.
      * This uniqueness is local to the Observation Domain that generated the Template ID.
@@ -243,12 +210,12 @@ struct __attribute__((__packed__)) ipx_nf9_trec {
 };
 
 /**
- * \struct ipx_nf9_tset
- * \brief NetFlow Template Set structure
+ * @struct ipx_nf9_tset
+ * @brief NetFlow Template Set structure
  *
  * Consists of the common Set header and the first Template record.
- * \remark Based on RFC 3954, Section 5.2.
- * \warning All values are stored in Network Byte Order!
+ * @remark Based on RFC 3954, Section 5.2.
+ * @warning All values are stored in Network Byte Order!
  */
 struct __attribute__((__packed__)) ipx_nf9_tset {
     /**
@@ -265,14 +232,14 @@ struct __attribute__((__packed__)) ipx_nf9_tset {
 };
 
 /**
- * \struct ipx_nf9_opts_trec
- * \brief NetFlow v9 Options Template record structure
- * \remark Based on RFC 3954, Section 6.1.
- * \warning All values are stored in Network Byte Order!
+ * @struct ipx_nf9_opts_trec
+ * @brief NetFlow v9 Options Template record structure
+ * @remark Based on RFC 3954, Section 6.1.
+ * @warning All values are stored in Network Byte Order!
  */
 struct __attribute__((__packed__)) ipx_nf9_opts_trec {
     /**
-     * \brief Template ID of this Options Template.
+     * @brief Template ID of this Options Template.
      *
      * Each of the newly generated Template Records is given a unique Template ID.
      * This uniqueness is local to the Observation Domain that generated the Template ID.
@@ -295,18 +262,18 @@ struct __attribute__((__packed__)) ipx_nf9_opts_trec {
 
     /**
      * Field Specifier(s)
-     * \note The Scope fields always precede the Option fields.
+     * @note The Scope fields always precede the Option fields.
      */
     struct ipx_nf9_tmplt_ie fields[1];
 };
 
 /**
- * \struct ipx_nf9_opts_tset
- * \brief NetFlow Template Set structure
+ * @struct ipx_nf9_opts_tset
+ * @brief NetFlow Template Set structure
  *
  * Consists of the common Set header and the first Options Template record.
- * \remark Based on RFC 3954, Section 6.1.
- * \warning All values are stored in Network Byte Order!
+ * @remark Based on RFC 3954, Section 6.1.
+ * @warning All values are stored in Network Byte Order!
  */
 struct __attribute__((__packed__)) ipx_nf9_opts_tset {
     /**
@@ -323,8 +290,8 @@ struct __attribute__((__packed__)) ipx_nf9_opts_tset {
 };
 
 /**
- * \struct ipx_nf9_dset
- * \brief NetFlow v9 Data FlowSet structure
+ * @struct ipx_nf9_dset
+ * @brief NetFlow v9 Data FlowSet structure
  *
  * The Data Records are sent in Data Sets. It consists only of one or more Field Values. The
  * Template ID to which the Field Values belong is encoded in the Set Header field "Set ID", i.e.,
@@ -338,7 +305,7 @@ struct __attribute__((__packed__)) ipx_nf9_dset {
      */
     struct ipx_nf9_set_hdr header;
 
-    /** Start of the first Data record */
+    /// Start of the first Data record
     uint8_t record[1];
 };
 
