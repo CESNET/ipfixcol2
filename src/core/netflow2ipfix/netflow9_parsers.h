@@ -8,8 +8,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#ifndef IPFIXCOL2_NETFLOW_PARSERS_H
-#define IPFIXCOL2_NETFLOW_PARSERS_H
+#ifndef IPFIXCOL2_NETFLOW9_PARSERS_H
+#define IPFIXCOL2_NETFLOW9_PARSERS_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -273,4 +273,4 @@ ipx_nf9_tset_iter_err(const struct ipx_nf9_tset_iter *it);
 }
 #endif
 
-#endif // IPFIXCOL2_NETFLOW_PARSERS_H
+#endif //IPFIXCOL2_NETFLOW9_PARSERS_H

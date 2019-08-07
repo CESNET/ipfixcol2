@@ -20,7 +20,7 @@
 #include <libfds/ipfix_structs.h>
 #include "netflow2ipfix.h"
 #include "netflow_structs.h"
-#include "netflow_parsers.h"
+#include "netflow9_parsers.h"
 #include "netflow9_templates.h"
 #include "../message_ipfix.h"
 #include "../verbose.h"
