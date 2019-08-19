@@ -107,7 +107,7 @@ ipx_parser_verb(ipx_parser_t *parser, enum ipx_verb_level *v_new, enum ipx_verb_
  * the Message which holds a Template manager and expected sequence number of the Message.
  * If this is the first record from the TS and ODID, new info is created.
  * Second, if the message is in the form of NetFlow, it is converted to IPFIX.
- * Finally, parse and check validity of all (Data/Template Options Template) Sets in the
+ * Finally, it parses and checks validity of all (Data/Template Options Template) Sets in the
  * IPFIX Message.
  *
  * \note

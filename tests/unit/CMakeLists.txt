@@ -12,6 +12,7 @@ unit_tests_register_test(session.cpp)
 unit_tests_register_test("core/verbose.cpp")
 
 add_subdirectory(core/parser)
+add_subdirectory(core/netflow)
 # >> Add your new tests or test subdirectories HERE <<
 
 # Enable code coverage target (i.e. make coverage) when appropriate build

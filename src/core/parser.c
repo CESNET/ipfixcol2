@@ -2,10 +2,10 @@
  * \file src/core/parser.c
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief IPFIX Message parser (source file)
- * \date 2018
+ * \date 2018-2019
  */
 
-/* Copyright (C) 2018 CESNET, z.s.p.o.
+/* Copyright (C) 2018-2019 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,6 +49,8 @@
 #include "parser.h"
 #include "verbose.h"
 #include "fpipe.h"
+#include "netflow2ipfix/netflow2ipfix.h"
+#include "netflow2ipfix/netflow_structs.h"
 
 /** Default record of the parser structure */
 #define PARSER_DEF_RECS 8
@@ -77,6 +79,18 @@ enum stream_ctx_flags {
     SCF_BLOCK = (1 << 0),
 };
 
+/** Type of source data                                                */
+enum source_type {
+    /// Unknown type of messages
+    ST_UNKNOWN,
+    /// IPFIX Messages
+    ST_IPFIX,
+    /// NetFlow v5 Messages
+    ST_NETFLOW5,
+    /// NetFlow v9 Messages
+    ST_NETFLOW9
+};
+
 /**
  * \brief Stream context
  * \note Represents parameters common to all streams within the same combination of Transport
@@ -87,6 +101,15 @@ struct stream_ctx {
     fds_tmgr_t *mgr;
     /** Connection flags (see #stream_ctx_flags)  */
     uint16_t flags;
+    /** Type of source messages (IPFIX/NetFlow)   */
+    enum source_type type;
+    /** Messages converters to IPFIX (based on source type) */
+    union {
+        /** Converter from NetFlow v5 to IPFIX    */
+        ipx_nf5_conv_t *nf5;
+        /** Converter from NetFlow v9 to IPFIX    */
+        ipx_nf9_conv_t *nf9;
+    } converter;
 
     /** Number of pre-allocated stream records    */
     size_t infos_alloc;
@@ -207,6 +230,7 @@ stream_ctx_create(const struct ipx_parser *parser, const struct ipx_session *ses
     ctx->infos_alloc = STREAM_DEF_RECS;
     ctx->infos_valid = 0;
     ctx->flags = 0;
+    ctx->type = ST_UNKNOWN; // type of flows is unknown
 
     // Initialize a new template manager
     ctx->mgr = fds_tmgr_create(session->type);
@@ -241,6 +265,15 @@ static void
 stream_ctx_destroy(struct stream_ctx *ctx)
 {
     fds_tmgr_destroy(ctx->mgr);
+
+    // Destroy converters
+    if (ctx->type == ST_NETFLOW5 && ctx->converter.nf5 != NULL) {
+        ipx_nf5_conv_destroy(ctx->converter.nf5);
+    }
+    if (ctx->type == ST_NETFLOW9 && ctx->converter.nf9 != NULL) {
+        ipx_nf9_conv_destroy(ctx->converter.nf9);
+    }
+
     free(ctx);
 }
 
@@ -988,6 +1021,127 @@ parser_session_block_all(ipx_parser_t *parser)
     }
 }
 
+/**
+ * \brief Convert a message with flow records to IPFIX Message format
+ *
+ * If the message is already in IPFIX Message format, no conversion is performed.
+ * The function also check if the message type matches previously seen type of messages
+ * in the stream.
+ *
+ * @param[in]     parser Parser (for logging information)
+ * @param[in]     rec    Parser record of the current stream
+ * @param[in,out] msg    Message wrapper with a message to convert
+ *
+ * @return #IPX_OK on success
+ * @return #IPX_ERR_DENIED if the message cannot be converted (i.e. not NetFlow or IPFIX)
+ * @return #IPX_ERR_FORMAT if the message is malformed and stream must be closed/reset
+ * @return #IPX_ERR_NOMEM in case of a memory allocation error
+ */
+static int
+parser_convert(ipx_parser_t *parser, struct parser_rec *rec, ipx_msg_ipfix_t *msg)
+{
+    const struct ipx_msg_ctx *msg_ctx = &msg->ctx;
+    const uint8_t *msg_data = msg->raw_pkt;
+    const uint16_t msg_size = msg->raw_size;
+
+    if (msg_size < sizeof(uint16_t)) {
+        return FDS_ERR_FORMAT;
+    }
+
+    // Determine the version of flow message
+    const uint16_t version = ntohs(*(uint16_t *) msg_data);
+
+    enum source_type type = rec->ctx->type;
+    if (type == ST_UNKNOWN) {
+        // This is the first message that we received for processing
+        switch (version) {
+        case FDS_IPFIX_VERSION:
+            // IPFIX
+            rec->ctx->type = ST_IPFIX;
+            break;
+        case IPX_NF9_VERSION:
+            // NetFlow v9 (+ initialize converter)
+            rec->ctx->type = ST_NETFLOW9;
+            rec->ctx->converter.nf9 = ipx_nf9_conv_init(parser->ident, parser->vlevel);
+            if (!rec->ctx->converter.nf9) {
+                PARSER_ERROR(parser, msg_ctx, "Failed to initialize NetFlow v9 converter!", '\0');
+                return IPX_ERR_NOMEM;
+            }
+            break;
+        case IPX_NF5_VERSION: {
+            // NetFlow v5 (+ initialize converter)
+            rec->ctx->type = ST_NETFLOW5;
+
+            // Determine suitable Template refresh interval
+            uint32_t tmplt_refresh = 0; // disabled
+            if (rec->session->type == FDS_SESSION_UDP) {
+                // Lifetime should be at least 3x higher than refresh interval
+                tmplt_refresh = rec->session->udp.lifetime.tmplts / 3U;
+            }
+
+            rec->ctx->converter.nf5 = ipx_nf5_conv_init(parser->ident, parser->vlevel,
+                tmplt_refresh, rec->odid);
+            if (!rec->ctx->converter.nf5) {
+                PARSER_ERROR(parser, msg_ctx, "Failed to initialize NetFlow v5 converter!", '\0');
+                return IPX_ERR_NOMEM;
+            }
+            }
+            break;
+        default:
+            PARSER_ERROR(parser, msg_ctx, "Unexpected NetFlow/IPFIX message version (expected: "
+                "5,9 or 10, got: %" PRIu16 ")", version);
+            return IPX_ERR_DENIED;
+        }
+    }
+
+    type = rec->ctx->type;
+    assert(type != ST_UNKNOWN);
+
+    // Perform convertion based on the stream type, if necessary
+    int conv_status = IPX_OK;
+    switch (type) {
+    case ST_IPFIX:
+        // IPFIX
+        if (version != FDS_IPFIX_VERSION) {
+            PARSER_ERROR(parser, msg_ctx, "Expected an IPFIX Message but non-IPFIX data has been "
+                "received (expected version: 10, got: %" PRIu16 ")", version);
+            return IPX_ERR_FORMAT;
+        }
+
+        // Nothing to convert...
+        break;
+    case ST_NETFLOW9:
+        // NetFlow v9 -> convert to IPFIX
+        if (version != IPX_NF9_VERSION) {
+            PARSER_ERROR(parser, msg_ctx, "Expected NetFlow v9 Message but non-NetFlow data has "
+                "been received (expected version: 9, got: %" PRIu16 ")", version);
+            return IPX_ERR_FORMAT;
+        }
+
+        conv_status = ipx_nf9_conv_process(rec->ctx->converter.nf9, msg);
+        break;
+    case ST_NETFLOW5:
+        // NetFlow v5 -> convert to IPFIX
+        if (version != IPX_NF5_VERSION) {
+            PARSER_ERROR(parser, msg_ctx, "Expected NetFlow v5 Message but non-NetFlow data has "
+                "been received (expected version: 5, got: %" PRIu16 ")", version);
+            return IPX_ERR_FORMAT;
+        }
+
+        conv_status = ipx_nf5_conv_process(rec->ctx->converter.nf5, msg);
+        break;
+    default:
+        PARSER_ERROR(parser, msg_ctx, "Unimplemented support for message format conversion!", '\0');
+        return IPX_ERR_DENIED;
+    }
+
+    if (conv_status != IPX_OK) {
+        return (conv_status == IPX_ERR_NOMEM) ? IPX_ERR_NOMEM : IPX_ERR_FORMAT;
+    }
+
+    return IPX_OK;
+}
+
 ipx_parser_t *
 ipx_parser_create(const char *ident, enum ipx_verb_level vlevel)
 {
@@ -1038,6 +1192,18 @@ ipx_parser_verb(ipx_parser_t *parser, enum ipx_verb_level *v_new, enum ipx_verb_
 
     if (v_new != NULL) {
         parser->vlevel = *v_new;
+
+        // Change verbosity of all converters too
+        for (size_t i = 0; i < parser->recs_valid; ++i) {
+            struct stream_ctx *ctx = parser->recs[i].ctx;
+
+            if (ctx->type == ST_NETFLOW5 && ctx->converter.nf5 != NULL) {
+                ipx_nf5_conv_verb(ctx->converter.nf5, *v_new);
+            }
+            if (ctx->type == ST_NETFLOW9 && ctx->converter.nf9 != NULL) {
+                ipx_nf9_conv_verb(ctx->converter.nf9, *v_new);
+            }
+        }
     }
 }
 
@@ -1046,7 +1212,6 @@ ipx_parser_process(ipx_parser_t *parser, ipx_msg_ipfix_t **ipfix, ipx_msg_garbag
 {
     *garbage = NULL;
     const struct ipx_msg_ctx *msg_ctx = &(*ipfix)->ctx;
-    const struct fds_ipfix_msg_hdr *msg_data = (struct fds_ipfix_msg_hdr *)(*ipfix)->raw_pkt;
 
     // Find a Stream Info
     struct parser_rec *rec;   // Combination of Transport Session, ODID
@@ -1069,13 +1234,20 @@ ipx_parser_process(ipx_parser_t *parser, ipx_msg_ipfix_t **ipfix, ipx_msg_garbag
     assert(rec->odid == msg_ctx->odid);
     assert(info->id == msg_ctx->stream);
 
-    // Check IPFIX Message header and its sequence number
-    if (ntohs(msg_data->version) != FDS_IPFIX_VERSION) {
-        // TODO: convert NetFlow to IPFIX
-        PARSER_ERROR(parser, msg_ctx, "IPFIX Message version doesn't match (expected: "
-            "%" PRIu16 ", got: %" PRIu16 ")", FDS_IPFIX_VERSION, ntohs(msg_data->version));
-        return IPX_ERR_FORMAT;
+    // Check if the message must be converted to IPFIX
+    int conv_status = parser_convert(parser, rec, *ipfix);
+    if (conv_status != IPX_OK) {
+        // Note: An appropriate error message has been printed in the converter
+        if (conv_status != FDS_ERR_NOMEM) {
+            return FDS_ERR_FORMAT;
+        }
+
+        return FDS_ERR_NOMEM;
     }
+
+    // Check IPFIX Message header and its sequence number
+    const struct fds_ipfix_msg_hdr *msg_data = (struct fds_ipfix_msg_hdr *)(*ipfix)->raw_pkt;
+    assert(ntohs(msg_data->version) == FDS_IPFIX_VERSION && "Message to parse must be IPFIX!");
 
     if (ntohs(msg_data->length) < FDS_IPFIX_MSG_HDR_LEN) {
         PARSER_ERROR(parser, msg_ctx, "IPFIX Message Header size (%" PRIu16 ") is invalid "
@@ -1106,6 +1278,7 @@ ipx_parser_process(ipx_parser_t *parser, ipx_msg_ipfix_t **ipfix, ipx_msg_garbag
             }
         }
     }
+    info->flags |= SIF_SEEN;
 
     // Configure a template manager
     fds_tmgr_t *tmgr = rec->ctx->mgr;

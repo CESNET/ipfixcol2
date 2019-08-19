@@ -116,11 +116,12 @@ struct ipx_ipfix_record {
  * \param[in] plugin_ctx Context of the plugin
  * \param[in] msg_ctx    Message context (info about Transport Session, ODID, etc.)
  * \param[in] msg_data   Pointer to the IPFIX (or NetFlow) Message header
+ * \param[in] msg_size   Total size of the IPFIX (or NetFlow) Message
  * \return Pointer or NULL (memory allocation error)
  */
 IPX_API ipx_msg_ipfix_t *
 ipx_msg_ipfix_create(const ipx_ctx_t *plugin_ctx, const struct ipx_msg_ctx *msg_ctx,
-    uint8_t *msg_data);
+    uint8_t *msg_data, uint16_t msg_size);
 
 /**
  * \brief Destroy a message wrapper with a parsed IPFIX packet

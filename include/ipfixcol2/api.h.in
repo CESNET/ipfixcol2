@@ -105,6 +105,8 @@ extern "C" {
 // Note: Following codes preservers the same numbering as libfds
 /** Status code for success                                               */
 #define IPX_OK             (0)
+/** Status code for the end of a context                                      */
+#define IPX_EOC            (-1)
 /** Status code for ready operation                                       */
 #define IPX_READY          (-11)
 /** Status code for memory allocation error                               */
