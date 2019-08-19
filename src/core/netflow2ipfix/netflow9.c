@@ -29,7 +29,7 @@
 #define NF_INCOMP_ID_MIN  128
 /// IPFIX Enterprise Number for incompatible NetFlow IEs (128 <= ID <= 32767)
 #define NF_INCOMP_EN_LOW  4294967294UL
-/// IPFIX Enterprise Number for incompatible NetFlow IEs (32767 <= ID <= 65535)
+/// IPFIX Enterprise Number for incompatible NetFlow IEs (32768 <= ID <= 65535)
 #define NF_INCOMP_EN_HIGH 4294967295UL
 /**
  * Maximum length of any IPFIX Message Set
@@ -62,15 +62,15 @@ struct nf2ipx_opts {
  */
 static const struct nf2ipx_opts nf2ipx_opts_table[] = {
     // "System"    -> iana:exportingProcessId
-    {1U, 144U, 4U},
+    {IPX_NF9_SCOPE_SYSTEM,     144U, 4U},
     // "Interface" -> iana:ingressInterface
-    {2U,  10U, 4U},
+    {IPX_NF9_SCOPE_INTERFACE,   10U, 4U},
     // "Line Card" -> iana:lineCardId
-    {3U, 141U, 4U},
+    {IPX_NF9_SCOPE_LINE_CARD,  141U, 4U},
     // "Cache"     -> ??? (maybe iana:meteringProcessId)
-    // {4, xxx, xxx},
+    // {IPX_NF9_SCOPE_CACHE, xxx, xxx},
     // "Template"  -> iana:templateId
-    {5U, 145U, 2U}
+    {IPX_NF9_SCOPE_TEMPLATE,   145U, 2U}
 };
 
 /// Number of record the the Options conversion table
@@ -108,9 +108,9 @@ struct nf2ipx_data {
  */
 static const struct nf2ipx_data nf2ipx_data_table[] = {
     // Conversion from relative to absolute TS: "LAST_SWITCHED"  -> iana:flowEndMilliseconds
-    {{21U, 4U}, {153U, 0U, 8U}, {NF2IPX_ITYPE_TS, 8U}},
+    {{IPX_NF9_IE_LAST_SWITCHED,  4U}, {153U, 0U, 8U}, {NF2IPX_ITYPE_TS, 8U}},
     // Conversion from relative to absolute TS: "FIRST_SWITCHED" -> iana:flowStartMilliseconds
-    {{22U, 4U}, {152U, 0U, 8U}, {NF2IPX_ITYPE_TS, 8U}}
+    {{IPX_NF9_IE_FIRST_SWITCHED, 4U}, {152U, 0U, 8U}, {NF2IPX_ITYPE_TS, 8U}}
 };
 
 /// Number of record the the Data conversion table */
@@ -801,7 +801,7 @@ conv_tmplt_from_data(ipx_nf9_conv_t *conv, const struct ipx_nf9_tset_iter *it, u
  * The function creates and appends a new IPFIX (Options) Template Set with converted
  * (Options) Template records to the new IPFIX Message. For each NetFlow (Options) Template
  * record a conversion function is called and the new IPFIX Template record is stored for future
- * using during parsing and Data record conversions.
+ * parsing and Data record conversions.
  * @param[in] conv        Converter internals
  * @param[in] flowset_hdr NetFlow (Options) Template Set to be converted
  * @return #IPX_OK on success
@@ -928,7 +928,7 @@ conv_process_tset(ipx_nf9_conv_t *conv, const struct ipx_nf9_set_hdr *flowset_hd
 static inline uint64_t
 conv_ts_rel2abs(const struct ipx_nf9_msg_hdr *hdr, const uint32_t *nf_ts)
 {
-    const uint64_t hdr_exp = ntohl(hdr->unix_sec) * 1000U;
+    const uint64_t hdr_exp = ntohl(hdr->unix_sec) * 1000ULL;
     const uint64_t hdr_sys = ntohl(hdr->sys_uptime);
     const uint64_t rec_sys = ntohl(*nf_ts);
     return (hdr_exp - hdr_sys) + rec_sys;
@@ -962,7 +962,6 @@ conv_process_drec(ipx_nf9_conv_t *conv, const struct ipx_nf9_msg_hdr *nf9_msg,
     // Execute conversion instructions
     const uint8_t *nf9_pos = nf9_rec;
     uint8_t *ipx_pos = conv_mem_ptr_now(conv);
-    size_t offset_start = conv_mem_pos_get(conv);
 
     for (size_t i = 0; i < tmplt->instr_size; ++i) {
         const struct nf2ipx_instr *instr = &tmplt->instr_data[i];
@@ -975,7 +974,7 @@ conv_process_drec(ipx_nf9_conv_t *conv, const struct ipx_nf9_msg_hdr *nf9_msg,
             break;
         case NF2IPX_ITYPE_TS:
             // Convert relative timestamp to absolute timestamp
-            *((uint64_t *) ipx_pos) = conv_ts_rel2abs(nf9_msg, (uint32_t *) nf9_pos);
+            *((uint64_t *) ipx_pos) = htobe64(conv_ts_rel2abs(nf9_msg, (uint32_t *) nf9_pos));
             nf9_pos += 4U; // NetFlow TS (FIRST_SWITCHED/LAST_SWITCHED)
             ipx_pos += 8U; // IPFIX TS (iana:flowStartMilliseconds/flowEndMilliseconds)
             break;
@@ -986,7 +985,6 @@ conv_process_drec(ipx_nf9_conv_t *conv, const struct ipx_nf9_msg_hdr *nf9_msg,
     }
 
     // Commit written memory
-    assert(tmplt->ipx_drec_len == (conv_mem_pos_get(conv) - offset_start));
     conv_mem_commit(conv, tmplt->ipx_drec_len);
     return IPX_OK;
 }
@@ -1014,7 +1012,7 @@ conv_process_dset(ipx_nf9_conv_t *conv, const struct ipx_nf9_set_hdr *flowset_hd
     const struct nf9_trec *tmplt = nf9_tmplts_find(&conv->l1_table, tid);
     if (!tmplt) {
         // Template NOT found!
-        CONV_WARNING(conv, "Unable to convert NetFlow v9 Data Set (FlowSet ID: " PRIu16 ") to "
+        CONV_WARNING(conv, "Unable to convert NetFlow v9 Data Set (FlowSet ID: %" PRIu16 ") to "
             "IPFIX due to missing NetFlow template. The Data FlowSet and its records will be "
             "dropped!", tid);
         return IPX_OK;
@@ -1129,7 +1127,7 @@ conv_process_msg(ipx_nf9_conv_t *conv, const struct ipx_nf9_msg_hdr *nf9_msg, ui
             // (Options) Template FlowSet
             rc_conv = conv_process_tset(conv, it.set);
         } else {
-            // Unknown FlowSet ID
+            // Unknown FlowSet ID // TODO: skip unknown
             CONV_ERROR(conv, "Unknown FlowSet ID %" PRIu16, flowset_id);
             rc_conv = IPX_ERR_FORMAT;
         }
@@ -1203,8 +1201,10 @@ ipx_nf9_conv_process(ipx_nf9_conv_t *conv, ipx_msg_ipfix_t *wrapper)
     CONV_DEBUG(conv, "Converting a NetFlow Message v9 (seq. num. %" PRIu32 ") to an IPFIX Message "
         "(new seq. num. %" PRIu32 ")", msg_seq, conv->ipx_seq_next);
 
-    bool old_oos = false; // Old (out of sequence message)
+    bool is_oos = false; // Old (out of sequence message)
     if (conv->nf9_seq_next != msg_seq) {
+        is_oos = true;
+
         if (!conv->nf9_seq_valid) {
             // The first message to convert
             conv->nf9_seq_valid = true;
@@ -1214,16 +1214,15 @@ ipx_nf9_conv_process(ipx_nf9_conv_t *conv, ipx_msg_ipfix_t *wrapper)
             CONV_WARNING(conv, "Unexpected Sequence number (expected: %" PRIu32 ", got: %" PRId32 ")",
                 conv->nf9_seq_next, msg_seq);
             if (conv_seq_num_cmp(msg_seq, conv->nf9_seq_next) > 0) {
-                conv->nf9_seq_next = msg_seq + 1; // Newer than expected
-            } else {
-                old_oos = true; // Older than expected
+                // Newer than expected (expect that all previous messages are lost)
+                conv->nf9_seq_next = msg_seq + 1;
             }
         }
     }
     conv->nf9_seq_valid = true;
 
     // Update expected Sequence number of the next NetFlow message
-    if (!old_oos) {
+    if (!is_oos) {
         ++conv->nf9_seq_next;
     }
 
@@ -1266,4 +1265,10 @@ ipx_nf9_conv_process(ipx_nf9_conv_t *conv, ipx_msg_ipfix_t *wrapper)
     wrapper->raw_pkt = conv_mem_release(conv);
     wrapper->raw_size = (uint16_t) ipx_size;
     return IPX_OK;
+}
+
+void
+ipx_nf9_conv_verb(ipx_nf9_conv_t *conv, enum ipx_verb_level v_new)
+{
+    conv->vlevel = v_new;
 }

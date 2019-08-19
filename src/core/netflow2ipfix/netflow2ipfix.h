@@ -69,6 +69,12 @@ ipx_nf5_conv_destroy(ipx_nf5_conv_t *conv);
  * @note
  *   In case of an error (i.e. return code different from #IPX_OK) the original NetFlow Message
  *   in the wrapper is untouched.
+ * @note
+ *   Sequence number of the first IPFIX Message is deduced from the first NetFlow message to
+ *   convert. Sequence numbers of following converted messages is incremented independently
+ *   on the original NetFlow sequence number to avoid creation of invalid messages. In other words,
+ *   missing or reordered NetFlow messages don't affect correctness of the IPFIX stream.
+ *
  * @param[in] conv    Message converter
  * @param[in] wrapper Message wrapper
  * @return #IPX_OK on success
@@ -77,6 +83,15 @@ ipx_nf5_conv_destroy(ipx_nf5_conv_t *conv);
  */
 int
 ipx_nf5_conv_process(ipx_nf5_conv_t *conv, ipx_msg_ipfix_t *wrapper);
+
+/**
+ * @brief Change verbosity level
+ *
+ * @param[in] conv   Message converter
+ * @param[in] v_new  New verbosity level
+ */
+void
+ipx_nf5_conv_verb(ipx_nf5_conv_t *conv, enum ipx_verb_level v_new);
 
 /**
  * @}
@@ -92,6 +107,13 @@ ipx_nf5_conv_process(ipx_nf5_conv_t *conv, ipx_msg_ipfix_t *wrapper);
  * exporter. If it is necessary to convert streams from the same exporter with different Source
  * IDs or from multiple exporters at time, you MUST create an independent instance for each
  * stream (i.e. combination of an Exporter and Source ID).
+ *
+ * @note
+ *   NetFlow Field Specifiers with ID > 127 are not backwards compatible with IPFIX Information
+ *   Elements, therefore, after conversion these specifiers are defined as Enterprise Specific
+ *   fields with Enterprise Number 4294967294 (128 <= ID <= 32767) or Enterprise Number 4294967295
+ *   (32768 <= ID <= 65535). In the latter case, the ID of the field is changed to fit into
+ *   range 0..32767: newID = oldID - 32768.
  *
  * @note
  *   In the context of IPFIX protocol, the Source ID is referred as Observation Domain ID (ODID)
@@ -133,6 +155,11 @@ ipx_nf9_conv_destroy(ipx_nf9_conv_t *conv);
  * @note
  *   After conversion the IPFIX Message is not ready to be used for accessing flow records,
  *   it MUST be processed by the IPFIX Parser first.
+ * @note
+ *   Sequence numbers of IPFIX Messages are incremented independently on NetFlow messages to
+ *   convert and starts from 0. In other words, missing or reordered NetFlow messages don't
+ *   affect correctness of the IPFIX stream.
+ *
  * @param[in] conv    Message converter
  * @param[in] wrapper Message wrapper
  * @return #IPX_OK on success
@@ -141,6 +168,15 @@ ipx_nf9_conv_destroy(ipx_nf9_conv_t *conv);
  */
 int
 ipx_nf9_conv_process(ipx_nf9_conv_t *conv, ipx_msg_ipfix_t *wrapper);
+
+/**
+ * @brief Change verbosity level
+ *
+ * @param[in] conv   Message converter
+ * @param[in] v_new  New verbosity level
+ */
+void
+ipx_nf9_conv_verb(ipx_nf9_conv_t *conv, enum ipx_verb_level v_new);
 
 /**
  * @}

@@ -547,3 +547,9 @@ ipx_nf5_conv_process(ipx_nf5_conv_t *conv, ipx_msg_ipfix_t *wrapper)
     wrapper->raw_size = (uint16_t) ipx_size;
     return IPX_OK;
 }
+
+void
+ipx_nf5_conv_verb(ipx_nf5_conv_t *conv, enum ipx_verb_level v_new)
+{
+    conv->conf.vlevel = v_new;
+}
