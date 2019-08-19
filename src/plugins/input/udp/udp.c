@@ -2,10 +2,10 @@
  * \file src/plugins/input/udp/udp.c
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief UDP input plugin for IPFIXcol 2
- * \date 2018
+ * \date 2018-2019
  */
 
-/* Copyright (C) 2018 CESNET, z.s.p.o.
+/* Copyright (C) 2018-2019 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -77,10 +77,67 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
     // Configuration flags (reserved for future use)
     .flags = 0,
     // Plugin version string (like "1.2.3")
-    .version = "2.0.0",
+    .version = "2.1.0",
     // Minimal IPFIXcol version string (like "1.2.3")
-    .ipx_min = "2.0.0"
+    .ipx_min = "2.1.0"
 };
+
+/**
+ * @struct nf5_msg_hdr
+ * @brief NetFlow v5 Packet Header structure
+ * @warning All values are stored in Network Byte Order!
+ */
+struct __attribute__((__packed__)) nf5_msg_hdr {
+    /// NetFlow export format version number
+    uint16_t version;
+    /// Number of flows exported in this packet (1 - 30)
+    uint16_t count;
+    /// Current time in milliseconds since the export device booted
+    uint32_t sys_uptime;
+    /// Current count of seconds since 0000 UTC 1970
+    uint32_t unix_sec;
+    /// Residual nanoseconds since 0000 UTC 1970
+    uint32_t unix_nsec;
+    /// Sequence counter of total flows seen
+    uint32_t flow_seq;
+    /// Type of flow-switching engine
+    uint8_t  engine_type;
+    /// Slot number of the flow-switching engine
+    uint8_t  engine_id;
+    /// First two bits hold the sampling mode. Remaining 14 bits hold value of sampling interval
+    uint16_t sampling_interval;
+};
+
+/** Version identification in NetFlow v5 header                                                  */
+#define NF5_HDR_VERSION   (5)
+/** Length of NetFlow v5 header (in bytes)                                                       */
+#define NF5_HDR_LEN       (sizeof(struct nf5_msg_hdr))
+
+/**
+ * @struct nf9_msg_hdr
+ * @brief NetFlow v9 Packet Header structure
+ * @warning All values are stored in Network Byte Order!
+ */
+struct __attribute__((__packed__)) nf9_msg_hdr {
+    /// Version of Flow Record format exported in this packet
+    uint16_t version;
+    /// The total number of records in the Export Packet
+    uint16_t count;
+    /// Time in milliseconds since this device was first booted
+    uint32_t sys_uptime;
+    /// Time in seconds since 0000 UTC 1970, at which the Export Packet leaves the Exporter
+    uint32_t unix_sec;
+    /// Incremental sequence counter of all Export Packets by the Exporter
+    uint32_t seq_number;
+    /// Exporter Observation Domain
+    uint32_t source_id;
+};
+
+/** Version identification in NetFlow v9 header                                                  */
+#define NF9_HDR_VERSION   (9)
+/** Length of NetFlow v9 header (in bytes)                                                       */
+#define NF9_HDR_LEN       (sizeof(struct nf9_msg_hdr))
+
 
 /** Description of a UDP Transport Session                                                       */
 struct udp_source {
@@ -850,7 +907,7 @@ process_timer(struct udp_data *instance, int fd)
 }
 
 /**
- * \brief Get an IPFIX message from a socket and pass it
+ * \brief Get an IPFIX/NetFlow message from a socket and pass it
  * \param[in] instance Instance data
  * \param[in] sd       File descriptor of the socket
  */
@@ -858,8 +915,6 @@ static void
 process_socket(struct udp_data *instance, int sd)
 {
     const char *err_str;
-    struct fds_ipfix_msg_hdr hdr;
-    static_assert(sizeof(hdr) == FDS_IPFIX_MSG_HDR_LEN, "Invalid size of IPFIX Message header");
 
     // Get size of the message
     int msg_size;
@@ -870,9 +925,10 @@ process_socket(struct udp_data *instance, int sd)
         return;
     }
 
-    if (msg_size < FDS_IPFIX_MSG_HDR_LEN || msg_size > UINT16_MAX) {
+    if (msg_size < (int) sizeof(uint16_t) || msg_size > UINT16_MAX) {
         // Remove the malformed message from the buffer
-        ssize_t ret = recvfrom(sd, &hdr, sizeof(hdr), 0, NULL, NULL);
+        uint16_t mini_buffer;
+        ssize_t ret = recvfrom(sd, &mini_buffer, sizeof(mini_buffer), 0, NULL, NULL);
         if (ret == -1) {
             ipx_strerror(errno, err_str);
             IPX_CTX_WARNING(instance->ctx, "An error has occurred during reading a malformed "
@@ -917,11 +973,44 @@ process_socket(struct udp_data *instance, int sd)
         return;
     }
 
-    // Check IPFIX header
-    const struct fds_ipfix_msg_hdr *msg_hdr = (const struct fds_ipfix_msg_hdr *) buffer;
-    if (ntohs(msg_hdr->version) != FDS_IPFIX_VERSION
-            || ntohs(msg_hdr->length) < FDS_IPFIX_MSG_HDR_LEN) {
-        IPX_CTX_ERROR(instance->ctx, "Receiver an invalid IPFIX Message header from '%s'. "
+    // Check NetFlow/IPFIX header length and extract ODID/Source ID
+    const uint16_t msg_ver = ntohs(*(uint16_t *) buffer);
+    uint32_t msg_odid = 0;
+    bool is_len_ok = true;
+
+    switch (msg_ver) {
+    case FDS_IPFIX_VERSION: // IPFIX
+        if (msg_size < FDS_IPFIX_MSG_HDR_LEN) {
+            is_len_ok = false;
+            break;
+        }
+
+        msg_odid = ntohl(((const struct fds_ipfix_msg_hdr *) buffer)->odid);
+        break;
+    case NF9_HDR_VERSION: // NetFlow v9
+        if (msg_size < (int) NF9_HDR_LEN) {
+            is_len_ok = false;
+            break;
+        }
+
+        msg_odid = ntohl(((const struct nf9_msg_hdr *) buffer)->source_id);
+        break;
+    case NF5_HDR_VERSION: // NetFlow v5
+        if (msg_size < (int) NF5_HDR_LEN) {
+            is_len_ok = false;
+            break;
+        }
+
+        // Source ID is not available in NetFlow v5 -> always 0
+        msg_odid = 0;
+        break;
+    default:
+        is_len_ok = false;
+        break;
+    }
+
+    if (!is_len_ok) {
+        IPX_CTX_ERROR(instance->ctx, "Receiver an invalid NetFlow/IPFIX Message header from '%s'. "
             "The message will be dropped!", source->session->ident);
         free(buffer);
         return;
@@ -943,7 +1032,7 @@ process_socket(struct udp_data *instance, int sd)
     // Create a message wrapper and pass the message
     struct ipx_msg_ctx msg_ctx;
     msg_ctx.session = source->session;
-    msg_ctx.odid = ntohl(msg_hdr->odid);
+    msg_ctx.odid = msg_odid;
     msg_ctx.stream = 0; // Streams are not supported over UDP
 
     ipx_msg_ipfix_t *msg = ipx_msg_ipfix_create(instance->ctx, &msg_ctx, buffer, (uint16_t) msg_size);
