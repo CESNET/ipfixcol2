@@ -60,6 +60,10 @@ struct cfg_format {
     bool white_spaces;
     /** Ignore Options Template records                                                          */
     bool ignore_options;
+    /** Use only numeric identifiers of Information Elements                                     */
+    bool numeric_names;
+    /** Split biflow records                                                                     */
+    bool split_biflow;
 };
 
 /** Output configuration base structure                                                          */

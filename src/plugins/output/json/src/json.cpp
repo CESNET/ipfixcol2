@@ -2,10 +2,10 @@
  * \file src/plugins/output/json/src/json.cpp
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief JSON output plugin (source file)
- * \date 2018
+ * \date 2018-2019
  */
 
-/* Copyright (C) 2018 CESNET, z.s.p.o.
+/* Copyright (C) 2018-2019 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -61,9 +61,9 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
     // Configuration flags (reserved for future use)
     0,
     // Plugin version string (like "1.2.3")
-    "2.0.0",
+    "2.1.0",
     // Minimal IPFIXcol version string (like "1.2.3")
-    "2.0.0"
+    "2.1.0"
 };
 
 /** JSON instance data                                                                           */
@@ -111,7 +111,7 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
         // Create and parse the configuration
         std::unique_ptr<Instance> ptr(new Instance);
         std::unique_ptr<Config> cfg(new Config(params));
-        std::unique_ptr<Storage> storage(new Storage(cfg.get()->format));
+        std::unique_ptr<Storage> storage(new Storage(ctx, cfg.get()->format));
 
         // Initialize outputs
         outputs_initialize(ctx, storage.get(), cfg.get());
@@ -150,13 +150,17 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
     (void) ctx;
 
     int ret_code = IPX_OK;
+    const fds_iemgr_t *iemgr = ipx_ctx_iemgr_get(ctx);
+
     try {
         struct Instance *data = reinterpret_cast<struct Instance *>(cfg);
-        ret_code = data->storage->records_store(ipx_msg_base2ipfix(msg));
+        ret_code = data->storage->records_store(ipx_msg_base2ipfix(msg), iemgr);
     } catch (std::exception &ex) {
         IPX_CTX_ERROR(ctx, "%s", ex.what());
+        ret_code = FDS_ERR_DENIED;
     } catch (...) {
         IPX_CTX_ERROR(ctx, "Unexpected exception has occurred!", '\0');
+        ret_code = FDS_ERR_DENIED;
     }
 
     return ret_code;
