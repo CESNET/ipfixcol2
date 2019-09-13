@@ -70,6 +70,7 @@ Don't forget to remove (or comment) outputs that you don't want to use!
             <nonPrintableChar>true</nonPrintableChar>
             <numericNames>false</numericNames>
             <splitBiflow>false</splitBiflow>
+	    <detailedInfo>true</detailedInfo>
 
             <outputs>
                 <server>
@@ -141,6 +142,10 @@ Formatting parameters:
 :``splitBiflow``:
     In case of Biflow records, split the record to two unidirectional flow records. Non-biflow
     records are unaffected. [values: true/false, default: false]
+
+:``detailedInfo``:
+    Add detailed info about the IPFIX message (export time, sequence number, ...) to each record
+    under "ipfix:" prefix. [values: true/false, default: false]
 
 ----
 
