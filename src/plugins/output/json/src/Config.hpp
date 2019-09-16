@@ -58,6 +58,8 @@ struct cfg_format {
     bool ignore_unknown;
     /** Convert white spaces in string (do not skip)                                             */
     bool white_spaces;
+    /** Add detailed information about each record                                            */
+    bool detailed_info;
     /** Ignore Options Template records                                                          */
     bool ignore_options;
     /** Use only numeric identifiers of Information Elements                                     */

@@ -81,6 +81,7 @@ Storage::Storage(const ipx_ctx_t *ctx, const struct cfg_format &fmt)
     if (m_format.split_biflow) {
         m_flags |= FDS_CD2J_REVERSE_SKIP;
     }
+
 }
 
 Storage::~Storage()
@@ -149,6 +150,9 @@ Storage::records_store(ipx_msg_ipfix_t *msg, const fds_iemgr_t *iemgr)
     // Process all data records
     const uint32_t rec_cnt = ipx_msg_ipfix_get_drec_cnt(msg);
 
+    // Message header
+    auto hdr = (fds_ipfix_msg_hdr*) ipx_msg_ipfix_get_packet(msg);
+
     for (uint32_t i = 0; i < rec_cnt; ++i) {
         ipx_ipfix_record *ipfix_rec = ipx_msg_ipfix_get_drec(msg, i);
 
@@ -159,7 +163,7 @@ Storage::records_store(ipx_msg_ipfix_t *msg, const fds_iemgr_t *iemgr)
         }
 
         // Convert the record
-        convert(ipfix_rec->rec, iemgr, false);
+        convert(ipfix_rec->rec, iemgr, hdr, false);
 
         // Store it
         for (Output *output : m_outputs) {
@@ -174,7 +178,7 @@ Storage::records_store(ipx_msg_ipfix_t *msg, const fds_iemgr_t *iemgr)
         }
 
         // Convert the record from reverse point of view
-        convert(ipfix_rec->rec, iemgr, true);
+        convert(ipfix_rec->rec, iemgr, hdr, true);
 
         // Store it
         for (Output *output : m_outputs) {
@@ -198,7 +202,7 @@ Storage::records_store(ipx_msg_ipfix_t *msg, const fds_iemgr_t *iemgr)
  * \throw runtime_error if the JSON converter fails
  */
 void
-Storage::convert(struct fds_drec &rec, const fds_iemgr_t *iemgr, bool reverse)
+Storage::convert(struct fds_drec &rec, const fds_iemgr_t *iemgr, fds_ipfix_msg_hdr *hdr, bool reverse)
 {
     // Convert the record
     uint32_t flags = m_flags;
@@ -206,12 +210,39 @@ Storage::convert(struct fds_drec &rec, const fds_iemgr_t *iemgr, bool reverse)
 
     int rc = fds_drec2json(&rec, flags, iemgr, &m_record.buffer, &m_record.size_alloc);
     if (rc < 0) {
-        throw std::runtime_error("Conversion to JSON failed (probably a memory allocation error!");
+        throw std::runtime_error("Conversion to JSON failed (probably a memory allocation error)!");
     }
 
     m_record.size_used = size_t(rc);
-    // Append the record with end of line character
-    buffer_append("\n");
+
+    if (m_format.detailed_info) {
+
+        // Remove '}' parenthesis at the end of the record
+        m_record.size_used--;
+
+        // Array for formatting detailed info fields
+        char field[64];
+        snprintf(field, 64, ",\"ipfix:exportTime\":\"%" PRIu32 "\"", ntohl(hdr->export_time));
+        buffer_append(field);
+
+        snprintf(field, 64, ",\"ipfix:seqNumber\":\"%" PRIu32 "\"", ntohl(hdr->seq_num));
+        buffer_append(field);
+
+        snprintf(field, 64, ",\"ipfix:odid\":\"%" PRIu32 "\"", ntohl(hdr->odid));
+        buffer_append(field);
+
+        snprintf(field, 32, ",\"ipfix:msgLength\":\"%" PRIu16 "\"", ntohs(hdr->length));
+        buffer_append(field);
+
+        snprintf(field, 32, ",\"ipfix:templateId\":\"%" PRIu16 "\"", rec.tmplt->id);
+        buffer_append(field);
+
+        // Append the record with '}' parenthesis removed before
+        buffer_append("}");
+    }
+
+         // Append the record with end of line character
+         buffer_append("\n");
 
     /* Note: additional information (e.g. ODID, Export Time, etc.) can be added here,
      * just use buffer_append() and buffer_reserve() to append and extend buffer, respectively.

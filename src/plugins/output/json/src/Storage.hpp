@@ -95,7 +95,7 @@ private:
     } m_record; /**< Converted JSON record                                                       */
 
     // Convert an IPFIX record to a JSON string
-    void convert(struct fds_drec &rec, const fds_iemgr_t *iemgr, bool reverse = false);
+    void convert(struct fds_drec &rec, const fds_iemgr_t *iemgr, struct fds_ipfix_msg_hdr *hdr, bool reverse = false);
 
     // Remaining buffer size
     size_t buffer_remain() const {return m_record.size_alloc - m_record.size_used;};
