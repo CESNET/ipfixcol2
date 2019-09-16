@@ -228,10 +228,13 @@ Storage::convert(struct fds_drec &rec, const fds_iemgr_t *iemgr, fds_ipfix_msg_h
         snprintf(field, 64, ",\"ipfix:seqNumber\":\"%" PRIu32 "\"", ntohl(hdr->seq_num));
         buffer_append(field);
 
-        snprintf(field, 64, ",\"ipfix:templateId\":\"%" PRIu32 "\"", ntohl(hdr->odid));
+        snprintf(field, 64, ",\"ipfix:odid\":\"%" PRIu32 "\"", ntohl(hdr->odid));
         buffer_append(field);
 
         snprintf(field, 32, ",\"ipfix:msgLength\":\"%" PRIu16 "\"", ntohs(hdr->length));
+        buffer_append(field);
+
+        snprintf(field, 32, ",\"ipfix:templateId\":\"%" PRIu16 "\"", rec.tmplt->id);
         buffer_append(field);
 
         // Append the record with '}' parenthesis removed before
