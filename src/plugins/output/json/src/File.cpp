@@ -220,6 +220,14 @@ File::process(const char *str, size_t len)
     return IPX_OK;
 }
 
+void
+File::flush(void)
+{
+    if (_file) {
+        fflush(_file);
+    }
+}
+
 /**
  * \brief Get a directory path for a time window
  * \param[in]  tm    Time window

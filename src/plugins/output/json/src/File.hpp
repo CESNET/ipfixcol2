@@ -61,6 +61,8 @@ public:
 
     // Store a record to the file
     int process(const char *str, size_t len);
+
+    void flush();
 private:
     /** Minimal window size */
     const unsigned int _WINDOW_MIN_SIZE = 60; // seconds
