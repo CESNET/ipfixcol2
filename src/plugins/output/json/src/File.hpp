@@ -71,7 +71,7 @@ private:
     typedef struct thread_ctx_s {
         ipx_ctx_t *ctx;              /**< Plugin instance context    */
         pthread_t thread;            /**< Thread                     */
-        pthread_mutex_t mutex;       /**< Data mutex                 */
+        pthread_rwlock_t rwlock;     /**< Data rwlock                */
         bool stop;                   /**< Stop flag for termination  */
 
         unsigned int window_size;    /**< Size of a time window      */
@@ -79,12 +79,9 @@ private:
         std::string storage_path;    /**< Storage path (template)    */
         std::string file_prefix;     /**< File prefix                */
 
-        FILE *new_file;              /**< New file                   */
-        bool new_file_ready;         /**< New file flag              */
+        FILE *file;                  /**< File descriptor            */
     } thread_ctx_t;
 
-    /** File descriptor */
-    FILE *_file;
     /** Thread for changing time windows */
     thread_ctx_t *_thread;
 
