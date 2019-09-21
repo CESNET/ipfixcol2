@@ -97,12 +97,28 @@ File::File(const struct cfg_file &cfg, ipx_ctx_t *ctx) : Output(cfg.name, ctx)
 
     _thread->file = new_file;
 
-    if (pthread_rwlock_init(&_thread->rwlock, NULL) != 0) {
+    pthread_rwlockattr_t attr;
+    if (pthread_rwlockattr_init(&attr) != 0) {
         fclose(_thread->file);
         delete _thread;
-        throw std::runtime_error("(File output) Mutex initialization failed!");
+        throw std::runtime_error("(File output) Rwlockattr initialization failed!");
     }
 
+    if (pthread_rwlockattr_setkind_np(&attr, PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP) != 0) {
+        fclose(_thread->file);
+        pthread_rwlockattr_destroy(&attr);
+        delete _thread;
+        throw std::runtime_error("(File output) Rwlockattr setkind failed!");
+    }
+
+    if (pthread_rwlock_init(&_thread->rwlock, &attr) != 0) {
+        fclose(_thread->file);
+        pthread_rwlockattr_destroy(&attr);
+        delete _thread;
+        throw std::runtime_error("(File output) Rwlock initialization failed!");
+    }
+
+    pthread_rwlockattr_destroy(&attr);
     if (pthread_create(&_thread->thread, NULL, &File::thread_window, _thread) != 0) {
         fclose(_thread->file);
         pthread_rwlock_destroy(&_thread->rwlock);
