@@ -42,6 +42,7 @@
 #ifndef JSON_FILE_H
 #define JSON_FILE_H
 
+#include <atomic>
 #include <string>
 #include <ctime>
 #include <cstdio>
@@ -72,7 +73,7 @@ private:
         ipx_ctx_t *ctx;              /**< Plugin instance context    */
         pthread_t thread;            /**< Thread                     */
         pthread_rwlock_t rwlock;     /**< Data rwlock                */
-        bool stop;                   /**< Stop flag for termination  */
+        std::atomic<bool> stop;      /**< Stop flag for termination  */
 
         unsigned int window_size;    /**< Size of a time window      */
         time_t window_time;          /**< Current time window        */
