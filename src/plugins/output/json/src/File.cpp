@@ -62,8 +62,7 @@ File::File(const struct cfg_file &cfg, ipx_ctx_t *ctx) : Output(cfg.name, ctx)
 {
     // Prepare a configuration of the thread for changing time windows
     _thread = new thread_ctx_t;
-    _thread->new_file = nullptr;
-    _thread->new_file_ready = false;
+    _thread->file = nullptr;
     _thread->stop = false;
 
     _thread->ctx = ctx;
@@ -96,17 +95,33 @@ File::File(const struct cfg_file &cfg, ipx_ctx_t *ctx) : Output(cfg.name, ctx)
         throw std::runtime_error("(File output) Failed to create a time window file.");
     }
 
-    _file = new_file;
+    _thread->file = new_file;
 
-    if (pthread_mutex_init(&_thread->mutex, NULL) != 0) {
-        fclose(_file);
+    pthread_rwlockattr_t attr;
+    if (pthread_rwlockattr_init(&attr) != 0) {
+        fclose(_thread->file);
         delete _thread;
-        throw std::runtime_error("(File output) Mutex initialization failed!");
+        throw std::runtime_error("(File output) Rwlockattr initialization failed!");
     }
 
+    if (pthread_rwlockattr_setkind_np(&attr, PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP) != 0) {
+        fclose(_thread->file);
+        pthread_rwlockattr_destroy(&attr);
+        delete _thread;
+        throw std::runtime_error("(File output) Rwlockattr setkind failed!");
+    }
+
+    if (pthread_rwlock_init(&_thread->rwlock, &attr) != 0) {
+        fclose(_thread->file);
+        pthread_rwlockattr_destroy(&attr);
+        delete _thread;
+        throw std::runtime_error("(File output) Rwlock initialization failed!");
+    }
+
+    pthread_rwlockattr_destroy(&attr);
     if (pthread_create(&_thread->thread, NULL, &File::thread_window, _thread) != 0) {
-        fclose(_file);
-        pthread_mutex_destroy(&_thread->mutex);
+        fclose(_thread->file);
+        pthread_rwlock_destroy(&_thread->rwlock);
         delete _thread;
         throw std::runtime_error("(File output) Failed to start a thread for changing time "
             "windows.");
@@ -120,17 +135,13 @@ File::File(const struct cfg_file &cfg, ipx_ctx_t *ctx) : Output(cfg.name, ctx)
  */
 File::~File()
 {
-    if (_file) {
-        fclose(_file);
-    }
-
     if (_thread) {
         _thread->stop = true;
         pthread_join(_thread->thread, NULL);
-        pthread_mutex_destroy(&_thread->mutex);
+        pthread_rwlock_destroy(&_thread->rwlock);
 
-        if (_thread->new_file) {
-            fclose(_thread->new_file);
+        if (_thread->file) {
+            fclose(_thread->file);
         }
 
         delete _thread;
@@ -164,10 +175,10 @@ File::thread_window(void *context)
         }
 
         // New time window
-        pthread_mutex_lock(&data->mutex);
-        if (data->new_file) {
-            fclose(data->new_file);
-            data->new_file = NULL;
+        pthread_rwlock_wrlock(&data->rwlock);
+        if (data->file) {
+            fclose(data->file);
+            data->file = nullptr;
         }
 
         data->window_time += data->window_size;
@@ -177,9 +188,8 @@ File::thread_window(void *context)
         }
 
         // Null pointer is also valid...
-        data->new_file = file;
-        data->new_file_ready = true;
-        pthread_mutex_unlock(&data->mutex);
+        data->file = file;
+        pthread_rwlock_unlock(&data->rwlock);
     }
 
     IPX_CTX_DEBUG(data->ctx, "(File output) Thread terminated.", '\0');
@@ -196,28 +206,23 @@ File::thread_window(void *context)
 int
 File::process(const char *str, size_t len)
 {
-    // Should we change a time window
-    if (_thread->new_file_ready) {
-        // Close old time window
-        if (_file) {
-            fclose(_file);
-        }
-
-        // Get new time window
-        pthread_mutex_lock(&_thread->mutex);
-        _file = _thread->new_file;
-        _thread->new_file = nullptr;
-        _thread->new_file_ready = false;
-        pthread_mutex_unlock(&_thread->mutex);
+    pthread_rwlock_rdlock(&_thread->rwlock);
+    if (_thread->file) {
+        // Store the record
+        fwrite(str, len, 1, _thread->file);
     }
-
-    if (!_file) {
-        return IPX_OK;
-    }
-
-    // Store the record
-    fwrite(str, len, 1, _file);
+    pthread_rwlock_unlock(&_thread->rwlock);
     return IPX_OK;
+}
+
+void
+File::flush()
+{
+    pthread_rwlock_rdlock(&_thread->rwlock);
+    if (_thread->file) {
+        fflush(_thread->file);
+    }
+    pthread_rwlock_unlock(&_thread->rwlock);
 }
 
 /**

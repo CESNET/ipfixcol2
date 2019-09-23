@@ -149,6 +149,8 @@ Storage::records_store(ipx_msg_ipfix_t *msg, const fds_iemgr_t *iemgr)
 {
     // Process all data records
     const uint32_t rec_cnt = ipx_msg_ipfix_get_drec_cnt(msg);
+    bool flush = false;
+    int ret = IPX_OK;
 
     // Message header
     auto hdr = (fds_ipfix_msg_hdr*) ipx_msg_ipfix_get_packet(msg);
@@ -162,13 +164,16 @@ Storage::records_store(ipx_msg_ipfix_t *msg, const fds_iemgr_t *iemgr)
             continue;
         }
 
+        flush = true;
+
         // Convert the record
         convert(ipfix_rec->rec, iemgr, hdr, false);
 
         // Store it
         for (Output *output : m_outputs) {
             if (output->process(m_record.buffer, m_record.size_used) != IPX_OK) {
-                return IPX_ERR_DENIED;
+                ret = IPX_ERR_DENIED;
+                goto endloop;
             }
         }
 
@@ -183,12 +188,20 @@ Storage::records_store(ipx_msg_ipfix_t *msg, const fds_iemgr_t *iemgr)
         // Store it
         for (Output *output : m_outputs) {
             if (output->process(m_record.buffer, m_record.size_used) != IPX_OK) {
-                return IPX_ERR_DENIED;
+                ret = IPX_ERR_DENIED;
+                goto endloop;
             }
         }
     }
 
-    return IPX_OK;
+endloop:
+    if (flush) {
+        for (Output *output : m_outputs) {
+            output->flush();
+        }
+    }
+
+    return ret;
 }
 
 /**
