@@ -184,7 +184,7 @@ Server::thread_accept(void *context)
 
     IPX_CTX_INFO(acc->ctx, "(Server output) Waiting for connections...", '\0');
 
-    while(1) {
+    while(!acc->stop) {
         struct sockaddr_storage client_addr;
         socklen_t sin_size = sizeof(client_addr);
         int new_fd;
@@ -209,10 +209,6 @@ Server::thread_accept(void *context)
 
         if (!FD_ISSET(acc->socket_fd, &rfds)) {
             // Timeout
-            if (acc->stop) {
-                // End thread
-                break;
-            }
             continue;
         }
 

@@ -74,6 +74,9 @@ public:
      */
     virtual int
     process(const char *str, size_t len) = 0;
+
+    virtual void
+    flush() {};
 };
 
 /** JSON converter and output manager                                                            */
