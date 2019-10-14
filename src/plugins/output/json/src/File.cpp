@@ -373,7 +373,7 @@ File::file_create(ipx_ctx_t *ctx, const std::string &tmplt, const std::string &p
     }
 
     std::string file_name = directory + prefix + file_fmt;
-    FILE *file = fopen(file_name.c_str(), "w");
+    FILE *file = fopen(file_name.c_str(), "a");
     if (!file) {
         // Failed to create a flow file
         char buffer[128];
