@@ -40,6 +40,7 @@
 */
 
 #include <inttypes.h>
+#include <stdio.h>
 #include <libfds.h>
 #include "Reader.h"
 #include <ipfixcol2.h>
@@ -75,6 +76,8 @@ read_packet(ipx_msg_ipfix_t *msg, const fds_iemgr_t *iemgr)
     for (uint32_t i = 0; i < set_cnt; ++i){
         read_set(&sets[i], msg, iemgr, &rec_i);
     }
+
+    fflush(stdout);
 }
 
 void
