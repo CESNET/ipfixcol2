@@ -149,8 +149,15 @@ Storage::records_store(ipx_msg_ipfix_t *msg, const fds_iemgr_t *iemgr)
 {
     // Process all data records
     const uint32_t rec_cnt = ipx_msg_ipfix_get_drec_cnt(msg);
+    char src_addr[INET6_ADDRSTRLEN];
+    const char *src_addr_ptr = nullptr;
     bool flush = false;
     int ret = IPX_OK;
+
+    if (m_format.detailed_info) {
+        const struct ipx_msg_ctx *msg_ctx = ipx_msg_ipfix_get_ctx(msg);
+        src_addr_ptr = session_src_addr(msg_ctx->session, src_addr, INET6_ADDRSTRLEN);
+    }
 
     // Message header
     auto hdr = (fds_ipfix_msg_hdr*) ipx_msg_ipfix_get_packet(msg);
@@ -167,7 +174,7 @@ Storage::records_store(ipx_msg_ipfix_t *msg, const fds_iemgr_t *iemgr)
         flush = true;
 
         // Convert the record
-        convert(ipfix_rec->rec, iemgr, hdr, false);
+        convert(ipfix_rec->rec, iemgr, hdr, src_addr_ptr, false);
 
         // Store it
         for (Output *output : m_outputs) {
@@ -183,7 +190,7 @@ Storage::records_store(ipx_msg_ipfix_t *msg, const fds_iemgr_t *iemgr)
         }
 
         // Convert the record from reverse point of view
-        convert(ipfix_rec->rec, iemgr, hdr, true);
+        convert(ipfix_rec->rec, iemgr, hdr, src_addr_ptr, true);
 
         // Store it
         for (Output *output : m_outputs) {
@@ -204,6 +211,34 @@ endloop:
     return ret;
 }
 
+const char *
+Storage::session_src_addr(const struct ipx_session *ipx_desc, char *src_addr, socklen_t size)
+{
+    const struct ipx_session_net *net_desc;
+    switch (ipx_desc->type) {
+    case FDS_SESSION_UDP:
+        net_desc = &ipx_desc->udp.net;
+        break;
+    case FDS_SESSION_TCP:
+        net_desc = &ipx_desc->tcp.net;
+        break;
+    case FDS_SESSION_SCTP:
+        net_desc = &ipx_desc->sctp.net;
+        break;
+    default:
+        return nullptr;
+    }
+
+    const char *ret;
+    if (net_desc->l3_proto == AF_INET) {
+        ret = inet_ntop(AF_INET, &net_desc->addr_src.ipv4, src_addr, size);
+    } else {
+        ret = inet_ntop(AF_INET6, &net_desc->addr_src.ipv6, src_addr, size);
+    }
+
+    return ret;
+}
+
 /**
  * \brief Convert an IPFIX record to JSON string
  *
@@ -211,11 +246,12 @@ endloop:
  * into the local buffer.
  * \param[in] rec     IPFIX record to convert
  * \param[in] iemgr   Manager of Information Elements
+ * \param[in] src_addr Exporter source address
  * \param[in] reverse Convert from reverse point of view (affects only biflow records)
  * \throw runtime_error if the JSON converter fails
  */
 void
-Storage::convert(struct fds_drec &rec, const fds_iemgr_t *iemgr, fds_ipfix_msg_hdr *hdr, bool reverse)
+Storage::convert(struct fds_drec &rec, const fds_iemgr_t *iemgr, fds_ipfix_msg_hdr *hdr, const char *src_addr, bool reverse)
 {
     // Convert the record
     uint32_t flags = m_flags;
@@ -249,6 +285,12 @@ Storage::convert(struct fds_drec &rec, const fds_iemgr_t *iemgr, fds_ipfix_msg_h
 
         snprintf(field, 32, ",\"ipfix:templateId\":\"%" PRIu16 "\"", rec.tmplt->id);
         buffer_append(field);
+
+        if (src_addr) {
+            buffer_append(",\"ipfix:srcAddr\":\"");
+            buffer_append(src_addr);
+            buffer_append("\"");
+        }
 
         // Append the record with '}' parenthesis removed before
         buffer_append("}");

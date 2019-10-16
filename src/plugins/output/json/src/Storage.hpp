@@ -44,6 +44,7 @@
 
 #include <string>
 #include <vector>
+#include <arpa/inet.h>
 #include <ipfixcol2.h>
 #include "Config.hpp"
 
@@ -97,8 +98,11 @@ private:
         size_t size_used;
     } m_record; /**< Converted JSON record                                                       */
 
+    //Get src_addr from IPFIX session
+    static const char *session_src_addr(const struct ipx_session *ipx_desc, char *src_addr, socklen_t size);
+
     // Convert an IPFIX record to a JSON string
-    void convert(struct fds_drec &rec, const fds_iemgr_t *iemgr, struct fds_ipfix_msg_hdr *hdr, bool reverse = false);
+    void convert(struct fds_drec &rec, const fds_iemgr_t *iemgr, struct fds_ipfix_msg_hdr *hdr, const char *src_addr, bool reverse = false);
 
     // Remaining buffer size
     size_t buffer_remain() const {return m_record.size_alloc - m_record.size_used;};
