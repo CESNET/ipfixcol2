@@ -70,7 +70,8 @@ Don't forget to remove (or comment) outputs that you don't want to use!
             <nonPrintableChar>true</nonPrintableChar>
             <numericNames>false</numericNames>
             <splitBiflow>false</splitBiflow>
-	    <detailedInfo>true</detailedInfo>
+	    <detailedInfo>false</detailedInfo>
+	    <templateInfo>false</templateInfo>
 
             <outputs>
                 <server>
@@ -146,6 +147,10 @@ Formatting parameters:
 :``detailedInfo``:
     Add detailed info about the IPFIX message (export time, sequence number, ...) to each record
     under "ipfix:" prefix. [values: true/false, default: false]
+
+:``templateInfo``:
+    Add Template and Options Template records to the top of the exported JSON file with prefix
+    "ipfix.template" and "ipfix.optionsTemplate". [values: true/false, default: false]
 
 ----
 
@@ -281,3 +286,48 @@ among the nested arrays.
     }
 
 Keep on mind that all structures can be nested in each other.
+
+Template and Options Template records
+-------------------------------------
+
+Template and Options Template records are special records.
+
+*Template record* describes structure of flow records, and its type is "ipfix.template".
+Converted *Template record* contains "ipfix:templateId" field, which is unique to the Transport Session 
+and Observation Domain and "ipfix:fields" which is an array of JSON objects specifing fields of flow records. 
+
+.. code-block:: json
+{
+	"@type": "ipfix.template",
+	"ipfix:templateId": "49171",
+	"ipfix:fields": [{
+		"ipfix:elementId": "16399",
+		"ipfix:enterpriseId": "6871",
+		"ipfix:fieldLength": "1"
+	}, {
+		"ipfix:elementId": "184",
+		"ipfix:enterpriseId": "29305",
+		"ipfix:fieldLength": "4"
+	}]
+}
+
+*Options Template record* describes structure of additional information for the collector.
+These additional information are converted to record with type "ipfix.optionsEntry".
+Converted *Options Template record* is similar to previous type, however it contains also 
+"ipfix:scopeCount" field, which specifies number of scope fields in the record.
+  
+.. code-block:: json
+{
+	"@type": "ipfix.optionsTemplate",
+	"ipfix:templateId": "53252",
+	"ipfix:scopeCount": "3",
+	"ipfix:fields": [{
+		"ipfix:elementId": "322",
+		"ipfix:enterpriseId": "0",
+		"ipfix:fieldLength": "4"
+	}, {
+		"ipfix:elementId": "554",
+		"ipfix:enterpriseId": "6871",
+		"ipfix:fieldLength": "65535"
+	}]
+}

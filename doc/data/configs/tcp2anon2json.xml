@@ -40,7 +40,8 @@
         <ignoreUnknown>true</ignoreUnknown>
         <ignoreOptions>false</ignoreOptions>
         <nonPrintableChar>true</nonPrintableChar>
-	<detailedInfo>true</detailedInfo>
+	<detailedInfo>false</detailedInfo>
+	<templateInfo>false</templateInfo>
 
         <!-- Output methods -->
         <outputs>

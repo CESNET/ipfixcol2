@@ -66,6 +66,8 @@ struct cfg_format {
     bool numeric_names;
     /** Split biflow records                                                                     */
     bool split_biflow;
+    /** Add template records                                                                     */
+    bool template_info;
 };
 
 /** Output configuration base structure                                                          */

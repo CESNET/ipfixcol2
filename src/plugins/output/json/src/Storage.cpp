@@ -144,16 +144,146 @@ Storage::output_add(Output *output)
     m_outputs.push_back(output);
 }
 
+/**
+ * \brief Convert template record to JSON string
+ *
+ * \param[in] tset_iter     (Options) Template set structure to convert
+ * \param[in] set_id        Id of the set
+ * \param[in] hdr           Message header of IPFIX record
+ * \throw runtime_error    if template parser failed
+ */
+
+void
+Storage::convert_tmplt_rec(struct fds_tset_iter *tset_iter, uint16_t set_id, fds_ipfix_msg_hdr* hdr)
+{
+    enum fds_template_type type;
+    void *ptr;
+    if (set_id == FDS_IPFIX_SET_TMPLT) {
+        buffer_append("{\"@type\":\"ipfix.template\",");
+        type = FDS_TYPE_TEMPLATE;
+        ptr = tset_iter->ptr.trec;
+    } else {
+        assert(set_id == FDS_IPFIX_SET_OPTS_TMPLT);
+        buffer_append("{\"@type\":\"ipfix.optionsTemplate\",");
+        type = FDS_TYPE_TEMPLATE_OPTS;
+        ptr = tset_iter->ptr.opts_trec;
+    }
+
+    // Filling the template structure with data from raw packet
+    uint16_t tmplt_size = tset_iter->size;
+    struct fds_template *tmplt;
+    int rc;
+    rc = fds_template_parse(type, ptr, &tmplt_size, &tmplt);
+    if (rc != FDS_OK) {
+        throw std::runtime_error("Parsing failed due to memory allocation error or the format of template is invalid!");
+    }
+
+    // Printing out the header
+    char field[64];
+    snprintf(field, 64, "\"ipfix:templateId\":\"%" PRIu16 "\"", tmplt->id);
+    buffer_append(field);
+    if (set_id == FDS_IPFIX_SET_OPTS_TMPLT) {
+        snprintf(field, 64, ",\"ipfix:scopeCount\":\"%" PRIu16 "\"", tmplt->fields_cnt_scope);
+        buffer_append(field);
+    }
+
+    // Add detailed info to record
+    if (m_format.detailed_info) {
+        addDetailedInfo(hdr);
+    }
+
+    buffer_append(",\"ipfix:fields\":[");
+
+    // Iteration through the fields and converting them to JSON string
+    for (uint16_t i = 0; i < tmplt->fields_cnt_total; i++) {
+        struct fds_tfield current = tmplt->fields[i];
+        if (i != 0) { // Not first field
+            buffer_append(",");
+        }
+        buffer_append("{");
+        snprintf(field, 64, "\"ipfix:elementId\":\"%" PRIu16 "\"", current.id);
+        buffer_append(field);
+        snprintf(field, 64, ",\"ipfix:enterpriseId\":\"%" PRIu32 "\"", current.en);
+        buffer_append(field);
+        snprintf(field, 64, ",\"ipfix:fieldLength\":\"%" PRIu16 "\"", current.length);
+        buffer_append(field);
+        buffer_append("}");
+    }
+    buffer_append("]}\n");
+
+    // Free allocated memory
+    fds_template_destroy(tmplt);
+}
+
+/**
+ * \brief Convert Template sets and Options Template sets
+ *
+ * From all sets in the Message, try to convert just Template and Options template sets.
+ * \param[in] set   All sets in the Message
+ * \param[in] hdr   Message header of IPFIX record
+ */
+void
+Storage::convert_set(struct ipx_ipfix_set *set, fds_ipfix_msg_hdr* hdr)
+{
+
+    bool flush = false;
+    int ret = IPX_OK;
+    uint16_t set_id = ntohs(set->ptr->flowset_id);
+    if (set_id == FDS_IPFIX_SET_TMPLT || set_id == FDS_IPFIX_SET_OPTS_TMPLT) {
+
+        // Template set
+        struct fds_tset_iter tset_iter;
+        fds_tset_iter_init(&tset_iter, set->ptr);
+
+        // Iteration through all templates in the set
+        while (fds_tset_iter_next(&tset_iter) == FDS_OK) {
+            flush = true;
+
+            // Read and print single template
+            convert_tmplt_rec(&tset_iter, set_id, hdr);
+
+            // Store it
+            for (Output *output : m_outputs) {
+                if (output->process(m_record.buffer, m_record.size_used) != IPX_OK) {
+                    ret = IPX_ERR_DENIED;
+                    goto endloop;
+                }
+            }
+
+            // Buffer is empty
+            m_record.size_used = 0;
+        }
+    }
+endloop:
+    if (flush) {
+        for (Output *output : m_outputs) {
+            output->flush();
+        }
+    }
+}
+
 int
 Storage::records_store(ipx_msg_ipfix_t *msg, const fds_iemgr_t *iemgr)
 {
+    // Message header
+    auto hdr = (fds_ipfix_msg_hdr*) ipx_msg_ipfix_get_packet(msg);
+
+    // Process template records if enabled
+    if (m_format.template_info) {
+        struct ipx_ipfix_set *sets;
+        size_t set_cnt;
+        ipx_msg_ipfix_get_sets(msg, &sets, &set_cnt);
+
+        // Iteration through all sets
+        for (uint32_t i = 0; i < set_cnt; i++) {
+            convert_set(&sets[i], hdr);
+        }
+    }
+
     // Process all data records
     const uint32_t rec_cnt = ipx_msg_ipfix_get_drec_cnt(msg);
     bool flush = false;
     int ret = IPX_OK;
-
-    // Message header
-    auto hdr = (fds_ipfix_msg_hdr*) ipx_msg_ipfix_get_packet(msg);
 
     for (uint32_t i = 0; i < rec_cnt; ++i) {
         ipx_ipfix_record *ipfix_rec = ipx_msg_ipfix_get_drec(msg, i);
@@ -205,6 +335,30 @@ endloop:
 }
 
 /**
+ * \brief Add fields with detailed info (export time, sequence number, ODID, message length) to record
+ *
+ * For each record, add detailed information if detailedInfo is enabled.
+ * @param[in] hdr   Message header of IPFIX record
+ */
+void
+Storage::addDetailedInfo(fds_ipfix_msg_hdr *hdr)
+{
+    // Array for formatting detailed info fields
+    char field[64];
+    snprintf(field, 64, ",\"ipfix:exportTime\":\"%" PRIu32 "\"", ntohl(hdr->export_time));
+    buffer_append(field);
+
+    snprintf(field, 64, ",\"ipfix:seqNumber\":\"%" PRIu32 "\"", ntohl(hdr->seq_num));
+    buffer_append(field);
+
+    snprintf(field, 64, ",\"ipfix:odid\":\"%" PRIu32 "\"", ntohl(hdr->odid));
+    buffer_append(field);
+
+    snprintf(field, 32, ",\"ipfix:msgLength\":\"%" PRIu16 "\"", ntohs(hdr->length));
+    buffer_append(field);
+}
+
+/**
  * \brief Convert an IPFIX record to JSON string
  *
  * For each field in the record, try to convert it into JSON format. The record is stored
@@ -228,25 +382,15 @@ Storage::convert(struct fds_drec &rec, const fds_iemgr_t *iemgr, fds_ipfix_msg_h
 
     m_record.size_used = size_t(rc);
 
-    if (m_format.detailed_info) {
-
+    if (m_format.detailed_info && !m_format.template_info) {
         // Remove '}' parenthesis at the end of the record
         m_record.size_used--;
 
-        // Array for formatting detailed info fields
+        // Add detailed info to JSON string
+        addDetailedInfo(hdr);
+
+        // Add template ID to JSON string
         char field[64];
-        snprintf(field, 64, ",\"ipfix:exportTime\":\"%" PRIu32 "\"", ntohl(hdr->export_time));
-        buffer_append(field);
-
-        snprintf(field, 64, ",\"ipfix:seqNumber\":\"%" PRIu32 "\"", ntohl(hdr->seq_num));
-        buffer_append(field);
-
-        snprintf(field, 64, ",\"ipfix:odid\":\"%" PRIu32 "\"", ntohl(hdr->odid));
-        buffer_append(field);
-
-        snprintf(field, 32, ",\"ipfix:msgLength\":\"%" PRIu16 "\"", ntohs(hdr->length));
-        buffer_append(field);
-
         snprintf(field, 32, ",\"ipfix:templateId\":\"%" PRIu16 "\"", rec.tmplt->id);
         buffer_append(field);
 

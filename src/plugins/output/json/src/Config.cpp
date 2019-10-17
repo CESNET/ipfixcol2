@@ -60,6 +60,7 @@ enum params_xml_nodes {
     FMT_NUMERIC,       /**< Use numeric names               */
     FMT_BFSPLIT,       /**< Split biflow                    */
     FMT_DETAILEDINFO,  /**< Detailed information            */
+    FMT_TMPLTINFO,      /**< Template records                */
     // Common output
     OUTPUT_LIST,       /**< List of output types            */
     OUTPUT_PRINT,      /**< Print to standard output        */
@@ -141,6 +142,7 @@ static const struct fds_xml_args args_params[] = {
     FDS_OPTS_ELEM(FMT_NUMERIC,   "numericNames",     FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(FMT_BFSPLIT,   "splitBiflow",      FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(FMT_DETAILEDINFO,  "detailedInfo", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(FMT_TMPLTINFO, "templateInfo", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
     FDS_OPTS_NESTED(OUTPUT_LIST, "outputs",   args_outputs, 0),
     FDS_OPTS_END
 };
@@ -459,13 +461,17 @@ Config::parse_params(fds_xml_ctx_t *params)
             assert(content->type == FDS_OPTS_T_BOOL);
             format.split_biflow = content->val_bool;
             break;
-            case FMT_DETAILEDINFO: //Add detailed information about each record
+            case FMT_DETAILEDINFO: // Add detailed information about each record
             assert(content->type == FDS_OPTS_T_BOOL);
             format.detailed_info = content->val_bool;
             break;
         case OUTPUT_LIST: // List of output plugin
             assert(content->type == FDS_OPTS_T_CONTEXT);
             parse_outputs(content->ptr_ctx);
+            break;
+            case FMT_TMPLTINFO: // Add template records
+            assert(content->type == FDS_OPTS_T_BOOL);
+            format.template_info = content->val_bool;
             break;
         default:
             throw std::invalid_argument("Unexpected element within <params>!");
@@ -488,6 +494,7 @@ Config::default_set()
     format.numeric_names = false;
     format.split_biflow = false;
     format.detailed_info = false;
+    format.template_info = false;
 
     outputs.prints.clear();
     outputs.files.clear();
