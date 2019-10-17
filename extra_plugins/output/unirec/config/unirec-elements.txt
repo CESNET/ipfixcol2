@@ -115,6 +115,7 @@ HB_SIZE_PAYLOAD                uint16 	     e8057id703       # Heartbeat payload
 #FLOWDIR_SYN                    uint8         e8057id299       # Packet with SYN flag only flag
 VENOM                          uint8         e8057id1001      # Venom rootkit detection
 IPV6_TUN_TYPE                  uint8         e16982id405      # IPv6 tunnel type
+APP_ID                         bytes         e0id95           # Application ID from libprotoident / NBAR2 / Flowmon's NBAR plugin
 
 # --- Flowmon TLS fields
 TLS_CONTENT_TYPE	uint8	flowmon:tlsContentType		# tlsContentType
