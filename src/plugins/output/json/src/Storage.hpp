@@ -110,6 +110,12 @@ private:
     void buffer_append(const char *str);
     // Reserve memory for a JSON string
     void buffer_reserve(size_t n);
+    // Convert set to JSON string
+    void convert_set(struct ipx_ipfix_set *set, fds_ipfix_msg_hdr* hdr);
+    // Convert template record to a JSON string
+    void convert_tmplt_rec(struct fds_tset_iter *tset_iter, uint16_t set_id, fds_ipfix_msg_hdr* hdr);
+    // Add detailed info (templateId, ODID, seqNum, exportTime) to JSON string
+    void addDetailedInfo(fds_ipfix_msg_hdr *hdr);
 
 public:
     /**
