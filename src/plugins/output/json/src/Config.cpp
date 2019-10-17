@@ -461,17 +461,17 @@ Config::parse_params(fds_xml_ctx_t *params)
             assert(content->type == FDS_OPTS_T_BOOL);
             format.split_biflow = content->val_bool;
             break;
-            case FMT_DETAILEDINFO: // Add detailed information about each record
+        case FMT_DETAILEDINFO: // Add detailed information about each record
             assert(content->type == FDS_OPTS_T_BOOL);
             format.detailed_info = content->val_bool;
+            break;
+        case FMT_TMPLTINFO: // Add template records
+            assert(content->type == FDS_OPTS_T_BOOL);
+            format.template_info = content->val_bool;
             break;
         case OUTPUT_LIST: // List of output plugin
             assert(content->type == FDS_OPTS_T_CONTEXT);
             parse_outputs(content->ptr_ctx);
-            break;
-            case FMT_TMPLTINFO: // Add template records
-            assert(content->type == FDS_OPTS_T_BOOL);
-            format.template_info = content->val_bool;
             break;
         default:
             throw std::invalid_argument("Unexpected element within <params>!");

@@ -47,8 +47,10 @@ using namespace std;
 #include "Storage.hpp"
 #include <libfds.h>
 
-/** Base size of the conversion buffer           */
+/** Base size of the conversion buffer                 */
 #define BUFFER_BASE   4096
+/** Size of local conversion buffers (for snprintf)    */
+#define LOCAL_BSIZE   64
 
 Storage::Storage(const ipx_ctx_t *ctx, const struct cfg_format &fmt)
     : m_ctx(ctx), m_format(fmt)
@@ -150,9 +152,8 @@ Storage::output_add(Output *output)
  * \param[in] tset_iter     (Options) Template set structure to convert
  * \param[in] set_id        Id of the set
  * \param[in] hdr           Message header of IPFIX record
- * \throw runtime_error    if template parser failed
+ * \throw runtime_error  If template parser failed
  */
-
 void
 Storage::convert_tmplt_rec(struct fds_tset_iter *tset_iter, uint16_t set_id, fds_ipfix_msg_hdr* hdr)
 {
@@ -179,11 +180,11 @@ Storage::convert_tmplt_rec(struct fds_tset_iter *tset_iter, uint16_t set_id, fds
     }
 
     // Printing out the header
-    char field[64];
-    snprintf(field, 64, "\"ipfix:templateId\":\"%" PRIu16 "\"", tmplt->id);
+    char field[LOCAL_BSIZE];
+    snprintf(field, LOCAL_BSIZE, "\"ipfix:templateId\":\"%" PRIu16 "\"", tmplt->id);
     buffer_append(field);
     if (set_id == FDS_IPFIX_SET_OPTS_TMPLT) {
-        snprintf(field, 64, ",\"ipfix:scopeCount\":\"%" PRIu16 "\"", tmplt->fields_cnt_scope);
+        snprintf(field, LOCAL_BSIZE, ",\"ipfix:scopeCount\":\"%" PRIu16 "\"", tmplt->fields_cnt_scope);
         buffer_append(field);
     }
 
@@ -201,11 +202,11 @@ Storage::convert_tmplt_rec(struct fds_tset_iter *tset_iter, uint16_t set_id, fds
             buffer_append(",");
         }
         buffer_append("{");
-        snprintf(field, 64, "\"ipfix:elementId\":\"%" PRIu16 "\"", current.id);
+        snprintf(field, LOCAL_BSIZE, "\"ipfix:elementId\":\"%" PRIu16 "\"", current.id);
         buffer_append(field);
-        snprintf(field, 64, ",\"ipfix:enterpriseId\":\"%" PRIu32 "\"", current.en);
+        snprintf(field, LOCAL_BSIZE, ",\"ipfix:enterpriseId\":\"%" PRIu32 "\"", current.en);
         buffer_append(field);
-        snprintf(field, 64, ",\"ipfix:fieldLength\":\"%" PRIu16 "\"", current.length);
+        snprintf(field, LOCAL_BSIZE, ",\"ipfix:fieldLength\":\"%" PRIu16 "\"", current.length);
         buffer_append(field);
         buffer_append("}");
     }
@@ -344,17 +345,17 @@ void
 Storage::addDetailedInfo(fds_ipfix_msg_hdr *hdr)
 {
     // Array for formatting detailed info fields
-    char field[64];
-    snprintf(field, 64, ",\"ipfix:exportTime\":\"%" PRIu32 "\"", ntohl(hdr->export_time));
+    char field[LOCAL_BSIZE];
+    snprintf(field, LOCAL_BSIZE, ",\"ipfix:exportTime\":\"%" PRIu32 "\"", ntohl(hdr->export_time));
     buffer_append(field);
 
-    snprintf(field, 64, ",\"ipfix:seqNumber\":\"%" PRIu32 "\"", ntohl(hdr->seq_num));
+    snprintf(field, LOCAL_BSIZE, ",\"ipfix:seqNumber\":\"%" PRIu32 "\"", ntohl(hdr->seq_num));
     buffer_append(field);
 
-    snprintf(field, 64, ",\"ipfix:odid\":\"%" PRIu32 "\"", ntohl(hdr->odid));
+    snprintf(field, LOCAL_BSIZE, ",\"ipfix:odid\":\"%" PRIu32 "\"", ntohl(hdr->odid));
     buffer_append(field);
 
-    snprintf(field, 32, ",\"ipfix:msgLength\":\"%" PRIu16 "\"", ntohs(hdr->length));
+    snprintf(field, LOCAL_BSIZE, ",\"ipfix:msgLength\":\"%" PRIu16 "\"", ntohs(hdr->length));
     buffer_append(field);
 }
 
@@ -390,18 +391,14 @@ Storage::convert(struct fds_drec &rec, const fds_iemgr_t *iemgr, fds_ipfix_msg_h
         addDetailedInfo(hdr);
 
         // Add template ID to JSON string
-        char field[64];
-        snprintf(field, 32, ",\"ipfix:templateId\":\"%" PRIu16 "\"", rec.tmplt->id);
+        char field[LOCAL_BSIZE];
+        snprintf(field, LOCAL_BSIZE, ",\"ipfix:templateId\":\"%" PRIu16 "\"", rec.tmplt->id);
         buffer_append(field);
 
         // Append the record with '}' parenthesis removed before
         buffer_append("}");
     }
 
-         // Append the record with end of line character
-         buffer_append("\n");
-
-    /* Note: additional information (e.g. ODID, Export Time, etc.) can be added here,
-     * just use buffer_append() and buffer_reserve() to append and extend buffer, respectively.
-     */
+     // Append the record with end of line character
+     buffer_append("\n");
 }
