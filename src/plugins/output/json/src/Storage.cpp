@@ -383,7 +383,7 @@ Storage::convert(struct fds_drec &rec, const fds_iemgr_t *iemgr, fds_ipfix_msg_h
 
     m_record.size_used = size_t(rc);
 
-    if (m_format.detailed_info && !m_format.template_info) {
+    if (m_format.detailed_info) {
         // Remove '}' parenthesis at the end of the record
         m_record.size_used--;
 
