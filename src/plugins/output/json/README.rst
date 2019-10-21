@@ -10,15 +10,15 @@ Each flow record is converted individually and send to outputs where at least on
 method must be configured. All fields in an IPFIX record are formatted as: <field name>:<value>,
 where the *field name* represents a name of a corresponding Information Element as
 "<Enterprise Name>:<Information Element Name>" and *value* is a number, string,
-boolean or null (if conversion from IPFIX to JSON fails). The Enterprise Name is a name of an
-organization that manages the field, such as IANA, CISCO, etc.
+boolean or null (if conversion from IPFIX to JSON fails or it is a zero-length field). The
+Enterprise Name is a name of an organization that manages the field, such as IANA, CISCO, etc.
 
 If the field name and type is unknown and "ignoreUnknown" option is disabled, the field name
 use format 'enXX:idYY' where XX is an Enterprise Number and YY is an Information Element ID.
 See notes for instructions on how to add missing definitions of Information Elements.
 
-Structured data types (basicList, subTemplateList and subTemplateMultiList) are supported. See
-the particular section below for information about their formatting.
+Flow records with structured data types (basicList, subTemplateList and subTemplateMultiList) are
+supported. See the particular section below for information about the formatting of these types.
 
 Example output
 --------------
@@ -50,6 +50,27 @@ if you want to change available IPFIX fields.
         "iana:samplingAlgorithm": 0
     }
 
+The plugin can produce multiple record types, which are always distinguished by "@type" key:
+
+:``ipfix.entry``:
+    Flow record captured by the exporter as shown in the example above. This record is always
+    converted and it is the most common type.
+:``ipfix.optionsEntry``:
+    Record containing additional information provided by the exporter to the collector. Usually
+    it is used for information about the exporter configuration (such as packet sampling)
+    and flow export statistics. Periodicity and content of the record always depends on the
+    particular exporter. By default, record conversion is disabled, see ``ignoreOptions`` parameter
+    in the configuration section.
+:``ipfix.template`` and ``ipfix.optionsTemplate``:
+    Records describing structure of flow records (i.e. ``ipfix.entry``) and options records
+    (i.e. ``ipfix.optionsEntry``), respectively. These types are usually useful only for
+    exporter analytics. Periodicity of these records usually depends on the exporter and used
+    transport protocol. For example, for connection over UDP it corresponds to
+    "template refresh interval" configured on the exporter. However, for TCP and SCTP sessions,
+    the template records are usually sent only once immediately after session start.
+    By default, template record conversion is disabled, see ``templateInfo`` parameter in the
+    configuration section.
+
 Example configuration
 ---------------------
 
@@ -70,8 +91,8 @@ Don't forget to remove (or comment) outputs that you don't want to use!
             <nonPrintableChar>true</nonPrintableChar>
             <numericNames>false</numericNames>
             <splitBiflow>false</splitBiflow>
-	    <detailedInfo>false</detailedInfo>
-	    <templateInfo>false</templateInfo>
+            <detailedInfo>false</detailedInfo>
+            <templateInfo>false</templateInfo>
 
             <outputs>
                 <server>
@@ -145,12 +166,13 @@ Formatting parameters:
     records are unaffected. [values: true/false, default: false]
 
 :``detailedInfo``:
-    Add detailed info about the IPFIX message (export time, sequence number, ...) to each record
-    under "ipfix:" prefix. [values: true/false, default: false]
+    Add additional information about the IPFIX message (such as export time, Observation Domain ID,
+    IP address of the exporter, etc.) to which each record belongs. Additional fields starts
+    with "ipfix:" prefix. [values: true/false, default: false]
 
 :``templateInfo``:
-    Add Template and Options Template records to the top of the exported JSON file with prefix
-    "ipfix.template" and "ipfix.optionsTemplate". [values: true/false, default: false]
+    Convert Template and Options Template records. See the particular section below for
+    information about the formatting of these records. [values: true/false, default: false]
 
 ----
 
@@ -290,44 +312,57 @@ Keep on mind that all structures can be nested in each other.
 Template and Options Template records
 -------------------------------------
 
-Template and Options Template records are special records.
+These records are converted only if ``<templateInfo>`` option is enabled.
 
-*Template record* describes structure of flow records, and its type is "ipfix.template".
-Converted *Template record* contains "ipfix:templateId" field, which is unique to the Transport Session 
-and Observation Domain and "ipfix:fields" which is an array of JSON objects specifing fields of flow records. 
+*Template record* describes structure of flow records, and its "@type" is "ipfix.template".
+Converted Template record contains "ipfix:templateId" field, which is unique to the Transport
+Session and Observation Domain, and "ipfix:fields", which is an array of JSON objects specifying
+fields of flow records.
 
 .. code-block:: json
-{
-	"@type": "ipfix.template",
-	"ipfix:templateId": "49171",
-	"ipfix:fields": [{
-		"ipfix:elementId": "16399",
-		"ipfix:enterpriseId": "6871",
-		"ipfix:fieldLength": "1"
-	}, {
-		"ipfix:elementId": "184",
-		"ipfix:enterpriseId": "29305",
-		"ipfix:fieldLength": "4"
-	}]
-}
 
-*Options Template record* describes structure of additional information for the collector.
-These additional information are converted to record with type "ipfix.optionsEntry".
-Converted *Options Template record* is similar to previous type, however it contains also 
-"ipfix:scopeCount" field, which specifies number of scope fields in the record.
-  
+    {
+        "@type": "ipfix.template",
+        "ipfix:templateId": 49171,
+        "ipfix:fields": [
+            {
+                "ipfix:elementId": 16399,
+                "ipfix:enterpriseId": 6871,
+                "ipfix:fieldLength": 1
+            }, {
+                "ipfix:elementId": 184,
+                "ipfix:enterpriseId": 29305,
+                "ipfix:fieldLength": 4
+            }, {
+                ...
+            }
+        ]
+    }
+
+*Options Template record* describes structure of additional information for the collector, such as
+sampling configuration, export statistics, etc. The description is converted to a record with
+"@type" equal to "ipfix.optionsEntry". Converted Options Template record is similar
+to the previous type, however, it contains additional "ipfix:scopeCount" field, which specifies
+number of scope fields in the record. A scope count of N specifies that the first N field
+specifiers are scope fields.
+
 .. code-block:: json
-{
-	"@type": "ipfix.optionsTemplate",
-	"ipfix:templateId": "53252",
-	"ipfix:scopeCount": "3",
-	"ipfix:fields": [{
-		"ipfix:elementId": "322",
-		"ipfix:enterpriseId": "0",
-		"ipfix:fieldLength": "4"
-	}, {
-		"ipfix:elementId": "554",
-		"ipfix:enterpriseId": "6871",
-		"ipfix:fieldLength": "65535"
-	}]
-}
+
+    {
+        "@type": "ipfix.optionsTemplate",
+	    "ipfix:templateId": 53252,
+	    "ipfix:scopeCount": 1,
+	    "ipfix:fields": [
+	        {
+		        "ipfix:elementId": 130,
+		        "ipfix:enterpriseId": 0,
+		        "ipfix:fieldLength": 4
+	        }, {
+		        "ipfix:elementId": 103,
+		        "ipfix:enterpriseId": 6871,
+		        "ipfix:fieldLength": 4
+	        }, {
+                ...
+            }
+        ]
+    }
