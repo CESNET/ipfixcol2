@@ -147,15 +147,52 @@ Storage::output_add(Output *output)
 }
 
 /**
+ * \brief Get IP address from Transport Session
+ *
+ * \note Not all Transport Session contains an IPv4/IPv6 address (for example, file type)
+ * \param[in]  ipx_desc Transport Session description
+ * \param[out] src_addr Conversion buffer for IPv4/IPv6 address converted to string
+ * \param[int] size     Size of the conversion buffer
+ * \return On success returns a pointer to the buffer. Otherwise returns nullptr.
+ */
+const char *
+Storage::session_src_addr(const struct ipx_session *ipx_desc, char *src_addr, socklen_t size)
+{
+    const struct ipx_session_net *net_desc;
+    switch (ipx_desc->type) {
+    case FDS_SESSION_UDP:
+        net_desc = &ipx_desc->udp.net;
+        break;
+    case FDS_SESSION_TCP:
+        net_desc = &ipx_desc->tcp.net;
+        break;
+    case FDS_SESSION_SCTP:
+        net_desc = &ipx_desc->sctp.net;
+        break;
+    default:
+        return nullptr;
+    }
+
+    const char *ret;
+    if (net_desc->l3_proto == AF_INET) {
+        ret = inet_ntop(AF_INET, &net_desc->addr_src.ipv4, src_addr, size);
+    } else {
+        ret = inet_ntop(AF_INET6, &net_desc->addr_src.ipv6, src_addr, size);
+    }
+
+    return ret;
+}
+
+/**
  * \brief Convert template record to JSON string
  *
- * \param[in] tset_iter     (Options) Template set structure to convert
- * \param[in] set_id        Id of the set
- * \param[in] hdr           Message header of IPFIX record
+ * \param[in] tset_iter  (Options) Template Set structure to convert
+ * \param[in] set_id     Id of the Template Set
+ * \param[in] hdr        Message header of IPFIX record
  * \throw runtime_error  If template parser failed
  */
 void
-Storage::convert_tmplt_rec(struct fds_tset_iter *tset_iter, uint16_t set_id, fds_ipfix_msg_hdr* hdr)
+Storage::convert_tmplt_rec(struct fds_tset_iter *tset_iter, uint16_t set_id, const struct fds_ipfix_msg_hdr *hdr)
 {
     enum fds_template_type type;
     void *ptr;
@@ -222,54 +259,55 @@ Storage::convert_tmplt_rec(struct fds_tset_iter *tset_iter, uint16_t set_id, fds
  * From all sets in the Message, try to convert just Template and Options template sets.
  * \param[in] set   All sets in the Message
  * \param[in] hdr   Message header of IPFIX record
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_DENIED if an output fails to store any record
  */
-void
-Storage::convert_set(struct ipx_ipfix_set *set, fds_ipfix_msg_hdr* hdr)
+int
+Storage::convert_tset(struct ipx_ipfix_set *set, const struct fds_ipfix_msg_hdr *hdr)
 {
-
-    bool flush = false;
-    int ret = IPX_OK;
     uint16_t set_id = ntohs(set->ptr->flowset_id);
-    if (set_id == FDS_IPFIX_SET_TMPLT || set_id == FDS_IPFIX_SET_OPTS_TMPLT) {
+    assert(set_id == FDS_IPFIX_SET_TMPLT || set_id == FDS_IPFIX_SET_OPTS_TMPLT);
 
-        // Template set
-        struct fds_tset_iter tset_iter;
-        fds_tset_iter_init(&tset_iter, set->ptr);
+    // Template set
+    struct fds_tset_iter tset_iter;
+    fds_tset_iter_init(&tset_iter, set->ptr);
 
-        // Iteration through all templates in the set
-        while (fds_tset_iter_next(&tset_iter) == FDS_OK) {
-            flush = true;
+    // Iteration through all (Options) Templates in the Set
+    while (fds_tset_iter_next(&tset_iter) == FDS_OK) {
+        // Read and print single template
+        convert_tmplt_rec(&tset_iter, set_id, hdr);
 
-            // Read and print single template
-            convert_tmplt_rec(&tset_iter, set_id, hdr);
-
-            // Store it
-            for (Output *output : m_outputs) {
-                if (output->process(m_record.buffer, m_record.size_used) != IPX_OK) {
-                    ret = IPX_ERR_DENIED;
-                    goto endloop;
-                }
-            }
-
-            // Buffer is empty
-            m_record.size_used = 0;
-        }
-    }
-endloop:
-    if (flush) {
+        // Store it
         for (Output *output : m_outputs) {
-            output->flush();
+            if (output->process(m_record.buffer, m_record.size_used) != IPX_OK) {
+                return IPX_ERR_DENIED;
+            }
         }
+
+        // Buffer is empty
+        m_record.size_used = 0;
     }
+
+    return IPX_OK;
 }
 
 int
 Storage::records_store(ipx_msg_ipfix_t *msg, const fds_iemgr_t *iemgr)
 {
-    // Message header
-    auto hdr = (fds_ipfix_msg_hdr*) ipx_msg_ipfix_get_packet(msg);
+    const auto hdr = (fds_ipfix_msg_hdr*) ipx_msg_ipfix_get_packet(msg);
+    const uint32_t rec_cnt = ipx_msg_ipfix_get_drec_cnt(msg);
+    bool flush = false;
+    int ret = IPX_OK;
 
-    // Process template records if enabled
+    // Extract IPv4/IPv6 address of the exporter, if required
+    m_src_addr = nullptr;
+    char src_addr[INET6_ADDRSTRLEN];
+    if (m_format.detailed_info) {
+        const struct ipx_msg_ctx *msg_ctx = ipx_msg_ipfix_get_ctx(msg);
+        m_src_addr = session_src_addr(msg_ctx->session, src_addr, INET6_ADDRSTRLEN);
+    }
+
+    // Process (Options) Template records if enabled
     if (m_format.template_info) {
         struct ipx_ipfix_set *sets;
         size_t set_cnt;
@@ -277,15 +315,21 @@ Storage::records_store(ipx_msg_ipfix_t *msg, const fds_iemgr_t *iemgr)
 
         // Iteration through all sets
         for (uint32_t i = 0; i < set_cnt; i++) {
-            convert_set(&sets[i], hdr);
+            uint16_t set_id = ntohs(sets[i].ptr->flowset_id);
+            if (set_id != FDS_IPFIX_SET_TMPLT && set_id != FDS_IPFIX_SET_OPTS_TMPLT) {
+                // Skip non-template sets
+                continue;
+            }
+
+            flush = true;
+            if (convert_tset(&sets[i], hdr) != IPX_OK) {
+                ret = IPX_ERR_DENIED;
+                goto endloop;
+            }
         }
     }
 
     // Process all data records
-    const uint32_t rec_cnt = ipx_msg_ipfix_get_drec_cnt(msg);
-    bool flush = false;
-    int ret = IPX_OK;
-
     for (uint32_t i = 0; i < rec_cnt; ++i) {
         ipx_ipfix_record *ipfix_rec = ipx_msg_ipfix_get_drec(msg, i);
 
@@ -342,7 +386,7 @@ endloop:
  * @param[in] hdr   Message header of IPFIX record
  */
 void
-Storage::addDetailedInfo(fds_ipfix_msg_hdr *hdr)
+Storage::addDetailedInfo(const struct fds_ipfix_msg_hdr *hdr)
 {
     // Array for formatting detailed info fields
     char field[LOCAL_BSIZE];
@@ -357,6 +401,12 @@ Storage::addDetailedInfo(fds_ipfix_msg_hdr *hdr)
 
     snprintf(field, LOCAL_BSIZE, ",\"ipfix:msgLength\":%" PRIu16, ntohs(hdr->length));
     buffer_append(field);
+
+    if (m_src_addr) {
+        buffer_append(",\"ipfix:srcAddr\":\"");
+        buffer_append(m_src_addr);
+        buffer_append("\"");
+    }
 }
 
 /**

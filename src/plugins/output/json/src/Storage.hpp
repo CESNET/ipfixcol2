@@ -44,6 +44,7 @@
 
 #include <string>
 #include <vector>
+#include <arpa/inet.h>
 #include <ipfixcol2.h>
 #include "Config.hpp"
 
@@ -75,6 +76,9 @@ public:
     virtual int
     process(const char *str, size_t len) = 0;
 
+    /**
+     * \brief Flush buffered records
+     */
     virtual void
     flush() {};
 };
@@ -90,6 +94,8 @@ private:
     struct cfg_format m_format;
     /** Conversion flags for libfds converter                                                    */
     uint32_t m_flags;
+    /** IPv4/IPv6 exporter address of the current message (can be nullptr)                       */
+    const char *m_src_addr = nullptr;
 
     struct {
         char *buffer;
@@ -111,12 +117,13 @@ private:
     // Reserve memory for a JSON string
     void buffer_reserve(size_t n);
     // Convert set to JSON string
-    void convert_set(struct ipx_ipfix_set *set, fds_ipfix_msg_hdr* hdr);
+    int convert_tset(struct ipx_ipfix_set *set, const struct fds_ipfix_msg_hdr *hdr);
     // Convert template record to a JSON string
-    void convert_tmplt_rec(struct fds_tset_iter *tset_iter, uint16_t set_id, fds_ipfix_msg_hdr* hdr);
+    void convert_tmplt_rec(struct fds_tset_iter *tset_iter, uint16_t set_id, const struct fds_ipfix_msg_hdr *hdr);
     // Add detailed info (templateId, ODID, seqNum, exportTime) to JSON string
-    void addDetailedInfo(fds_ipfix_msg_hdr *hdr);
-
+    void addDetailedInfo(const struct fds_ipfix_msg_hdr *hdr);
+    // Get src_addr from IPFIX session
+    static const char *session_src_addr(const struct ipx_session *ipx_desc, char *src_addr, socklen_t size);
 public:
     /**
      * \brief Constructor
@@ -142,8 +149,8 @@ public:
      * \brief Process IPFIX Message records
      *
      * For each record perform conversion to JSON and pass it to all output instances.
-     * \param[in] msg IPFIX Message to convert
-     * \param[in] mgr Information Element manager (can be NULL)
+     * \param[in] msg   IPFIX Message to convert
+     * \param[in] iemgr Information Element manager (can be NULL)
      * \return #IPX_OK on success
      * \return #IPX_ERR_DENIED if a fatal error has occurred and the storage cannot continue to
      *   work properly!
