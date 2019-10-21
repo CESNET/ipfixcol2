@@ -181,10 +181,10 @@ Storage::convert_tmplt_rec(struct fds_tset_iter *tset_iter, uint16_t set_id, fds
 
     // Printing out the header
     char field[LOCAL_BSIZE];
-    snprintf(field, LOCAL_BSIZE, "\"ipfix:templateId\":\"%" PRIu16 "\"", tmplt->id);
+    snprintf(field, LOCAL_BSIZE, "\"ipfix:templateId\":%" PRIu16, tmplt->id);
     buffer_append(field);
     if (set_id == FDS_IPFIX_SET_OPTS_TMPLT) {
-        snprintf(field, LOCAL_BSIZE, ",\"ipfix:scopeCount\":\"%" PRIu16 "\"", tmplt->fields_cnt_scope);
+        snprintf(field, LOCAL_BSIZE, ",\"ipfix:scopeCount\":%" PRIu16, tmplt->fields_cnt_scope);
         buffer_append(field);
     }
 
@@ -202,11 +202,11 @@ Storage::convert_tmplt_rec(struct fds_tset_iter *tset_iter, uint16_t set_id, fds
             buffer_append(",");
         }
         buffer_append("{");
-        snprintf(field, LOCAL_BSIZE, "\"ipfix:elementId\":\"%" PRIu16 "\"", current.id);
+        snprintf(field, LOCAL_BSIZE, "\"ipfix:elementId\":%" PRIu16, current.id);
         buffer_append(field);
-        snprintf(field, LOCAL_BSIZE, ",\"ipfix:enterpriseId\":\"%" PRIu32 "\"", current.en);
+        snprintf(field, LOCAL_BSIZE, ",\"ipfix:enterpriseId\":%" PRIu32, current.en);
         buffer_append(field);
-        snprintf(field, LOCAL_BSIZE, ",\"ipfix:fieldLength\":\"%" PRIu16 "\"", current.length);
+        snprintf(field, LOCAL_BSIZE, ",\"ipfix:fieldLength\":%" PRIu16, current.length);
         buffer_append(field);
         buffer_append("}");
     }
@@ -346,16 +346,16 @@ Storage::addDetailedInfo(fds_ipfix_msg_hdr *hdr)
 {
     // Array for formatting detailed info fields
     char field[LOCAL_BSIZE];
-    snprintf(field, LOCAL_BSIZE, ",\"ipfix:exportTime\":\"%" PRIu32 "\"", ntohl(hdr->export_time));
+    snprintf(field, LOCAL_BSIZE, ",\"ipfix:exportTime\":%" PRIu32, ntohl(hdr->export_time));
     buffer_append(field);
 
-    snprintf(field, LOCAL_BSIZE, ",\"ipfix:seqNumber\":\"%" PRIu32 "\"", ntohl(hdr->seq_num));
+    snprintf(field, LOCAL_BSIZE, ",\"ipfix:seqNumber\":%" PRIu32, ntohl(hdr->seq_num));
     buffer_append(field);
 
-    snprintf(field, LOCAL_BSIZE, ",\"ipfix:odid\":\"%" PRIu32 "\"", ntohl(hdr->odid));
+    snprintf(field, LOCAL_BSIZE, ",\"ipfix:odid\":%" PRIu32, ntohl(hdr->odid));
     buffer_append(field);
 
-    snprintf(field, LOCAL_BSIZE, ",\"ipfix:msgLength\":\"%" PRIu16 "\"", ntohs(hdr->length));
+    snprintf(field, LOCAL_BSIZE, ",\"ipfix:msgLength\":%" PRIu16, ntohs(hdr->length));
     buffer_append(field);
 }
 
@@ -392,7 +392,7 @@ Storage::convert(struct fds_drec &rec, const fds_iemgr_t *iemgr, fds_ipfix_msg_h
 
         // Add template ID to JSON string
         char field[LOCAL_BSIZE];
-        snprintf(field, LOCAL_BSIZE, ",\"ipfix:templateId\":\"%" PRIu16 "\"", rec.tmplt->id);
+        snprintf(field, LOCAL_BSIZE, ",\"ipfix:templateId\":%" PRIu16, rec.tmplt->id);
         buffer_append(field);
 
         // Append the record with '}' parenthesis removed before
