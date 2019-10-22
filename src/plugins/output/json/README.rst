@@ -119,6 +119,7 @@ Don't forget to remove (or comment) outputs that you don't want to use!
                     <prefix>json.</prefix>
                     <timeWindow>300</timeWindow>
                     <timeAlignment>yes</timeAlignment>
+                    <compression>none</compression>
                 </file>
             </outputs>
         </params>
