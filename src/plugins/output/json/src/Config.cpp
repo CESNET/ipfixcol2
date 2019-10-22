@@ -84,7 +84,8 @@ enum params_xml_nodes {
     FILE_PATH,         /**< Path specification format       */
     FILE_PREFIX,       /**< File prefix                     */
     FILE_WINDOW,       /**< Window interval                 */
-    FILE_ALIGN         /**< Window alignment                */
+    FILE_ALIGN,        /**< Window alignment                */
+    FILE_COMPRESS      /**< Compression                     */
 };
 
 /** Definition of the \<print\> node  */
@@ -118,6 +119,7 @@ static const struct fds_xml_args args_file[] = {
     FDS_OPTS_ELEM(FILE_PREFIX, "prefix",        FDS_OPTS_T_STRING, 0),
     FDS_OPTS_ELEM(FILE_WINDOW, "timeWindow",    FDS_OPTS_T_UINT,   0),
     FDS_OPTS_ELEM(FILE_ALIGN,  "timeAlignment", FDS_OPTS_T_BOOL,   0),
+    FDS_OPTS_ELEM(FILE_COMPRESS, "compression", FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
     FDS_OPTS_END
 };
 
@@ -339,6 +341,7 @@ Config::parse_file(fds_xml_ctx_t *file)
     struct cfg_file output;
     output.window_align = true;
     output.window_size = 300;
+    output.m_calg = calg::NONE;
 
     const struct fds_xml_cont *content;
     while (fds_xml_next(file, &content) != FDS_EOC) {
@@ -367,6 +370,18 @@ Config::parse_file(fds_xml_ctx_t *file)
         case FILE_ALIGN:
             assert(content->type == FDS_OPTS_T_BOOL);
             output.window_align = content->val_bool;
+            break;
+        case FILE_COMPRESS:
+            // Compression method
+            assert(content->type == FDS_OPTS_T_STRING);
+            if (strcasecmp(content->ptr_string, "none") == 0) {
+                output.m_calg = calg::NONE;
+            } else if (strcasecmp(content->ptr_string, "gzip") == 0) {
+                output.m_calg = calg::GZIP;
+            } else {
+                const std::string inv_str = content->ptr_string;
+                throw std::invalid_argument("Unknown compression algorithm '" + inv_str + "'");
+            }
             break;
         default:
             throw std::invalid_argument("Unexpected element within <file>!");

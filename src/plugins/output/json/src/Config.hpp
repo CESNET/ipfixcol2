@@ -104,6 +104,11 @@ struct cfg_server : cfg_output {
     bool blocking;
 };
 
+enum class calg {
+    NONE, ///< Do not use compression
+    GZIP  ///< GZIP compression
+};
+
 /** Configuration of file writer                                                                 */
 struct cfg_file : cfg_output {
     /** Path pattern                                                                             */
@@ -114,6 +119,8 @@ struct cfg_file : cfg_output {
     uint32_t window_size;
     /** Enable/disable window alignment                                                          */
     bool window_align;
+    /** Compression algorithm                                                                    */
+    calg m_calg;
 };
 
 /** Parsed configuration of an instance                                                          */

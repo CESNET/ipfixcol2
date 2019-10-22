@@ -223,6 +223,12 @@ outputs can be used at the same time if the outputs are not in collision with ea
         Specifies the time interval in seconds to rotate files [minimum 60, default 300]
     :``timeAlignment``:
          Align file rotation with next N minute interval (yes/no).
+    :``compression``:
+        Data compression helps to significantly reduce size of output files.
+        Following compression algorithms are available:
+
+        :``none``: Compression disabled [default]
+        :``gzip``: GZIP compression
 
 :``print``:
     Write data on standard output.

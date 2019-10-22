@@ -15,6 +15,10 @@ add_library(json-output MODULE
     src/Server.hpp
 )
 
+find_package(ZLIB REQUIRED)
+include_directories(${ZLIB_INCLUDE_DIRS})
+target_link_libraries(json-output ${ZLIB_LIBRARIES})
+
 install(
     TARGETS json-output
     LIBRARY DESTINATION "${INSTALL_DIR_LIB}/ipfixcol2/"

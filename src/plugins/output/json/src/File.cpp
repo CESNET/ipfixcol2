@@ -52,6 +52,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <climits>
+#include <zlib.h>
 
 /**
  * \brief Class constructor
@@ -69,6 +70,7 @@ File::File(const struct cfg_file &cfg, ipx_ctx_t *ctx) : Output(cfg.name, ctx)
     _thread->storage_path = cfg.path_pattern;
     _thread->file_prefix = cfg.prefix;
     _thread->window_size = cfg.window_size;
+    _thread->m_calg = cfg.m_calg;
     time(&_thread->window_time);
 
     if (cfg.window_size < _WINDOW_MIN_SIZE) {
@@ -88,8 +90,8 @@ File::File(const struct cfg_file &cfg, ipx_ctx_t *ctx) : Output(cfg.name, ctx)
     }
 
     // Create directory & first file
-    FILE *new_file = file_create(ctx, _thread->storage_path, _thread->file_prefix,
-        _thread->window_time);
+    void *new_file = file_create(ctx, _thread->storage_path, _thread->file_prefix,
+        _thread->window_time, _thread->m_calg);
     if (!new_file) {
         delete _thread;
         throw std::runtime_error("(File output) Failed to create a time window file.");
@@ -99,20 +101,32 @@ File::File(const struct cfg_file &cfg, ipx_ctx_t *ctx) : Output(cfg.name, ctx)
 
     pthread_rwlockattr_t attr;
     if (pthread_rwlockattr_init(&attr) != 0) {
-        fclose(_thread->file);
+        if (_thread->m_calg == calg::GZIP) {
+            gzclose((gzFile)_thread->file);
+        } else {
+            fclose((FILE *)_thread->file);
+        }
         delete _thread;
         throw std::runtime_error("(File output) Rwlockattr initialization failed!");
     }
 
     if (pthread_rwlockattr_setkind_np(&attr, PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP) != 0) {
-        fclose(_thread->file);
+        if (_thread->m_calg == calg::GZIP) {
+            gzclose((gzFile)_thread->file);
+        } else {
+            fclose((FILE *)_thread->file);
+        }
         pthread_rwlockattr_destroy(&attr);
         delete _thread;
         throw std::runtime_error("(File output) Rwlockattr setkind failed!");
     }
 
     if (pthread_rwlock_init(&_thread->rwlock, &attr) != 0) {
-        fclose(_thread->file);
+        if (_thread->m_calg == calg::GZIP) {
+            gzclose((gzFile)_thread->file);
+        } else {
+            fclose((FILE *)_thread->file);
+        }
         pthread_rwlockattr_destroy(&attr);
         delete _thread;
         throw std::runtime_error("(File output) Rwlock initialization failed!");
@@ -120,7 +134,11 @@ File::File(const struct cfg_file &cfg, ipx_ctx_t *ctx) : Output(cfg.name, ctx)
 
     pthread_rwlockattr_destroy(&attr);
     if (pthread_create(&_thread->thread, NULL, &File::thread_window, _thread) != 0) {
-        fclose(_thread->file);
+        if (_thread->m_calg == calg::GZIP) {
+            gzclose((gzFile)_thread->file);
+        } else {
+            fclose((FILE *)_thread->file);
+        }
         pthread_rwlock_destroy(&_thread->rwlock);
         delete _thread;
         throw std::runtime_error("(File output) Failed to start a thread for changing time "
@@ -141,7 +159,11 @@ File::~File()
         pthread_rwlock_destroy(&_thread->rwlock);
 
         if (_thread->file) {
-            fclose(_thread->file);
+            if (_thread->m_calg == calg::GZIP) {
+                gzclose((gzFile)_thread->file);
+            } else {
+                fclose((FILE *)_thread->file);
+            }
         }
 
         delete _thread;
@@ -177,12 +199,16 @@ File::thread_window(void *context)
         // New time window
         pthread_rwlock_wrlock(&data->rwlock);
         if (data->file) {
-            fclose(data->file);
+            if (data->m_calg == calg::GZIP) {
+                gzclose((gzFile)data->file);
+            } else {
+                fclose((FILE *)data->file);
+            }
             data->file = nullptr;
         }
 
         data->window_time += data->window_size;
-        FILE *file = file_create(data->ctx, data->storage_path, data->file_prefix, data->window_time);
+        void *file = file_create(data->ctx, data->storage_path, data->file_prefix, data->window_time, data->m_calg);
         if (!file) {
             IPX_CTX_ERROR(data->ctx, "(File output) Failed to create a time window file.", '\0');
         }
@@ -209,7 +235,11 @@ File::process(const char *str, size_t len)
     pthread_rwlock_rdlock(&_thread->rwlock);
     if (_thread->file) {
         // Store the record
-        fwrite(str, len, 1, _thread->file);
+        if (_thread->m_calg == calg::GZIP) {
+            gzfwrite(str, len, 1, (gzFile)_thread->file);
+        } else {
+            fwrite(str, len, 1, (FILE *)_thread->file);
+        }
     }
     pthread_rwlock_unlock(&_thread->rwlock);
     return IPX_OK;
@@ -220,7 +250,11 @@ File::flush()
 {
     pthread_rwlock_rdlock(&_thread->rwlock);
     if (_thread->file) {
-        fflush(_thread->file);
+        if (_thread->m_calg == calg::GZIP) {
+            gzflush((gzFile)_thread->file, Z_SYNC_FLUSH);
+        } else {
+            fflush((FILE *)_thread->file);
+        }
     }
     pthread_rwlock_unlock(&_thread->rwlock);
 }
@@ -342,9 +376,9 @@ File::dir_create(ipx_ctx_t *ctx, const std::string &path)
  * \param[in] tm     Timestamp
  * \return On success returns pointer to the file, Otherwise returns NULL.
  */
-FILE *
+void *
 File::file_create(ipx_ctx_t *ctx, const std::string &tmplt, const std::string &prefix,
-    const time_t &tm)
+    const time_t &tm, calg m_calg)
 {
     char file_fmt[20];
 
@@ -372,8 +406,15 @@ File::file_create(ipx_ctx_t *ctx, const std::string &tmplt, const std::string &p
         return NULL;
     }
 
-    std::string file_name = directory + prefix + file_fmt;
-    FILE *file = fopen(file_name.c_str(), "a");
+    std::string file_name;
+    void *file;
+    if (m_calg == calg::GZIP) {
+        file_name = directory + prefix + file_fmt + ".gz";
+        file = gzopen(file_name.c_str(), "a9");
+    } else {
+        file_name = directory + prefix + file_fmt;
+        file = fopen(file_name.c_str(), "a");
+    }
     if (!file) {
         // Failed to create a flow file
         char buffer[128];
