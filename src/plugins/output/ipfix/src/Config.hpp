@@ -47,22 +47,45 @@
 #include <ipfixcol2.h>
 #include <libfds.h>
 
+/// Plugin configuration
 class Config {
-
 private:
+    /**
+     * @brief Set default configuration parameters
+     */
     void set_defaults();
+    /**
+     * @brief Parse XML tree
+     * @param[in] params XML tree
+     * @throws invalid_argument if unexpected node is detected
+     */
     void parse_params(fds_xml_ctx_t *params);
+    /**
+     * @brief Check validity of configuration
+     */
     void check_validity();
 
 public:
+    /// Output file pattern
     std::string filename;
+    /// Use local time instead of UTC time
     bool use_localtime;
+    /// Time interval to rotate files (in seconds)
     uint64_t window_size;
+    /// Rotate files on multiple of time interval
     bool align_windows;
+    /// Skip Data Sets with undefined templates
     bool skip_unknown_datasets;
+    /// Split on IPFIX Export Time instead on system time
     bool split_on_export_time;
 
+    /**
+     * @brief Parse configuration of the IPFIX plugin
+     * @param[in] params Plugin part of the configuration of the collector
+     * @throws runtime_error on error or invalid configuration
+     */
     Config(const char *params);
+    /// Configuration destructor
     ~Config();
 };
 

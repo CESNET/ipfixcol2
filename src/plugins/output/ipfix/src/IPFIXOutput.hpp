@@ -52,28 +52,42 @@
 #include <ipfixcol2.h>
 #include <libfds.h>
 
+/// IPFIX file manager
 class IPFIXOutput {
 private:
+    /// Plugin context (only for log!)
     const ipx_ctx *plugin_context;
-    Config *config;
-    
+    /// Parsed instance configuration
+    const Config *config;
+
+    /// Auxiliary context of an Observation Domain ID (ODID)
     struct odid_context_s {
+        /// Observation Domain ID
         uint32_t odid;
+        /// Transport Session with permission to write to the file
         const ipx_session *session = NULL;
+        /// Template IDs seen during the last window
         std::set<uint16_t> templates_seen;
+        /// Options Template IDs seen during the last window
         std::set<uint16_t> options_templates_seen;
+        /// Detected Transport Sessions without permission to write to the file
         std::set<const ipx_session *> colliding_sessions;
+        /// All (Options) Templates must be written before any Data Records
         bool needs_to_write_templates = false;
+        /// Sequence number of the IPFIX Message (only if skipping unknown Data Sets is enabled)
         uint32_t sequence_number = 0;
     };
 
+    /// Map of known Observation Domain IDs (ODIDs)
     std::map<uint32_t, odid_context_s> odid_contexts;
+    /// Current output file
     std::FILE *output_file = NULL;
+    /// Start time of the current file
     std::time_t file_start_time = 0;
 
     bool
     should_start_new_file(std::time_t current_time);
-    void 
+    void
     new_file(std::time_t  current_time);
     void
     write_bytes(const void *bytes, size_t bytes_count);
@@ -83,8 +97,8 @@ private:
     void
     remove_dead_templates(odid_context_s *odid_context, const fds_tsnapshot_t *templates_snapshot);
     int
-    write_template_set(uint16_t set_id, const fds_tsnapshot_t *templates_snapshot, 
-                       std::set<uint16_t>::iterator template_ids, std::set<uint16_t>::iterator template_ids_end, 
+    write_template_set(uint16_t set_id, const fds_tsnapshot_t *templates_snapshot,
+                       std::set<uint16_t>::iterator template_ids, std::set<uint16_t>::iterator template_ids_end,
                        unsigned size_limit, unsigned *out_set_length);
     void
     write_templates(odid_context_s *odid_context, const fds_tsnapshot_t *templates_snapshot,
@@ -92,23 +106,29 @@ private:
 
 
 public:
-    IPFIXOutput(Config *config, const ipx_ctx *ctx);
+    /**
+     * \brief Constructor
+     * \param[in] config Instance configuration
+     * \param[in] ctx    Plugin context (for log only!)
+     */
+    IPFIXOutput(const Config *config, const ipx_ctx *ctx);
+    /// Class destructor
     ~IPFIXOutput();
 
     /**
-     * \brief      Processes an incoming IPFIX message from the collector
+     * \brief  Processes an incoming IPFIX message from the collector
+     * \param[in] message The IPFIX message
+     * \throws runtime_error if a new file cannot be created
      *
-     * \param      message  The IPFIX message
      */
-    void 
+    void
     on_ipfix_message(ipx_msg_ipfix *message);
 
     /**
-     * \brief      Processes an incoming session message from the collector
-     *
-     * \param      message  The session message
+     * \brief Processes an incoming session message from the collector
+     * \param[in] message The session message
      */
-    void 
+    void
     on_session_message(ipx_msg_session *message);
 };
 

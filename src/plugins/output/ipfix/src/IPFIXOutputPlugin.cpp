@@ -42,13 +42,14 @@
 #include "Config.hpp"
 #include "IPFIXOutput.hpp"
 
-#include <iostream>
 #include <memory>
-
 #include <ipfixcol2.h>
 
+/// Instance of the output plugin
 struct IPFIXOutputInstance {
+    /// Configuration of the instance
     Config *config;
+    /// Output file manager
     IPFIXOutput *ipfix_output;
 };
 
@@ -63,9 +64,9 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
     // Configuration flags (reserved for future use)
     0,
     // Plugin version string (like "1.2.3")
-    "1.0.0",
+    "2.0.0",
     // Minimal IPFIXcol version string (like "1.2.3")
-    "2.0.0"};
+    "2.1.0"};
 
 int
 ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
@@ -105,7 +106,7 @@ void
 ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
 {
     (void)ctx;
-    
+
     IPFIXOutputInstance *instance = reinterpret_cast<IPFIXOutputInstance *>(cfg);
 
     delete instance->ipfix_output;

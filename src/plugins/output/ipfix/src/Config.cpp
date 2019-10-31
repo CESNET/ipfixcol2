@@ -1,7 +1,7 @@
 /**
  * \file src/plugins/output/ipfix/src/Config.cpp
  * \author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
- * \brief Config for ipfix output plugin
+ * \brief Config for IPFIX output plugin
  * \date 2019
  */
 
@@ -44,6 +44,7 @@
 #include <stdexcept>
 #include <memory>
 
+/// XML nodes
 enum params_xml_nodes {
     PARAM_FILENAME,
     PARAM_USE_LOCALTIME,
@@ -53,14 +54,15 @@ enum params_xml_nodes {
     PARAM_SPLIT_ON_EXPORT_TIME
 };
 
+/// Description of XML document
 static const struct fds_xml_args args_params[] = {
     FDS_OPTS_ROOT("params"),
-    FDS_OPTS_ELEM(PARAM_FILENAME, "filename", FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_ELEM(PARAM_FILENAME,      "filename",     FDS_OPTS_T_STRING, 0),
     FDS_OPTS_ELEM(PARAM_USE_LOCALTIME, "useLocalTime", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
-    FDS_OPTS_ELEM(PARAM_WINDOW_SIZE, "windowSize", FDS_OPTS_T_UINT, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(PARAM_WINDOW_SIZE,   "windowSize",   FDS_OPTS_T_UINT, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(PARAM_ALIGN_WINDOWS, "alignWindows", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(PARAM_SKIP_UNKNOWN_DATASETS, "skipUnknownDataSets", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
-    FDS_OPTS_ELEM(PARAM_SPLIT_ON_EXPORT_TIME, "splitOnExportTime", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(PARAM_SPLIT_ON_EXPORT_TIME,  "splitOnExportTime",   FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
     FDS_OPTS_END
 };
 
@@ -108,8 +110,8 @@ void Config::parse_params(fds_xml_ctx_t *params)
     }
 }
 
-void 
-Config::check_validity() 
+void
+Config::check_validity()
 {
     if (filename.empty()) {
         throw std::invalid_argument("Filename cannot be empty!");
