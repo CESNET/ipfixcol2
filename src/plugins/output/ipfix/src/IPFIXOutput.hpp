@@ -45,6 +45,7 @@
 
 #include <set>
 #include <map>
+#include <memory>
 #include <vector>
 #include <cstdio>
 #include <ctime>
@@ -62,14 +63,8 @@ private:
 
     /// Auxiliary context of an Observation Domain ID (ODID)
     struct odid_context_s {
-        /// Observation Domain ID
-        uint32_t odid;
         /// Transport Session with permission to write to the file
-        const ipx_session *session = NULL;
-        /// Template IDs seen during the last window
-        std::set<uint16_t> templates_seen;
-        /// Options Template IDs seen during the last window
-        std::set<uint16_t> options_templates_seen;
+        const ipx_session *session = nullptr;
         /// Detected Transport Sessions without permission to write to the file
         std::set<const ipx_session *> colliding_sessions;
         /// All (Options) Templates must be written before any Data Records
@@ -78,32 +73,27 @@ private:
         uint32_t sequence_number = 0;
     };
 
+    /// Memory for editing IPFIX Messages
+    std::unique_ptr<uint8_t[]> buffer = nullptr;
     /// Map of known Observation Domain IDs (ODIDs)
     std::map<uint32_t, odid_context_s> odid_contexts;
     /// Current output file
-    std::FILE *output_file = NULL;
+    std::FILE *output_file = nullptr;
     /// Start time of the current file
     std::time_t file_start_time = 0;
 
+    struct odid_context_s *
+    get_odid(uint32_t odid, const ipx_session *session);
+    void
+    remove_session(const struct ipx_session *session);
     bool
     should_start_new_file(std::time_t current_time);
     void
-    new_file(std::time_t  current_time);
-    void
-    write_bytes(const void *bytes, size_t bytes_count);
+    new_file(const std::time_t current_time);
     void
     close_file();
-
     void
-    remove_dead_templates(odid_context_s *odid_context, const fds_tsnapshot_t *templates_snapshot);
-    int
-    write_template_set(uint16_t set_id, const fds_tsnapshot_t *templates_snapshot,
-                       std::set<uint16_t>::iterator template_ids, std::set<uint16_t>::iterator template_ids_end,
-                       unsigned size_limit, unsigned *out_set_length);
-    void
-    write_templates(odid_context_s *odid_context, const fds_tsnapshot_t *templates_snapshot,
-                    uint32_t export_time, uint32_t sequence_number);
-
+    write_templates(const fds_tsnapshot_t *snap, uint32_t odid, uint32_t exp_time, uint32_t seq_num);
 
 public:
     /**
