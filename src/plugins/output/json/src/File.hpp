@@ -45,7 +45,6 @@
 #include <atomic>
 #include <string>
 #include <ctime>
-#include <cstdio>
 
 #include <pthread.h>
 #include "Storage.hpp"
@@ -79,8 +78,9 @@ private:
         time_t window_time;          /**< Current time window        */
         std::string storage_path;    /**< Storage path (template)    */
         std::string file_prefix;     /**< File prefix                */
+        calg m_calg;                 /**< Compression                */
 
-        FILE *file;                  /**< File descriptor            */
+        void *file;                  /**< File descriptor            */
     } thread_ctx_t;
 
     /** Thread for changing time windows */
@@ -92,8 +92,8 @@ private:
     // Create a directory for a time window
     static int dir_create(ipx_ctx_t *ctx, const std::string &path);
     // Create a file for a time window
-    static FILE *file_create(ipx_ctx_t *ctx, const std::string &tmplt, const std::string &prefix,
-        const time_t &tm);
+    static void *file_create(ipx_ctx_t *ctx, const std::string &tmplt, const std::string &prefix,
+        const time_t &tm, calg m_calg);
     // Window changer
     static void *thread_window(void *context);
 };
