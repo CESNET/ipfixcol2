@@ -1,9 +1,9 @@
 IPFIXcol2
 ===========
 
-IPFIXcol is a flexible, high-performance IPFIX flow data collector designed to be extensible
-by plugins. The second generation of the collector includes many design and performance enhancements
-compared to the original `IPFIXcol <https://github.com/CESNET/ipfixcol/>`_.
+IPFIXcol2 is a flexible, high-performance NetFlow v5/v9 and IPFIX flow data collector designed
+to be extensible by plugins. The second generation of the collector includes many design and
+performance enhancements compared to the original `IPFIXcol <https://github.com/CESNET/ipfixcol/>`_.
 
 .. image:: doc/main_img.svg
 
@@ -25,7 +25,7 @@ Available plugins
 **Input plugins** - receive IPFIX data. Each can be configured to to listen on a specific
 network interface and a port. Multiple instances of these plugins can run concurrently.
 
-- `UDP <src/plugins/input/udp>`_ - receives IPFIX over UDP
+- `UDP <src/plugins/input/udp>`_ - receives NetFlow v5/v9 and IPFIX over UDP
 - `TCP <src/plugins/input/tcp>`_ - receives IPFIX over TCP
 
 **Intermediate plugins** - modify, enrich and filter flow records.
@@ -35,10 +35,11 @@ network interface and a port. Multiple instances of these plugins can run concur
 
 **Output plugins** - store or forward your flows.
 
-- `FDS <src/plugins/output/fds>`_ - store all flows in FDS file format (efficient long-term storage)
+- `FDS file <src/plugins/output/fds>`_ - store all flows in FDS file format (efficient long-term storage)
 - `JSON <src/plugins/output/json>`_ - convert flow records to JSON and send/store them
 - `Viewer <src/plugins/output/viewer>`_ - convert IPFIX into plain text and print
   it on standard output
+- `IPFIX file <src/plugins/output/ipfix>`_ - store all flows in IPFIX File format
 - `Time Check <src/plugins/output/timecheck>`_ - flow timestamp check
 - `Dummy <src/plugins/output/dummy>`_ - simple module example
 - `lnfstore <extra_plugins/output/lnfstore>`_ (*) - store all flows in nfdump compatible
@@ -105,10 +106,9 @@ of the collector are given in the section
 
 Coming soon
 -----------
-- NetFlow v5/v9 support
 - Runtime reconfiguration (improved compared to the previous generation)
+- Flow filtration and flow profiling
 - RPM/DEB packages
-- Support for structured data types (lists, etc.)
 
 FAQ
 --------------
