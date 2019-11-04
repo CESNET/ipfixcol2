@@ -12,8 +12,8 @@ Packager:       @CPACK_PACKAGE_CONTACT@
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}
 BuildRequires:  gcc >= 4.8, gcc-c++ >= 4.8, cmake >= 2.8.8, make
-BuildRequires:  libfds-devel, python2-docutils
-Requires:       libfds >= 0.2.0
+BuildRequires:  libfds-devel, python2-docutils, zlib-devel
+Requires:       libfds >= 0.2.0, zlib
 
 %description
 IPFIXcol is a flexible IPFIX (RFC 7011) flow data collector designed to
