@@ -1,5 +1,5 @@
 # Create a linkable module
-add_library(ipfix MODULE
+add_library(ipfix-output MODULE
     src/IPFIXOutputPlugin.cpp
     src/IPFIXOutput.cpp
     src/IPFIXOutput.hpp
@@ -8,7 +8,7 @@ add_library(ipfix MODULE
 )
 
 install(
-    TARGETS ipfix
+    TARGETS ipfix-output
     LIBRARY DESTINATION "${INSTALL_DIR_LIB}/ipfixcol2/"
 )
 
@@ -17,7 +17,7 @@ if (ENABLE_DOC_MANPAGE)
     set(SRC_FILE "${CMAKE_CURRENT_SOURCE_DIR}/doc/ipfixcol2-ipfix-output.7.rst")
     set(DST_FILE "${CMAKE_CURRENT_BINARY_DIR}/ipfixcol2-ipfix-output.7")
 
-    add_custom_command(TARGET ipfix PRE_BUILD
+    add_custom_command(TARGET ipfix-output PRE_BUILD
         COMMAND ${RST2MAN_EXECUTABLE} --syntax-highlight=none ${SRC_FILE} ${DST_FILE}
         DEPENDS ${SRC_FILE}
         VERBATIM
