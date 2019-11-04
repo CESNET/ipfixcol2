@@ -74,8 +74,8 @@ public:
     uint64_t window_size;
     /// Rotate files on multiple of time interval
     bool align_windows;
-    /// Skip Data Sets with undefined templates
-    bool skip_unknown_datasets;
+    /// Preserve original IPFIX Message (i.e. don't skip Data Sets with undefined templates)
+    bool preserve_original;
     /// Split on IPFIX Export Time instead on system time
     bool split_on_export_time;
 

@@ -90,11 +90,11 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
         ipx_ctx_private_set(ctx, instance);
 
     } catch (std::exception &ex) {
-        IPX_CTX_ERROR(ctx, "IPFIXOutput plugin: %s", ex.what());
+        IPX_CTX_ERROR(ctx, "%s", ex.what());
         return IPX_ERR_DENIED;
 
     } catch (...) {
-        IPX_CTX_ERROR(ctx, "IPFIXOutput plugin: Unexpected exception has occurred!", '\0');
+        IPX_CTX_ERROR(ctx, "Unexpected exception has occurred!", '\0');
         return IPX_ERR_DENIED;
     }
 
@@ -127,11 +127,11 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
         }
 
     } catch (std::exception &ex) {
-        IPX_CTX_ERROR(ctx, "IPFIXOutput plugin: %s", ex.what());
+        IPX_CTX_ERROR(ctx, "%s", ex.what());
         return IPX_ERR_DENIED;
 
     } catch (...) {
-        IPX_CTX_ERROR(ctx, "IPFIXOutput plugin: Unexpected exception has occurred!", '\0');
+        IPX_CTX_ERROR(ctx, "Unexpected exception has occurred!", '\0');
         return IPX_ERR_DENIED;
     }
 

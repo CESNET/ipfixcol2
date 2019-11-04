@@ -41,8 +41,8 @@ Example configuration
             <useLocalTime>false</useLocalTime>
             <windowSize>300</windowSize>
             <alignWindows>true</alignWindows>
-            <skipUnknownDataSets>true</skipUnknownDataSets>
-            <splitOnExportTime>false</splitOnExportTime>
+            <preserveOriginal>false</preserveOriginal>
+            <rotateOnExportTime>false</rotateOnExportTime>
         </params>
     </output>
 
@@ -63,27 +63,36 @@ Parameters
     is "0", all flow will be stored into a single file. [default: 0]
 
 :``alignWindows``:
-    Align file rotation with next N minute interval (true/false). [default: true]
+    Align file rotation with next N minute interval. [values: true/false,
+    default: true]
 
-:``skipUnknownDataSets``:
-    Specifies whether Data Sets with unknown (Options) Template should be left
-    out from the output file. Sequence numbers and message lengths will be
-    adjusted accordingly. [default: false]
+:``preserveOriginal``:
+    Preserve and store original IPFIX Messages as received by the plugin i.e.
+    do not modify the Messages or their sequence numbers. If this option is
+    disabled (recommended), Data Sets with unknown (Options) Templates are
+    left out from the file and sequence numbers are adjusted accordingly
+    (starts from 0), which should produce warning-free stream of IPFIX
+    Messages. However, if the original IPFIX Messages are preserved, some
+    warnings (e.g. missing (Options) Templates, unexpected sequence number,
+    etc.) might be produced during replay and even errors might raise when
+    there is an ODID collision and the main Transport Session is replaced.
+    Use with caution. [values: true/false, default: false]
 
-:``splitOnExportTime``:
+:``rotateOnExportTime``:
     Specifies whether files should be rotated based on IPFIX Export Time
     (i.e. timestamp from IPFIX Message header) instead of system time.
-    Warning: If the plugin receives flow records from multiple exporters at time
-    the rotation could be unsteady. [default: false]
+    If enabled, the Export Time is used also for creating filenames.
+    Warning: If the plugin receives flow records from multiple exporters at
+    time the rotation could be unsteady. [default: false]
 
 Note
 ----
 
 After a new IPFIX File is created, all previously seen and still valid (Options)
 Templates of the each ODID are written to the file once the first IPFIX Message
-corresponding to the ODID arrives with at least one successfully parsed data record.
-This is necessary so each file can be used independently of the (Options) Template
-definitions from previous files.
+corresponding to the ODID arrives with at least one successfully parsed data
+record. This is necessary so each file can be used independently of the
+(Options) Template definitions from previous files.
 
 ``ipfixsend2`` tool doesn't support sequential reading of multiple IPFIX Files
 right now. However, there is a workaround - you can merge multiple IPFIX Files

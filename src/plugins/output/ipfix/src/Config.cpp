@@ -50,7 +50,7 @@ enum params_xml_nodes {
     PARAM_USE_LOCALTIME,
     PARAM_WINDOW_SIZE,
     PARAM_ALIGN_WINDOWS,
-    PARAM_SKIP_UNKNOWN_DATASETS,
+    PARAM_PRESERVE_ORIGINAL,
     PARAM_SPLIT_ON_EXPORT_TIME
 };
 
@@ -61,8 +61,8 @@ static const struct fds_xml_args args_params[] = {
     FDS_OPTS_ELEM(PARAM_USE_LOCALTIME, "useLocalTime", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(PARAM_WINDOW_SIZE,   "windowSize",   FDS_OPTS_T_UINT, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(PARAM_ALIGN_WINDOWS, "alignWindows", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
-    FDS_OPTS_ELEM(PARAM_SKIP_UNKNOWN_DATASETS, "skipUnknownDataSets", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
-    FDS_OPTS_ELEM(PARAM_SPLIT_ON_EXPORT_TIME,  "splitOnExportTime",   FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(PARAM_PRESERVE_ORIGINAL,    "preserveOriginal",   FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(PARAM_SPLIT_ON_EXPORT_TIME, "rotateOnExportTime", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
     FDS_OPTS_END
 };
 
@@ -71,7 +71,7 @@ void Config::set_defaults() {
     use_localtime = false;
     window_size = 0;
     align_windows = true;
-    skip_unknown_datasets = false;
+    preserve_original = false;
     split_on_export_time = false;
 }
 
@@ -96,9 +96,9 @@ void Config::parse_params(fds_xml_ctx_t *params)
             assert(content->type == FDS_OPTS_T_BOOL);
             align_windows = content->val_bool;
             break;
-        case PARAM_SKIP_UNKNOWN_DATASETS:
+        case PARAM_PRESERVE_ORIGINAL:
             assert(content->type == FDS_OPTS_T_BOOL);
-            skip_unknown_datasets = content->val_bool;
+            preserve_original = content->val_bool;
             break;
         case PARAM_SPLIT_ON_EXPORT_TIME:
             assert(content->type == FDS_OPTS_T_BOOL);

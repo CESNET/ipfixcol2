@@ -7,6 +7,7 @@ IPFIX (output plugin)
 ---------------------
 
 :Author: Michal Sedlák (xsedla0v@stud.fit.vutbr.cz)
+:Author: Lukáš Huták (lukas.hutak@cesnet.cz)
 :Date:   2019-03-28
 :Copyright: Copyright © 2019 CESNET, z.s.p.o.
 :Version: 1.0

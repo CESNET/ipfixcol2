@@ -70,22 +70,23 @@ IPFIXOutput::should_start_new_file(std::time_t current_time)
         return false;
     }
 
-    uint32_t time_difference = current_time - file_start_time;
-    if (time_difference >= config->window_size) {
-        return true;
-    } else {
-        return false;
-    }
+    return (current_time >= file_start_time + time_t(config->window_size));
 }
 
 /**
- * @brief Create a new output file
- * @param[in] current_time Current export time
- * @throw runtime_error if the file cannot be created
+ * \brief Create a new output file
+ * \param[in] current_time Current export time
+ * \throw runtime_error if the file cannot be created
  */
 void
 IPFIXOutput::new_file(const std::time_t current_time)
 {
+    // Require (Options) Templates definitions to be added (only if this is not the first file)
+    bool add_tmplts = (output_file != nullptr);
+
+    // Close the previous file, if exists
+    close_file();
+
     // Get the timestamp of the file to create
     if (config->align_windows) {
         // Round down to the nearest multiple of window size
@@ -98,7 +99,7 @@ IPFIXOutput::new_file(const std::time_t current_time)
     std::tm *ts_res = config->use_localtime
         ? localtime_r(&file_start_time, &ts_now)
         : gmtime_r(&file_start_time, &ts_now);
-    if (ts_res == NULL) {
+    if (ts_res == nullptr) {
         // An error has occurred
         const char *err_str;
         ipx_strerror(errno, err_str);
@@ -141,7 +142,7 @@ IPFIXOutput::new_file(const std::time_t current_time)
 
     // Consider all Templates as undefined
     for (auto &odid_pair : odid_contexts) {
-        odid_pair.second.needs_to_write_templates = true;
+        odid_pair.second.needs_to_write_templates = add_tmplts;
     }
 
     IPX_CTX_INFO(plugin_context, "New output file created: %s", filename);
@@ -221,7 +222,7 @@ write_templates_cb(const struct fds_template *tmplt, void *data)
     assert(tmplt->type == FDS_TYPE_TEMPLATE || tmplt->type == FDS_TYPE_TEMPLATE_OPTS);
 
     auto *ctx = reinterpret_cast<struct write_templates_aux *>(data);
-    constexpr size_t MSG_SIZE = 1400; // Create only IPFIX Message with at most this length  // TODO
+    constexpr size_t MSG_SIZE = 1400; // Create only IPFIX Message with at most this length
 
     // First, check if the template can fit into the current message
     size_t size_needed = 0;
@@ -317,13 +318,15 @@ IPFIXOutput::get_odid(uint32_t odid, const ipx_session *session)
 {
     auto *odid_ctx = &odid_contexts[odid];
     if (odid_ctx->session == nullptr) {
-        // Grant right to this Transport Session to write into thw file with the given ODID...
+        // Grant this Transport Session access to write into the file with the given ODID...
         odid_ctx->session = session;
+        IPX_CTX_INFO(plugin_context, "[ODID: %" PRIu32 "] '%s' has been granted access to write to "
+            "the file with the given ODID.", odid, session->ident);
         return odid_ctx;
     }
 
     if (odid_ctx->session == session) {
-        // This is already known Transport Session with right to write into the file
+        // This is already known Transport Session with access to write into the file
         return odid_ctx;
     }
 
@@ -376,7 +379,6 @@ IPFIXOutput::on_ipfix_message(ipx_msg_ipfix *message)
     assert(time_now >= 0 && sizeof(time_now) >= sizeof(msg_etime));
 
     if (should_start_new_file(time_now)) {
-        close_file();
         new_file(time_now); // This will make sure that templates will be written to the file
     }
 
@@ -390,13 +392,13 @@ IPFIXOutput::on_ipfix_message(ipx_msg_ipfix *message)
 
     // Write all (Options) Templates, if required
     if (tsnap != nullptr && odid_context->needs_to_write_templates) {
-        uint32_t new_sn = (config->skip_unknown_datasets) ? odid_context->sequence_number : msg_seq;
+        uint32_t new_sn = (config->preserve_original) ? msg_seq : odid_context->sequence_number;
         write_templates(tsnap, msg_odid, msg_etime, new_sn);
         odid_context->needs_to_write_templates = false;
     }
 
     // If we don't have to look for unknown Data Sets, just copy the whole message -> FAST PATH
-    if (!config->skip_unknown_datasets) {
+    if (config->preserve_original) {
         std::fwrite(msg_hdr, msg_size, 1, output_file);
         return;
     }
@@ -477,7 +479,7 @@ IPFIXOutput::remove_session(const struct ipx_session *session)
 {
     auto it = odid_contexts.begin();
     while (it != odid_contexts.end()) {
-        // Has this session right to write to the file?
+        // Has this session access to write to the file?
         struct odid_context_s &ctx = it->second;
         if (ctx.session != session) {
             // Remove it from colliding sessions, if present
@@ -488,7 +490,7 @@ IPFIXOutput::remove_session(const struct ipx_session *session)
 
         // This is the Transport Session with rights to write to the file with given ODID
         if (ctx.colliding_sessions.empty()) {
-            // Only session in the context -> remove whole context
+            // Only session in the context -> remove the whole context
             it = odid_contexts.erase(it);
             continue;
         }
@@ -516,7 +518,7 @@ IPFIXOutput::on_session_message(ipx_msg_session *message)
 
     case IPX_MSG_SESSION_CLOSE:
         // Free up ODIDs used by this session allowing them to be used again
-        remove_session(session); // TODO: consider blocking ODID until new file is started + reset seqnum!
+        remove_session(session);
         break;
     }
 }
