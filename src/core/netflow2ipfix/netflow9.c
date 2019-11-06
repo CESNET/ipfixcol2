@@ -297,8 +297,12 @@ conv_mem_reserve(ipx_nf9_conv_t *conv, size_t size)
         return IPX_OK;
     }
 
-    // Reallocate // TODO: improve size - multiples of 1024? 1024, 2048, 4096, ...
-    size_t new_alloc = conv->data.ipx_size_used + size;  // TODO: during TEST allocate only to required size and use valgrind
+    // Reallocate - use multiples of 1024 to avoid too many reallocations
+    size_t new_alloc = conv->data.ipx_size_used + size;
+    new_alloc /= 1024U;
+    new_alloc += 1U;
+    new_alloc *= 1024U;
+    // TODO: during TEST allocate only to required size and use valgrind
     uint8_t *new_msg = realloc(conv->data.ipx_msg, new_alloc * sizeof(uint8_t));
     if (!new_msg) {
         return IPX_ERR_NOMEM;
