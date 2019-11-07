@@ -236,7 +236,7 @@ File::process(const char *str, size_t len)
     if (_thread->file) {
         // Store the record
         if (_thread->m_calg == calg::GZIP) {
-            gzfwrite(str, len, 1, (gzFile)_thread->file);
+            gzwrite((gzFile)_thread->file, str, len);
         } else {
             fwrite(str, len, 1, (FILE *)_thread->file);
         }
