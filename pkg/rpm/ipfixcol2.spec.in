@@ -12,7 +12,7 @@ Packager:       @CPACK_PACKAGE_CONTACT@
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}
 BuildRequires:  gcc >= 4.8, gcc-c++ >= 4.8, cmake >= 2.8.8, make
-BuildRequires:  libfds-devel, python2-docutils, zlib-devel
+BuildRequires:  libfds-devel, /usr/bin/rst2man, zlib-devel
 Requires:       libfds >= 0.2.0, zlib
 
 %description

@@ -76,7 +76,7 @@ Second, install build dependencies of the collector
     # Optionally: doxygen pkg-config
 
 * Note: latest systems (e.g. Fedora) use ``dnf`` instead of ``yum``.
-* Note: package ``python-docutils`` may by also named as ``python2-docutils``
+* Note: package ``python-docutils`` may by also named as ``python2-docutils`` or ``python3-docutils``
 * Note: package ``pkg-config`` may by also named as ``pkgconfig``
 
 **Debian/Ubuntu:**
