@@ -83,7 +83,7 @@ Second, install build dependencies of the collector
 
 .. code-block::
 
-    apt-get install gcc g++ cmake make python-docutils zlib1g-dev
+    apt-get install gcc g++ cmake make python3-docutils zlib1g-dev
     # Optionally: doxygen pkg-config
 
 Finally, build and install the collector:
