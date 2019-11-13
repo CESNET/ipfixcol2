@@ -1,5 +1,5 @@
-Flow Data Storage (output plugin)
-=================================
+Flow Data Storage (output plugin) [beta version]
+================================================
 
 The plugin converts and stores IPFIX Data Records into FDS file format. The file
 is based on IPFIX, therefore, it provides highly-effective way for long-term
@@ -9,6 +9,9 @@ exported these records.
 
 All data are stored into flat files, which are automatically rotated and renamed
 every N minutes (by default 5 minutes).
+
+    | **Warning**: The plugin is still under development and some incompatible
+    | changes in file format may be introduced!
 
 Example configuration
 ---------------------
