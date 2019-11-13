@@ -89,6 +89,7 @@ Don't forget to remove (or comment) outputs that you don't want to use!
             <ignoreUnknown>true</ignoreUnknown>
             <ignoreOptions>true</ignoreOptions>
             <nonPrintableChar>true</nonPrintableChar>
+            <octetArrayAsUint>true</octetArrayAsUint>
             <numericNames>false</numericNames>
             <splitBiflow>false</splitBiflow>
             <detailedInfo>false</detailedInfo>
@@ -145,8 +146,8 @@ Formatting parameters:
 
 :``ignoreUnknown``:
     Skip unknown Information Elements (i.e. record fields with unknown name and data type).
-    If disabled, data of unknown elements are formatted as unsigned integer (the size of the
-    field ≤ 8 bytes) or binary values. [values: true/false, default: true]
+    If disabled, data of unknown elements are formatted as unsigned integer or hexadecimal values.
+    For more information, see ``octetArrayAsUint`` option. [values: true/false, default: true]
 
 :``ignoreOptions``:
     Skip non-flow records used for reporting metadata about IPFIX Exporting and Metering Processes
@@ -155,6 +156,15 @@ Formatting parameters:
 :``nonPrintableChar``:
     Ignore non-printable characters (newline, tab, control characters, etc.) in IPFIX strings.
     If disabled, these characters are escaped on output. [values: true/false, default: true]
+
+:``octetArrayAsUint``:
+    Converter each IPFIX field with octetArray type (including IPFIX fields with unknown
+    definitions) as unsigned integer if the size of the field is less or equal to 8 bytes.
+    Fields with the size above the limit are always converted as string representing hexadecimal
+    value, which is typically in network byte order (e.g. "0x71E1"). Keep on mind, that there might
+    be octetArray fields with variable length that might be interpreted differently based on their
+    size. If disabled, octetArray fields are never interpreted as unsigned integers.
+    [values: true/false, default: true]
 
 :``numericNames``:
     Use only short identification of Information Elements (i.e. "enXX:idYY"). If enabled, the

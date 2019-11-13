@@ -57,10 +57,11 @@ enum params_xml_nodes {
     FMT_UNKNOWN,       /**< Unknown definitions             */
     FMT_OPTIONS,       /**< Ignore Options Template Records */
     FMT_NONPRINT,      /**< Non-printable chars             */
+    FMT_OCTETASUINT,   /**< OctetArray as unsigned integer  */
     FMT_NUMERIC,       /**< Use numeric names               */
     FMT_BFSPLIT,       /**< Split biflow                    */
     FMT_DETAILEDINFO,  /**< Detailed information            */
-    FMT_TMPLTINFO,      /**< Template records                */
+    FMT_TMPLTINFO,     /**< Template records                */
     // Common output
     OUTPUT_LIST,       /**< List of output types            */
     OUTPUT_PRINT,      /**< Print to standard output        */
@@ -142,6 +143,7 @@ static const struct fds_xml_args args_params[] = {
     FDS_OPTS_ELEM(FMT_OPTIONS,   "ignoreOptions",    FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(FMT_NONPRINT,  "nonPrintableChar", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(FMT_NUMERIC,   "numericNames",     FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(FMT_OCTETASUINT, "octetArrayAsUint", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(FMT_BFSPLIT,   "splitBiflow",      FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(FMT_DETAILEDINFO,  "detailedInfo", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(FMT_TMPLTINFO, "templateInfo", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
@@ -472,6 +474,10 @@ Config::parse_params(fds_xml_ctx_t *params)
             assert(content->type == FDS_OPTS_T_BOOL);
             format.numeric_names = content->val_bool;
             break;
+        case FMT_OCTETASUINT:
+            assert(content->type == FDS_OPTS_T_BOOL);
+            format.octets_as_uint = content->val_bool;
+            break;
         case FMT_BFSPLIT:  // Split biflow records
             assert(content->type == FDS_OPTS_T_BOOL);
             format.split_biflow = content->val_bool;
@@ -506,6 +512,7 @@ Config::default_set()
     format.white_spaces = true;
     format.ignore_unknown = true;
     format.ignore_options = true;
+    format.octets_as_uint = true;
     format.numeric_names = false;
     format.split_biflow = false;
     format.detailed_info = false;

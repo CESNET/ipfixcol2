@@ -56,9 +56,11 @@ struct cfg_format {
     bool proto;
     /** Skip unknown elements                                                                    */
     bool ignore_unknown;
+    /** Converter octetArray type as unsigned integer (only if field size <= 8)                  */
+    bool octets_as_uint;
     /** Convert white spaces in string (do not skip)                                             */
     bool white_spaces;
-    /** Add detailed information about each record                                            */
+    /** Add detailed information about each record                                               */
     bool detailed_info;
     /** Ignore Options Template records                                                          */
     bool ignore_options;

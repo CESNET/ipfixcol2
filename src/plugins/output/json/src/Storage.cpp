@@ -83,7 +83,9 @@ Storage::Storage(const ipx_ctx_t *ctx, const struct cfg_format &fmt)
     if (m_format.split_biflow) {
         m_flags |= FDS_CD2J_REVERSE_SKIP;
     }
-
+    if (!m_format.octets_as_uint) {
+        m_flags |= FDS_CD2J_OCTETS_NOINT;
+    }
 }
 
 Storage::~Storage()
