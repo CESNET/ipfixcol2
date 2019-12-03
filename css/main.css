@@ -1,0 +1,161 @@
+.column .addModule, .column .module, .column h2 {
+  margin: 20px;
+  box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.24);
+  border-radius: 20px;
+  line-height: 40px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: sans-serif;
+  display: flex;
+  align-content: center;
+  align-items: center;
+  width: 100%;
+  background: white;
+}
+
+#configurator_app {
+  width: 100%;
+  max-width: 1260px;
+  min-width: 420px;
+  margin: 10px auto 0 auto;
+}
+
+.form {
+  display: flex;
+  flex-direction: row;
+  justify-content: baseline;
+  flex-wrap: wrap;
+}
+
+.column {
+  width: 400px;
+  border-radius: 30px;
+  background: white;
+  box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.24);
+  width: 400px;
+  margin: 10px;
+}
+.column h2 {
+  text-align: center;
+}
+.column .module {
+  text-align: center;
+}
+.column .module .header {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+.column .module .header h2 {
+  display: inline;
+  margin: auto 10px;
+}
+.column .module .header button {
+  text-align: center;
+  align-content: center;
+  font-size: 1.3rem;
+  border-radius: 50%;
+  width: 30px;
+  border: none;
+  outline-style: none;
+  margin: 5px;
+  transition: 0.3s ease;
+}
+.column .module .header button .fa-angle-down {
+  transition: transform 0.3s ease;
+}
+.column .module .content {
+  text-align: left;
+  margin: 0 13px;
+  transition: max-height 0.3s;
+  max-height: 0;
+  overflow: hidden;
+}
+.column .module.visible .header button .fa-angle-down {
+  transform: scaleY(-1);
+}
+.column .module.visible .content {
+  max-height: 10em;
+}
+.column .addModule {
+  background: #fff;
+}
+.column .addModule button {
+  line-height: 40px;
+  border-radius: 20px;
+  border: none;
+  font-size: x-large;
+  font-weight: bold;
+  width: 100%;
+  transition: 0.3s ease;
+  display: block;
+  outline-style: none;
+  color: black;
+  text-decoration: none;
+  text-align: center;
+}
+.column .addModule .modules {
+  transition: max-height 0.3s;
+  max-height: 0;
+  overflow: hidden;
+}
+.column .addModule .modules button {
+  background: white;
+  box-shadow: none;
+}
+.column .addModule:hover .modules {
+  max-height: 10em;
+}
+
+.blue {
+  background: linear-gradient(135deg, #6599ff 0%, #3266cc 100%);
+}
+.blue .module,
+.blue button,
+.blue h2 {
+  background: #f1f9ff;
+}
+.blue button:hover,
+.blue .modules button:hover {
+  background: #91cfff;
+}
+
+.orange {
+  background: linear-gradient(135deg, #fe9900 0%, #ff7c00 100%);
+}
+.orange .module,
+.orange button,
+.orange h2 {
+  background: #fff4c1;
+}
+.orange button:hover,
+.orange .modules button:hover {
+  background: #ffe25f;
+}
+
+.red {
+  background: linear-gradient(135deg, #ff5e34 0%, #f63c01 100%);
+}
+.red .module,
+.red button,
+.red h2 {
+  background: #ffe1cb;
+}
+.red button:hover,
+.red .modules button:hover {
+  background: #ffb078;
+}
+
+textarea {
+  width: 100%;
+  height: 100vh;
+  margin: 10px;
+}
+
+/*# sourceMappingURL=main.css.map */
