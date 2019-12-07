@@ -169,6 +169,17 @@ textarea {
     margin: 10px;
 }
 
+.rootProps {
+    margin: 10px;
+}
+
+.innerProps {
+    margin-left: 20px;
+    h3 {
+        margin-left: -20px;
+    }
+}
+
 // html {
 //     background: black;
 //     filter: invert(1) hue-rotate(180deg);

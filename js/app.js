@@ -2,6 +2,51 @@
 const rootAppElement = document.getElementById("configurator_app");
 const colors = ["blue", "orange", "red"];
 const columnNames = ["Input plugins", "Intermediate plugins", "Output plugins"];
+const jsonSchemaUDP = {
+    $schema: "http://json-schema.org/draft-07/schema#",
+    title: "UDP input",
+    desription: "UDP input plugin",
+    type: "object",
+    properties: {
+        name: {
+			type: "string",
+			default: "UDP input"
+        },
+        plugin: {
+            description: "plugin type identifier",
+            type: "string",
+            const: "udp"
+        },
+        props: {
+            type: "object",
+            properties: {
+                localPort: {
+                    type: "integer",
+                    minimum: 0,
+                    default: 4739
+                },
+                localIPAddress: {
+                    type: "string",
+                    default: ""
+                },
+                connectionTimeout: {
+                    type: "integer",
+                    default: 600
+                },
+                templateLifeTime: {
+                    type: "integer",
+                    default: 1800
+                },
+                optionsTemplateLifeTime: {
+                    type: "integer",
+                    default: 1800
+                }
+            },
+            required: ["localPort", "localIPAddress"]
+        }
+    },
+    required: ["name", "plugin", "props"]
+};
 const defaultConfig = {
     ipfixcol2: {
         inputPlugins: {
@@ -146,7 +191,7 @@ const outputModulesAvailable = [
                         time: 0,
                         size: 0
                     }
-                },
+                }
             ]
         }
     }
@@ -186,37 +231,19 @@ class Form extends React.Component {
             var newModules;
             switch (columnName) {
                 case columnNames[0]:
-                    newModules = this.state.modules[0].concat(
-                        modulesAvailable[0][index]
-                    );
+                    newModules = this.state.modules[0].concat(modulesAvailable[0][index]);
                     return {
-                        modules: [
-                            newModules,
-                            state.modules[1],
-                            state.modules[2]
-                        ]
+                        modules: [newModules, state.modules[1], state.modules[2]]
                     };
                 case columnNames[1]:
-                    newModules = this.state.modules[1].concat(
-                        modulesAvailable[1][index]
-                    );
+                    newModules = this.state.modules[1].concat(modulesAvailable[1][index]);
                     return {
-                        modules: [
-                            state.modules[0],
-                            newModules,
-                            state.modules[2]
-                        ]
+                        modules: [state.modules[0], newModules, state.modules[2]]
                     };
                 case columnNames[2]:
-                    newModules = this.state.modules[2].concat(
-                        modulesAvailable[2][index]
-                    );
+                    newModules = this.state.modules[2].concat(modulesAvailable[2][index]);
                     return {
-                        modules: [
-                            state.modules[0],
-                            state.modules[1],
-                            newModules
-                        ]
+                        modules: [state.modules[0], state.modules[1], newModules]
                     };
                 default:
                     console.log("error while adding module");
@@ -229,37 +256,19 @@ class Form extends React.Component {
             var newModules;
             switch (columnName) {
                 case columnNames[0]:
-                    newModules = this.state.modules[0].filter(
-                        (_, j) => index !== j
-                    );
+                    newModules = this.state.modules[0].filter((_, j) => index !== j);
                     return {
-                        modules: [
-                            newModules,
-                            state.modules[1],
-                            state.modules[2]
-                        ]
+                        modules: [newModules, state.modules[1], state.modules[2]]
                     };
                 case columnNames[1]:
-                    newModules = this.state.modules[1].filter(
-                        (_, j) => index !== j
-                    );
+                    newModules = this.state.modules[1].filter((_, j) => index !== j);
                     return {
-                        modules: [
-                            state.modules[0],
-                            newModules,
-                            state.modules[2]
-                        ]
+                        modules: [state.modules[0], newModules, state.modules[2]]
                     };
                 case columnNames[2]:
-                    newModules = this.state.modules[2].filter(
-                        (_, j) => index !== j
-                    );
+                    newModules = this.state.modules[2].filter((_, j) => index !== j);
                     return {
-                        modules: [
-                            state.modules[0],
-                            state.modules[1],
-                            newModules
-                        ]
+                        modules: [state.modules[0], state.modules[1], newModules]
                     };
                 default:
                     console.log("error while deleting module");
@@ -306,6 +315,7 @@ class Form extends React.Component {
                     modulesAvailable={modulesAvailable[2]}
                     addModule={this.addModule}
                 />
+                <EditModule JSONschema={jsonSchemaUDP} />
                 {this.renderXML()}
             </div>
         );
@@ -336,31 +346,22 @@ class FormColumn extends React.Component {
                         <Module
                             key={index}
                             module={module}
-                            onRemove={() =>
-                                this.removeModule(this.props.name, index)
-                            }
+                            onRemove={() => this.removeModule(this.props.name, index)}
                         />
                     );
                 })}
                 <div className={"addModule"} id={"add" + this.props.name}>
                     <button className={"shadow"}>Add plugin</button>
                     <div className={"modules"}>
-                        {this.props.modulesAvailable.map(
-                            (moduleAvailable, index) => {
-                                return (
-                                    <ModuleAvailable
-                                        key={index}
-                                        module={moduleAvailable}
-                                        onClick={() =>
-                                            this.addModule(
-                                                this.props.name,
-                                                index
-                                            )
-                                        }
-                                    />
-                                );
-                            }
-                        )}
+                        {this.props.modulesAvailable.map((moduleAvailable, index) => {
+                            return (
+                                <ModuleAvailable
+                                    key={index}
+                                    module={moduleAvailable}
+                                    onClick={() => this.addModule(this.props.name, index)}
+                                />
+                            );
+                        })}
                     </div>
                 </div>
             </div>
@@ -396,11 +397,7 @@ class Module extends React.Component {
 
     render() {
         return (
-            <div
-                className={
-                    "module" + (this.state.detailVisible ? " visible" : "")
-                }
-            >
+            <div className={"module" + (this.state.detailVisible ? " visible" : "")}>
                 <div className={"header"}>
                     <button
                         onClick={
@@ -420,6 +417,128 @@ class Module extends React.Component {
                     <p>plugin: {this.props.module.plugin}</p>
                     <p>params: {this.props.module.params.toString()}</p>
                 </div>
+            </div>
+        );
+    }
+}
+
+class EditModule extends React.Component {
+    render() {
+        return <Properties objectProperties={this.props.JSONschema} required={true} isRoot={true}/>;
+    }
+}
+
+class Properties extends React.Component {
+    render() {
+		var className = (this.props.isRoot) ? "rootProps" : "innerProps";
+		var name = (this.props.isRoot) ? "" : this.props.name;
+        return (
+            <div className={className}>
+				<h3>{name}</h3>
+                {Object.keys(this.props.objectProperties.properties).map(propertyName => {
+                    if (!this.props.objectProperties.required.includes(propertyName)) {
+                        return;
+                    }
+                    switch (this.props.objectProperties.properties[propertyName].type) {
+                        case "string":
+                            return (
+                                <StringProperty
+                                    key={propertyName}
+                                    name={propertyName}
+                                    required={true}
+                                    stringProperties={
+                                        this.props.objectProperties.properties[propertyName]
+                                    }
+                                />
+                            );
+                        case "integer":
+                            return (
+                                <IntegerProperty
+                                    key={propertyName}
+                                    name={propertyName}
+                                    required={true}
+                                    indegerProperties={
+                                        this.props.objectProperties.properties[propertyName]
+                                    }
+                                />
+                            );
+                        case "object":
+                            return (
+                                <Properties
+                                    key={propertyName}
+                                    name={propertyName}
+                                    required={true}
+									isRoot={false}
+                                    objectProperties={
+                                        this.props.objectProperties.properties[propertyName]
+                                    }
+                                />
+                            );
+                    }
+                })}
+            </div>
+        );
+    }
+}
+
+class StringProperty extends React.Component {
+    render() {
+        var value = "";
+        var readOnly = false;
+        if (this.props.stringProperties.hasOwnProperty("default")) {
+            value = this.props.stringProperties.default;
+        }
+        if (this.props.stringProperties.hasOwnProperty("const")) {
+            value = this.props.stringProperties.const;
+            readOnly = true;
+        }
+        return (
+            <div>
+                <label>{this.props.name}</label>
+                <input
+                    type={"text"}
+                    name={this.props.name}
+                    value={value}
+                    readOnly={readOnly}
+                    required={this.props.required}
+                />
+            </div>
+        );
+    }
+}
+
+class IntegerProperty extends React.Component {
+    render() {
+        var value = "";
+		var readOnly = false;
+		var min = null;
+		var max = null;
+        if (this.props.indegerProperties.hasOwnProperty("default")) {
+            value = this.props.indegerProperties.default;
+        }
+        if (this.props.indegerProperties.hasOwnProperty("const")) {
+            value = this.props.indegerProperties.const;
+            readOnly = true;
+		}
+		if (this.props.indegerProperties.hasOwnProperty("minimum")) {
+			min = this.props.indegerProperties.minimum;
+		}
+		if (this.props.indegerProperties.hasOwnProperty("maximum")) {
+			max = this.props.indegerProperties.maximum;
+		}
+        return (
+            <div>
+                <label>{this.props.name}</label>
+                <input
+                    type={"number"}
+                    name={this.props.name}
+					step={1}
+                    value={value}
+                    readOnly={readOnly}
+                    required
+					min={min}
+					max={max}
+                />
             </div>
         );
     }
