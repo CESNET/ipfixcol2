@@ -165,8 +165,39 @@ textarea {
 .innerProps {
   margin-left: 20px;
 }
-.innerProps h3 {
+.innerProps p {
   margin-left: -20px;
+}
+.innerProps .addOptional {
+  box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.24);
+  background: #ffd6d6;
+}
+.innerProps .addOptional button {
+  line-height: 20px;
+  border-radius: 5px;
+  border: none;
+  font-size: 16px;
+  font-weight: bold;
+  width: 100%;
+  transition: 0.3s ease;
+  display: block;
+  outline-style: none;
+  color: black;
+  text-decoration: none;
+  text-align: center;
+}
+.innerProps .addOptional .parameters {
+  transition: max-height 0.3s;
+  max-height: 0;
+  overflow: hidden;
+}
+.innerProps .addOptional .parameters button {
+  background: #ffd6d6;
+  font-weight: 300;
+  box-shadow: none;
+}
+.innerProps .addOptional:hover .parameters {
+  max-height: 10em;
 }
 
 /*# sourceMappingURL=main.css.map */

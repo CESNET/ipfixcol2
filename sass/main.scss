@@ -175,8 +175,40 @@ textarea {
 
 .innerProps {
     margin-left: 20px;
-    h3 {
+    p {
         margin-left: -20px;
+    }
+    .addOptional {
+        // @extend %default_column_elem_settings;
+        box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.24);
+        background: rgb(255, 214, 214);
+        button {
+            line-height: 20px;
+            border-radius: 5px;
+            border: none;
+            font-size: 16px;
+            font-weight: bold;
+            width: 100%;
+            transition: 0.3s ease;
+            display: block;
+            outline-style: none;
+            color: black;
+            text-decoration: none;
+            text-align: center;
+        }
+        .parameters {
+            transition: max-height 0.3s;
+            max-height: 0;
+            overflow: hidden;
+            button {
+                background: rgb(255, 214, 214);
+                font-weight: 300;
+                box-shadow: none;
+            }
+        }
+    }
+    .addOptional:hover .parameters {
+        max-height: 10em;
     }
 }
 

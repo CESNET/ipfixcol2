@@ -9,8 +9,8 @@ const jsonSchemaUDP = {
     type: "object",
     properties: {
         name: {
-			type: "string",
-			default: "UDP input"
+            type: "string",
+            default: "UDP input"
         },
         plugin: {
             description: "plugin type identifier",
@@ -351,7 +351,7 @@ class FormColumn extends React.Component {
                     );
                 })}
                 <div className={"addModule"} id={"add" + this.props.name}>
-                    <button className={"shadow"}>Add plugin</button>
+                    <button>Add plugin</button>
                     <div className={"modules"}>
                         {this.props.modulesAvailable.map((moduleAvailable, index) => {
                             return (
@@ -424,17 +424,41 @@ class Module extends React.Component {
 
 class EditModule extends React.Component {
     render() {
-        return <Properties objectProperties={this.props.JSONschema} required={true} isRoot={true}/>;
+        return (
+            <Properties objectProperties={this.props.JSONschema} required={true} isRoot={true} />
+        );
     }
+}
+
+function OptionalProperty(props) {
+    return <button>{props.name}</button>;
 }
 
 class Properties extends React.Component {
     render() {
-		var className = (this.props.isRoot) ? "rootProps" : "innerProps";
-		var name = (this.props.isRoot) ? "" : this.props.name;
+        var className = this.props.isRoot ? "rootProps" : "innerProps";
+        var name = this.props.isRoot ? "" : this.props.name;
+        var optional = "";
+        if (
+            Object.keys(this.props.objectProperties.properties).length >
+            this.props.objectProperties.required.length
+        ) {
+            optional = (
+                <div className={"addOptional"}>
+                    <button>Add optional parameter</button>
+                    <div className={"parameters"}>
+                        {Object.keys(this.props.objectProperties.properties).map(propertyName => {
+                            if (!this.props.objectProperties.required.includes(propertyName)) {
+                                return <OptionalProperty key={propertyName} name={propertyName} />;
+                            }
+                        })}
+                    </div>
+                </div>
+            );
+        }
         return (
             <div className={className}>
-				<h3>{name}</h3>
+                <p>{name}</p>
                 {Object.keys(this.props.objectProperties.properties).map(propertyName => {
                     if (!this.props.objectProperties.required.includes(propertyName)) {
                         return;
@@ -468,7 +492,7 @@ class Properties extends React.Component {
                                     key={propertyName}
                                     name={propertyName}
                                     required={true}
-									isRoot={false}
+                                    isRoot={false}
                                     objectProperties={
                                         this.props.objectProperties.properties[propertyName]
                                     }
@@ -476,6 +500,7 @@ class Properties extends React.Component {
                             );
                     }
                 })}
+                {optional}
             </div>
         );
     }
@@ -510,34 +535,34 @@ class StringProperty extends React.Component {
 class IntegerProperty extends React.Component {
     render() {
         var value = "";
-		var readOnly = false;
-		var min = null;
-		var max = null;
+        var readOnly = false;
+        var min = null;
+        var max = null;
         if (this.props.indegerProperties.hasOwnProperty("default")) {
             value = this.props.indegerProperties.default;
         }
         if (this.props.indegerProperties.hasOwnProperty("const")) {
             value = this.props.indegerProperties.const;
             readOnly = true;
-		}
-		if (this.props.indegerProperties.hasOwnProperty("minimum")) {
-			min = this.props.indegerProperties.minimum;
-		}
-		if (this.props.indegerProperties.hasOwnProperty("maximum")) {
-			max = this.props.indegerProperties.maximum;
-		}
+        }
+        if (this.props.indegerProperties.hasOwnProperty("minimum")) {
+            min = this.props.indegerProperties.minimum;
+        }
+        if (this.props.indegerProperties.hasOwnProperty("maximum")) {
+            max = this.props.indegerProperties.maximum;
+        }
         return (
             <div>
                 <label>{this.props.name}</label>
                 <input
                     type={"number"}
                     name={this.props.name}
-					step={1}
+                    step={1}
                     value={value}
                     readOnly={readOnly}
                     required
-					min={min}
-					max={max}
+                    min={min}
+                    max={max}
                 />
             </div>
         );
