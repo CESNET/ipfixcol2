@@ -172,6 +172,7 @@ textarea {
 .addOptional {
   box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.24);
   background: #ffd6d6;
+  border-radius: 5px;
 }
 .addOptional button {
   line-height: 20px;
