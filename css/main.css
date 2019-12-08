@@ -168,11 +168,12 @@ textarea {
 .innerProps p {
   margin-left: -20px;
 }
-.innerProps .addOptional {
+
+.addOptional {
   box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.24);
   background: #ffd6d6;
 }
-.innerProps .addOptional button {
+.addOptional button {
   line-height: 20px;
   border-radius: 5px;
   border: none;
@@ -186,17 +187,18 @@ textarea {
   text-decoration: none;
   text-align: center;
 }
-.innerProps .addOptional .parameters {
+.addOptional .parameters {
   transition: max-height 0.3s;
   max-height: 0;
   overflow: hidden;
 }
-.innerProps .addOptional .parameters button {
+.addOptional .parameters button {
   background: #ffd6d6;
   font-weight: 300;
   box-shadow: none;
 }
-.innerProps .addOptional:hover .parameters {
+
+.addOptional:hover .parameters {
   max-height: 10em;
 }
 
