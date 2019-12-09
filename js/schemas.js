@@ -9,11 +9,10 @@ const jsonSchemaUDP = {
             default: "UDP input"
         },
         plugin: {
-            description: "plugin type identifier",
             type: "string",
             const: "udp"
         },
-        props: {
+        params: {
             type: "object",
             properties: {
                 localPort: {
@@ -41,7 +40,7 @@ const jsonSchemaUDP = {
             required: ["localPort", "localIPAddress"]
         }
     },
-    required: ["name", "plugin", "props"]
+    required: ["name", "plugin", "params"]
 };
 const jsonSchemaTCP = {
     $schema: "http://json-schema.org/draft-07/schema#",
@@ -54,11 +53,10 @@ const jsonSchemaTCP = {
             default: "TCP input"
         },
         plugin: {
-            description: "plugin type identifier",
             type: "string",
             const: "tcp"
         },
-        props: {
+        params: {
             type: "object",
             properties: {
                 localPort: {
@@ -74,7 +72,7 @@ const jsonSchemaTCP = {
             required: ["localPort", "localIPAddress"]
         }
     },
-    required: ["name", "plugin", "props"]
+    required: ["name", "plugin", "params"]
 };
 const jsonSchemaAnonymization = {
     $schema: "http://json-schema.org/draft-07/schema#",
@@ -87,11 +85,10 @@ const jsonSchemaAnonymization = {
             default: "Flow anonymization"
         },
         plugin: {
-            description: "plugin type identifier",
             type: "string",
             const: "anonymization"
         },
-        props: {
+        params: {
             type: "object",
             properties: {
                 type: {
@@ -106,7 +103,7 @@ const jsonSchemaAnonymization = {
             required: ["type", "key"]
         }
     },
-    required: ["name", "plugin", "props"]
+    required: ["name", "plugin", "params"]
 };
 const jsonSchemaJSON = {
     $schema: "http://json-schema.org/draft-07/schema#",
@@ -119,11 +116,10 @@ const jsonSchemaJSON = {
             default: "JSON output"
         },
         plugin: {
-            description: "plugin type identifier",
             type: "string",
             const: "json"
         },
-        props: {
+        params: {
             type: "object",
             properties: {
                 tcpFlags: {
@@ -252,8 +248,119 @@ const jsonSchemaJSON = {
                     minProperties: 1
                 }
             },
-            required: ["tcpFlags", "timestamp", "protocol", "ignoreUnknown", "ignoreOptions", "nonPrintableChar", "outputs"]
+            required: [
+                "tcpFlags",
+                "timestamp",
+                "protocol",
+                "ignoreUnknown",
+                "ignoreOptions",
+                "nonPrintableChar",
+                "outputs"
+            ]
         }
     },
-    required: ["name", "plugin", "props"]
+    required: ["name", "plugin", "params"]
+};
+const jsonSchemaDummy = {
+    $schema: "http://json-schema.org/draft-07/schema#",
+    title: "Dummy output",
+    desription: "Dummy output plugin",
+    type: "object",
+    properties: {
+        name: {
+            type: "string",
+            default: "Dummy output"
+        },
+        plugin: {
+            type: "string",
+            const: "dummy"
+        },
+        params: {
+            type: "object",
+            properties: {
+                delay: {
+                    type: "integer",
+                    minimum: 0
+                }
+            },
+            required: ["delay"]
+        }
+    },
+    required: ["name", "plugin", "params"]
+};
+const jsonSchemaLNF = {
+    $schema: "http://json-schema.org/draft-07/schema#",
+    title: "LNF storage",
+    desription: "LNF storage plugin",
+    type: "object",
+    properties: {
+        name: {
+            type: "string",
+            default: "LNF storage"
+        },
+        plugin: {
+            type: "lnfstore",
+            const: "anonymization"
+        },
+        params: {
+            type: "object",
+            properties: {
+                storagePath: {
+                    type: "string"
+                },
+                compress: {
+                    type: "string",
+                    default: "no",
+                    enum: ["yes", "no"]
+                },
+                identificatorField: {
+                    type: "string",
+                    default: ""
+                },
+                dumpInterval: {
+                    type: "object",
+                    properties: {
+                        timeWindow: {
+                            type: "integer",
+                            default: 300,
+                            minimum: 0
+                        },
+                        align: {
+                            type: "string",
+                            default: "yes",
+                            enum: ["yes", "no"]
+                        }
+                    },
+                    required: ["timeWindow", "align"]
+                },
+                index: {
+                    type: "object",
+                    properties: {
+                        enable: {
+                            type: "string",
+                            default: "no",
+                            enum: ["yes", "no"]
+                        },
+                        autosize: {
+                            type: "string",
+                            default: "yes",
+                            enum: ["yes", "no"]
+                        },
+                        estimatedItemCount: {
+                            type: "integer",
+                            default: 100000,
+                            minimum: 0
+                        },
+                        falsePositiveProbability: {
+                            type: "number",
+                            default: 0.01
+                        }
+                    },
+                    required: ["enable", "autosize"]
+                }
+            },
+            required: ["storagePath", "compress", "dumpInterval", "index"]
+        }
+    },
+    required: ["name", "plugin", "params"]
 };

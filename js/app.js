@@ -274,6 +274,8 @@ class Form extends React.Component {
                 <EditModule JSONschema={jsonSchemaTCP} />
                 <EditModule JSONschema={jsonSchemaAnonymization} />
                 <EditModule JSONschema={jsonSchemaJSON} />
+                <EditModule JSONschema={jsonSchemaDummy} />
+                <EditModule JSONschema={jsonSchemaLNF} />
                 {this.renderXML()}
             </div>
         );
@@ -474,6 +476,17 @@ class Properties extends React.Component {
                                     }
                                 />
                             );
+                        case "number":
+                            return (
+                                <NumberProperty
+                                    key={propertyName}
+                                    name={propertyName}
+                                    required={true}
+                                    numberProperties={
+                                        this.props.objectProperties.properties[propertyName]
+                                    }
+                                />
+                            );
                     }
                 })}
                 {optional}
@@ -591,6 +604,43 @@ class BooleanProperty extends React.Component {
                         );
                     })}
                 </select>
+            </div>
+        );
+    }
+}
+
+class NumberProperty extends React.Component {
+    render() {
+        var value = 0.00;
+        var readOnly = false;
+        var min = null;
+        var max = null;
+        if (this.props.indegerProperties.hasOwnProperty("default")) {
+            value = this.props.indegerProperties.default;
+        }
+        if (this.props.indegerProperties.hasOwnProperty("const")) {
+            value = this.props.indegerProperties.const;
+            readOnly = true;
+        }
+        if (this.props.indegerProperties.hasOwnProperty("minimum")) {
+            min = this.props.indegerProperties.minimum;
+        }
+        if (this.props.indegerProperties.hasOwnProperty("maximum")) {
+            max = this.props.indegerProperties.maximum;
+        }
+        return (
+            <div>
+                <label>{this.props.name}</label>
+                <input
+                    type={"number"}
+                    name={this.props.name}
+                    step={0.01}
+                    value={value}
+                    readOnly={readOnly}
+                    required
+                    min={min}
+                    max={max}
+                />
             </div>
         );
     }
