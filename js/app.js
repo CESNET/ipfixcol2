@@ -2,51 +2,6 @@
 const rootAppElement = document.getElementById("configurator_app");
 const colors = ["blue", "orange", "red"];
 const columnNames = ["Input plugins", "Intermediate plugins", "Output plugins"];
-const jsonSchemaUDP = {
-    $schema: "http://json-schema.org/draft-07/schema#",
-    title: "UDP input",
-    desription: "UDP input plugin",
-    type: "object",
-    properties: {
-        name: {
-            type: "string",
-            default: "UDP input"
-        },
-        plugin: {
-            description: "plugin type identifier",
-            type: "string",
-            const: "udp"
-        },
-        props: {
-            type: "object",
-            properties: {
-                localPort: {
-                    type: "integer",
-                    minimum: 0,
-                    default: 4739
-                },
-                localIPAddress: {
-                    type: "string",
-                    default: ""
-                },
-                connectionTimeout: {
-                    type: "integer",
-                    default: 600
-                },
-                templateLifeTime: {
-                    type: "integer",
-                    default: 1800
-                },
-                optionsTemplateLifeTime: {
-                    type: "integer",
-                    default: 1800
-                }
-            },
-            required: ["localPort", "localIPAddress"]
-        }
-    },
-    required: ["name", "plugin", "props"]
-};
 const defaultConfig = {
     ipfixcol2: {
         inputPlugins: {
@@ -316,6 +271,9 @@ class Form extends React.Component {
                     addModule={this.addModule}
                 />
                 <EditModule JSONschema={jsonSchemaUDP} />
+                <EditModule JSONschema={jsonSchemaTCP} />
+                <EditModule JSONschema={jsonSchemaAnonymization} />
+                <EditModule JSONschema={jsonSchemaJSON} />
                 {this.renderXML()}
             </div>
         );
@@ -440,15 +398,19 @@ class Properties extends React.Component {
         var name = this.props.isRoot ? "" : this.props.name;
         var optional = "";
         if (
+            !this.props.objectProperties.hasOwnProperty("required") ||
             Object.keys(this.props.objectProperties.properties).length >
-            this.props.objectProperties.required.length
+                this.props.objectProperties.required.length
         ) {
             optional = (
                 <div className={"addOptional"}>
                     <button>Add optional parameter</button>
                     <div className={"parameters"}>
                         {Object.keys(this.props.objectProperties.properties).map(propertyName => {
-                            if (!this.props.objectProperties.required.includes(propertyName)) {
+                            if (
+                                !this.props.objectProperties.hasOwnProperty("required") ||
+                                !this.props.objectProperties.required.includes(propertyName)
+                            ) {
                                 return <OptionalProperty key={propertyName} name={propertyName} />;
                             }
                         })}
@@ -460,7 +422,10 @@ class Properties extends React.Component {
             <div className={className}>
                 <p>{name}</p>
                 {Object.keys(this.props.objectProperties.properties).map(propertyName => {
-                    if (!this.props.objectProperties.required.includes(propertyName)) {
+                    if (
+                        !this.props.objectProperties.hasOwnProperty("required") ||
+                        !this.props.objectProperties.required.includes(propertyName)
+                    ) {
                         return;
                     }
                     switch (this.props.objectProperties.properties[propertyName].type) {
@@ -498,6 +463,17 @@ class Properties extends React.Component {
                                     }
                                 />
                             );
+                        case "boolean":
+                            return (
+                                <BooleanProperty
+                                    key={propertyName}
+                                    name={propertyName}
+                                    required={true}
+                                    booleanProperties={
+                                        this.props.objectProperties.properties[propertyName]
+                                    }
+                                />
+                            );
                     }
                 })}
                 {optional}
@@ -510,6 +486,7 @@ class StringProperty extends React.Component {
     render() {
         var value = "";
         var readOnly = false;
+        var inputCode;
         if (this.props.stringProperties.hasOwnProperty("default")) {
             value = this.props.stringProperties.default;
         }
@@ -517,9 +494,20 @@ class StringProperty extends React.Component {
             value = this.props.stringProperties.const;
             readOnly = true;
         }
-        return (
-            <div>
-                <label>{this.props.name}</label>
+        if (this.props.stringProperties.hasOwnProperty("enum")) {
+            inputCode = (
+                <select name={"enum"} defaultValue={value}>
+                    {this.props.stringProperties.enum.map(enumValue => {
+                        return (
+                            <option key={enumValue} value={enumValue}>
+                                {enumValue}
+                            </option>
+                        );
+                    })}
+                </select>
+            );
+        } else {
+            inputCode = (
                 <input
                     type={"text"}
                     name={this.props.name}
@@ -527,6 +515,12 @@ class StringProperty extends React.Component {
                     readOnly={readOnly}
                     required={this.props.required}
                 />
+            );
+        }
+        return (
+            <div>
+                <label>{this.props.name}</label>
+                {inputCode}
             </div>
         );
     }
@@ -564,6 +558,39 @@ class IntegerProperty extends React.Component {
                     min={min}
                     max={max}
                 />
+            </div>
+        );
+    }
+}
+
+class BooleanProperty extends React.Component {
+    render() {
+        var value = true;
+        var readOnly = false;
+        var inputCode;
+        if (this.props.booleanProperties.hasOwnProperty("default")) {
+            value = this.props.booleanProperties.default;
+        }
+        if (this.props.booleanProperties.hasOwnProperty("const")) {
+            value = this.props.booleanProperties.const;
+            readOnly = true;
+        }
+        var enumValues = [true, false];
+        if (this.props.booleanProperties.hasOwnProperty("enum")) {
+            enumValues = this.props.booleanProperties.enum;
+        }
+        return (
+            <div>
+                <label>{this.props.name}</label>
+                <select name={"enum"} defaultValue={value}>
+                    {this.props.booleanProperties.enum.map(enumValue => {
+                        return (
+                            <option key={enumValue} value={enumValue}>
+                                {enumValue.toString()}
+                            </option>
+                        );
+                    })}
+                </select>
             </div>
         );
     }
