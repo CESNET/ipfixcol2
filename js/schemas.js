@@ -464,7 +464,7 @@ const jsonSchemaUniRec = {
                                     type: "string"
                                 },
                                 mode: {
-                                    type: "wtring",
+                                    type: "string",
                                     default: "write",
                                     enum: ["write", "append"]
                                 },
