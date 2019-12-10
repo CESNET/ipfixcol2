@@ -299,8 +299,8 @@ const jsonSchemaLNF = {
             default: "LNF storage"
         },
         plugin: {
-            type: "lnfstore",
-            const: "anonymization"
+            type: "string",
+            const: "lnfstore"
         },
         params: {
             type: "object",
@@ -360,6 +360,131 @@ const jsonSchemaLNF = {
                 }
             },
             required: ["storagePath", "compress", "dumpInterval", "index"]
+        }
+    },
+    required: ["name", "plugin", "params"]
+};
+const jsonSchemaUniRec = {
+    $schema: "http://json-schema.org/draft-07/schema#",
+    title: "UniRec plugin",
+    desription: "UniRec plugin",
+    type: "object",
+    properties: {
+        name: {
+            type: "string",
+            default: "UniRec plugin"
+        },
+        plugin: {
+            type: "lnfstore",
+            const: "unirec"
+        },
+        params: {
+            type: "object",
+            properties: {
+                uniRecFormat: {
+                    type: "string"
+                },
+                trapIfcCommon: {
+                    type: "object",
+                    properties: {
+                        timeout: {
+                            type: "string",
+                            default: "HALF_WAIT",
+                            enum: ["WAIT", "HALF_WAIT", "NO_WAIT"]
+                        },
+                        buffer: {
+                            type: "boolean",
+                            default: true,
+                            enum: [true, false]
+                        },
+                        autoflush: {
+                            type: "integer",
+                            default: 500000
+                        }
+                    },
+                    required: ["timeout", "buffer", "autoflush"]
+                },
+                trapIfcSpec: {
+                    type: "object",
+                    properties: {
+                        unix: {
+                            type: "object",
+                            properties: {
+                                name: {
+                                    type: "string"
+                                },
+                                maxClients: {
+                                    type: "integer",
+                                    default: 64
+                                }
+                            },
+                            required: ["name", "maxClients"]
+                        },
+                        tcp: {
+                            type: "object",
+                            properties: {
+                                port: {
+                                    type: "integer",
+                                    minimum: 0
+                                },
+                                maxClients: {
+                                    type: "integer",
+                                    default: 64
+                                }
+                            },
+                            required: ["port", "maxClients"]
+                        },
+                        "tcp-tls": {
+                            type: "object",
+                            properties: {
+                                port: {
+                                    type: "integer",
+                                    minimum: 0
+                                },
+                                maxClients: {
+                                    type: "integer",
+                                    default: 64
+                                },
+                                keyFile: {
+                                    type: "string"
+                                },
+                                certFile: {
+                                    type: "string"
+                                },
+                                caFile: {
+                                    type: "string"
+                                }
+                            },
+                            required: ["port", "maxClients", "keyFile", "certFile", "caFile"]
+                        },
+                        file: {
+                            type: "object",
+                            properties: {
+                                name: {
+                                    type: "string"
+                                },
+                                mode: {
+                                    type: "wtring",
+                                    default: "write",
+                                    enum: ["write", "append"]
+                                },
+                                time: {
+                                    type: "integer",
+                                    default: 0
+                                },
+                                size: {
+                                    type: "integer",
+                                    default: 0
+                                }
+                            },
+                            required: ["name", "mode", "time", "size"]
+                        }
+                    },
+                    minProperties: 1,
+                    maxProperties: 1
+                }
+            },
+            required: ["uniRecFormat", "trapIfcCommon", "trapIfcSpec"]
         }
     },
     required: ["name", "plugin", "params"]

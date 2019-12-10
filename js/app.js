@@ -276,6 +276,7 @@ class Form extends React.Component {
                 <EditModule JSONschema={jsonSchemaJSON} />
                 <EditModule JSONschema={jsonSchemaDummy} />
                 <EditModule JSONschema={jsonSchemaLNF} />
+                <EditModule JSONschema={jsonSchemaUniRec} />
                 {this.renderXML()}
             </div>
         );
