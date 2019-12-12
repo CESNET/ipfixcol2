@@ -1,3 +1,4 @@
+const { Button, TextField } = MaterialUI;
 // Obtain the root element
 const rootAppElement = document.getElementById("configurator_app");
 const colors = ["blue", "orange", "red"];
@@ -277,6 +278,13 @@ class Form extends React.Component {
                 <EditModule JSONschema={jsonSchemaDummy} />
                 <EditModule JSONschema={jsonSchemaLNF} />
                 <EditModule JSONschema={jsonSchemaUniRec} />
+                <Button variant="contained" color="primary">
+                    Hello World
+                </Button>
+                <TextField
+                    placeholder="Placeholder here"
+                    label="Basic TextField"
+                />
                 {this.renderXML()}
             </div>
         );
@@ -612,7 +620,7 @@ class BooleanProperty extends React.Component {
 
 class NumberProperty extends React.Component {
     render() {
-        var value = 0.00;
+        var value = 0.0;
         var readOnly = false;
         var min = null;
         var max = null;
