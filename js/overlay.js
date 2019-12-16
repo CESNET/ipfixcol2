@@ -61,7 +61,8 @@ class Overlay extends React.Component {
                     <Button variant="contained" color="primary">
                         {buttonText}
                     </Button>
-                    <Properties jsonSchema={this.props.jsonSchema} isRoot={true} />
+                    <Properties  jsonSchema={this.props.jsonSchema} isRoot={true} />
+                    <pre>{formatXml(x2js.json2xml_str(this.state.module))}</pre>
                 </div>
             </div>
         );
