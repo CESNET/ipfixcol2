@@ -132,7 +132,8 @@ class Form extends React.Component {
         config.ipfixcol2.intermediatePlugins.intermediate = this.state.modules[1];
         config.ipfixcol2.outputPlugins.output = this.state.modules[2];
         var xml = x2js.json2xml_str(config);
-        return <textarea value={formatXml(xml)} readOnly />;
+        // return <textarea value={formatXml(xml)} readOnly />;
+        return <pre>{formatXml(xml)}</pre>
     }
 
     render() {
@@ -170,10 +171,6 @@ class Form extends React.Component {
                         modulesAvailable={moduleSchemas[2]}
                         addModule={this.newModuleOverlay.bind(this)}
                     />
-                    <Button variant="contained" color="primary">
-                        Hello World
-                    </Button>
-                    <TextField placeholder="Test palaceholder" label="Test label" />
                     {this.renderXML()}
                 </div>
             </div>
