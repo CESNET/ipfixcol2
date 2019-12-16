@@ -400,16 +400,12 @@ class Module extends React.Component {
     }
 
     setDetailVisibile = () => {
-        this.setState(state => {
-            return { detailVisible: true };
-        });
+        this.setState({ detailVisible: true });
         console.log("set visible");
     };
 
     setDetailHidden = () => {
-        this.setState(state => {
-            return { detailVisible: false };
-        });
+        this.setState({ detailVisible: false });
         console.log("set hidden");
     };
 
