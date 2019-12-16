@@ -26,7 +26,7 @@ body {
   margin: 10px auto 0 auto;
 }
 
-.form {
+.mainLayer {
   display: flex;
   flex-direction: row;
   justify-content: baseline;
@@ -150,6 +150,26 @@ body {
 .red button:hover,
 .red .modules button:hover {
   background: #ffb078;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.582);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.overlay .content {
+  background: white;
+  width: 90%;
+  height: 90%;
+  border-radius: 20px;
+  padding: 20px;
 }
 
 textarea {

@@ -3,6 +3,11 @@ const { Button, TextField } = MaterialUI;
 const rootAppElement = document.getElementById("configurator_app");
 const colors = ["blue", "orange", "red"];
 const columnNames = ["Input plugins", "Intermediate plugins", "Output plugins"];
+const moduleSchemas = [
+    [jsonSchemaUDP, jsonSchemaTCP],
+    [jsonSchemaAnonymization],
+    [jsonSchemaJSON, jsonSchemaDummy, jsonSchemaLNF, jsonSchemaUniRec]
+];
 const defaultConfig = {
     ipfixcol2: {
         inputPlugins: {
@@ -173,7 +178,8 @@ class Form extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            modules: [[], [], []]
+            modules: [[], [], []],
+            overlay: null
         };
 
         // this.state.modules[0].push(modulesAvailable[0][1]);
@@ -182,7 +188,40 @@ class Form extends React.Component {
         // this.state.modules[1].push(modulesAvailable[1][0]);
     }
 
-    addModule = (columnName, index) => {
+    editCancel() {
+        this.setState({
+            overlay: null
+        });
+    }
+
+    newModuleOverlay(columnIndex, moduleIndex) {
+        this.setState({
+            overlay: (
+                <Overlay
+                    columnIndex={columnIndex}
+                    moduleIndex={moduleIndex}
+                    jsonSchema={moduleSchemas[columnIndex][moduleIndex]}
+                    onCancel={this.editCancel.bind(this)}
+                />
+            )
+        });
+    }
+
+    editModuleOverlay(columnIndex, index) {
+        this.setState({
+            overlay: (
+                <Overlay
+                    module={this.state.modules[columnIndex][index]}
+                    columnIndex={columnIndex}
+                    moduleIndex={moduleIndex}
+                    jsonSchema={moduleSchemas[columnIndex][moduleIndex]}
+                    onCancel={this.editCancel.bind(this)}
+                />
+            )
+        });
+    }
+
+    addModule(columnName, index) {
         this.setState(state => {
             var newModules;
             switch (columnName) {
@@ -205,9 +244,9 @@ class Form extends React.Component {
                     console.log("error while adding module");
             }
         });
-    };
+    }
 
-    removeModule = (columnName, index) => {
+    removeModule(columnName, index) {
         this.setState(state => {
             var newModules;
             switch (columnName) {
@@ -230,7 +269,7 @@ class Form extends React.Component {
                     console.log("error while deleting module");
             }
         });
-    };
+    }
 
     renderXML() {
         var config = defaultConfig;
@@ -244,48 +283,51 @@ class Form extends React.Component {
     render() {
         return (
             <div className="form">
-                <FormColumn
-                    key={columnNames[0]}
-                    parent={this}
-                    modules={this.state.modules[0]}
-                    color={colors[0]}
-                    name={columnNames[0]}
-                    modulesAvailable={modulesAvailable[0]}
-                    addModule={this.addModule}
-                />
-                <FormColumn
-                    key={columnNames[1]}
-                    parent={this}
-                    modules={this.state.modules[1]}
-                    color={colors[1]}
-                    name={columnNames[1]}
-                    modulesAvailable={modulesAvailable[1]}
-                    addModule={this.addModule}
-                />
-                <FormColumn
-                    key={columnNames[2]}
-                    parent={this}
-                    modules={this.state.modules[2]}
-                    color={colors[2]}
-                    name={columnNames[2]}
-                    modulesAvailable={modulesAvailable[2]}
-                    addModule={this.addModule}
-                />
-                <EditModule JSONschema={jsonSchemaUDP} />
-                <EditModule JSONschema={jsonSchemaTCP} />
-                <EditModule JSONschema={jsonSchemaAnonymization} />
-                <EditModule JSONschema={jsonSchemaJSON} />
-                <EditModule JSONschema={jsonSchemaDummy} />
-                <EditModule JSONschema={jsonSchemaLNF} />
-                <EditModule JSONschema={jsonSchemaUniRec} />
-                <Button variant="contained" color="primary">
-                    Hello World
-                </Button>
-                <TextField
-                    placeholder="Placeholder here"
-                    label="Basic TextField"
-                />
-                {this.renderXML()}
+                {this.state.overlay}
+                <div className="mainLayer">
+                    <FormColumn
+                        key={columnNames[0]}
+                        columnIndex={0}
+                        parent={this}
+                        modules={this.state.modules[0]}
+                        color={colors[0]}
+                        name={columnNames[0]}
+                        modulesAvailable={modulesAvailable[0]}
+                        addModule={this.newModuleOverlay.bind(this)}
+                    />
+                    <FormColumn
+                        key={columnNames[1]}
+                        columnIndex={1}
+                        parent={this}
+                        modules={this.state.modules[1]}
+                        color={colors[1]}
+                        name={columnNames[1]}
+                        modulesAvailable={modulesAvailable[1]}
+                        addModule={this.newModuleOverlay.bind(this)}
+                    />
+                    <FormColumn
+                        key={columnNames[2]}
+                        columnIndex={2}
+                        parent={this}
+                        modules={this.state.modules[2]}
+                        color={colors[2]}
+                        name={columnNames[2]}
+                        modulesAvailable={modulesAvailable[2]}
+                        addModule={this.newModuleOverlay.bind(this)}
+                    />
+                    <EditModule JSONschema={jsonSchemaUDP} />
+                    <EditModule JSONschema={jsonSchemaTCP} />
+                    <EditModule JSONschema={jsonSchemaAnonymization} />
+                    <EditModule JSONschema={jsonSchemaJSON} />
+                    <EditModule JSONschema={jsonSchemaDummy} />
+                    <EditModule JSONschema={jsonSchemaLNF} />
+                    <EditModule JSONschema={jsonSchemaUniRec} />
+                    <Button variant="contained" color="primary">
+                        Hello World
+                    </Button>
+                    <TextField placeholder="Test palaceholder" label="Test label" />
+                    {this.renderXML()}
+                </div>
             </div>
         );
     }
@@ -296,15 +338,15 @@ class FormColumn extends React.Component {
         super(props);
     }
 
-    addModule(name, index) {
-        this.props.parent.addModule(name, index);
+    addModule = index => {
+        this.props.addModule(this.props.columnIndex, index);
         console.log("plugin added");
-    }
+    };
 
-    removeModule(name, index) {
+    removeModule = (name, index) => {
         this.props.parent.removeModule(name, index);
         console.log("plugin removed");
-    }
+    };
 
     render() {
         return (
@@ -326,8 +368,9 @@ class FormColumn extends React.Component {
                             return (
                                 <ModuleAvailable
                                     key={index}
+                                    moduleIndex={index}
                                     module={moduleAvailable}
-                                    onClick={() => this.addModule(this.props.name, index)}
+                                    onAdd={this.addModule}
                                 />
                             );
                         })}
@@ -338,8 +381,14 @@ class FormColumn extends React.Component {
     }
 }
 
-function ModuleAvailable(props) {
-    return <button onClick={props.onClick}>{props.module.plugin}</button>;
+class ModuleAvailable extends React.Component {
+    handleAdd = () => {
+        this.props.onAdd(this.props.moduleIndex);
+    };
+
+    render() {
+        return <button onClick={this.handleAdd}>{this.props.module.plugin}</button>;
+    }
 }
 
 class Module extends React.Component {
