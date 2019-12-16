@@ -188,6 +188,9 @@ textarea {
 .innerProps p {
   margin-left: -20px;
 }
+.innerProps .select {
+  min-width: 182px;
+}
 
 .addOptional {
   box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.24);
