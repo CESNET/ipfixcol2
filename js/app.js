@@ -1,4 +1,4 @@
-const { Button, TextField, FormControl, InputLabel, Select, MenuItem } = MaterialUI;
+const { Button, TextField, FormControl, InputLabel, Select, Menu, MenuItem } = MaterialUI;
 // Obtain the root element
 const rootAppElement = document.getElementById("configurator_app");
 const colors = ["blue", "orange", "red"];
@@ -47,6 +47,7 @@ class Form extends React.Component {
         this.setState({
             overlay: null
         });
+        console.log("Editing canceled");
     }
 
     newModuleOverlay(columnIndex, moduleIndex) {
@@ -60,6 +61,7 @@ class Form extends React.Component {
                 />
             )
         });
+        console.log("Editing a new module");
     }
 
     editModuleOverlay(columnIndex, index) {
@@ -74,6 +76,7 @@ class Form extends React.Component {
                 />
             )
         });
+        console.log("Editing an existing module");
     }
 
     addModule(columnName, index) {
@@ -99,6 +102,7 @@ class Form extends React.Component {
                     console.log("error while adding module");
             }
         });
+        console.log("New module added")
     }
 
     removeModule(columnName, index) {
@@ -124,6 +128,7 @@ class Form extends React.Component {
                     console.log("error while deleting module");
             }
         });
+        console.log("Module removed")
     }
 
     renderXML() {
@@ -185,12 +190,10 @@ class FormColumn extends React.Component {
 
     addModule = index => {
         this.props.addModule(this.props.columnIndex, index);
-        console.log("plugin added");
     };
 
     removeModule = (name, index) => {
         this.props.parent.removeModule(name, index);
-        console.log("plugin removed");
     };
 
     render() {

@@ -51,7 +51,7 @@ class Overlay extends React.Component {
         };
     }
     render() {
-        var buttonText = this.state.isNew ? "Add module" : "Edit module"
+        var buttonText = this.state.isNew ? "Add module" : "Edit module";
         return (
             <div className={"overlay"}>
                 <div className={"content"}>
@@ -61,7 +61,7 @@ class Overlay extends React.Component {
                     <Button variant="contained" color="primary">
                         {buttonText}
                     </Button>
-                    <Properties  jsonSchema={this.props.jsonSchema} isRoot={true} />
+                    <Properties jsonSchema={this.props.jsonSchema} isRoot={true} />
                     <pre>{formatXml(x2js.json2xml_str(this.state.module))}</pre>
                 </div>
             </div>
@@ -69,11 +69,20 @@ class Overlay extends React.Component {
     }
 }
 
-function OptionalProperty(props) {
-    return <button>{props.name}</button>;
-}
-
 class Properties extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            anchorEl: null
+        };
+    }
+    handleClick = event => {
+        this.setState({anchorEl: event.currentTarget});
+    }
+    handleClose = () => {
+        this.setState({anchorEl: null});
+    }
+
     render() {
         var className = this.props.isRoot ? "rootProps" : "innerProps";
         var name = this.props.isRoot ? "" : this.props.name;
@@ -84,18 +93,26 @@ class Properties extends React.Component {
                 this.props.jsonSchema.required.length
         ) {
             optional = (
-                <div className={"addOptional"}>
-                    <button>Add optional parameter</button>
-                    <div className={"parameters"}>
+                <div>
+                    <Button variant="contained" color="primary" aria-controls="simple-menu" aria-haspopup="true" onClick={this.handleClick.bind(this)}>
+                        Add optional parameter
+                    </Button>
+                    <Menu
+                        id="simple-menu"
+                        anchorEl={this.state.anchorEl}
+                        keepMounted
+                        open={Boolean(this.state.anchorEl)}
+                        onClose={this.handleClose.bind(this)}
+                    >
                         {Object.keys(this.props.jsonSchema.properties).map(propertyName => {
                             if (
                                 !this.props.jsonSchema.hasOwnProperty("required") ||
                                 !this.props.jsonSchema.required.includes(propertyName)
                             ) {
-                                return <OptionalProperty key={propertyName} name={propertyName} />;
+                                return <MenuItem key={propertyName} onClick={this.handleClose.bind(this)}>{propertyName}</MenuItem>;
                             }
                         })}
-                    </div>
+                    </Menu>
                 </div>
             );
         }
