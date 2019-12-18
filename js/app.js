@@ -1,4 +1,18 @@
-const { Button, TextField, FormControl, InputLabel, Select, Menu, MenuItem } = MaterialUI;
+const {
+    Button,
+    TextField,
+    FormControl,
+    InputLabel,
+    Select,
+    Menu,
+    MenuItem,
+    Dialog,
+    DialogTitle,
+    DialogActions,
+    DialogContent,
+    Grid,
+    TextareaAutosize
+} = MaterialUI;
 // Obtain the root element
 const rootAppElement = document.getElementById("configurator_app");
 const colors = ["blue", "orange", "red"];
@@ -102,7 +116,7 @@ class Form extends React.Component {
                     console.log("error while adding module");
             }
         });
-        console.log("New module added")
+        console.log("New module added");
     }
 
     removeModule(columnName, index) {
@@ -128,7 +142,7 @@ class Form extends React.Component {
                     console.log("error while deleting module");
             }
         });
-        console.log("Module removed")
+        console.log("Module removed");
     }
 
     renderXML() {
@@ -138,7 +152,7 @@ class Form extends React.Component {
         config.ipfixcol2.outputPlugins.output = this.state.modules[2];
         var xml = x2js.json2xml_str(config);
         // return <textarea value={formatXml(xml)} readOnly />;
-        return <pre>{formatXml(xml)}</pre>
+        return <pre>{formatXml(xml)}</pre>;
     }
 
     render() {
@@ -235,7 +249,9 @@ class ModuleAvailable extends React.Component {
     };
 
     render() {
-        return <button onClick={this.handleAdd}>{this.props.module.properties.plugin.const}</button>;
+        return (
+            <button onClick={this.handleAdd}>{this.props.module.properties.plugin.const}</button>
+        );
     }
 }
 

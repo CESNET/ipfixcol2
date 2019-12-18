@@ -53,18 +53,27 @@ class Overlay extends React.Component {
     render() {
         var buttonText = this.state.isNew ? "Add module" : "Edit module";
         return (
-            <div className={"overlay"}>
-                <div className={"content"}>
+            <Dialog disableBackdropClick disableEscapeKeyDown open={true} fullWidth={true} maxWidth={"md"}>
+                <DialogTitle>{buttonText}</DialogTitle>
+                <DialogContent>
+                    <Grid container spacing={2}>
+                        <Grid item md={6}>
+                            <Properties jsonSchema={this.props.jsonSchema} isRoot={true} />
+                        </Grid>
+                        <Grid item md={6}>
+                            <TextareaAutosize defaultValue={formatXml(x2js.json2xml_str(this.state.module))} />
+                        </Grid>
+                    </Grid>
+                </DialogContent>
+                <DialogActions>
                     <Button variant="outlined" color="primary" onClick={this.props.onCancel}>
                         Cancel
                     </Button>
                     <Button variant="contained" color="primary">
                         {buttonText}
                     </Button>
-                    <Properties jsonSchema={this.props.jsonSchema} isRoot={true} />
-                    <pre>{formatXml(x2js.json2xml_str(this.state.module))}</pre>
-                </div>
-            </div>
+                </DialogActions>
+            </Dialog>
         );
     }
 }
@@ -77,11 +86,11 @@ class Properties extends React.Component {
         };
     }
     handleClick = event => {
-        this.setState({anchorEl: event.currentTarget});
-    }
+        this.setState({ anchorEl: event.currentTarget });
+    };
     handleClose = () => {
-        this.setState({anchorEl: null});
-    }
+        this.setState({ anchorEl: null });
+    };
 
     render() {
         var className = this.props.isRoot ? "rootProps" : "innerProps";
@@ -94,7 +103,13 @@ class Properties extends React.Component {
         ) {
             optional = (
                 <div>
-                    <Button variant="contained" color="primary" aria-controls="simple-menu" aria-haspopup="true" onClick={this.handleClick.bind(this)}>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        aria-controls="simple-menu"
+                        aria-haspopup="true"
+                        onClick={this.handleClick.bind(this)}
+                    >
                         Add optional parameter
                     </Button>
                     <Menu
@@ -109,7 +124,14 @@ class Properties extends React.Component {
                                 !this.props.jsonSchema.hasOwnProperty("required") ||
                                 !this.props.jsonSchema.required.includes(propertyName)
                             ) {
-                                return <MenuItem key={propertyName} onClick={this.handleClose.bind(this)}>{propertyName}</MenuItem>;
+                                return (
+                                    <MenuItem
+                                        key={propertyName}
+                                        onClick={this.handleClose.bind(this)}
+                                    >
+                                        {propertyName}
+                                    </MenuItem>
+                                );
                             }
                         })}
                     </Menu>
