@@ -53,15 +53,31 @@ class Overlay extends React.Component {
     render() {
         var buttonText = this.state.isNew ? "Add module" : "Edit module";
         return (
-            <Dialog disableBackdropClick disableEscapeKeyDown open={true} fullWidth={true} maxWidth={"md"}>
+            <Dialog
+                disableBackdropClick
+                disableEscapeKeyDown
+                open={true}
+                fullWidth={true}
+                maxWidth={"md"}
+            >
                 <DialogTitle>{buttonText}</DialogTitle>
                 <DialogContent>
-                    <Grid container spacing={2}>
-                        <Grid item md={6}>
+                    <Grid container spacing={2} alignItems="center">
+                        <Grid item md={6} sm={12} xs={12}>
                             <Properties jsonSchema={this.props.jsonSchema} isRoot={true} />
                         </Grid>
-                        <Grid item md={6}>
-                            <TextareaAutosize defaultValue={formatXml(x2js.json2xml_str(this.state.module))} />
+                        <Grid item md={6} sm={12} xs={12}>
+                            <FormControl fullWidth>
+                                <TextField
+                                    label={"Module XML"}
+                                    multiline
+                                    InputProps={{
+                                        readOnly: true
+                                    }}
+                                    defaultValue={formatXml(x2js.json2xml_str(this.state.module))}
+                                />
+                                <FormHelperText>Read only</FormHelperText>
+                            </FormControl>
                         </Grid>
                     </Grid>
                 </DialogContent>

@@ -2,6 +2,7 @@ const {
     Button,
     TextField,
     FormControl,
+    FormHelperText,
     InputLabel,
     Select,
     Menu,
@@ -151,8 +152,19 @@ class Form extends React.Component {
         config.ipfixcol2.intermediatePlugins.intermediate = this.state.modules[1];
         config.ipfixcol2.outputPlugins.output = this.state.modules[2];
         var xml = x2js.json2xml_str(config);
-        // return <textarea value={formatXml(xml)} readOnly />;
-        return <pre>{formatXml(xml)}</pre>;
+        return (
+            <FormControl fullWidth>
+                <TextField
+                    label={"Config XML"}
+                    multiline
+                    InputProps={{
+                        readOnly: true
+                    }}
+                    defaultValue={formatXml(xml)}
+                />
+                <FormHelperText>Read only</FormHelperText>
+            </FormControl>
+        );
     }
 
     render() {
