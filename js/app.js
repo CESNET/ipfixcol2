@@ -73,6 +73,7 @@ class Form extends React.Component {
                     moduleIndex={moduleIndex}
                     jsonSchema={moduleSchemas[columnIndex][moduleIndex]}
                     onCancel={this.editCancel.bind(this)}
+                    onSuccess={this.addModule.bind(this)}
                 />
             )
         });
@@ -88,13 +89,14 @@ class Form extends React.Component {
                     moduleIndex={moduleIndex}
                     jsonSchema={moduleSchemas[columnIndex][moduleIndex]}
                     onCancel={this.editCancel.bind(this)}
+                    onSuccess={this.editModule.bind(this)}
                 />
             )
         });
         console.log("Editing an existing module");
     }
 
-    addModule(columnName, index) {
+    addModule(columnIndex, module) {
         this.setState(state => {
             var newModules;
             switch (columnName) {
@@ -118,6 +120,10 @@ class Form extends React.Component {
             }
         });
         console.log("New module added");
+    }
+
+    editModule(columnIndex, moduleIndex, module) {
+
     }
 
     removeModule(columnName, index) {

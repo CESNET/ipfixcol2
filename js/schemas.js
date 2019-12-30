@@ -375,7 +375,7 @@ const jsonSchemaUniRec = {
             default: "UniRec plugin"
         },
         plugin: {
-            type: "lnfstore",
+            type: "string",
             const: "unirec"
         },
         params: {

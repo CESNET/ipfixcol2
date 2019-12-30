@@ -50,6 +50,15 @@ class Overlay extends React.Component {
             isNew: this.props.module === undefined
         };
     }
+    handleComfirm() {}
+    handleChange(propertyName, changedSubmodule) {
+        var changedModule = changedSubmodule;
+        // var changedModule = this.state.module;
+        // changedModule[propertyName] = changedSubmodule;
+        this.setState({
+            module: changedModule
+        });
+    }
     render() {
         var buttonText = this.state.isNew ? "Add module" : "Edit module";
         return (
@@ -64,7 +73,12 @@ class Overlay extends React.Component {
                 <DialogContent>
                     <Grid container spacing={2} alignItems="center">
                         <Grid item md={6} sm={12} xs={12}>
-                            <Properties jsonSchema={this.props.jsonSchema} isRoot={true} />
+                            <Properties
+                                module={this.state.module}
+                                jsonSchema={this.props.jsonSchema}
+                                onChange={this.handleChange.bind(this)}
+                                isRoot={true}
+                            />
                         </Grid>
                         <Grid item md={6} sm={12} xs={12}>
                             <FormControl fullWidth>
@@ -74,7 +88,7 @@ class Overlay extends React.Component {
                                     InputProps={{
                                         readOnly: true
                                     }}
-                                    defaultValue={formatXml(x2js.json2xml_str(this.state.module))}
+                                    value={formatXml(x2js.json2xml_str(this.state.module))}
                                 />
                                 <FormHelperText>Read only</FormHelperText>
                             </FormControl>
@@ -107,6 +121,11 @@ class Properties extends React.Component {
     handleClose = () => {
         this.setState({ anchorEl: null });
     };
+    handleChange(propertyName, changedSubmodule) {
+        var changedModule = this.props.module;
+        changedModule[propertyName] = changedSubmodule;
+        this.props.onChange(this.props.name, changedModule);
+    }
 
     render() {
         var className = this.props.isRoot ? "rootProps" : "innerProps";
@@ -170,8 +189,10 @@ class Properties extends React.Component {
                                 <StringProperty
                                     key={propertyName}
                                     name={propertyName}
+                                    module={this.props.module[propertyName]}
                                     required={true}
                                     jsonSchema={this.props.jsonSchema.properties[propertyName]}
+                                    onChange={this.handleChange.bind(this)}
                                 />
                             );
                         case "integer":
@@ -179,8 +200,10 @@ class Properties extends React.Component {
                                 <IntegerProperty
                                     key={propertyName}
                                     name={propertyName}
+                                    module={this.props.module[propertyName]}
                                     required={true}
                                     jsonSchema={this.props.jsonSchema.properties[propertyName]}
+                                    onChange={this.handleChange.bind(this)}
                                 />
                             );
                         case "object":
@@ -188,9 +211,11 @@ class Properties extends React.Component {
                                 <Properties
                                     key={propertyName}
                                     name={propertyName}
+                                    module={this.props.module[propertyName]}
                                     required={true}
                                     isRoot={false}
                                     jsonSchema={this.props.jsonSchema.properties[propertyName]}
+                                    onChange={this.handleChange.bind(this)}
                                 />
                             );
                         case "boolean":
@@ -198,8 +223,10 @@ class Properties extends React.Component {
                                 <BooleanProperty
                                     key={propertyName}
                                     name={propertyName}
+                                    module={this.props.module[propertyName]}
                                     required={true}
                                     jsonSchema={this.props.jsonSchema.properties[propertyName]}
+                                    onChange={this.handleChange.bind(this)}
                                 />
                             );
                         case "number":
@@ -207,8 +234,10 @@ class Properties extends React.Component {
                                 <NumberProperty
                                     key={propertyName}
                                     name={propertyName}
+                                    module={this.props.module[propertyName]}
                                     required={true}
                                     jsonSchema={this.props.jsonSchema.properties[propertyName]}
+                                    onChange={this.handleChange.bind(this)}
                                 />
                             );
                     }
@@ -220,22 +249,31 @@ class Properties extends React.Component {
 }
 
 class StringProperty extends React.Component {
+    handleChange(event) {
+        this.props.onChange(this.props.name, event.target.value);
+    }
     render() {
-        var value = "";
+        // console.log(this.props.module);
+        var value = this.props.module;
         var readOnly = false;
+        var onChange = this.handleChange.bind(this);
         var inputCode;
-        if (this.props.jsonSchema.hasOwnProperty("default")) {
+        if (this.props.jsonSchema.hasOwnProperty("default") && value === null) {
             value = this.props.jsonSchema.default;
         }
         if (this.props.jsonSchema.hasOwnProperty("const")) {
             value = this.props.jsonSchema.const;
             readOnly = true;
+            onChange = null
+        }
+        if (value === null) {
+            value = "";
         }
         if (this.props.jsonSchema.hasOwnProperty("enum")) {
             inputCode = (
                 <FormControl className={"select"}>
                     <InputLabel>{this.props.name}</InputLabel>
-                    <Select value={value}>
+                    <Select value={value} onChange={onChange}>
                         {this.props.jsonSchema.enum.map(enumValue => {
                             return (
                                 <MenuItem key={enumValue} value={enumValue}>
@@ -255,6 +293,7 @@ class StringProperty extends React.Component {
                     value={value}
                     readOnly={readOnly}
                     required={this.props.required}
+                    onChange={onChange}
                 />
             );
         }
@@ -263,17 +302,34 @@ class StringProperty extends React.Component {
 }
 
 class IntegerProperty extends React.Component {
+    handleChange(event) {
+        if (
+            this.props.jsonSchema.hasOwnProperty("minimum") &&
+            event.target.value < this.props.jsonSchema.minimum
+        ) {
+            this.props.onChange(this.props.name, this.props.jsonSchema.minimum);
+        } else if (
+            this.props.jsonSchema.hasOwnProperty("maximum") &&
+            event.target.value > this.props.jsonSchema.maximum
+        ) {
+            this.props.onChange(this.props.name, this.props.jsonSchema.maximum);
+        } else {
+            this.props.onChange(this.props.name, event.target.value);
+        }
+    }
     render() {
-        var value = "";
+        var value = this.props.module;
         var readOnly = false;
         var min = null;
         var max = null;
-        if (this.props.jsonSchema.hasOwnProperty("default")) {
+        var onChange = this.handleChange.bind(this);
+        if (this.props.jsonSchema.hasOwnProperty("default") && value === null) {
             value = this.props.jsonSchema.default;
         }
         if (this.props.jsonSchema.hasOwnProperty("const")) {
             value = this.props.jsonSchema.const;
             readOnly = true;
+            onChange = null;
         }
         if (this.props.jsonSchema.hasOwnProperty("minimum")) {
             min = this.props.jsonSchema.minimum;
@@ -281,33 +337,40 @@ class IntegerProperty extends React.Component {
         if (this.props.jsonSchema.hasOwnProperty("maximum")) {
             max = this.props.jsonSchema.maximum;
         }
+        if (value === null) {
+            value = "";
+        }
         return (
             <TextField
                 label={this.props.name}
                 type={"number"}
-                step={1}
                 name={this.props.name}
                 value={value}
                 readOnly={readOnly}
                 required={this.props.required}
-                min={min}
-                max={max}
+                inputProps={{ min: min, max: max, step: 1 }}
+                onChange={onChange}
             />
         );
     }
 }
 
 class BooleanProperty extends React.Component {
+    handleChange(event) {
+        this.props.onChange(this.props.name, event.target.value);
+    }
     render() {
-        var value = true;
+        var value = this.props.module;
         var readOnly = false;
-        var inputCode;
-        if (this.props.jsonSchema.hasOwnProperty("default")) {
+        if (this.props.jsonSchema.hasOwnProperty("default") && value === undefined) {
             value = this.props.jsonSchema.default;
         }
         if (this.props.jsonSchema.hasOwnProperty("const")) {
             value = this.props.jsonSchema.const;
             readOnly = true;
+        }
+        if (value === null) {
+            value = "";
         }
         var enumValues = [true, false];
         if (this.props.jsonSchema.hasOwnProperty("enum")) {
@@ -317,8 +380,12 @@ class BooleanProperty extends React.Component {
             <div>
                 <FormControl className={"select"}>
                     <InputLabel>{this.props.name}</InputLabel>
-                    <Select value={value}>
-                        {this.props.jsonSchema.enum.map(enumValue => {
+                    <Select
+                        value={value}
+                        onChange={this.handleChange.bind(this)}
+                        readOnly={readOnly}
+                    >
+                        {enumValues.map(enumValue => {
                             return (
                                 <MenuItem key={enumValue} value={enumValue}>
                                     {enumValue.toString()}
@@ -333,17 +400,34 @@ class BooleanProperty extends React.Component {
 }
 
 class NumberProperty extends React.Component {
+    handleChange(event) {
+        if (
+            this.props.jsonSchema.hasOwnProperty("minimum") &&
+            event.target.value < this.props.jsonSchema.minimum
+        ) {
+            this.props.onChange(this.props.name, this.props.jsonSchema.minimum);
+        } else if (
+            this.props.jsonSchema.hasOwnProperty("maximum") &&
+            event.target.value > this.props.jsonSchema.maximum
+        ) {
+            this.props.onChange(this.props.name, this.props.jsonSchema.maximum);
+        } else {
+            this.props.onChange(this.props.name, event.target.value);
+        }
+    }
     render() {
-        var value = 0.0;
+        var value = this.props.module;
         var readOnly = false;
         var min = null;
         var max = null;
-        if (this.props.jsonSchema.hasOwnProperty("default")) {
+        var onChange = this.handleChange.bind(this);
+        if (this.props.jsonSchema.hasOwnProperty("default") && value === null) {
             value = this.props.jsonSchema.default;
         }
         if (this.props.jsonSchema.hasOwnProperty("const")) {
             value = this.props.jsonSchema.const;
             readOnly = true;
+            onChange = null;
         }
         if (this.props.jsonSchema.hasOwnProperty("minimum")) {
             min = this.props.jsonSchema.minimum;
@@ -351,17 +435,19 @@ class NumberProperty extends React.Component {
         if (this.props.jsonSchema.hasOwnProperty("maximum")) {
             max = this.props.jsonSchema.maximum;
         }
+        if (value === null) {
+            value = "";
+        }
         return (
             <TextField
                 label={this.props.name}
                 type={"number"}
-                step={0.01}
                 name={this.props.name}
                 value={value}
                 readOnly={readOnly}
                 required={this.props.required}
-                min={min}
-                max={max}
+                inputProps={{ min: min, max: max, step: 0.01 }}
+                onChange={onChange}
             />
         );
     }
