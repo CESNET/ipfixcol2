@@ -50,7 +50,9 @@ class Overlay extends React.Component {
             isNew: this.props.module === undefined
         };
     }
-    handleComfirm() {}
+    handleComfirm() {
+        this.props.onSuccess(this.props.columnIndex, this.state.module);
+    }
     handleChange(propertyName, changedSubmodule) {
         var changedModule = changedSubmodule;
         // var changedModule = this.state.module;
@@ -99,7 +101,7 @@ class Overlay extends React.Component {
                     <Button variant="outlined" color="primary" onClick={this.props.onCancel}>
                         Cancel
                     </Button>
-                    <Button variant="contained" color="primary">
+                    <Button variant="contained" color="primary" onClick={this.handleComfirm.bind(this)}>
                         {buttonText}
                     </Button>
                 </DialogActions>

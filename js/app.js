@@ -97,27 +97,11 @@ class Form extends React.Component {
     }
 
     addModule(columnIndex, module) {
-        this.setState(state => {
-            var newModules;
-            switch (columnName) {
-                case columnNames[0]:
-                    newModules = this.state.modules[0].concat(modulesAvailable[0][index]);
-                    return {
-                        modules: [newModules, state.modules[1], state.modules[2]]
-                    };
-                case columnNames[1]:
-                    newModules = this.state.modules[1].concat(modulesAvailable[1][index]);
-                    return {
-                        modules: [state.modules[0], newModules, state.modules[2]]
-                    };
-                case columnNames[2]:
-                    newModules = this.state.modules[2].concat(modulesAvailable[2][index]);
-                    return {
-                        modules: [state.modules[0], state.modules[1], newModules]
-                    };
-                default:
-                    console.log("error while adding module");
-            }
+        var modules = this.state.modules;
+        modules[columnIndex] = modules[columnIndex].concat(module);
+        this.setState({
+            modules: modules,
+            overlay: null
         });
         console.log("New module added");
     }
@@ -166,7 +150,7 @@ class Form extends React.Component {
                     InputProps={{
                         readOnly: true
                     }}
-                    defaultValue={formatXml(xml)}
+                    value={formatXml(xml)}
                 />
                 <FormHelperText>Read only</FormHelperText>
             </FormControl>
