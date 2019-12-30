@@ -17,6 +17,7 @@ No problem, pick any combination of plugins.
 - Input, intermediate and output plugins with various options
 - Parallelized design for high-performance
 - Support for bidirectional flows (biflow)
+- Support for structured data types (i.e. lists)
 - Built-in support for many Enterprise-Specific Information Elements (Cisco, Netscaler, etc.)
 
 Available plugins
@@ -41,7 +42,7 @@ network interface and a port. Multiple instances of these plugins can run concur
   it on standard output
 - `IPFIX file <src/plugins/output/ipfix>`_ - store all flows in IPFIX File format
 - `Time Check <src/plugins/output/timecheck>`_ - flow timestamp check
-- `Dummy <src/plugins/output/dummy>`_ - simple module example
+- `Dummy <src/plugins/output/dummy>`_ - simple output module example
 - `lnfstore <extra_plugins/output/lnfstore>`_ (*) - store all flows in nfdump compatible
   format for long-term preservation
 - `UniRec <extra_plugins/output/unirec>`_ (*)  - send flow records in UniRec format
@@ -107,7 +108,9 @@ of the collector are given in the section
 Coming soon
 -----------
 - Runtime reconfiguration (improved compared to the previous generation)
+- Input plugins for files (IPFIX, fds, etc.)
 - Flow filtration and flow profiling
+- Flow aggregation
 - RPM/DEB packages
 
 FAQ
@@ -125,6 +128,19 @@ be useful also for other users? Please, share your experiences and thoughts.
 :A: This is normal behaviour caused by UDP transport protocol. It may take up few minutes until
     the first record is processed based on template refresh interval on the exporter.
     For more information, see documentation of `UDP <src/plugins/input/udp>`_ plugin.
+
+:Q: The collector is not able to find a plugin. What should I do?
+:A: First of all, make sure that the plugin is installed. Some plugins (e.g. Unirec) are optional
+    and must be installed separately. Therefore, list all available plugins
+    using ``ipfixcol2 -L`` and check if the plugin is on the list. If not, see the plugin page
+    for help. If the problem still persists, check if the plugin is installed in the correct
+    directory. Since plugins might be placed in different locations on different platforms,
+    show help using ``ipfixcol2 -h`` and see the default value of ``-p PATH`` parameter.
+    In some situations, it is also possible that the plugin cannot be loaded (even when
+    it is properly installed) due to additional dependencies (e.g. missing library etc.).
+    If this is the issue, use ``ipfixcol2 -L -v`` and there might be a message like this
+    ``WARNING: Configurator (plugin manager): Failed to open file... (some reason)``
+    on the first line that might help you.
 
 :Q: How can I add more IPFIX fields into records?
 :A: The collector receives flow records captured and prepared by an exporter. IPFIX is an
