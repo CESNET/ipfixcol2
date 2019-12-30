@@ -43,7 +43,8 @@ static const char *err_msg[] = {
     [ERR_SETS_LONG]   = "Total length of the FlowSet is longer than its enclosing NetFlow v9 "
         "Message.",
     // Data FlowSet iterator
-    [ERR_DSET_EMPTY]  = "A DataFlow Set must not be empty. At least one record must be present.",
+    [ERR_DSET_EMPTY]  = "A DataFlow Set is empty or contains a malformed record (shorted that "
+        "described in its particular template). At least one valid record must be present.",
     // (Options) Template FlowSet iterator
     [ERR_TSET_EMPTY]  = "An (Options) Template FlowSet must not be empty. At least one record must "
         "be present.",
@@ -137,7 +138,7 @@ ipx_nf9_dset_iter_init(struct ipx_nf9_dset_iter *it, const struct ipx_nf9_set_hd
     it->_private.err_msg = err_msg[ERR_OK];
 
     if (it->_private.rec_next + rec_size > it->_private.set_end) {
-        // Empty set is not valid (see RFC 3954, Section 2, FlowSet)
+        // Empty set is not valid (see RFC 3954, Section 2, Data FlowSet)
         it->_private.flags |= IPX_NF9_DSET_ITER_FAILED;
         it->_private.err_msg = err_msg[ERR_DSET_EMPTY];
     }

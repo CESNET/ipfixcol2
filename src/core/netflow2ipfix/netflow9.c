@@ -1042,7 +1042,7 @@ conv_process_dset(ipx_nf9_conv_t *conv, const struct ipx_nf9_set_hdr *flowset_hd
     size_t hdr_offset = conv_mem_pos_get(conv);
     conv_mem_commit(conv, FDS_IPFIX_SET_HDR_LEN);
 
-    // Convert all records in the Template Set
+    // Convert all records in the Data Set
     uint16_t rec_processed = 0;
     struct ipx_nf9_dset_iter it;
     ipx_nf9_dset_iter_init(&it, flowset_hdr, tmplt->nf9_drec_len);
@@ -1132,8 +1132,8 @@ conv_process_msg(ipx_nf9_conv_t *conv, const struct ipx_nf9_msg_hdr *nf9_msg, ui
             rc_conv = conv_process_tset(conv, it.set);
         } else {
             // Unknown FlowSet ID // TODO: skip unknown
-            CONV_ERROR(conv, "Unknown FlowSet ID %" PRIu16, flowset_id);
-            rc_conv = IPX_ERR_FORMAT;
+            CONV_INFO(conv, "Ignoring FlowSet with unsupported ID %" PRIu16, flowset_id);
+            rc_conv = IPX_OK;
         }
     }
 
