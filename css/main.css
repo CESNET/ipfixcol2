@@ -56,6 +56,9 @@ body {
   display: inline;
   margin: auto 10px;
 }
+.column .module .header div {
+  display: flex;
+}
 .column .module .header button {
   text-align: center;
   align-content: center;

@@ -125,28 +125,11 @@ class Form extends React.Component {
         console.log("Module edited");
     }
 
-    removeModule(columnName, index) {
-        this.setState(state => {
-            var newModules;
-            switch (columnName) {
-                case columnNames[0]:
-                    newModules = this.state.modules[0].filter((_, j) => index !== j);
-                    return {
-                        modules: [newModules, state.modules[1], state.modules[2]]
-                    };
-                case columnNames[1]:
-                    newModules = this.state.modules[1].filter((_, j) => index !== j);
-                    return {
-                        modules: [state.modules[0], newModules, state.modules[2]]
-                    };
-                case columnNames[2]:
-                    newModules = this.state.modules[2].filter((_, j) => index !== j);
-                    return {
-                        modules: [state.modules[0], state.modules[1], newModules]
-                    };
-                default:
-                    console.log("error while deleting module");
-            }
+    removeModule(columnIndex, index) {
+        var modules = this.state.modules;
+        modules[columnIndex].splice(index, 1);
+        this.setState({
+            modules: modules
         });
         console.log("Module removed");
     }
@@ -180,7 +163,6 @@ class Form extends React.Component {
                     <FormColumn
                         key={columnNames[0]}
                         columnIndex={0}
-                        parent={this}
                         modules={this.state.modules[0]}
                         color={colors[0]}
                         name={columnNames[0]}
@@ -192,7 +174,6 @@ class Form extends React.Component {
                     <FormColumn
                         key={columnNames[1]}
                         columnIndex={1}
-                        parent={this}
                         modules={this.state.modules[1]}
                         color={colors[1]}
                         name={columnNames[1]}
@@ -204,7 +185,6 @@ class Form extends React.Component {
                     <FormColumn
                         key={columnNames[2]}
                         columnIndex={2}
-                        parent={this}
                         modules={this.state.modules[2]}
                         color={colors[2]}
                         name={columnNames[2]}
@@ -221,17 +201,13 @@ class Form extends React.Component {
 }
 
 class FormColumn extends React.Component {
-    constructor(props) {
-        super(props);
-    }
-
     addModule(moduleIndex) {
         this.props.addModule(this.props.columnIndex, moduleIndex);
     }
 
-    removeModule = (name, index) => {
-        this.props.parent.removeModule(name, index);
-    };
+    removeModule(index) {
+        this.props.removeModule(this.props.columnIndex, index);
+    }
 
     editModule(index) {
         this.props.editModule(this.props.columnIndex, index);
@@ -247,7 +223,7 @@ class FormColumn extends React.Component {
                             key={index}
                             index={index}
                             module={module}
-                            onRemove={() => this.removeModule(this.props.name, index)}
+                            onRemove={this.removeModule.bind(this)}
                             onEdit={this.editModule.bind(this)}
                         />
                     );
@@ -322,12 +298,14 @@ class Module extends React.Component {
                         <i className={"fas fa-angle-down"}></i>
                     </button>
                     <h3>{this.props.module.name}</h3>
-                    <button onClick={this.handleEdit.bind(this)}>
-                        <i className="fas fa-pen"></i>
-                    </button>
-                    <button onClick={this.props.onRemove}>
-                        <i className="fas fa-times"></i>
-                    </button>
+                    <div>
+                        <button onClick={this.handleEdit.bind(this)}>
+                            <i className="fas fa-pen"></i>
+                        </button>
+                        <button onClick={this.props.onRemove}>
+                            <i className="fas fa-times"></i>
+                        </button>
+                    </div>
                 </div>
                 <div className={"content"}>
                     <p>plugin: {this.props.module.plugin}</p>

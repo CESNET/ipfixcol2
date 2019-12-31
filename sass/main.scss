@@ -58,7 +58,10 @@ body {
                 display: inline;
                 margin: auto 10px;
             }
-            button {
+            div {
+                display: flex;
+            }
+            button{
                 text-align: center;
                 align-content: center;
                 font-size: 1.3rem;
