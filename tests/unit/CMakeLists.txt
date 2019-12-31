@@ -17,7 +17,6 @@ add_subdirectory(core/netflow)
 
 # Enable code coverage target (i.e. make coverage) when appropriate build
 # type is chosen.
-if (${BUILD_TYPE_UPPER} STREQUAL "COVERAGE")
+if (ENABLE_TESTS AND ENABLE_TESTS_COVERAGE)
     coverage_add_target()
 endif()
-
