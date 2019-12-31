@@ -58,6 +58,14 @@ class Form extends React.Component {
         };
     }
 
+    findSchema(module, schemas) {
+        var moduleSchema = schemas.find(schema => module.plugin === schema.properties.plugin.const);
+        if (moduleSchema !== undefined) {
+            return moduleSchema;
+        }
+        console.log("Schema not found!");
+    }
+
     editCancel() {
         this.setState({
             overlay: null
@@ -70,7 +78,6 @@ class Form extends React.Component {
             overlay: (
                 <Overlay
                     columnIndex={columnIndex}
-                    moduleIndex={moduleIndex}
                     jsonSchema={moduleSchemas[columnIndex][moduleIndex]}
                     onCancel={this.editCancel.bind(this)}
                     onSuccess={this.addModule.bind(this)}
@@ -81,13 +88,15 @@ class Form extends React.Component {
     }
 
     editModuleOverlay(columnIndex, index) {
+        var module = JSON.parse(JSON.stringify(this.state.modules[columnIndex][index]));
+        var jsonSchema = this.findSchema(module, moduleSchemas[columnIndex]);
         this.setState({
             overlay: (
                 <Overlay
-                    module={this.state.modules[columnIndex][index]}
+                    module={module}
                     columnIndex={columnIndex}
-                    moduleIndex={moduleIndex}
-                    jsonSchema={moduleSchemas[columnIndex][moduleIndex]}
+                    index={index}
+                    jsonSchema={jsonSchema}
                     onCancel={this.editCancel.bind(this)}
                     onSuccess={this.editModule.bind(this)}
                 />
@@ -106,8 +115,14 @@ class Form extends React.Component {
         console.log("New module added");
     }
 
-    editModule(columnIndex, moduleIndex, module) {
-
+    editModule(columnIndex, index, module) {
+        var modules = this.state.modules;
+        modules[columnIndex][index] = module;
+        this.setState({
+            modules: modules,
+            overlay: null
+        });
+        console.log("Module edited");
     }
 
     removeModule(columnName, index) {
@@ -171,6 +186,8 @@ class Form extends React.Component {
                         name={columnNames[0]}
                         modulesAvailable={moduleSchemas[0]}
                         addModule={this.newModuleOverlay.bind(this)}
+                        editModule={this.editModuleOverlay.bind(this)}
+                        removeModule={this.removeModule.bind(this)}
                     />
                     <FormColumn
                         key={columnNames[1]}
@@ -181,6 +198,8 @@ class Form extends React.Component {
                         name={columnNames[1]}
                         modulesAvailable={moduleSchemas[1]}
                         addModule={this.newModuleOverlay.bind(this)}
+                        editModule={this.editModuleOverlay.bind(this)}
+                        removeModule={this.removeModule.bind(this)}
                     />
                     <FormColumn
                         key={columnNames[2]}
@@ -191,6 +210,8 @@ class Form extends React.Component {
                         name={columnNames[2]}
                         modulesAvailable={moduleSchemas[2]}
                         addModule={this.newModuleOverlay.bind(this)}
+                        editModule={this.editModuleOverlay.bind(this)}
+                        removeModule={this.removeModule.bind(this)}
                     />
                     {this.renderXML()}
                 </div>
@@ -204,13 +225,17 @@ class FormColumn extends React.Component {
         super(props);
     }
 
-    addModule = index => {
-        this.props.addModule(this.props.columnIndex, index);
-    };
+    addModule(moduleIndex) {
+        this.props.addModule(this.props.columnIndex, moduleIndex);
+    }
 
     removeModule = (name, index) => {
         this.props.parent.removeModule(name, index);
     };
+
+    editModule(index) {
+        this.props.editModule(this.props.columnIndex, index);
+    }
 
     render() {
         return (
@@ -220,8 +245,10 @@ class FormColumn extends React.Component {
                     return (
                         <Module
                             key={index}
+                            index={index}
                             module={module}
                             onRemove={() => this.removeModule(this.props.name, index)}
+                            onEdit={this.editModule.bind(this)}
                         />
                     );
                 })}
@@ -234,7 +261,7 @@ class FormColumn extends React.Component {
                                     key={index}
                                     moduleIndex={index}
                                     module={moduleAvailable}
-                                    onAdd={this.addModule}
+                                    onAdd={this.addModule.bind(this)}
                                 />
                             );
                         })}
@@ -246,13 +273,15 @@ class FormColumn extends React.Component {
 }
 
 class ModuleAvailable extends React.Component {
-    handleAdd = () => {
+    handleAdd() {
         this.props.onAdd(this.props.moduleIndex);
-    };
+    }
 
     render() {
         return (
-            <button onClick={this.handleAdd}>{this.props.module.properties.plugin.const}</button>
+            <button onClick={this.handleAdd.bind(this)}>
+                {this.props.module.properties.plugin.const}
+            </button>
         );
     }
 }
@@ -265,15 +294,19 @@ class Module extends React.Component {
         };
     }
 
-    setDetailVisibile = () => {
+    handleEdit() {
+        this.props.onEdit(this.props.index);
+    }
+
+    setDetailVisibile() {
         this.setState({ detailVisible: true });
         console.log("set visible");
-    };
+    }
 
-    setDetailHidden = () => {
+    setDetailHidden() {
         this.setState({ detailVisible: false });
         console.log("set hidden");
-    };
+    }
 
     render() {
         return (
@@ -289,6 +322,9 @@ class Module extends React.Component {
                         <i className={"fas fa-angle-down"}></i>
                     </button>
                     <h3>{this.props.module.name}</h3>
+                    <button onClick={this.handleEdit.bind(this)}>
+                        <i className="fas fa-pen"></i>
+                    </button>
                     <button onClick={this.props.onRemove}>
                         <i className="fas fa-times"></i>
                     </button>

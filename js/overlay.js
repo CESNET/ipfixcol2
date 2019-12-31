@@ -51,7 +51,11 @@ class Overlay extends React.Component {
         };
     }
     handleComfirm() {
-        this.props.onSuccess(this.props.columnIndex, this.state.module);
+        if (this.state.isNew) {
+            this.props.onSuccess(this.props.columnIndex, this.state.module);
+        } else {
+            this.props.onSuccess(this.props.columnIndex, this.props.index, this.state.module);
+        }
     }
     handleChange(propertyName, changedSubmodule) {
         var changedModule = changedSubmodule;
@@ -101,7 +105,11 @@ class Overlay extends React.Component {
                     <Button variant="outlined" color="primary" onClick={this.props.onCancel}>
                         Cancel
                     </Button>
-                    <Button variant="contained" color="primary" onClick={this.handleComfirm.bind(this)}>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={this.handleComfirm.bind(this)}
+                    >
                         {buttonText}
                     </Button>
                 </DialogActions>
@@ -266,7 +274,7 @@ class StringProperty extends React.Component {
         if (this.props.jsonSchema.hasOwnProperty("const")) {
             value = this.props.jsonSchema.const;
             readOnly = true;
-            onChange = null
+            onChange = null;
         }
         if (value === null) {
             value = "";
