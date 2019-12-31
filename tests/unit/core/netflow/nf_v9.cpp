@@ -67,7 +67,7 @@ protected:
     }
     /**
      * @brief Create the NetFlow v5 to IPFIX converter
-     * @param[in] verb      Verbosity level of the converter
+     * @param[in] verb  Verbosity level of the converter
      */
     void
     converter_create(ipx_verb_level verb = IPX_VERB_NONE)
