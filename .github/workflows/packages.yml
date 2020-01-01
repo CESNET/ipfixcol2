@@ -1,0 +1,152 @@
+name: Build RPM/DEB packages
+
+on:
+  # Ignore changes in extra plugins (as they are not tested here)
+  push:
+    paths-ignore:
+      - 'extra_plugins/**'
+  pull_request:
+    paths-ignore:
+      - 'extra_plugins/**'
+
+jobs:
+  deb:
+    # Try to build DEB packages
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ['ubuntu:18.04', 'ubuntu:19.04', 'ubuntu:20.04', 'debian:stretch', 'debian:buster', 'debian:bullseye']
+
+    name: Build DEBs on ${{ matrix.image }}
+    container: ${{ matrix.image }}
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Define global variables
+      run: echo "::set-output name=zip_file::libfds-${IMAGE//:/}-$GITHUB_SHA.zip"
+      shell: bash
+      env:
+        IMAGE: ${{ matrix.image }}
+      id: vars
+
+    # Dependencies ---------------------------------------------------------------------------
+    - name: Install dependencies for libfds and IPFIXcol2 (Ubuntu/Debian)
+      run: |
+        apt-get update
+        apt-get -y install git gcc g++ cmake make libxml2-dev liblz4-dev libzstd-dev
+        apt-get -y install python3-docutils zlib1g-dev pkg-config
+        apt-get -y install debhelper devscripts build-essential fakeroot zip
+
+    # Build LIBFDS DEB package ---------------------------------------------------------------
+    - name: Checkout libfds library - master branch
+      if: github.ref == 'refs/heads/master'
+      run: git clone --branch master https://github.com/CESNET/libfds.git build/libfds_repo
+    - name: Checkout libfds library - devel branch
+      if: github.ref != 'refs/heads/master'
+      run: git clone --branch devel https://github.com/CESNET/libfds.git build/libfds_repo
+    - name: Build DEBs of libfds library and install them
+      working-directory: 'build/libfds_repo'
+      run: |
+        mkdir build && cd build
+        cmake .. -DPACKAGE_BUILDER_DEB=On -DCPACK_PACKAGE_CONTACT="GitHub actions <no-reply@example.com>"
+        make deb
+        apt -y install ./pkg/deb/debbuild/libfds*.deb
+
+      # Build IPFIXcol2 DEB package ------------------------------------------------------------
+    - name: Build IPFIXcol2 DEBs and install them
+      run: |
+        cd build
+        cmake .. -DPACKAGE_BUILDER_DEB=On -DCPACK_PACKAGE_CONTACT="GitHub actions <no-reply@example.com>"
+        make deb
+        apt -y install ./pkg/deb/debbuild/*.deb
+    - name: Try to run IPFIXcol2
+      run: |
+        ipfixcol2 -V
+        ipfixcol2 -h
+        ipfixcol2 -L
+    - name: Pack IPFIXcol2 DEB packages
+      working-directory: 'build/pkg/deb/debbuild/'
+      run: zip "$GITHUB_WORKSPACE/$ZIP_FILE" *.deb *.ddeb *.tar.gz *.dsc
+      env:
+        ZIP_FILE: ${{ steps.vars.outputs.zip_file }}
+    - name: Archive DEB packages
+      if: github.event_name == 'push'
+      uses: actions/upload-artifact@v1
+      with:
+        name: ${{ steps.vars.outputs.zip_file }}
+        path: ${{ steps.vars.outputs.zip_file }}
+
+  rpm:
+    # Try to build RPM packages
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ['centos:7', 'centos:8', 'fedora:29', 'fedora:30', 'fedora:31']
+
+    name: Build RPMs on ${{ matrix.image }}
+    container: ${{ matrix.image }}
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Prepare environment and variables
+      run: |
+        echo "::set-output name=zip_file::libfds-${IMAGE//:/}-$GITHUB_SHA.zip"
+        mkdir -p build/libfds_repo
+      env:
+        IMAGE: ${{ matrix.image }}
+      id: vars
+
+    # Dependencies ---------------------------------------------------------------------------
+    - name: Install dependencies for libfds and IPFIXcol2 (CentOS)
+      if: startsWith(matrix.image, 'centos')
+      run: |
+        yum -y install epel-release
+        yum -y install git gcc gcc-c++ cmake make libxml2-devel lz4-devel libzstd-devel
+        yum -y install zlib-devel pkgconfig rpm-build
+        yum -y install python3-docutils || yum -y install python-docutils
+    - name: Install depedencies for libfds and IPFIXcol2 (Fedora)
+      if: startsWith(matrix.image, 'fedora')
+      run: |
+        dnf -y install git gcc gcc-c++ cmake make libxml2-devel lz4-devel libzstd-devel
+        dnf -y install python3-docutils zlib-devel pkgconfig rpm-build
+
+    # Build LIBFDS RPM package ---------------------------------------------------------------
+    - name: Checkout libfds library - master branch
+      if: github.ref == 'refs/heads/master'
+      run: git clone --branch master https://github.com/CESNET/libfds.git build/libfds_repo
+    - name: Checkout libfds library - devel branch
+      if: github.ref != 'refs/heads/master'
+      run: git clone --branch devel https://github.com/CESNET/libfds.git build/libfds_repo
+    - name: Build RPMs of libfds library and install it
+      working-directory: 'build/libfds_repo'
+      run: |
+        mkdir build && cd build
+        cmake .. -DPACKAGE_BUILDER_RPM=On -DCPACK_PACKAGE_CONTACT="GitHub actions <no-reply@example.com>"
+        make rpm
+        yum -y install pkg/rpm/rpmbuild/RPMS/*/libfds-*.rpm
+
+    # Build IPFIXcol2 RPM package ------------------------------------------------------------
+    - name: Build IPFIXcol2 RPMs and install them
+      run: |
+        cd build
+        cmake .. -DPACKAGE_BUILDER_RPM=On -DCPACK_PACKAGE_CONTACT="GitHub actions <no-reply@example.com>"
+        make rpm
+        yum -y install pkg/rpm/rpmbuild/RPMS/*/ipfixcol2-*.rpm
+    - name: Try to run IPFIXcol2
+      run: |
+        ipfixcol2 -V
+        ipfixcol2 -h
+        ipfixcol2 -L -v
+    - name: Pack IPFIXcol2 RPM packages
+      working-directory: 'build/pkg/rpm/rpmbuild'
+      run: zip -r "$GITHUB_WORKSPACE/$ZIP_FILE" RPMS SRPMS
+      env:
+        ZIP_FILE: ${{ steps.vars.outputs.zip_file }}
+    - name: Archive RPM packages
+      if: github.event_name == 'push'
+      uses: actions/upload-artifact@v1
+      with:
+        name: ${{ steps.vars.outputs.zip_file }}
+        path: ${{ steps.vars.outputs.zip_file }}
