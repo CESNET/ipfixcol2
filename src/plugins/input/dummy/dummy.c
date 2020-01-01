@@ -176,7 +176,8 @@ ipx_plugin_get(ipx_ctx_t *ctx, void *cfg)
     ipfix_hdr->odid = htonl(data->config->odid);
 
     // Insert the message and info about source into a wrapper
-    ipx_msg_ipfix_t *msg2send = ipx_msg_ipfix_create(ctx, &msg_ctx, (uint8_t *) ipfix_hdr);
+    ipx_msg_ipfix_t *msg2send = ipx_msg_ipfix_create(ctx, &msg_ctx, (uint8_t *) ipfix_hdr,
+        FDS_IPFIX_MSG_HDR_LEN);
     if (!msg2send) {
         // Allocation failed, but this is not a fatal error - just skip the message
         IPX_CTX_ERROR(ctx, "Memory allocation failed! (%s:%d)", __FILE__, __LINE__);

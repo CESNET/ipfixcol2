@@ -3,7 +3,7 @@ Upstream-Contact: @CPACK_PACKAGE_CONTACT@
 Source:           http://www.liberouter.org/
 
 Files: *
-Copyright:        2015-2017 CESNET, z.s.p.o.
+Copyright:        2015-2019 CESNET, z.s.p.o.
 License:          BSD-3-clause
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions

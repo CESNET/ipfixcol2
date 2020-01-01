@@ -5,8 +5,6 @@ add_library(json-output MODULE
     src/Config.hpp
     src/Storage.cpp
     src/Storage.hpp
-    src/protocols.hpp
-    src/protocols.cpp
     src/Printer.cpp
     src/Printer.hpp
     src/File.cpp
@@ -16,6 +14,10 @@ add_library(json-output MODULE
     src/Sender.cpp
     src/Server.hpp
 )
+
+find_package(ZLIB REQUIRED)
+include_directories(${ZLIB_INCLUDE_DIRS})
+target_link_libraries(json-output ${ZLIB_LIBRARIES})
 
 install(
     TARGETS json-output

@@ -1,10 +1,11 @@
 /**
- * \file src/plugins/output/json/src/protocols.hpp
- * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Header for cpp file containing array of IP protocol names
- * generated from /etc/protocols
- *
- * Copyright (C) 2015-2018 CESNET, z.s.p.o.
+ * \file src/plugins/output/timecheck/src/config.h
+ * \author Lukas Hutak <lukas.hutak@cesnet.cz>
+ * \brief Parser of an XML configuration (header file)
+ * \date 2019
+ */
+
+/* Copyright (C) 2019 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,7 +25,7 @@
  * License (GPL) version 2 or later, in which case the provisions
  * of the GPL apply INSTEAD OF those given above.
  *
- * This software is provided ``as is, and any express or implied
+ * This software is provided ``as is'', and any express or implied
  * warranties, including, but not limited to, the implied warranties of
  * merchantability and fitness for a particular purpose are disclaimed.
  * In no event shall the company or contributors be liable for any
@@ -38,10 +39,35 @@
  *
  */
 
-#ifndef JSON_PROTOCOLS_H
-#define JSON_PROTOCOLS_H
+#ifndef CONFIG_H
+#define CONFIG_H
 
-/** Array of protocols */
-extern const char *protocols[];
+#include <ipfixcol2.h>
+#include "stdint.h"
 
-#endif // JSON_PROTOCOLS_H
+/** Configuration of a instance of the plugin                                                     */
+struct instance_config {
+    /** Maximum allowed deviation between the current time and timestamps from the past (sec)   */
+    uint64_t dev_past;
+    /** Maximum allowed deviation between the current time and timestamps from the future (sec) */
+    uint64_t dev_future;
+};
+
+/**
+ * \brief Parse configuration of the plugin
+ * \param[in] ctx    Instance context
+ * \param[in] params XML parameters
+ * \return Pointer to the parse configuration of the instance on success
+ * \return NULL if arguments are not valid or if a memory allocation error has occurred
+ */
+struct instance_config *
+config_parse(ipx_ctx_t *ctx, const char *params);
+
+/**
+ * \brief Destroy parsed configuration
+ * \param[in] cfg Parsed configuration
+ */
+void
+config_destroy(struct instance_config *cfg);
+
+#endif // CONFIG_H

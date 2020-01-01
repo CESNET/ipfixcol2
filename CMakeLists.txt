@@ -14,7 +14,7 @@ endif()
 
 # Versions and other informations
 set(IPFIXCOL_VERSION_MAJOR 2)
-set(IPFIXCOL_VERSION_MINOR 0)
+set(IPFIXCOL_VERSION_MINOR 1)
 set(IPFIXCOL_VERSION_PATCH 0)
 set(IPFIXCOL_VERSION
     ${IPFIXCOL_VERSION_MAJOR}.${IPFIXCOL_VERSION_MINOR}.${IPFIXCOL_VERSION_PATCH})
@@ -39,25 +39,23 @@ if (NOT COMPILER_SUPPORT_GNUXX11)
 endif()
 
 # ------------------------------------------------------------------------------
-# Build options
-set(TESTS_DEFAULT    OFF)
-
 # Set default build type if not specified by user
-if (NOT CMAKE_BUILD_TYPE)
-    set (CMAKE_BUILD_TYPE Release
-        CACHE STRING "Choose type of build (Release/Debug/Coverage)." FORCE)
-endif()
-
-string(TOUPPER ${CMAKE_BUILD_TYPE} BUILD_TYPE_UPPER)
-# Enable unit tests, by default, for coverage builds
-if (${BUILD_TYPE_UPPER} STREQUAL "COVERAGE")
-    set(TESTS_DEFAULT ON)
+set(DEFAULT_BUILD_TYPE "Release")
+if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    # Use the default build type if not specified
+    message(STATUS "Setting build type to '${DEFAULT_BUILD_TYPE}' as none was specified.")
+    set(CMAKE_BUILD_TYPE "${DEFAULT_BUILD_TYPE}" CACHE
+        STRING "Choose the type of build." FORCE)
+    # Set the possible values of build type for cmake-gui
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+        "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
 option(ENABLE_DOC_MANPAGE    "Enable manual page building"              ON)
 option(ENABLE_DOC_DOXYGEN    "Enable code documentation building"       OFF)
-option(ENABLE_TESTS          "Build Unit tests (make test)"     ${TESTS_DEFAULT})
+option(ENABLE_TESTS          "Build Unit tests (make test)"             OFF)
 option(ENABLE_TESTS_VALGRIND "Build Unit tests with Valgrind Memcheck"  OFF)
+option(ENABLE_TESTS_COVERAGE "Enable support for code coverage"         OFF)
 option(PACKAGE_BUILDER_RPM   "Enable RPM package builder (make rpm)"    OFF)
 option(PACKAGE_BUILDER_DEB   "Enable DEB package builder (make deb)"    OFF)
 
@@ -68,11 +66,15 @@ option(PACKAGE_BUILDER_DEB   "Enable DEB package builder (make deb)"    OFF)
 set(CMAKE_C_FLAGS            "${CMAKE_C_FLAGS} -fvisibility=hidden -std=gnu11")
 set(CMAKE_C_FLAGS_RELEASE    "-O2 -DNDEBUG")
 set(CMAKE_C_FLAGS_DEBUG      "-g -O0 -Wall -Wextra -pedantic")
-set(CMAKE_C_FLAGS_COVERAGE   "${CMAKE_C_FLAGS_DEBUG} --coverage -fprofile-arcs -ftest-coverage")
 set(CMAKE_CXX_FLAGS          "${CMAKE_CXX_FLAGS} -fvisibility=hidden -std=gnu++11")
 set(CMAKE_CXX_FLAGS_RELEASE  "-O2 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG    "-g -O0 -Wall -Wextra -pedantic")
-set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_DEBUG} --coverage -fprofile-arcs -ftest-coverage")
+
+if (ENABLE_TESTS AND ENABLE_TESTS_COVERAGE)
+    # Additional flags for code coverage
+    set(CMAKE_C_FLAGS    "${CMAKE_C_FLAGS}   --coverage -fprofile-arcs -ftest-coverage")
+    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} --coverage -fprofile-arcs -ftest-coverage")
+endif()
 
 # ------------------------------------------------------------------------------
 # Project components
@@ -88,6 +90,7 @@ endif()
 
 # ------------------------------------------------------------------------------
 # Status messages
+string(TOUPPER ${CMAKE_BUILD_TYPE} BUILD_TYPE_UPPER)
 MESSAGE(STATUS
     "\n\n"
     "IPFIXcol version.:   ${IPFIXCOL_VERSION}\n"

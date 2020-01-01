@@ -4,12 +4,13 @@ Homepage:          http://www.liberouter.org/
 Section:           net
 Priority:          optional
 Standards-Version: 3.9.8
-Build-Depends:     debhelper (>= 10), cmake (>= 2.8.8), doxygen, make,
-                   libfds-dev, gcc (>= 4.8), g++ (>= 4.8), pkg-config
+Build-Depends:     debhelper (>= 9), cmake (>= 2.8.8), make (>= 4.0),
+                   libfds-dev, gcc (>= 4.8), g++ (>= 4.8), pkg-config,
+                   zlib1g-dev, python3-docutils | python-docutils
 
 Package:           @CPACK_PACKAGE_NAME@
 Architecture:      any
-Depends:           ${shlibs:Depends}, ${misc:Depends}, libfds (>= 0.1.0)
+Depends:           ${shlibs:Depends}, ${misc:Depends}, libfds (>= 0.2.0), zlib1g
 Description:       @CPACK_PACKAGE_DESCRIPTION_SUMMARY@
  IPFIXcol is a flexible IPFIX (RFC 7011) flow data collector designed to
  be extensible by plugins.

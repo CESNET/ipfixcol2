@@ -60,7 +60,7 @@ ipx_msg_ipfix_size(uint32_t rec_cnt, size_t rec_size)
 
 ipx_msg_ipfix_t *
 ipx_msg_ipfix_create(const ipx_ctx_t *plugin_ctx, const struct ipx_msg_ctx *msg_ctx,
-    uint8_t *msg_data)
+    uint8_t *msg_data, uint16_t msg_size)
 {
     const size_t rec_size = ipx_ctx_recsize_get(plugin_ctx);
     const size_t new_size = ipx_msg_ipfix_size(REC_DEF_CNT, rec_size);
@@ -72,6 +72,7 @@ ipx_msg_ipfix_create(const ipx_ctx_t *plugin_ctx, const struct ipx_msg_ctx *msg_
     ipx_msg_header_init(&wrapper->msg_header, IPX_MSG_IPFIX);
     wrapper->ctx = *msg_ctx;
     wrapper->raw_pkt = msg_data;
+    wrapper->raw_size = msg_size;
     wrapper->sets.cnt_alloc = SET_DEF_CNT;
     wrapper->rec_info.cnt_alloc = REC_DEF_CNT;
     wrapper->rec_info.rec_size = rec_size;

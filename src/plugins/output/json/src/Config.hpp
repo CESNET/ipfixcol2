@@ -56,10 +56,20 @@ struct cfg_format {
     bool proto;
     /** Skip unknown elements                                                                    */
     bool ignore_unknown;
+    /** Converter octetArray type as unsigned integer (only if field size <= 8)                  */
+    bool octets_as_uint;
     /** Convert white spaces in string (do not skip)                                             */
     bool white_spaces;
+    /** Add detailed information about each record                                               */
+    bool detailed_info;
     /** Ignore Options Template records                                                          */
     bool ignore_options;
+    /** Use only numeric identifiers of Information Elements                                     */
+    bool numeric_names;
+    /** Split biflow records                                                                     */
+    bool split_biflow;
+    /** Add template records                                                                     */
+    bool template_info;
 };
 
 /** Output configuration base structure                                                          */
@@ -96,6 +106,11 @@ struct cfg_server : cfg_output {
     bool blocking;
 };
 
+enum class calg {
+    NONE, ///< Do not use compression
+    GZIP  ///< GZIP compression
+};
+
 /** Configuration of file writer                                                                 */
 struct cfg_file : cfg_output {
     /** Path pattern                                                                             */
@@ -106,6 +121,8 @@ struct cfg_file : cfg_output {
     uint32_t window_size;
     /** Enable/disable window alignment                                                          */
     bool window_align;
+    /** Compression algorithm                                                                    */
+    calg m_calg;
 };
 
 /** Parsed configuration of an instance                                                          */

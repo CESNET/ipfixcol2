@@ -52,6 +52,8 @@
 #define DEF_SIZE 32
 /** Size of error buffer                 */
 #define ERR_SIZE 256
+/** Special type of UniRec string field that is trimmed before conversion from IPFIX */
+#define TYPE_STRING_TRIM "string_trimmed"
 
 /** Internal structure of the mapping database */
 struct map_s {
@@ -234,13 +236,14 @@ map_elem_get_internal(const char *elem)
  * \param[in] ur_name     UniRec name
  * \param[in] ur_type     UniRec type
  * \param[in] ur_type_str UniRec type string
+ * \param[in] cflags      Additional conversion flags
  * \param[in] ie_defs     Definition of IPFIX IEs (comma separated list of definitions)
  * \param[in] line_id Line ID (just for error messages)
  * \return #IPX_OK on success
  * \return #IPX_ERR_NOMEM or #IPX_ERR_FORMAT on failure
  */
 static int
-map_load_line_ie_defs(map_t *map, char *ur_name, int ur_type, char *ur_type_str,
+map_load_line_ie_defs(map_t *map, char *ur_name, int ur_type, char *ur_type_str, uint32_t cflags,
     const char *ie_defs, size_t line_id)
 {
     char *defs_cpy = strdup(ie_defs);
@@ -264,6 +267,7 @@ map_load_line_ie_defs(map_t *map, char *ur_name, int ur_type, char *ur_type_str,
     rec.unirec.name = ur_name;
     rec.unirec.type = ur_type;
     rec.unirec.type_str = ur_type_str;
+    rec.unirec.flags = cflags;
 
     // Process IPFIX fields
     char *subsave_ptr = NULL;
@@ -323,6 +327,7 @@ map_load_line(map_t *map, const char *line, size_t line_id)
     int rc = IPX_OK;
     char *ur_name = NULL;
     char *ur_type_str = NULL;
+    uint32_t conv_flags = 0;
     ur_field_type_t ur_type;
 
     char *line_cpy = strdup(line);
@@ -356,7 +361,15 @@ map_load_line(map_t *map, const char *line, size_t line_id)
         goto end;
     }
 
-    int type = ur_get_field_type_from_str(token);
+    int type;
+    if (strcmp(token, TYPE_STRING_TRIM) == 0) {
+        // Special version of string
+        type = UR_TYPE_STRING;
+        conv_flags |= MAP_FLAGS_STR_TRIM;
+    } else {
+        type = ur_get_field_type_from_str(token);
+    }
+
     if (type == UR_E_INVALID_TYPE) {
         snprintf(map->err_buffer, ERR_SIZE, "Line %zu: Invalid type '%s' of UniRec field '%s'",
             line_id, token, ur_name);
@@ -382,7 +395,7 @@ map_load_line(map_t *map, const char *line, size_t line_id)
 
     ptrdiff_t offset = token - line_cpy;
     const char *ie_defs = line + offset;
-    rc = map_load_line_ie_defs(map, ur_name, ur_type, ur_type_str, ie_defs, line_id);
+    rc = map_load_line_ie_defs(map, ur_name, ur_type, ur_type_str, conv_flags, ie_defs, line_id);
 
 end:
     free(ur_type_str);

@@ -4,6 +4,9 @@ cmake-build-debug/
 cmake-build-debugwithtests/
 cmake-build-release/
 
+# Visual Studio
+.vscode/
+
 # JetBrains files
 .idea/
 

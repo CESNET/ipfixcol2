@@ -40,6 +40,7 @@
 #ifndef JSON_SERVER_H
 #define JSON_SERVER_H
 
+#include <atomic>
 #include <string>
 #include <vector>
 #include <pthread.h>
@@ -78,10 +79,10 @@ private:
         ipx_ctx_t *ctx;                     /**< Instance context (for log only ) */
         pthread_t thread;					/**< Thread                           */
         pthread_mutex_t mutex;              /**< Mutex for the array              */
-        bool stop;                          /**< Stop flag for terminating        */
+        std::atomic<bool> stop;             /**< Stop flag for terminating        */
 
         int socket_fd;                      /**< Server socket                    */
-        bool new_clients_ready;             /**< New clients flag                 */
+        std::atomic<bool> new_clients_ready; /**< New clients flag                 */
         std::vector<client_t> new_clients;  /**< Array of new clients             */
     } acceptor_t;
 

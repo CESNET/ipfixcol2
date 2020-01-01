@@ -57,6 +57,11 @@ enum params_xml_nodes {
     FMT_UNKNOWN,       /**< Unknown definitions             */
     FMT_OPTIONS,       /**< Ignore Options Template Records */
     FMT_NONPRINT,      /**< Non-printable chars             */
+    FMT_OCTETASUINT,   /**< OctetArray as unsigned integer  */
+    FMT_NUMERIC,       /**< Use numeric names               */
+    FMT_BFSPLIT,       /**< Split biflow                    */
+    FMT_DETAILEDINFO,  /**< Detailed information            */
+    FMT_TMPLTINFO,     /**< Template records                */
     // Common output
     OUTPUT_LIST,       /**< List of output types            */
     OUTPUT_PRINT,      /**< Print to standard output        */
@@ -80,7 +85,8 @@ enum params_xml_nodes {
     FILE_PATH,         /**< Path specification format       */
     FILE_PREFIX,       /**< File prefix                     */
     FILE_WINDOW,       /**< Window interval                 */
-    FILE_ALIGN         /**< Window alignment                */
+    FILE_ALIGN,        /**< Window alignment                */
+    FILE_COMPRESS      /**< Compression                     */
 };
 
 /** Definition of the \<print\> node  */
@@ -114,6 +120,7 @@ static const struct fds_xml_args args_file[] = {
     FDS_OPTS_ELEM(FILE_PREFIX, "prefix",        FDS_OPTS_T_STRING, 0),
     FDS_OPTS_ELEM(FILE_WINDOW, "timeWindow",    FDS_OPTS_T_UINT,   0),
     FDS_OPTS_ELEM(FILE_ALIGN,  "timeAlignment", FDS_OPTS_T_BOOL,   0),
+    FDS_OPTS_ELEM(FILE_COMPRESS, "compression", FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
     FDS_OPTS_END
 };
 
@@ -135,6 +142,11 @@ static const struct fds_xml_args args_params[] = {
     FDS_OPTS_ELEM(FMT_UNKNOWN,   "ignoreUnknown",    FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(FMT_OPTIONS,   "ignoreOptions",    FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(FMT_NONPRINT,  "nonPrintableChar", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(FMT_NUMERIC,   "numericNames",     FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(FMT_OCTETASUINT, "octetArrayAsUint", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(FMT_BFSPLIT,   "splitBiflow",      FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(FMT_DETAILEDINFO,  "detailedInfo", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(FMT_TMPLTINFO, "templateInfo", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
     FDS_OPTS_NESTED(OUTPUT_LIST, "outputs",   args_outputs, 0),
     FDS_OPTS_END
 };
@@ -331,6 +343,7 @@ Config::parse_file(fds_xml_ctx_t *file)
     struct cfg_file output;
     output.window_align = true;
     output.window_size = 300;
+    output.m_calg = calg::NONE;
 
     const struct fds_xml_cont *content;
     while (fds_xml_next(file, &content) != FDS_EOC) {
@@ -359,6 +372,18 @@ Config::parse_file(fds_xml_ctx_t *file)
         case FILE_ALIGN:
             assert(content->type == FDS_OPTS_T_BOOL);
             output.window_align = content->val_bool;
+            break;
+        case FILE_COMPRESS:
+            // Compression method
+            assert(content->type == FDS_OPTS_T_STRING);
+            if (strcasecmp(content->ptr_string, "none") == 0) {
+                output.m_calg = calg::NONE;
+            } else if (strcasecmp(content->ptr_string, "gzip") == 0) {
+                output.m_calg = calg::GZIP;
+            } else {
+                const std::string inv_str = content->ptr_string;
+                throw std::invalid_argument("Unknown compression algorithm '" + inv_str + "'");
+            }
             break;
         default:
             throw std::invalid_argument("Unexpected element within <file>!");
@@ -445,6 +470,26 @@ Config::parse_params(fds_xml_ctx_t *params)
             assert(content->type == FDS_OPTS_T_BOOL);
             format.white_spaces = content->val_bool;
             break;
+        case FMT_NUMERIC:  // Use only numeric identifiers
+            assert(content->type == FDS_OPTS_T_BOOL);
+            format.numeric_names = content->val_bool;
+            break;
+        case FMT_OCTETASUINT:
+            assert(content->type == FDS_OPTS_T_BOOL);
+            format.octets_as_uint = content->val_bool;
+            break;
+        case FMT_BFSPLIT:  // Split biflow records
+            assert(content->type == FDS_OPTS_T_BOOL);
+            format.split_biflow = content->val_bool;
+            break;
+        case FMT_DETAILEDINFO: // Add detailed information about each record
+            assert(content->type == FDS_OPTS_T_BOOL);
+            format.detailed_info = content->val_bool;
+            break;
+        case FMT_TMPLTINFO: // Add template records
+            assert(content->type == FDS_OPTS_T_BOOL);
+            format.template_info = content->val_bool;
+            break;
         case OUTPUT_LIST: // List of output plugin
             assert(content->type == FDS_OPTS_T_CONTEXT);
             parse_outputs(content->ptr_ctx);
@@ -467,6 +512,11 @@ Config::default_set()
     format.white_spaces = true;
     format.ignore_unknown = true;
     format.ignore_options = true;
+    format.octets_as_uint = true;
+    format.numeric_names = false;
+    format.split_biflow = false;
+    format.detailed_info = false;
+    format.template_info = false;
 
     outputs.prints.clear();
     outputs.files.clear();

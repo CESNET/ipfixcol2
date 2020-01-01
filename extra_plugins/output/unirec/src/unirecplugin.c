@@ -78,7 +78,7 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
     // Configuration flags (reserved for future use)
     .flags = 0,
     // Plugin version string (like "1.2.3")
-    .version = "2.0.0",
+    .version = "2.1.0",
     // Minimal IPFIXcol version string (like "1.2.3")
     .ipx_min = "2.0.0"
 };
@@ -172,7 +172,9 @@ core_initialize_inter(ipx_ctx_t *ctx, struct conf_unirec *cfg, const map_t *map)
     // Create a TRAP interface
     const char *ifc_spec = cfg->params->trap_ifc_spec;
     IPX_CTX_INFO(ctx, "Initialization of TRAP with IFCSPEC: '%s'.", ifc_spec);
-    cfg->trap_ctx = trap_ctx_init3(PLUGIN_TRAP_NAME, PLUGIN_TRAP_DSC, 0, 1, ifc_spec, NULL);
+
+    const char *instance_name = ipx_ctx_name_get(ctx);
+    cfg->trap_ctx = trap_ctx_init3(PLUGIN_TRAP_NAME, PLUGIN_TRAP_DSC, 0, 1, ifc_spec, instance_name);
     if (!cfg->trap_ctx) {
         IPX_CTX_ERROR(ctx, "Failed to initialize TRAP (%s:%d)", __FILE__, __LINE__);
         return IPX_ERR_NOMEM;

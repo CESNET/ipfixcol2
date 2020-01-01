@@ -67,6 +67,8 @@ struct ipx_msg_ipfix {
     struct ipx_msg_ctx ctx;
     /** Raw IPFIX packet from a source (in Network Byte Order)               */
     uint8_t *raw_pkt;
+    /** Size of raw message                                                  */
+    uint16_t raw_size;
 
     struct {
         /** Array of sets (valid only when #cnt_valid <= SET_DEF_CNT)       */

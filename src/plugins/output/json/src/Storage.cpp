@@ -2,10 +2,10 @@
  * \file src/plugins/output/json/src/Storage.cpp
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief JSON converter and output manager (source file)
- * \date 2018
+ * \date 2018-2019
  */
 
-/* Copyright (C) 2018 CESNET, z.s.p.o.
+/* Copyright (C) 2018-2019 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,43 +41,61 @@
 
 #include <stdexcept>
 #include <cstring>
-#include <limits>
-#include <cmath>
 #include <inttypes.h>
 
 using namespace std;
 #include "Storage.hpp"
-#include "protocols.hpp"
+#include <libfds.h>
 
-/** Base size of the conversion buffer           */
+/** Base size of the conversion buffer                 */
 #define BUFFER_BASE   4096
-/** IANA enterprise number (forward fields)      */
-#define IANA_EN_FWD   0
-/** IANA enterprise number (reverse fields)      */
-#define IANA_EN_REV   29305
-/** IANA identificator of TCP flags              */
-#define IANA_ID_FLAGS 6
-/** IANA identificator of protocols              */
-#define IANA_ID_PROTO 4
+/** Size of local conversion buffers (for snprintf)    */
+#define LOCAL_BSIZE   64
 
-Storage::Storage(const struct cfg_format &fmt) : format(fmt)
+Storage::Storage(const ipx_ctx_t *ctx, const struct cfg_format &fmt)
+    : m_ctx(ctx), m_format(fmt)
 {
-    raw_name[0] = '\0';
-
     // Prepare the buffer
-    record.buffer_begin = new char[BUFFER_BASE];
-    record.buffer_end = record.buffer_begin + BUFFER_BASE;
-    record.write_begin = record.buffer_begin;
+    m_record.buffer = nullptr;
+    m_record.size_used = 0;
+    m_record.size_alloc = 0;
+
+    // Prepare conversion flags
+    m_flags = FDS_CD2J_ALLOW_REALLOC; // Allow automatic reallocation of the buffer
+    if (m_format.tcp_flags) {
+        m_flags |= FDS_CD2J_FORMAT_TCPFLAGS;
+    }
+    if (m_format.timestamp) {
+        m_flags |= FDS_CD2J_TS_FORMAT_MSEC;
+    }
+    if (m_format.proto) {
+        m_flags |= FDS_CD2J_FORMAT_PROTO;
+    }
+    if (m_format.ignore_unknown) {
+        m_flags |= FDS_CD2J_IGNORE_UNKNOWN;
+    }
+    if (!m_format.white_spaces) {
+        m_flags |= FDS_CD2J_NON_PRINTABLE;
+    }
+    if (m_format.numeric_names) {
+        m_flags |= FDS_CD2J_NUMERIC_ID;
+    }
+    if (m_format.split_biflow) {
+        m_flags |= FDS_CD2J_REVERSE_SKIP;
+    }
+    if (!m_format.octets_as_uint) {
+        m_flags |= FDS_CD2J_OCTETS_NOINT;
+    }
 }
 
 Storage::~Storage()
 {
     // Destroy all outputs
-    for (Output *output : outputs) {
+    for (Output *output : m_outputs) {
         delete output;
     }
 
-    delete[](record.buffer_begin);
+    free(m_record.buffer);
 }
 
 /**
@@ -86,8 +104,10 @@ Storage::~Storage()
  * Requests that the string capacity be adapted to a planned change in size to a length of up
  * to n characters.
  * \param[in] n Minimal size of the buffer
+ * \throws bad_alloc in case of a memory allocation error
  */
-void Storage::buffer_reserve(size_t n)
+void
+Storage::buffer_reserve(size_t n)
 {
     if (n <= buffer_alloc()) {
         // Nothing to do
@@ -96,15 +116,13 @@ void Storage::buffer_reserve(size_t n)
 
     // Prepare a new buffer and copy the content
     const size_t new_size = ((n / BUFFER_BASE) + 1) * BUFFER_BASE;
-    char *new_buffer = new char[new_size];
+    char *new_buffer = (char *) realloc(m_record.buffer, new_size * sizeof(char));
+    if (!new_buffer) {
+        throw std::bad_alloc();
+    }
 
-    size_t used = buffer_used();
-    std::memcpy(new_buffer, record.buffer_begin, used);
-    delete[](record.buffer_begin);
-
-    record.buffer_begin = new_buffer;
-    record.buffer_end   = new_buffer + new_size;
-    record.write_begin  = new_buffer + used;
+    m_record.buffer = new_buffer;
+    m_record.size_alloc = new_size;
 }
 
 /**
@@ -113,579 +131,284 @@ void Storage::buffer_reserve(size_t n)
  *   If the buffer length is not sufficient enough, it is automatically reallocated to fit
  *   the string.
  * \param[in] str String to add
+ * \throws bad_alloc in case of a memory allocation error
  */
 void
 Storage::buffer_append(const char *str)
 {
     const size_t len = std::strlen(str) + 1; // "\0"
     buffer_reserve(buffer_used() + len);
-    memcpy(record.write_begin, str, len);
-    record.write_begin += len - 1;
+    memcpy(m_record.buffer + buffer_used(), str, len);
+    m_record.size_used += len - 1;
 }
 
 void
 Storage::output_add(Output *output)
 {
-    outputs.push_back(output);
+    m_outputs.push_back(output);
 }
 
-int
-Storage::records_store(ipx_msg_ipfix_t *msg)
+/**
+ * \brief Get IP address from Transport Session
+ *
+ * \note Not all Transport Session contains an IPv4/IPv6 address (for example, file type)
+ * \param[in]  ipx_desc Transport Session description
+ * \param[out] src_addr Conversion buffer for IPv4/IPv6 address converted to string
+ * \param[int] size     Size of the conversion buffer
+ * \return On success returns a pointer to the buffer. Otherwise returns nullptr.
+ */
+const char *
+Storage::session_src_addr(const struct ipx_session *ipx_desc, char *src_addr, socklen_t size)
 {
-    // Process all data records
-    const uint32_t rec_cnt = ipx_msg_ipfix_get_drec_cnt(msg);
-    for (uint32_t i = 0; i < rec_cnt; ++i) {
-        ipx_ipfix_record *ipfix_rec = ipx_msg_ipfix_get_drec(msg, i);
+    const struct ipx_session_net *net_desc;
+    switch (ipx_desc->type) {
+    case FDS_SESSION_UDP:
+        net_desc = &ipx_desc->udp.net;
+        break;
+    case FDS_SESSION_TCP:
+        net_desc = &ipx_desc->tcp.net;
+        break;
+    case FDS_SESSION_SCTP:
+        net_desc = &ipx_desc->sctp.net;
+        break;
+    default:
+        return nullptr;
+    }
 
-        // Convert the record
-        if (format.ignore_options && ipfix_rec->rec.tmplt->type == FDS_TYPE_TEMPLATE_OPTS) {
-            // Skip records based on Options Template
-            continue;
+    const char *ret;
+    if (net_desc->l3_proto == AF_INET) {
+        ret = inet_ntop(AF_INET, &net_desc->addr_src.ipv4, src_addr, size);
+    } else {
+        ret = inet_ntop(AF_INET6, &net_desc->addr_src.ipv6, src_addr, size);
+    }
+
+    return ret;
+}
+
+/**
+ * \brief Convert template record to JSON string
+ *
+ * \param[in] tset_iter  (Options) Template Set structure to convert
+ * \param[in] set_id     Id of the Template Set
+ * \param[in] hdr        Message header of IPFIX record
+ * \throw runtime_error  If template parser failed
+ */
+void
+Storage::convert_tmplt_rec(struct fds_tset_iter *tset_iter, uint16_t set_id, const struct fds_ipfix_msg_hdr *hdr)
+{
+    enum fds_template_type type;
+    void *ptr;
+    if (set_id == FDS_IPFIX_SET_TMPLT) {
+        buffer_append("{\"@type\":\"ipfix.template\",");
+        type = FDS_TYPE_TEMPLATE;
+        ptr = tset_iter->ptr.trec;
+    } else {
+        assert(set_id == FDS_IPFIX_SET_OPTS_TMPLT);
+        buffer_append("{\"@type\":\"ipfix.optionsTemplate\",");
+        type = FDS_TYPE_TEMPLATE_OPTS;
+        ptr = tset_iter->ptr.opts_trec;
+    }
+
+    // Filling the template structure with data from raw packet
+    uint16_t tmplt_size = tset_iter->size;
+    struct fds_template *tmplt;
+    int rc;
+    rc = fds_template_parse(type, ptr, &tmplt_size, &tmplt);
+    if (rc != FDS_OK) {
+        throw std::runtime_error("Parsing failed due to memory allocation error or the format of template is invalid!");
+    }
+
+    // Printing out the header
+    char field[LOCAL_BSIZE];
+    snprintf(field, LOCAL_BSIZE, "\"ipfix:templateId\":%" PRIu16, tmplt->id);
+    buffer_append(field);
+    if (set_id == FDS_IPFIX_SET_OPTS_TMPLT) {
+        snprintf(field, LOCAL_BSIZE, ",\"ipfix:scopeCount\":%" PRIu16, tmplt->fields_cnt_scope);
+        buffer_append(field);
+    }
+
+    // Add detailed info to record
+    if (m_format.detailed_info) {
+        addDetailedInfo(hdr);
+    }
+
+    buffer_append(",\"ipfix:fields\":[");
+
+    // Iteration through the fields and converting them to JSON string
+    for (uint16_t i = 0; i < tmplt->fields_cnt_total; i++) {
+        struct fds_tfield current = tmplt->fields[i];
+        if (i != 0) { // Not first field
+            buffer_append(",");
         }
+        buffer_append("{");
+        snprintf(field, LOCAL_BSIZE, "\"ipfix:elementId\":%" PRIu16, current.id);
+        buffer_append(field);
+        snprintf(field, LOCAL_BSIZE, ",\"ipfix:enterpriseId\":%" PRIu32, current.en);
+        buffer_append(field);
+        snprintf(field, LOCAL_BSIZE, ",\"ipfix:fieldLength\":%" PRIu16, current.length);
+        buffer_append(field);
+        buffer_append("}");
+    }
+    buffer_append("]}\n");
 
-        // Convert the record
-        convert(ipfix_rec->rec);
+    // Free allocated memory
+    fds_template_destroy(tmplt);
+}
+
+/**
+ * \brief Convert Template sets and Options Template sets
+ *
+ * From all sets in the Message, try to convert just Template and Options template sets.
+ * \param[in] set   All sets in the Message
+ * \param[in] hdr   Message header of IPFIX record
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_DENIED if an output fails to store any record
+ */
+int
+Storage::convert_tset(struct ipx_ipfix_set *set, const struct fds_ipfix_msg_hdr *hdr)
+{
+    uint16_t set_id = ntohs(set->ptr->flowset_id);
+    assert(set_id == FDS_IPFIX_SET_TMPLT || set_id == FDS_IPFIX_SET_OPTS_TMPLT);
+
+    // Template set
+    struct fds_tset_iter tset_iter;
+    fds_tset_iter_init(&tset_iter, set->ptr);
+
+    // Iteration through all (Options) Templates in the Set
+    while (fds_tset_iter_next(&tset_iter) == FDS_OK) {
+        // Read and print single template
+        convert_tmplt_rec(&tset_iter, set_id, hdr);
 
         // Store it
-        const size_t rec_size = buffer_used();
-        for (Output *output : outputs) {
-            if (output->process(record.buffer_begin, rec_size) != IPX_OK) {
+        for (Output *output : m_outputs) {
+            if (output->process(m_record.buffer, m_record.size_used) != IPX_OK) {
                 return IPX_ERR_DENIED;
             }
         }
+
+        // Buffer is empty
+        m_record.size_used = 0;
     }
 
     return IPX_OK;
 }
 
-/**
- * \brief Find a conversion function for an IPFIX field
- * \param[in] field An IPFIX field to convert
- * \return Conversion function
- */
-Storage::converter_fn
-Storage::get_converter(const struct fds_drec_field &field)
+int
+Storage::records_store(ipx_msg_ipfix_t *msg, const fds_iemgr_t *iemgr)
 {
-    // Conversion table, based on types defined by enum fds_iemgr_element_type
-    const static converter_fn table[] = {
-        &Storage::to_octet,    // FDS_ET_OCTET_ARRAY
-        &Storage::to_uint,     // FDS_ET_UNSIGNED_8
-        &Storage::to_uint,     // FDS_ET_UNSIGNED_16
-        &Storage::to_uint,     // FDS_ET_UNSIGNED_32
-        &Storage::to_uint,     // FDS_ET_UNSIGNED_64
-        &Storage::to_int,      // FDS_ET_SIGNED_8
-        &Storage::to_int,      // FDS_ET_SIGNED_16
-        &Storage::to_int,      // FDS_ET_SIGNED_32
-        &Storage::to_int,      // FDS_ET_SIGNED_64
-        &Storage::to_float,    // FDS_ET_FLOAT_32
-        &Storage::to_float,    // FDS_ET_FLOAT_64
-        &Storage::to_bool,     // FDS_ET_BOOLEAN
-        &Storage::to_mac,      // FDS_ET_MAC_ADDRESS
-        &Storage::to_string,   // FDS_ET_STRING
-        &Storage::to_datetime, // FDS_ET_DATE_TIME_SECONDS
-        &Storage::to_datetime, // FDS_ET_DATE_TIME_MILLISECONDS
-        &Storage::to_datetime, // FDS_ET_DATE_TIME_MICROSECONDS
-        &Storage::to_datetime, // FDS_ET_DATE_TIME_NANOSECONDS
-        &Storage::to_ip,       // FDS_ET_IPV4_ADDRESS
-        &Storage::to_ip        // FDS_ET_IPV6_ADDRESS
-        // Other types are not supported yet
-    };
+    const auto hdr = (fds_ipfix_msg_hdr*) ipx_msg_ipfix_get_packet(msg);
+    const uint32_t rec_cnt = ipx_msg_ipfix_get_drec_cnt(msg);
+    bool flush = false;
+    int ret = IPX_OK;
 
-    constexpr size_t table_size = sizeof(table) / sizeof(table[0]);
-    const enum fds_iemgr_element_type type = (field.info->def != nullptr)
-        ? (field.info->def->data_type) : FDS_ET_OCTET_ARRAY;
-
-    if (type >= table_size) {
-        return &Storage::to_octet;
-    } else {
-        return table[type];
-    }
-}
-
-/**
- * \brief Convert an octet array to JSON string
- *
- * \note
- *   Because the JSON doesn't directly support the octet array, the result string is wrapped in
- *   double quotes.
- * \param[in] field Field to convert
- * \throw invalid_argument if the field is not a valid field of this type
- */
-void
-Storage::to_octet(const struct fds_drec_field &field)
-{
-    if (field.size <= 8) {
-        // Print as unsigned integer
-        to_uint(field);
-        return;
+    // Extract IPv4/IPv6 address of the exporter, if required
+    m_src_addr = nullptr;
+    char src_addr[INET6_ADDRSTRLEN];
+    if (m_format.detailed_info) {
+        const struct ipx_msg_ctx *msg_ctx = ipx_msg_ipfix_get_ctx(msg);
+        m_src_addr = session_src_addr(msg_ctx->session, src_addr, INET6_ADDRSTRLEN);
     }
 
-    const size_t mem_req = (2 * field.size) + 5U; // "0x" + 2 chars per byte + 2x "\"" + "\0"
-    buffer_reserve(buffer_used() + mem_req);
+    // Process (Options) Template records if enabled
+    if (m_format.template_info) {
+        struct ipx_ipfix_set *sets;
+        size_t set_cnt;
+        ipx_msg_ipfix_get_sets(msg, &sets, &set_cnt);
 
-    record.write_begin[0] = '"';
-    record.write_begin[1] = '0';
-    record.write_begin[2] = 'x';
-    record.write_begin += 3;
-    int res = fds_octet_array2str(field.data, field.size, record.write_begin, buffer_remain());
-    if (res >= 0) {
-        record.write_begin += res;
-        *(record.write_begin++) = '"';
-        return;
-    }
+        // Iteration through all sets
+        for (uint32_t i = 0; i < set_cnt; i++) {
+            uint16_t set_id = ntohs(sets[i].ptr->flowset_id);
+            if (set_id != FDS_IPFIX_SET_TMPLT && set_id != FDS_IPFIX_SET_OPTS_TMPLT) {
+                // Skip non-template sets
+                continue;
+            }
 
-    // Restore position and throw an exception
-    throw std::invalid_argument("Failed to convert an octet array! (error: "
-        + std::to_string(res) + ")");
-}
-
-/**
- * \brief Convert an integer to JSON string
- * \param[in] field Field to convert
- * \throw invalid_argument if the field is not a valid field of this type
- */
-void
-Storage::to_int(const struct fds_drec_field &field)
-{
-    // Print as signed integer
-    int res = fds_int2str_be(field.data, field.size, record.write_begin, buffer_remain());
-    if (res > 0) {
-        record.write_begin += res;
-        return;
-    }
-
-    if (res != FDS_ERR_BUFFER) {
-        throw std::invalid_argument("Failed to convert a signed integer to string! (error: "
-            + std::to_string(res) + ")");
-    }
-
-    // Reallocate and try again
-    buffer_reserve(buffer_used() + FDS_CONVERT_STRLEN_INT);
-    to_int(field);
-}
-
-/**
- * \brief Convert an unsigned integer to JSON string
- * \param[in] field Field to convert
- * \throw invalid_argument if the field is not a valid field of this type
- */
-void
-Storage::to_uint(const struct fds_drec_field &field)
-{
-    // Print as unsigned integer
-    int res = fds_uint2str_be(field.data, field.size, record.write_begin, buffer_remain());
-    if (res > 0) {
-        record.write_begin += res;
-        return;
-    }
-
-    if (res != FDS_ERR_BUFFER) {
-        throw std::invalid_argument("Failed to convert an unsigned integer to string! (error: "
-            + std::to_string(res) + ")");
-    }
-
-    // Reallocate and try again
-    buffer_reserve(buffer_used() + FDS_CONVERT_STRLEN_INT);
-    to_uint(field);
-}
-
-/**
- * \brief Convert a float to JSON string
- *
- * \note
- *   If the value represent infinite or NaN, instead of number a corresponding string
- *   is stored.
- * \param[in] field Field to convert
- * \throw invalid_argument if the field is not a valid field of this type
- */
-void
-Storage::to_float(const struct fds_drec_field &field)
-{
-    // We cannot use default function because "nan" and "infinity" values
-    double value;
-    if (fds_get_float_be(field.data, field.size, &value) != FDS_OK) {
-        throw std::invalid_argument("Failed to convert a float number!");
-    }
-
-    if (std::isfinite(value)) {
-        // Normal value
-        const char *fmt = (field.size == sizeof(float))
-            ? ("%." FDS_CONVERT_STRX(FLT_DIG) "g")  // float precision
-            : ("%." FDS_CONVERT_STRX(DBL_DIG) "g"); // double precision
-        int str_real_len = snprintf(record.write_begin, buffer_remain(), fmt, value);
-        if (str_real_len < 0) {
-            throw std::invalid_argument("Failed to convert a float number. snprintf() failed!");
+            flush = true;
+            if (convert_tset(&sets[i], hdr) != IPX_OK) {
+                ret = IPX_ERR_DENIED;
+                goto endloop;
+            }
         }
-
-        if (size_t(str_real_len) >= buffer_remain()) {
-            // Reallocate the buffer and try again
-            buffer_reserve(2 * buffer_alloc()); // Just double it
-            to_float(field);
-            return;
-        }
-
-        record.write_begin += str_real_len;
-        return;
     }
 
-    // +/-Nan or +/-infinite
-    const char *str;
-    // Size 8 (double)
-    if (value == std::numeric_limits<double>::infinity()) {
-        str = "\"inf\"";
-    } else if (value == -std::numeric_limits<double>::infinity()) {
-        str = "\"-inf\"";
-    } else if (value == std::numeric_limits<double>::quiet_NaN()) {
-        str = "\"nan\"";
-    } else if (value == -std::numeric_limits<double>::quiet_NaN()) {
-        str = "\"-nan\"";
-    } else {
-        str = "null";
-    }
+    // Process all data records
+    for (uint32_t i = 0; i < rec_cnt; ++i) {
+        ipx_ipfix_record *ipfix_rec = ipx_msg_ipfix_get_drec(msg, i);
 
-    size_t size = std::strlen(str) + 1; // + '\0'
-    buffer_reserve(buffer_used() + size);
-    strcpy(record.write_begin, str);
-    record.write_begin += size;
-}
-
-/**
- * \brief Convert a boolean to JSON string
- *
- * \note If the stored boolean value is invalid, an exception is thrown!
- * \param[in] field Field to convert
- * \throw invalid_argument if the field is not a valid field of this type
- */
-void
-Storage::to_bool(const struct fds_drec_field &field)
-{
-    if (field.size != 1) {
-        throw std::invalid_argument("Failed to convert a boolean to string!");
-    }
-
-    int res = fds_bool2str(field.data, record.write_begin, buffer_remain());
-    if (res > 0) {
-        record.write_begin += res;
-        return;
-    }
-
-    if (res != FDS_ERR_BUFFER) {
-        throw std::invalid_argument("Failed to convert a boolean to string!");
-    }
-
-    // Reallocate and try again
-    buffer_reserve(buffer_used() + FDS_CONVERT_STRLEN_FALSE); // false is longer
-    to_bool(field);
-}
-
-/**
- * \brief Convert a datetime to JSON string
- *
- * Based on the configuration, the output string is formatted or represent UNIX timestamp
- * (in milliseconds). Formatted string is based on ISO 8601 and use only millisecond precision
- * because JSON parsers typically doesn't support anything else.
- * \param[in] field Field to convert
- * \throw invalid_argument if the field is not a valid field of this type
- */
-void
-Storage::to_datetime(const struct fds_drec_field &field)
-{
-    const fds_iemgr_element_type type = field.info->def->data_type;
-
-    if (format.timestamp) {
-        // Convert to formatted string
-        fds_convert_time_fmt fmt = FDS_CONVERT_TF_MSEC_UTC; // Only supported by JSON parser
-        buffer_reserve(buffer_used() + FDS_CONVERT_STRLEN_DATE + 2); // 2x '\"'
-
-        *(record.write_begin++) = '"';
-        int res = fds_datetime2str_be(field.data, field.size, type, record.write_begin,
-            buffer_remain(), fmt);
-        if (res > 0) {
-            // Success
-            record.write_begin += res;
-            *(record.write_begin++) = '"';
-            return;
-        }
-
-        throw std::invalid_argument("Failed to convert a timestamp to string! (error: " +
-            std::to_string(res) + ")");
-    }
-
-    // Convert to UNIX timestamp (in milliseconds)
-    uint64_t time;
-    if (fds_get_datetime_lp_be(field.data, field.size, type, &time) != FDS_OK) {
-        throw std::invalid_argument("Failed to convert a timestamp to string!");
-    }
-
-    time = htobe64(time); // Convert to network byte order and use fast libfds converter
-    int res = fds_uint2str_be(&time, sizeof(time), record.write_begin, buffer_remain());
-    if (res > 0) {
-        record.write_begin += res;
-        return;
-    }
-
-    if (res != FDS_ERR_BUFFER) {
-        throw std::invalid_argument("Failed to convert a timestamp to string!");
-    }
-
-    buffer_reserve(buffer_used() + FDS_CONVERT_STRLEN_INT);
-    to_datetime(field);
-}
-
-/**
- * \brief Convert a MAC address to JSON string
- *
- * \note
- *   Because the JSON doesn't directly support the MAC address, the result string is wrapped in
- *   double quotes.
- * \param[in] field Field to convert
- * \throw invalid_argument if the field is not a valid field of this type
- */
-void
-Storage::to_mac(const struct fds_drec_field &field)
-{
-    buffer_reserve(buffer_used() + FDS_CONVERT_STRLEN_MAC + 2); // MAC address + 2x '\"'
-
-    *(record.write_begin++) = '"';
-    int res = fds_mac2str(field.data, field.size, record.write_begin, buffer_remain());
-    if (res > 0) {
-        record.write_begin += res;
-        *(record.write_begin++) = '"';
-        return;
-    }
-
-    throw std::invalid_argument("Failed to convert a MAC address to string! (error: "
-        + std::to_string(res) + ")");
-}
-
-/**
- * \brief Convert an IPv4/IPv6 address to JSON string
- *
- * \note
- *   Because the JSON doesn't directly support IP addresses, the result string is wrapped in double
- *   quotes.
- * \param[in] field Field to convert
- * \throw invalid_argument if the field is not a valid field of this type
- */
-void
-Storage::to_ip(const struct fds_drec_field &field)
-{
-    // Make sure that we have enough memory
-    buffer_reserve(buffer_used() + FDS_CONVERT_STRLEN_IP + 2); // IPv4/IPv6 address + 2x '\"'
-
-    *(record.write_begin++) = '"';
-    int res = fds_ip2str(field.data, field.size, record.write_begin, buffer_remain());
-    if (res > 0) {
-        record.write_begin += res;
-        *(record.write_begin++) = '"';
-        return;
-    }
-
-    throw std::invalid_argument("Failed to convert an IP address to string! (error: "
-        + std::to_string(res) + ")");
-}
-
-/**
- * \def ESCAPE_CHAR
- * \brief Auxiliary function for escaping characters
- * \param[in] ch Character
- */
-#define ESCAPE_CHAR(ch) { \
-    out_buffer[idx_output++] = '\\'; \
-    out_buffer[idx_output++] = (ch); \
-}
-
-/**
- * \brief Convert IPFIX string to JSON string
- *
- * Non-ASCII characters are automatically converted to the special escaped sequence i.e. '\uXXXX'.
- * Quote and backslash are always escaped and while space (and control) characters are converted
- * based on active configuration.
- * \param[in] field Field to convert
- */
-void
-Storage::to_string(const struct fds_drec_field &field)
-{
-    /* Make sure that we have enough memory for the worst possible case (escaping everything)
-     * This case contains only non-printable characters that will be replaced with string
-     * "\uXXXX" (6 characters) each.
-     */
-    const size_t max_size = (6 * field.size) + 3U; // '\uXXXX' + 2x "\"" + 1x '\0'
-    buffer_reserve(buffer_used() + max_size);
-
-    const uint8_t *in_buffer = reinterpret_cast<const uint8_t *>(field.data);
-    char *out_buffer = record.write_begin;
-    uint32_t idx_output = 0;
-
-
-
-    // Beginning of the string
-    out_buffer[idx_output++] = '"';
-
-    for (uint32_t i = 0; i < field.size; ++i) {
-        // All characters from the extended part of ASCII must be escaped
-        if (in_buffer[i] > 0x7F) {
-            snprintf(&out_buffer[idx_output], 7, "\\u00%02x", in_buffer[i]);
-            idx_output += 6;
+        // Convert the record
+        if (m_format.ignore_options && ipfix_rec->rec.tmplt->type == FDS_TYPE_TEMPLATE_OPTS) {
+            // Skip records based on Options Template
             continue;
         }
 
-        /*
-         * Based on RFC 4627 (Section: 2.5. Strings):
-         * Control characters (i.e. 0x00 - 0x1F), '"' and  '\' must be escaped
-         * using "\"", "\\" or "\uXXXX" where "XXXX" is a hexa value.
-         */
-        if (in_buffer[i] > 0x1F && in_buffer[i] != '"' && in_buffer[i] != '\\') {
-            // Copy to the output buffer
-            out_buffer[idx_output++] = in_buffer[i];
+        flush = true;
+
+        // Convert the record
+        convert(ipfix_rec->rec, iemgr, hdr, false);
+
+        // Store it
+        for (Output *output : m_outputs) {
+            if (output->process(m_record.buffer, m_record.size_used) != IPX_OK) {
+                ret = IPX_ERR_DENIED;
+                goto endloop;
+            }
+        }
+
+        if (!m_format.split_biflow || (ipfix_rec->rec.tmplt->flags & FDS_TEMPLATE_BIFLOW) == 0) {
+            // Record splitting is disabled or it is not a biflow record -> continue
             continue;
         }
 
-        // Copy as escaped character
-        switch(in_buffer[i]) {
-        case '\\': // Reverse solidus
-        ESCAPE_CHAR('\\');
-            continue;
-        case '\"': // Quotation
-        ESCAPE_CHAR('\"');
-            continue;
-        default:
-            break;
-        }
+        // Convert the record from reverse point of view
+        convert(ipfix_rec->rec, iemgr, hdr, true);
 
-        if (!format.white_spaces) {
-            // Skip white space characters
-            continue;
-        }
-
-        switch(in_buffer[i]) {
-        case '\t': // Tabulator
-        ESCAPE_CHAR('t');
-            break;
-        case '\n': // New line
-        ESCAPE_CHAR('n');
-            break;
-        case '\b': // Backspace
-        ESCAPE_CHAR('b');
-            break;
-        case '\f': // Form feed
-        ESCAPE_CHAR('f');
-            break;
-        case '\r': // Return
-        ESCAPE_CHAR('r');
-            break;
-        default: // "\uXXXX"
-            snprintf(&out_buffer[idx_output], 7, "\\u00%02x", in_buffer[i]);
-            idx_output += 6;
-            break;
+        // Store it
+        for (Output *output : m_outputs) {
+            if (output->process(m_record.buffer, m_record.size_used) != IPX_OK) {
+                ret = IPX_ERR_DENIED;
+                goto endloop;
+            }
         }
     }
 
-    // End of the string
-    out_buffer[idx_output++] = '"';
-    record.write_begin += idx_output;
-}
-
-#undef ESCAPE_CHAR
-
-/**
- * \brief Convert TCP flags to JSON string
- *
- * \note The result string is wrapped in double quotes.
- * \param[in] field Field to convert
- * \throw invalid_argument if the field is not a valid field of this type
- */
-void
-Storage::to_flags(const struct fds_drec_field &field)
-{
-    if (field.size != 1 && field.size != 2) {
-        throw std::invalid_argument("Failed to convert TCP flags to string!");
+endloop:
+    if (flush) {
+        for (Output *output : m_outputs) {
+            output->flush();
+        }
     }
 
-    uint8_t flags;
-    if (field.size == 1) {
-        flags = *field.data;
-    } else {
-        flags = uint8_t(ntohs(*reinterpret_cast<uint16_t *>(field.data)));
-    }
-
-    const size_t size = 8; // 2x '"' + 6x flags
-    buffer_reserve(buffer_used() + size + 1); // '\0'
-
-    char *buffer = record.write_begin;
-    buffer[0] = '"';
-    buffer[1] = (flags & 0x20) ? 'U' : '.';
-    buffer[2] = (flags & 0x10) ? 'A' : '.';
-    buffer[3] = (flags & 0x08) ? 'P' : '.';
-    buffer[4] = (flags & 0x04) ? 'R' : '.';
-    buffer[5] = (flags & 0x02) ? 'S' : '.';
-    buffer[6] = (flags & 0x01) ? 'F' : '.';
-    buffer[7] = '"';
-    buffer[8] = '\0';
-
-    record.write_begin += size;
+    return ret;
 }
 
 /**
- * \brief Convert a protocol to JSON string
+ * \brief Add fields with detailed info (export time, sequence number, ODID, message length) to record
  *
- * \note The result string is wrapped in double quotes.
- * \param[in] field Field to convert
- * \throw invalid_argument if the field is not a valid field of this type
+ * For each record, add detailed information if detailedInfo is enabled.
+ * @param[in] hdr   Message header of IPFIX record
  */
 void
-Storage::to_proto(const struct fds_drec_field &field)
+Storage::addDetailedInfo(const struct fds_ipfix_msg_hdr *hdr)
 {
-    if (field.size != 1) {
-        throw std::invalid_argument("Failed to convert a protocol to string!");
+    // Array for formatting detailed info fields
+    char field[LOCAL_BSIZE];
+    snprintf(field, LOCAL_BSIZE, ",\"ipfix:exportTime\":%" PRIu32, ntohl(hdr->export_time));
+    buffer_append(field);
+
+    snprintf(field, LOCAL_BSIZE, ",\"ipfix:seqNumber\":%" PRIu32, ntohl(hdr->seq_num));
+    buffer_append(field);
+
+    snprintf(field, LOCAL_BSIZE, ",\"ipfix:odid\":%" PRIu32, ntohl(hdr->odid));
+    buffer_append(field);
+
+    snprintf(field, LOCAL_BSIZE, ",\"ipfix:msgLength\":%" PRIu16, ntohs(hdr->length));
+    buffer_append(field);
+
+    if (m_src_addr) {
+        buffer_append(",\"ipfix:srcAddr\":\"");
+        buffer_append(m_src_addr);
+        buffer_append("\"");
     }
-
-    const char *proto_str = protocols[*field.data];
-    const size_t proto_len = strlen(proto_str);
-    buffer_reserve(buffer_used() + proto_len + 3); // 2x '"' + '\0'
-
-    *(record.write_begin++) = '"';
-    memcpy(record.write_begin, proto_str, proto_len);
-    record.write_begin += proto_len;
-    *(record.write_begin++) = '"';
-}
-
-
-/**
- * \brief Append the buffer with a name of an Information Element
- *
- * If the definition of a field is unknown, numeric identification is added.
- * \param[in] field Field identification to add
- */
-void
-Storage::add_field_name(const struct fds_drec_field &field)
-{
-    const struct fds_iemgr_elem *def = field.info->def;
-
-    if (def == nullptr) {
-        // Unknown field - max length is "\"en" + 10x <en> + ":id" + 5x <id> + '\"\0'
-        snprintf(raw_name, raw_size, "\"en%" PRIu32 ":id%" PRIu16 "\":", field.info->en,
-            field.info->id);
-        buffer_append(raw_name);
-        return;
-    }
-
-    // Output format: "<pen_name>:<element_name>:"
-    const size_t scope_size = strlen(def->scope->name);
-    const size_t elem_size = strlen(def->name);
-
-    size_t size = scope_size + elem_size + 5; // 2x '"' + 2x ':' + '\0'
-    buffer_reserve(buffer_used() + size);
-
-    *(record.write_begin++) = '"';
-    memcpy(record.write_begin, def->scope->name, scope_size);
-    record.write_begin += scope_size;
-
-    *(record.write_begin++) = ':';
-    memcpy(record.write_begin, def->name, elem_size);
-    record.write_begin += elem_size;
-    *(record.write_begin++) = '"';
-    *(record.write_begin++) = ':';
 }
 
 /**
@@ -693,59 +416,41 @@ Storage::add_field_name(const struct fds_drec_field &field)
  *
  * For each field in the record, try to convert it into JSON format. The record is stored
  * into the local buffer.
- * \param[in] rec IPFIX record to convert
+ * \param[in] rec     IPFIX record to convert
+ * \param[in] iemgr   Manager of Information Elements
+ * \param[in] reverse Convert from reverse point of view (affects only biflow records)
+ * \throw runtime_error if the JSON converter fails
  */
 void
-Storage::convert(struct fds_drec &rec)
+Storage::convert(struct fds_drec &rec, const fds_iemgr_t *iemgr, fds_ipfix_msg_hdr *hdr, bool reverse)
 {
-    converter_fn fn;
-    unsigned int added = 0;
-    record.write_begin = record.buffer_begin;
-    buffer_append("{\"@type\":\"ipfix.entry\",");
+    // Convert the record
+    uint32_t flags = m_flags;
+    flags |= reverse ? FDS_CD2J_BIFLOW_REVERSE : 0;
 
-    // Try to convert each field in the record
-    uint16_t flags = (format.ignore_unknown) ? FDS_DREC_UNKNOWN_SKIP : 0;
-    struct fds_drec_iter iter;
-    fds_drec_iter_init(&iter, &rec, flags);
-
-    while (fds_drec_iter_next(&iter) != FDS_EOC) {
-        // Separate fields
-        if (added != 0) {
-            // Add comma
-            buffer_append(",");
-        }
-
-        // Add field name "<pen>:<field_name>"
-        add_field_name(iter.field);
-
-        // Find a converter
-        const struct fds_tfield *def = iter.field.info;
-        if (format.tcp_flags && def->id == IANA_ID_FLAGS
-                && (def->en == IANA_EN_FWD || def->en == IANA_EN_REV)) {
-            // Convert to formatted flags
-            fn = &Storage::to_flags;
-        } else if (format.proto && def->id == IANA_ID_PROTO
-                && (def->en == IANA_EN_FWD || def->en == IANA_EN_REV)) {
-            // Convert to formatted protocol type
-            fn = &Storage::to_proto;
-        } else {
-            // Convert to field based on internal type
-            fn = get_converter(iter.field);
-        }
-
-        // Convert the field
-        char *writer_pos = record.write_begin;
-
-        try {
-            (this->*fn)(iter.field);
-        } catch (std::invalid_argument &ex) {
-            // Recover from a conversion error
-            record.write_begin = writer_pos;
-            buffer_append("null");
-        }
-
-        added++;
+    int rc = fds_drec2json(&rec, flags, iemgr, &m_record.buffer, &m_record.size_alloc);
+    if (rc < 0) {
+        throw std::runtime_error("Conversion to JSON failed (probably a memory allocation error)!");
     }
 
-    buffer_append("}\n"); // This also adds '\0'
+    m_record.size_used = size_t(rc);
+
+    if (m_format.detailed_info) {
+        // Remove '}' parenthesis at the end of the record
+        m_record.size_used--;
+
+        // Add detailed info to JSON string
+        addDetailedInfo(hdr);
+
+        // Add template ID to JSON string
+        char field[LOCAL_BSIZE];
+        snprintf(field, LOCAL_BSIZE, ",\"ipfix:templateId\":%" PRIu16, rec.tmplt->id);
+        buffer_append(field);
+
+        // Append the record with '}' parenthesis removed before
+        buffer_append("}");
+    }
+
+     // Append the record with end of line character
+     buffer_append("\n");
 }

@@ -2,10 +2,10 @@
  * \file src/plugins/output/json/src/Storage.hpp
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief JSON converter and output manager (header file)
- * \date 2018
+ * \date 2018-2019
  */
 
-/* Copyright (C) 2018 CESNET, z.s.p.o.
+/* Copyright (C) 2018-2019 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,6 +44,7 @@
 
 #include <string>
 #include <vector>
+#include <arpa/inet.h>
 #include <ipfixcol2.h>
 #include "Config.hpp"
 
@@ -74,71 +75,62 @@ public:
      */
     virtual int
     process(const char *str, size_t len) = 0;
+
+    /**
+     * \brief Flush buffered records
+     */
+    virtual void
+    flush() {};
 };
 
 /** JSON converter and output manager                                                            */
 class Storage {
 private:
-    /** Converter function pointer                                                               */
-    typedef void (Storage::*converter_fn)(const struct fds_drec_field &);
+    /** Plugin context (only for log!)                                                           */
+    const ipx_ctx_t *m_ctx;
     /** Registered outputs                                                                       */
-    std::vector<Output *> outputs;
+    std::vector<Output *> m_outputs;
     /** Formatting options                                                                       */
-    struct cfg_format format;
+    struct cfg_format m_format;
+    /** Conversion flags for libfds converter                                                    */
+    uint32_t m_flags;
+    /** IPv4/IPv6 exporter address of the current message (can be nullptr)                       */
+    const char *m_src_addr = nullptr;
 
     struct {
-        /** Data begin                                                                           */
-        char *buffer_begin;
-        /** The past-the-end element (a character that would follow the last character)          */
-        char *buffer_end;
+        char *buffer;
+        size_t size_alloc;
+        size_t size_used;
+    } m_record; /**< Converted JSON record                                                       */
 
-        /** Position of the next write operation                                                 */
-        char *write_begin;
-    } record; /**< Converted JSON record                                                         */
-
-    /** Size of an array for formatting names of unknown fields                                  */
-    static constexpr size_t raw_size = 32;
-    /** Array for formatting name of unknown fields                                             */
-    char raw_name[raw_size];
-
-    // Find a conversion function for an IPFIX field
-    converter_fn get_converter(const struct fds_drec_field &field);
     // Convert an IPFIX record to a JSON string
-    void convert(struct fds_drec &rec);
+    void convert(struct fds_drec &rec, const fds_iemgr_t *iemgr, struct fds_ipfix_msg_hdr *hdr, bool reverse = false);
 
     // Remaining buffer size
-    size_t buffer_remain() const {return record.buffer_end - record.write_begin;};
+    size_t buffer_remain() const {return m_record.size_alloc - m_record.size_used;};
     // Total size of allocated buffer
-    size_t buffer_alloc() const {return record.buffer_end - record.buffer_begin;};
+    size_t buffer_alloc() const {return m_record.size_alloc;};
     // Used buffer size
-    size_t buffer_used() const {return record.write_begin - record.buffer_begin;};
+    size_t buffer_used() const {return m_record.size_used;};
     // Append append a string
     void buffer_append(const char *str);
     // Reserve memory for a JSON string
-    void buffer_reserve(size_t size);
-
-    // Add a field name
-    void add_field_name(const struct fds_drec_field &field);
-
-    // Conversion functions
-    void to_octet(const struct fds_drec_field &field);
-    void to_int(const struct fds_drec_field &field);
-    void to_uint(const struct fds_drec_field &field);
-    void to_float(const struct fds_drec_field &field);
-    void to_bool(const struct fds_drec_field &field);
-    void to_mac(const struct fds_drec_field &field);
-    void to_ip(const struct fds_drec_field &field);
-    void to_string(const struct fds_drec_field &field);
-    void to_datetime(const struct fds_drec_field &field);
-    void to_flags(const struct fds_drec_field &field);
-    void to_proto(const struct fds_drec_field &field);
-
+    void buffer_reserve(size_t n);
+    // Convert set to JSON string
+    int convert_tset(struct ipx_ipfix_set *set, const struct fds_ipfix_msg_hdr *hdr);
+    // Convert template record to a JSON string
+    void convert_tmplt_rec(struct fds_tset_iter *tset_iter, uint16_t set_id, const struct fds_ipfix_msg_hdr *hdr);
+    // Add detailed info (templateId, ODID, seqNum, exportTime) to JSON string
+    void addDetailedInfo(const struct fds_ipfix_msg_hdr *hdr);
+    // Get src_addr from IPFIX session
+    static const char *session_src_addr(const struct ipx_session *ipx_desc, char *src_addr, socklen_t size);
 public:
     /**
      * \brief Constructor
+     * \param[in] ctx Plugin context (only for log!)
      * \param[in] fmt Conversion specifier
      */
-    explicit Storage(const struct cfg_format &fmt);
+    explicit Storage(const ipx_ctx_t *ctx, const struct cfg_format &fmt);
     /** Destructor */
     ~Storage();
 
@@ -157,13 +149,14 @@ public:
      * \brief Process IPFIX Message records
      *
      * For each record perform conversion to JSON and pass it to all output instances.
-     * \param[in] msg IPFIX Message to convert
+     * \param[in] msg   IPFIX Message to convert
+     * \param[in] iemgr Information Element manager (can be NULL)
      * \return #IPX_OK on success
      * \return #IPX_ERR_DENIED if a fatal error has occurred and the storage cannot continue to
      *   work properly!
      */
     int
-    records_store(ipx_msg_ipfix_t *msg);
+    records_store(ipx_msg_ipfix_t *msg, const fds_iemgr_t *iemgr);
 };
 
 
