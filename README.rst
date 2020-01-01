@@ -1,3 +1,9 @@
+============= =============
+Master branch |BuildMaster|
+------------- -------------
+Devel branch  |BuildDevel|
+============= =============
+
 IPFIXcol2
 ===========
 
@@ -73,12 +79,12 @@ Second, install build dependencies of the collector
 
 .. code-block::
 
-    yum install gcc gcc-c++ cmake make python-docutils zlib-devel
-    # Optionally: doxygen pkg-config
+    yum install gcc gcc-c++ cmake make python3-docutils zlib-devel
+    # Optionally: doxygen pkgconfig
 
 * Note: latest systems (e.g. Fedora) use ``dnf`` instead of ``yum``.
-* Note: package ``python-docutils`` may by also named as ``python2-docutils`` or ``python3-docutils``
-* Note: package ``pkg-config`` may by also named as ``pkgconfig``
+* Note: package ``python3-docutils`` may by also named as ``python-docutils`` or ``python2-docutils``
+* Note: package ``pkgconfig`` may by also named as ``pkg-config``
 
 **Debian/Ubuntu:**
 
@@ -159,3 +165,7 @@ be useful also for other users? Please, share your experiences and thoughts.
     or temporarily change an environment variable
     "``export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib64/``"
 
+.. |BuildMaster| image:: https://github.com/Lukas955/ipfixcol2/workflows/Build%20and%20tests/badge.svg?branch=master
+   :target: https://github.com/CESNET/ipfixcol2/tree/master
+.. |BuildDevel| image:: https://github.com/Lukas955/ipfixcol2/workflows/Build%20and%20tests/badge.svg?branch=devel
+   :target: https://github.com/CESNET/ipfixcol2/tree/devel
