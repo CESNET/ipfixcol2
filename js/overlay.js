@@ -11,12 +11,12 @@ function moduleCreate(jsonSchema) {
 }
 
 function moduleSetProperty(module, propertyName, jsonSchema) {
-    if (jsonSchema.hasOwnProperty("default")) {
-        module[propertyName] = jsonSchema.default;
-        return;
-    }
     if (jsonSchema.hasOwnProperty("const")) {
         module[propertyName] = jsonSchema.const;
+        return;
+    }
+    if (jsonSchema.hasOwnProperty("default")) {
+        module[propertyName] = jsonSchema.default;
         return;
     }
     if (jsonSchema.type === "object") {
@@ -33,10 +33,36 @@ function moduleSetProperty(module, propertyName, jsonSchema) {
         return;
     }
     if (jsonSchema.type === "array") {
-        module[propertyName] = [];
+        var newArray = [];
+        moduleArrayAddItem(newArray, jsonSchema.items);
+        module[propertyName] = newArray;
         return;
     }
     module[propertyName] = null;
+}
+
+function moduleArrayAddItem(array, jsonSchema) {
+    var item = null;
+    if (jsonSchema.hasOwnProperty("const")) {
+        item = jsonSchema.const;
+    } else if (jsonSchema.hasOwnProperty("default")) {
+        item = jsonSchema.default;
+    } else if (jsonSchema.type === "object") {
+        item = {};
+        if (jsonSchema.hasOwnProperty("required")) {
+            for (var i in jsonSchema.required) {
+                moduleSetProperty(
+                    item,
+                    jsonSchema.required[i],
+                    jsonSchema.properties[jsonSchema.required[i]]
+                );
+            }
+        }
+    } else if (jsonSchema.type === "array") {
+        item = [];
+        moduleArrayAddItem(item, jsonSchema.items);
+    }
+    array.push(item);
 }
 
 class Overlay extends React.Component {
@@ -58,11 +84,12 @@ class Overlay extends React.Component {
         }
     }
     handleChange(propertyName, changedSubmodule) {
-        var changedModule = changedSubmodule;
+        //TODO rework - 2 params => 1 param
+        // var changedModule = changedSubmodule;
         // var changedModule = this.state.module;
         // changedModule[propertyName] = changedSubmodule;
         this.setState({
-            module: changedModule
+            module: changedSubmodule
         });
     }
     render() {
@@ -77,12 +104,13 @@ class Overlay extends React.Component {
             >
                 <DialogTitle>{buttonText}</DialogTitle>
                 <DialogContent>
-                    <Grid container spacing={2} alignItems="center">
+                    <Grid container spacing={2}>
                         <Grid item md={6} sm={12} xs={12}>
                             <Properties
                                 module={this.state.module}
                                 jsonSchema={this.props.jsonSchema}
                                 onChange={this.handleChange.bind(this)}
+                                required={true}
                                 isRoot={true}
                             />
                         </Grid>
@@ -151,11 +179,15 @@ class Properties extends React.Component {
         delete changedModule[propertyName];
         this.props.onChange(this.props.name, changedModule);
     }
+    handleRemove() {
+        this.props.onRemove(this.props.name);
+    }
 
     render() {
         var className = this.props.isRoot ? "rootProps" : "innerProps";
         var name = this.props.isRoot ? "" : this.props.name;
         var optionalMenu = "";
+        var removeButton = "";
         if (
             (!this.props.jsonSchema.hasOwnProperty("required") ||
                 Object.keys(this.props.jsonSchema.properties).length >
@@ -201,9 +233,17 @@ class Properties extends React.Component {
                 </div>
             );
         }
+        if (this.props.hasOwnProperty("required") && !this.props.required) {
+            removeButton = (
+                <IconButton onClick={this.handleRemove.bind(this)}>
+                    <Icon>delete</Icon>
+                </IconButton>
+            );
+        }
         return (
             <div className={className}>
                 <p>{name}</p>
+                {removeButton}
                 {Object.keys(this.props.jsonSchema.properties).map(propertyName => {
                     if (
                         (!this.props.jsonSchema.hasOwnProperty("required") ||
@@ -215,71 +255,155 @@ class Properties extends React.Component {
                     var isOptional =
                         this.props.jsonSchema.hasOwnProperty("required") &&
                         this.props.jsonSchema.required.includes(propertyName);
-                    switch (this.props.jsonSchema.properties[propertyName].type) {
-                        case "string":
-                            return (
-                                <StringProperty
-                                    key={propertyName}
-                                    name={propertyName}
-                                    module={this.props.module[propertyName]}
-                                    required={isOptional}
-                                    jsonSchema={this.props.jsonSchema.properties[propertyName]}
-                                    onChange={this.handleChange.bind(this)}
-                                    onRemove={this.handleRemoveChild.bind(this)}
-                                />
-                            );
-                        case "integer":
-                            return (
-                                <IntegerProperty
-                                    key={propertyName}
-                                    name={propertyName}
-                                    module={this.props.module[propertyName]}
-                                    required={isOptional}
-                                    jsonSchema={this.props.jsonSchema.properties[propertyName]}
-                                    onChange={this.handleChange.bind(this)}
-                                    onRemove={this.handleRemoveChild.bind(this)}
-                                />
-                            );
-                        case "object":
-                            return (
-                                <Properties
-                                    key={propertyName}
-                                    name={propertyName}
-                                    module={this.props.module[propertyName]}
-                                    required={isOptional}
-                                    isRoot={false}
-                                    jsonSchema={this.props.jsonSchema.properties[propertyName]}
-                                    onChange={this.handleChange.bind(this)}
-                                    onRemove={this.handleRemoveChild.bind(this)}
-                                />
-                            );
-                        case "boolean":
-                            return (
-                                <BooleanProperty
-                                    key={propertyName}
-                                    name={propertyName}
-                                    module={this.props.module[propertyName]}
-                                    required={isOptional}
-                                    jsonSchema={this.props.jsonSchema.properties[propertyName]}
-                                    onChange={this.handleChange.bind(this)}
-                                    onRemove={this.handleRemoveChild.bind(this)}
-                                />
-                            );
-                        case "number":
-                            return (
-                                <NumberProperty
-                                    key={propertyName}
-                                    name={propertyName}
-                                    module={this.props.module[propertyName]}
-                                    required={isOptional}
-                                    jsonSchema={this.props.jsonSchema.properties[propertyName]}
-                                    onChange={this.handleChange.bind(this)}
-                                    onRemove={this.handleRemoveChild.bind(this)}
-                                />
-                            );
-                    }
+                    return (
+                        <Item
+                            key={propertyName}
+                            name={propertyName}
+                            type={this.props.jsonSchema.properties[propertyName].type}
+                            module={this.props.module[propertyName]}
+                            required={isOptional}
+                            jsonSchema={this.props.jsonSchema.properties[propertyName]}
+                            onChange={this.handleChange.bind(this)}
+                            onRemove={this.handleRemoveChild.bind(this)}
+                        />
+                    );
                 })}
                 {optionalMenu}
+            </div>
+        );
+    }
+}
+
+class Item extends React.Component {
+    render() {
+        switch (this.props.type) {
+            case "string":
+                return (
+                    <StringProperty
+                        name={this.props.name}
+                        module={this.props.module}
+                        required={this.props.required}
+                        jsonSchema={this.props.jsonSchema}
+                        onChange={this.props.onChange}
+                        onRemove={this.props.onRemove}
+                    />
+                );
+            case "integer":
+                return (
+                    <IntegerProperty
+                        name={this.props.name}
+                        module={this.props.module}
+                        required={this.props.required}
+                        jsonSchema={this.props.jsonSchema}
+                        onChange={this.props.onChange}
+                        onRemove={this.props.onRemove}
+                    />
+                );
+            case "object":
+                return (
+                    <Properties
+                        name={this.props.name}
+                        module={this.props.module}
+                        required={this.props.required}
+                        jsonSchema={this.props.jsonSchema}
+                        onChange={this.props.onChange}
+                        onRemove={this.props.onRemove}
+                        isRoot={false}
+                    />
+                );
+            case "boolean":
+                return (
+                    <BooleanProperty
+                        name={this.props.name}
+                        module={this.props.module}
+                        required={this.props.required}
+                        jsonSchema={this.props.jsonSchema}
+                        onChange={this.props.onChange}
+                        onRemove={this.props.onRemove}
+                    />
+                );
+            case "number":
+                return (
+                    <NumberProperty
+                        name={this.props.name}
+                        module={this.props.module}
+                        required={this.props.required}
+                        jsonSchema={this.props.jsonSchema}
+                        onChange={this.props.onChange}
+                        onRemove={this.props.onRemove}
+                    />
+                );
+            case "array":
+                return (
+                    <ArrayProperty
+                        name={this.props.name}
+                        module={this.props.module}
+                        required={this.props.required}
+                        jsonSchema={this.props.jsonSchema}
+                        onChange={this.props.onChange}
+                        onRemove={this.props.onRemove}
+                    />
+                );
+            default:
+                console.log("Unknown type: " + this.props.jsonSchema.properties[propertyName].type);
+        }
+    }
+}
+
+class ArrayProperty extends React.Component {
+    handleChange(index, _, changedSubmodule) {
+        var changedModule = JSON.parse(JSON.stringify(this.props.module));
+        changedModule[index] = changedSubmodule;
+        this.props.onChange(this.props.name, changedModule);
+    }
+    handleRemove(index) {
+        if (this.props.module.length > 1) {
+            var changedModule = JSON.parse(JSON.stringify(this.props.module));
+            changedModule.splice(index, 1);
+            this.props.onChange(this.props.name, changedModule);
+        } else {
+            this.props.onRemove(this.props.name);
+        }
+    }
+    handleAdd() {
+        var changedModule = JSON.parse(JSON.stringify(this.props.module));
+        moduleArrayAddItem(changedModule, this.props.jsonSchema.items);
+        this.props.onChange(this.props.name, changedModule);
+    }
+    render() {
+        var className = "innerProps";
+        var name = this.props.name;
+        var buttonText = "Add item";
+        var button = "";
+        if (
+            !this.props.jsonSchema.hasOwnProperty("maxItems") ||
+            (this.props.jsonSchema.hasOwnProperty("maxItems") &&
+                this.props.jsonSchema.maxItems > this.props.module.length)
+        ) {
+            button = (
+                <Button variant="contained" color="primary" onClick={this.handleAdd.bind(this)}>
+                    Add item
+                </Button>
+            );
+        }
+        return (
+            <div className={className}>
+                <p>{name}</p>
+                {this.props.module.map((item, index) => {
+                    return (
+                        <Item
+                            key={index}
+                            name={"[" + index + "]"}
+                            type={this.props.jsonSchema.items.type}
+                            module={item}
+                            required={false}
+                            jsonSchema={this.props.jsonSchema.items}
+                            onChange={this.handleChange.bind(this, index)}
+                            onRemove={this.handleRemove.bind(this, index)}
+                        />
+                    );
+                })}
+                {button}
             </div>
         );
     }
@@ -334,9 +458,7 @@ class StringProperty extends React.Component {
                             readOnly={readOnly}
                             endAdornment={
                                 <InputAdornment position="end">
-                                    <IconButton
-                                        onClick={this.handleRemove.bind(this)}
-                                    >
+                                    <IconButton onClick={this.handleRemove.bind(this)}>
                                         <Icon>delete</Icon>
                                     </IconButton>
                                 </InputAdornment>
@@ -366,9 +488,7 @@ class StringProperty extends React.Component {
                         onChange={onChange}
                         endAdornment={
                             <InputAdornment position="end">
-                                <IconButton
-                                    onClick={this.handleRemove.bind(this)}
-                                >
+                                <IconButton onClick={this.handleRemove.bind(this)}>
                                     <Icon>delete</Icon>
                                 </IconButton>
                             </InputAdornment>
@@ -463,9 +583,7 @@ class IntegerProperty extends React.Component {
                         onChange={onChange}
                         endAdornment={
                             <InputAdornment position="end">
-                                <IconButton
-                                    onClick={this.handleRemove.bind(this)}
-                                >
+                                <IconButton onClick={this.handleRemove.bind(this)}>
                                     <Icon>delete</Icon>
                                 </IconButton>
                             </InputAdornment>
@@ -509,11 +627,7 @@ class BooleanProperty extends React.Component {
             inputCode = (
                 <FormControl className={"select"}>
                     <InputLabel>{this.props.name}</InputLabel>
-                    <Select
-                        value={value}
-                        onChange={onChange}
-                        readOnly={readOnly}
-                    >
+                    <Select value={value} onChange={onChange} readOnly={readOnly}>
                         {enumValues.map(enumValue => {
                             return (
                                 <MenuItem key={enumValue} value={enumValue}>
@@ -534,9 +648,7 @@ class BooleanProperty extends React.Component {
                         readOnly={readOnly}
                         endAdornment={
                             <InputAdornment position="end">
-                                <IconButton
-                                    onClick={this.handleRemove.bind(this)}
-                                >
+                                <IconButton onClick={this.handleRemove.bind(this)}>
                                     <Icon>delete</Icon>
                                 </IconButton>
                             </InputAdornment>
@@ -625,9 +737,7 @@ class NumberProperty extends React.Component {
                         onChange={onChange}
                         endAdornment={
                             <InputAdornment position="end">
-                                <IconButton
-                                    onClick={this.handleRemove.bind(this)}
-                                >
+                                <IconButton onClick={this.handleRemove.bind(this)}>
                                     <Icon>delete</Icon>
                                 </IconButton>
                             </InputAdornment>

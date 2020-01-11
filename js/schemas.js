@@ -231,18 +231,13 @@ const jsonSchemaJSON = {
                             }
                         },
                         print: {
-                            type: "array",
-                            minItems: 1,
-                            maxItems: 1,
-                            items: {
-                                type: "object",
-                                properties: {
-                                    name: {
-                                        type: "string"
-                                    }
-                                },
-                                required: ["name"]
-                            }
+                            type: "object",
+                            properties: {
+                                name: {
+                                    type: "string"
+                                }
+                            },
+                            required: ["name"]
                         }
                     },
                     minProperties: 1
