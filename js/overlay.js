@@ -150,7 +150,8 @@ class Properties extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            anchorEl: null
+            anchorEl: null,
+            expanded: true
         };
     }
     handleMenuClick(event) {
@@ -168,6 +169,7 @@ class Properties extends React.Component {
         );
         this.handleMenuClose();
         this.props.onChange(this.props.name, changedModule);
+        this.setState({ expanded: true });
     }
     handleChange(propertyName, changedSubmodule) {
         var changedModule = JSON.parse(JSON.stringify(this.props.module));
@@ -182,12 +184,16 @@ class Properties extends React.Component {
     handleRemove() {
         this.props.onRemove(this.props.name);
     }
+    handleExpandClick() {
+        this.setState({ expanded: !this.state.expanded });
+    }
 
     render() {
-        var className = this.props.isRoot ? "rootProps" : "innerProps";
         var name = this.props.isRoot ? "" : this.props.name;
         var optionalMenu = "";
         var removeButton = "";
+        var expandButton = "";
+        var properties = "";
         if (
             (!this.props.jsonSchema.hasOwnProperty("required") ||
                 Object.keys(this.props.jsonSchema.properties).length >
@@ -198,7 +204,7 @@ class Properties extends React.Component {
             optionalMenu = (
                 <div>
                     <Button
-                        variant="contained"
+                        variant="outlined"
                         color="primary"
                         aria-controls="simple-menu"
                         aria-haspopup="true"
@@ -240,36 +246,72 @@ class Properties extends React.Component {
                 </IconButton>
             );
         }
+        if (
+            Object.keys(this.props.module).length !== 0 &&
+            this.props.module.constructor === Object
+        ) {
+            expandButton = (
+                <IconButton
+                    className={"expandable" + (this.state.expanded ? " expanded" : "")}
+                    onClick={this.handleExpandClick.bind(this)}
+                    aria-expanded={this.state.expanded}
+                    aria-label="show more"
+                >
+                    <Icon>expand_more</Icon>
+                </IconButton>
+            );
+            properties = (
+                <Collapse in={this.state.expanded} timeout="auto" unmountOnExit>
+                    {Object.keys(this.props.jsonSchema.properties).map(propertyName => {
+                        if (
+                            (!this.props.jsonSchema.hasOwnProperty("required") ||
+                                !this.props.jsonSchema.required.includes(propertyName)) &&
+                            !this.props.module.hasOwnProperty(propertyName)
+                        ) {
+                            return;
+                        }
+                        var isOptional =
+                            this.props.jsonSchema.hasOwnProperty("required") &&
+                            this.props.jsonSchema.required.includes(propertyName);
+                        return (
+                            <CardContent key={propertyName}>
+                                <Item
+                                    name={propertyName}
+                                    type={this.props.jsonSchema.properties[propertyName].type}
+                                    module={this.props.module[propertyName]}
+                                    required={isOptional}
+                                    jsonSchema={this.props.jsonSchema.properties[propertyName]}
+                                    onChange={this.handleChange.bind(this)}
+                                    onRemove={this.handleRemoveChild.bind(this)}
+                                />
+                            </CardContent>
+                        );
+                    })}
+                </Collapse>
+            );
+        }
         return (
-            <div className={className}>
-                <p>{name}</p>
-                {removeButton}
-                {Object.keys(this.props.jsonSchema.properties).map(propertyName => {
-                    if (
-                        (!this.props.jsonSchema.hasOwnProperty("required") ||
-                            !this.props.jsonSchema.required.includes(propertyName)) &&
-                        !this.props.module.hasOwnProperty(propertyName)
-                    ) {
-                        return;
-                    }
-                    var isOptional =
-                        this.props.jsonSchema.hasOwnProperty("required") &&
-                        this.props.jsonSchema.required.includes(propertyName);
-                    return (
-                        <Item
-                            key={propertyName}
-                            name={propertyName}
-                            type={this.props.jsonSchema.properties[propertyName].type}
-                            module={this.props.module[propertyName]}
-                            required={isOptional}
-                            jsonSchema={this.props.jsonSchema.properties[propertyName]}
-                            onChange={this.handleChange.bind(this)}
-                            onRemove={this.handleRemoveChild.bind(this)}
-                        />
-                    );
-                })}
-                {optionalMenu}
-            </div>
+            <Card>
+                {name !== "" || removeButton !== "" ? (
+                    <CardHeader
+                        action={
+                            <div>
+                                {removeButton}
+                                {expandButton}
+                            </div>
+                        }
+                        title={name}
+                    />
+                ) : (
+                    ""
+                )}
+                {properties}
+                {optionalMenu !== "" ? (
+                    <CardActions disableSpacing>{optionalMenu}</CardActions>
+                ) : (
+                    ""
+                )}
+            </Card>
         );
     }
 }
@@ -351,6 +393,13 @@ class Item extends React.Component {
 }
 
 class ArrayProperty extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            expanded: true
+        };
+    }
+
     handleChange(index, _, changedSubmodule) {
         var changedModule = JSON.parse(JSON.stringify(this.props.module));
         changedModule[index] = changedSubmodule;
@@ -370,41 +419,62 @@ class ArrayProperty extends React.Component {
         moduleArrayAddItem(changedModule, this.props.jsonSchema.items);
         this.props.onChange(this.props.name, changedModule);
     }
+    handleExpandClick() {
+        this.setState({ expanded: !this.state.expanded });
+    }
+
     render() {
-        var className = "innerProps";
         var name = this.props.name;
         var buttonText = "Add item";
         var button = "";
+        var expandButton = "";
+        var items = "";
         if (
             !this.props.jsonSchema.hasOwnProperty("maxItems") ||
             (this.props.jsonSchema.hasOwnProperty("maxItems") &&
                 this.props.jsonSchema.maxItems > this.props.module.length)
         ) {
             button = (
-                <Button variant="contained" color="primary" onClick={this.handleAdd.bind(this)}>
-                    Add item
+                <Button variant="outlined" color="primary" onClick={this.handleAdd.bind(this)}>
+                    {buttonText}
                 </Button>
             );
         }
-        return (
-            <div className={className}>
-                <p>{name}</p>
+        expandButton = (
+            <IconButton
+                className={"expandable" + (this.state.expanded ? " expanded" : "")}
+                onClick={this.handleExpandClick.bind(this)}
+                aria-expanded={this.state.expanded}
+                aria-label="show more"
+            >
+                <Icon>expand_more</Icon>
+            </IconButton>
+        );
+        items = (
+            <Collapse in={this.state.expanded} timeout="auto" unmountOnExit>
                 {this.props.module.map((item, index) => {
                     return (
-                        <Item
-                            key={index}
-                            name={"[" + index + "]"}
-                            type={this.props.jsonSchema.items.type}
-                            module={item}
-                            required={false}
-                            jsonSchema={this.props.jsonSchema.items}
-                            onChange={this.handleChange.bind(this, index)}
-                            onRemove={this.handleRemove.bind(this, index)}
-                        />
+                        <CardContent key={index}>
+                            <Item
+                                name={"[" + index + "]"}
+                                type={this.props.jsonSchema.items.type}
+                                module={item}
+                                required={false}
+                                jsonSchema={this.props.jsonSchema.items}
+                                onChange={this.handleChange.bind(this, index)}
+                                onRemove={this.handleRemove.bind(this, index)}
+                            />
+                        </CardContent>
                     );
                 })}
-                {button}
-            </div>
+            </Collapse>
+        );
+        return (
+            <Card>
+                <CardHeader action={expandButton} title={name} subheader={"(Array)"} />
+                {items}
+                {button !== "" ? <CardActions disableSpacing>{button}</CardActions> : ""}
+            </Card>
         );
     }
 }
@@ -435,9 +505,9 @@ class StringProperty extends React.Component {
         if (this.props.jsonSchema.hasOwnProperty("enum")) {
             if (this.props.required) {
                 inputCode = (
-                    <FormControl className={"select"}>
+                    <FormControl>
                         <InputLabel>{this.props.name}</InputLabel>
-                        <Select value={value} onChange={onChange} readOnly={readOnly}>
+                        <Select className={"select"} value={value} onChange={onChange} readOnly={readOnly}>
                             {this.props.jsonSchema.enum.map(enumValue => {
                                 return (
                                     <MenuItem key={enumValue} value={enumValue}>
@@ -450,9 +520,10 @@ class StringProperty extends React.Component {
                 );
             } else {
                 inputCode = (
-                    <FormControl className={"select"}>
+                    <FormControl>
                         <InputLabel>{this.props.name}</InputLabel>
                         <Select
+                            className={"select"}
                             value={value}
                             onChange={onChange}
                             readOnly={readOnly}
@@ -480,6 +551,7 @@ class StringProperty extends React.Component {
                 <FormControl>
                     <InputLabel>{this.props.name}</InputLabel>
                     <Input
+                        className={"select"}
                         type={"text"}
                         name={this.props.name}
                         value={value}
@@ -499,6 +571,7 @@ class StringProperty extends React.Component {
         } else {
             inputCode = (
                 <TextField
+                    className={"select"}
                     label={this.props.name}
                     type={"text"}
                     name={this.props.name}
@@ -559,6 +632,7 @@ class IntegerProperty extends React.Component {
         if (this.props.required) {
             inputCode = (
                 <TextField
+                    className={"select"}
                     label={this.props.name}
                     type={"number"}
                     name={this.props.name}
@@ -574,6 +648,7 @@ class IntegerProperty extends React.Component {
                 <FormControl>
                     <InputLabel>{this.props.name}</InputLabel>
                     <Input
+                        className={"select"}
                         type={"number"}
                         name={this.props.name}
                         value={value}
@@ -625,9 +700,9 @@ class BooleanProperty extends React.Component {
         }
         if (this.props.required) {
             inputCode = (
-                <FormControl className={"select"}>
+                <FormControl>
                     <InputLabel>{this.props.name}</InputLabel>
-                    <Select value={value} onChange={onChange} readOnly={readOnly}>
+                    <Select className={"select"} value={value} onChange={onChange} readOnly={readOnly}>
                         {enumValues.map(enumValue => {
                             return (
                                 <MenuItem key={enumValue} value={enumValue}>
@@ -640,9 +715,10 @@ class BooleanProperty extends React.Component {
             );
         } else {
             inputCode = (
-                <FormControl className={"select"}>
+                <FormControl>
                     <InputLabel>{this.props.name}</InputLabel>
                     <Select
+                        className={"select"}
                         value={value}
                         onChange={onChange}
                         readOnly={readOnly}
@@ -714,6 +790,7 @@ class NumberProperty extends React.Component {
         }
         if (this.props.required) {
             <TextField
+                className={"select"}
                 label={this.props.name}
                 type={"number"}
                 name={this.props.name}
@@ -728,6 +805,7 @@ class NumberProperty extends React.Component {
                 <FormControl>
                     <InputLabel>{this.props.name}</InputLabel>
                     <Input
+                        className={"select"}
                         type={"number"}
                         name={this.props.name}
                         value={value}

@@ -159,14 +159,16 @@ textarea, pre {
   width: 100%;
 }
 
-.innerProps {
-  margin-left: 20px;
-}
-.innerProps p {
-  margin-left: -20px;
-}
-.innerProps .select {
+.select {
   min-width: 182px;
+}
+
+.expandable {
+  transition: transform 0.3s ease;
+}
+
+.expanded {
+  transform: rotate(180deg);
 }
 
 /*# sourceMappingURL=main.css.map */

@@ -171,14 +171,16 @@ textarea, pre {
     width: 100%;
 }
 
-.innerProps {
-    margin-left: 20px;
-    p {
-        margin-left: -20px;
-    }
-    .select {
-        min-width: 182px;
-    }
+.select {
+    min-width: 182px;
+}
+
+.expandable {
+    transition: transform 0.3s ease;
+}
+
+.expanded {
+    transform: rotate(180deg);
 }
 
 // html {
