@@ -103,7 +103,8 @@ class Overlay extends React.Component {
                 maxWidth={"md"}
             >
                 <DialogTitle>{buttonText}</DialogTitle>
-                <DialogContent>
+                <Divider />
+                <DialogContent dividers>
                     <Grid container spacing={2}>
                         <Grid item md={6} sm={12} xs={12}>
                             <Properties
@@ -507,7 +508,12 @@ class StringProperty extends React.Component {
                 inputCode = (
                     <FormControl>
                         <InputLabel>{this.props.name}</InputLabel>
-                        <Select className={"select"} value={value} onChange={onChange} readOnly={readOnly}>
+                        <Select
+                            className={"select"}
+                            value={value}
+                            onChange={onChange}
+                            readOnly={readOnly}
+                        >
                             {this.props.jsonSchema.enum.map(enumValue => {
                                 return (
                                     <MenuItem key={enumValue} value={enumValue}>
@@ -702,7 +708,12 @@ class BooleanProperty extends React.Component {
             inputCode = (
                 <FormControl>
                     <InputLabel>{this.props.name}</InputLabel>
-                    <Select className={"select"} value={value} onChange={onChange} readOnly={readOnly}>
+                    <Select
+                        className={"select"}
+                        value={value}
+                        onChange={onChange}
+                        readOnly={readOnly}
+                    >
                         {enumValues.map(enumValue => {
                             return (
                                 <MenuItem key={enumValue} value={enumValue}>
