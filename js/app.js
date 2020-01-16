@@ -1,4 +1,5 @@
 const {
+    Allert,
     Button,
     Card,
     CardContent,
@@ -22,6 +23,7 @@ const {
     Menu,
     MenuItem,
     Select,
+    Snackbar,
     TextareaAutosize
 } = MaterialUI;
 // Obtain the root element
@@ -64,7 +66,10 @@ class Form extends React.Component {
         super(props);
         this.state = {
             modules: [[], [], []],
-            overlay: null
+            overlay: null,
+            snackbarOpen: false,
+            snackbarText: "",
+            snackbarType: null
         };
     }
 
@@ -80,6 +85,7 @@ class Form extends React.Component {
         this.setState({
             overlay: null
         });
+        this.openSnackbar("Editing canceled");
         console.log("Editing canceled");
     }
 
@@ -122,6 +128,7 @@ class Form extends React.Component {
             modules: modules,
             overlay: null
         });
+        this.openSnackbar("New module added");
         console.log("New module added");
     }
 
@@ -132,6 +139,7 @@ class Form extends React.Component {
             modules: modules,
             overlay: null
         });
+        this.openSnackbar("Module edited");
         console.log("Module edited");
     }
 
@@ -141,6 +149,7 @@ class Form extends React.Component {
         this.setState({
             modules: modules
         });
+        this.openSnackbar("Module removed");
         console.log("Module removed");
     }
 
@@ -163,6 +172,23 @@ class Form extends React.Component {
                 <FormHelperText>Read only</FormHelperText>
             </FormControl>
         );
+    }
+
+    openSnackbar(text) {
+        this.setState({
+            snackbarOpen: true,
+            snackbarText: text
+        });
+    }
+
+    closeSnackbar(event, reason) {
+        if (reason === "clickaway") {
+            return;
+        }
+
+        this.setState({
+            snackbarOpen: false
+        });
     }
 
     render() {
@@ -204,6 +230,28 @@ class Form extends React.Component {
                         removeModule={this.removeModule.bind(this)}
                     />
                     {this.renderXML()}
+                    <Snackbar
+                        anchorOrigin={{
+                            vertical: "bottom",
+                            horizontal: "center"
+                        }}
+                        open={this.state.snackbarOpen}
+                        autoHideDuration={5000}
+                        onClose={this.closeSnackbar.bind(this)}
+                        message={this.state.snackbarText}
+                        action={
+                            <React.Fragment>
+                                <IconButton
+                                    size="small"
+                                    aria-label="close"
+                                    color="inherit"
+                                    onClick={this.closeSnackbar.bind(this)}
+                                >
+                                    <Icon fontSize="small">close</Icon>
+                                </IconButton>
+                            </React.Fragment>
+                        }
+                    />
                 </div>
             </div>
         );
