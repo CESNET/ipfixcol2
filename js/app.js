@@ -11,8 +11,12 @@ const {
     DialogContent,
     DialogTitle,
     Divider,
+    ExpansionPanel,
+    ExpansionPanelSummary,
+    ExpansionPanelDetails,
     TextField,
     FormControl,
+    FormControlLabel,
     FormHelperText,
     Grid,
     Icon,
@@ -24,7 +28,8 @@ const {
     MenuItem,
     Select,
     Snackbar,
-    TextareaAutosize
+    TextareaAutosize,
+    Typography
 } = MaterialUI;
 // Obtain the root element
 const rootAppElement = document.getElementById("configurator_app");
@@ -229,6 +234,23 @@ class Form extends React.Component {
                         editModule={this.editModuleOverlay.bind(this)}
                         removeModule={this.removeModule.bind(this)}
                     />
+                    {/* <ExpansionPanel>
+                        <ExpansionPanelSummary
+                            expandIcon={<Icon>expand_more</Icon>}
+                            aria-controls="panel1c-content"
+                            id="panel1c-header"
+                        >
+                            <Typography>Location</Typography>
+                            <IconButton size="small" aria-label="close" onClick={() => {}}>
+                                <Icon fontSize="small">close</Icon>
+                            </IconButton>
+                        </ExpansionPanelSummary>
+                        <ExpansionPanelDetails>
+                            <Typography variant="caption">
+                                Select your destination of choice
+                            </Typography>
+                        </ExpansionPanelDetails>
+                    </ExpansionPanel> */}
                     {this.renderXML()}
                     <Snackbar
                         anchorOrigin={{
