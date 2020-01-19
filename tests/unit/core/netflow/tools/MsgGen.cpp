@@ -384,6 +384,11 @@ nf9_drec::append_ip(const std::string &value)
 void
 nf9_drec::append_octets(const void *data, uint16_t data_len)
 {
+    if (data_len == 0) {
+        // Nothing to do
+        return;
+    }
+
     uint8_t *mem = mem_reserve(data_len);
     if (fds_set_octet_array(mem, data_len, data) != FDS_OK) {
         throw std::invalid_argument("fds_set_octet_array() failed!");

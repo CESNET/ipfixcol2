@@ -67,7 +67,7 @@ protected:
     }
     /**
      * @brief Create the NetFlow v5 to IPFIX converter
-     * @param[in] verb      Verbosity level of the converter
+     * @param[in] verb  Verbosity level of the converter
      */
     void
     converter_create(ipx_verb_level verb = IPX_VERB_NONE)
@@ -133,7 +133,8 @@ protected:
         DOUBLE,
         IP,
         STR,
-        TIME
+        TIME,
+        OCTETS
     };
 
     // Content of a field
@@ -144,6 +145,7 @@ protected:
         uint8_t  val_ipv4[4];
         uint8_t  val_ipv6[16];
         char     val_str[64];
+        uint8_t  val_octets[64];
     };
 
     // Description of a field
@@ -238,6 +240,22 @@ protected:
     }
 
     void
+    add_field_octets(uint16_t nf_id, uint16_t nf_len, const uint8_t *val,
+        uint16_t ipx_id = SAME_ID, uint32_t ipx_en = 0, uint16_t ipx_len = SAME_LEN)
+    {
+        ipx_id = (ipx_id == SAME_ID) ? nf_id : ipx_id;
+        ipx_len = (ipx_len == SAME_LEN) ? nf_len : ipx_len;
+
+        item_info info = {nf_id, nf_len, ipx_id, ipx_en, ipx_len, item_type::OCTETS, {}};
+        const size_t max_octets = sizeof(info.data.val_octets);
+        if (max_octets < nf_len) {
+            throw std::invalid_argument("Too long octet array!");
+        }
+        memcpy(info.data.val_octets, val, nf_len);
+        m_items.push_back(info);
+    }
+
+    void
     build(uint16_t tid, uint16_t scope_cnt = 0)
     {
         // Build NetFlow v9 Template Record
@@ -282,6 +300,9 @@ protected:
                 break;
             case item_type::STR:
                 m_drec->append_string(std::string(item.data.val_str), item.nf_len);
+                break;
+            case item_type::OCTETS:
+                m_drec->append_octets(item.data.val_octets, item.nf_len);
                 break;
             default:
                 FAIL() << "Unimplemented type!";
@@ -343,6 +364,10 @@ public:
             uint64_t time_since_utc = sys_time - (sys_uptime - field_uptime);
             ASSERT_EQ(time_since_utc, ipx_ts);
         };
+        auto cmp_octets = [&iter](const struct item_info *info) {
+            ASSERT_EQ(iter.field.size, info->ipx_len);
+            ASSERT_EQ(memcmp(iter.field.data, info->data.val_octets, iter.field.size), 0U);
+        };
 
         fds_drec_iter_init(&iter, rec, FDS_DREC_PADDING_SHOW);
         for (size_t i = 0; i < m_items.size(); ++i) {
@@ -368,6 +393,9 @@ public:
                 break;
             case item_type::TIME:
                 cmp_time(info);
+                break;
+            case item_type::OCTETS:
+                cmp_octets(info);
                 break;
             default:
                 FAIL() << "Unimplemented type!";
@@ -712,6 +740,7 @@ TEST_F(MsgBase, oneTemplateOneDataRecord)
     Rec_norm_nots r_nots(tid);
     Rec_norm_onlyts r_onlyts(tid);
 
+    // For each type of the flow record try to create a new NetFlow v9 message
     int i = 0;
     for (Rec_base *rec_ptr : {
             dynamic_cast<Rec_base *>(&r_basic),
@@ -719,66 +748,82 @@ TEST_F(MsgBase, oneTemplateOneDataRecord)
             dynamic_cast<Rec_base *>(&r_multi),
             dynamic_cast<Rec_base *>(&r_nots),
             dynamic_cast<Rec_base *>(&r_onlyts)}) {
-        SCOPED_TRACE("i: " + std::to_string(i++));
-        // For each type of the flow record try to create a new NetFlow v9 message
-        nf9_set nf9_tset(IPX_NF9_SET_TMPLT);
-        nf9_tset.add_rec(rec_ptr->get_nf9_template());
-        nf9_set nf9_dset(tid);
-        nf9_dset.add_rec(rec_ptr->get_nf9_record());
-        nf9_msg nf9;
-        nf9.set_odid(VALUE_ODID);
-        nf9.set_time_unix(VALUE_EXPORT);
-        nf9.set_time_uptime(VALUE_UPTIME);
-        nf9.add_set(nf9_tset);
-        nf9.add_set(nf9_dset);
+        SCOPED_TRACE("Record index: " + std::to_string(i++));
 
-        // Create a new converter for each message
-        converter_create(IPX_VERB_DEBUG);
+        // Try different combinations of Template FlowSet and Data FlowSet paddings
+        const uint16_t pad_dset_max = rec_ptr->get_nf9_record().size();
+        const uint16_t pad_tset_max = 8U; // i.e. Template with just one field
+        for (uint16_t pad_tset = 0; pad_tset < pad_tset_max; pad_tset++) {
+            SCOPED_TRACE("Template FlowSet padding: " + std::to_string(pad_tset));
+            for (uint16_t pad_dset = 0; pad_dset < pad_dset_max; ++pad_dset) {
+                SCOPED_TRACE("Data FlowSet padding: " + std::to_string(pad_dset));
 
-        // Try to convert the message
-        uint16_t msg_size = nf9.size();
-        uint8_t *msg_data = (uint8_t *) nf9.release();
-        prepare_msg(&msg_ctx, msg_data, msg_size);
-        ASSERT_EQ(ipx_nf9_conv_process(m_conv.get(), m_msg.get()), IPX_OK);
+                nf9_set nf9_tset(IPX_NF9_SET_TMPLT);
+                nf9_tset.add_rec(rec_ptr->get_nf9_template());
+                if (pad_tset) {
+                    nf9_tset.add_padding(pad_tset);
+                }
+                nf9_set nf9_dset(tid);
+                nf9_dset.add_rec(rec_ptr->get_nf9_record());
+                if (pad_dset) {
+                    nf9_dset.add_padding(pad_dset);
+                }
+                nf9_msg nf9;
+                nf9.set_odid(VALUE_ODID);
+                nf9.set_time_unix(VALUE_EXPORT);
+                nf9.set_time_uptime(VALUE_UPTIME);
+                nf9.add_set(nf9_tset);
+                nf9.add_set(nf9_dset);
 
-        // Try to parse the message
-        msg_data = ipx_msg_ipfix_get_packet(m_msg.get());
-        auto *ipfix_hdr = reinterpret_cast<struct fds_ipfix_msg_hdr*>(msg_data);
-        EXPECT_EQ(ntohs(ipfix_hdr->version), FDS_IPFIX_VERSION);
-        EXPECT_GE(ntohs(ipfix_hdr->length), FDS_IPFIX_MSG_HDR_LEN);
-        EXPECT_EQ(ntohl(ipfix_hdr->odid), VALUE_ODID);
-        EXPECT_EQ(ntohl(ipfix_hdr->export_time), VALUE_EXPORT);
-        EXPECT_EQ(ntohl(ipfix_hdr->seq_num), 0);
+                // Create a new converter for each message
+                converter_create(IPX_VERB_DEBUG);
 
-        // Try to parse the body
-        struct fds_sets_iter it_set;
-        fds_sets_iter_init(&it_set, ipfix_hdr);
+                // Try to convert the message
+                uint16_t msg_size = nf9.size();
+                uint8_t *msg_data = (uint8_t *) nf9.release();
+                prepare_msg(&msg_ctx, msg_data, msg_size);
+                ASSERT_EQ(ipx_nf9_conv_process(m_conv.get(), m_msg.get()), IPX_OK);
 
-        // Expect Template Set
-        ASSERT_EQ(fds_sets_iter_next(&it_set), FDS_OK);
-        ASSERT_EQ(ntohs(it_set.set->flowset_id), FDS_IPFIX_SET_TMPLT);
-        fds_tset_iter it_tset;
-        fds_tset_iter_init(&it_tset, it_set.set);
-        ASSERT_EQ(fds_tset_iter_next(&it_tset), FDS_OK);
-        // Parse the Template
-        auto tmplt = parse_template(it_tset, FDS_TYPE_TEMPLATE);
-        rec_ptr->compare_template(tmplt.get());
-        // Expect no more Templates in the Set
-        EXPECT_EQ(fds_tset_iter_next(&it_tset), FDS_EOC);
+                // Try to parse the message
+                msg_data = ipx_msg_ipfix_get_packet(m_msg.get());
+                auto *ipfix_hdr = reinterpret_cast<struct fds_ipfix_msg_hdr*>(msg_data);
+                EXPECT_EQ(ntohs(ipfix_hdr->version), FDS_IPFIX_VERSION);
+                EXPECT_GE(ntohs(ipfix_hdr->length), FDS_IPFIX_MSG_HDR_LEN);
+                EXPECT_EQ(ntohl(ipfix_hdr->odid), VALUE_ODID);
+                EXPECT_EQ(ntohl(ipfix_hdr->export_time), VALUE_EXPORT);
+                EXPECT_EQ(ntohl(ipfix_hdr->seq_num), 0);
 
-        // Expect Data Set
-        ASSERT_EQ(fds_sets_iter_next(&it_set), FDS_OK);
-        ASSERT_EQ(ntohs(it_set.set->flowset_id), tid);
-        struct fds_dset_iter it_dset;
-        fds_dset_iter_init(&it_dset, it_set.set, tmplt.get());
-        ASSERT_EQ(fds_dset_iter_next(&it_dset), FDS_OK);
+                // Try to parse the body
+                struct fds_sets_iter it_set;
+                fds_sets_iter_init(&it_set, ipfix_hdr);
 
-        struct fds_drec drec = {it_dset.rec, it_dset.size, tmplt.get(), nullptr};
-        rec_ptr->compare_data(&drec, VALUE_EXPORT, VALUE_UPTIME);
+                // Expect Template Set
+                ASSERT_EQ(fds_sets_iter_next(&it_set), FDS_OK);
+                ASSERT_EQ(ntohs(it_set.set->flowset_id), FDS_IPFIX_SET_TMPLT);
+                fds_tset_iter it_tset;
+                fds_tset_iter_init(&it_tset, it_set.set);
+                ASSERT_EQ(fds_tset_iter_next(&it_tset), FDS_OK);
+                // Parse the Template
+                auto tmplt = parse_template(it_tset, FDS_TYPE_TEMPLATE);
+                rec_ptr->compare_template(tmplt.get());
+                // Expect no more Templates in the Set
+                EXPECT_EQ(fds_tset_iter_next(&it_tset), FDS_EOC);
 
-        // No more records
-        EXPECT_EQ(fds_dset_iter_next(&it_dset), FDS_EOC);
-        EXPECT_EQ(fds_sets_iter_next(&it_set), FDS_EOC);
+                // Expect Data Set
+                ASSERT_EQ(fds_sets_iter_next(&it_set), FDS_OK);
+                ASSERT_EQ(ntohs(it_set.set->flowset_id), tid);
+                struct fds_dset_iter it_dset;
+                fds_dset_iter_init(&it_dset, it_set.set, tmplt.get());
+                ASSERT_EQ(fds_dset_iter_next(&it_dset), FDS_OK);
+
+                struct fds_drec drec = {it_dset.rec, it_dset.size, tmplt.get(), nullptr};
+                rec_ptr->compare_data(&drec, VALUE_EXPORT, VALUE_UPTIME);
+
+                // No more records
+                EXPECT_EQ(fds_dset_iter_next(&it_dset), FDS_EOC);
+                EXPECT_EQ(fds_sets_iter_next(&it_set), FDS_EOC);
+            }
+        }
     }
 }
 
@@ -799,72 +844,89 @@ TEST_F(MsgBase, oneOptionsTemplateOneDataRecord)
     Rec_opts_multi r_multi(tid);
     // Note: Rec_opts_unknown should be ignored during conversion, so it is not here...
 
+    // For each type of the flow record try to create a new NetFlow v9 message
     int i = 0;
     for (Rec_base *rec_ptr : {
             dynamic_cast<Rec_base *>(&r_simple),
             dynamic_cast<Rec_base *>(&r_ts),
             dynamic_cast<Rec_base *>(&r_enterprise),
             dynamic_cast<Rec_base *>(&r_multi)}) {
-        SCOPED_TRACE("i: " + std::to_string(i++));
-        // For each type of the flow record try to create a new NetFlow v9 message
-        nf9_set nf9_tset(IPX_NF9_SET_OPTS_TMPLT);
-        nf9_tset.add_rec(rec_ptr->get_nf9_template());
-        nf9_set nf9_dset(tid);
-        nf9_dset.add_rec(rec_ptr->get_nf9_record());
-        nf9_msg nf9;
-        nf9.set_odid(VALUE_ODID);
-        nf9.set_time_unix(VALUE_EXPORT);
-        nf9.set_time_uptime(VALUE_UPTIME);
-        nf9.add_set(nf9_tset);
-        nf9.add_set(nf9_dset);
+        SCOPED_TRACE("Record index: " + std::to_string(i++));
 
-        // Create a new converter for each message
-        converter_create(IPX_VERB_DEBUG);
+        // Try different combinations of Template FlowSet and Data FlowSet paddings
+        const uint16_t pad_dset_max = rec_ptr->get_nf9_record().size();
+        const uint16_t pad_tset_max = 10U; // i.e. Options Template with just one field
+        for (uint16_t pad_tset = 0; pad_tset < pad_tset_max; pad_tset++) {
+            SCOPED_TRACE("Template FlowSet padding: " + std::to_string(pad_tset));
+            for (uint16_t pad_dset = 0; pad_dset < pad_dset_max; ++pad_dset) {
+                SCOPED_TRACE("Data FlowSet padding: " + std::to_string(pad_dset));
 
-        // Try to convert the message
-        uint16_t msg_size = nf9.size();
-        uint8_t *msg_data = (uint8_t *) nf9.release();
-        prepare_msg(&msg_ctx, msg_data, msg_size);
-        ASSERT_EQ(ipx_nf9_conv_process(m_conv.get(), m_msg.get()), IPX_OK);
+                nf9_set nf9_tset(IPX_NF9_SET_OPTS_TMPLT);
+                nf9_tset.add_rec(rec_ptr->get_nf9_template());
+                if (pad_tset) {
+                    nf9_tset.add_padding(pad_tset);
+                }
+                nf9_set nf9_dset(tid);
+                nf9_dset.add_rec(rec_ptr->get_nf9_record());
+                if (pad_dset) {
+                    nf9_dset.add_padding(pad_dset);
+                }
+                nf9_msg nf9;
+                nf9.set_odid(VALUE_ODID);
+                nf9.set_time_unix(VALUE_EXPORT);
+                nf9.set_time_uptime(VALUE_UPTIME);
+                nf9.add_set(nf9_tset);
+                nf9.add_set(nf9_dset);
 
-        // Try to parse the message
-        msg_data = ipx_msg_ipfix_get_packet(m_msg.get());
-        auto *ipfix_hdr = reinterpret_cast<struct fds_ipfix_msg_hdr*>(msg_data);
-        EXPECT_EQ(ntohs(ipfix_hdr->version), FDS_IPFIX_VERSION);
-        EXPECT_GE(ntohs(ipfix_hdr->length), FDS_IPFIX_MSG_HDR_LEN);
-        EXPECT_EQ(ntohl(ipfix_hdr->odid), VALUE_ODID);
-        EXPECT_EQ(ntohl(ipfix_hdr->export_time), VALUE_EXPORT);
-        EXPECT_EQ(ntohl(ipfix_hdr->seq_num), 0);
+                // Create a new converter for each message
+                converter_create(IPX_VERB_DEBUG);
 
-        // Try to parse the body
-        struct fds_sets_iter it_set;
-        fds_sets_iter_init(&it_set, ipfix_hdr);
+                // Try to convert the message
+                uint16_t msg_size = nf9.size();
+                uint8_t *msg_data = (uint8_t *) nf9.release();
+                prepare_msg(&msg_ctx, msg_data, msg_size);
+                ASSERT_EQ(ipx_nf9_conv_process(m_conv.get(), m_msg.get()), IPX_OK);
 
-        // Expect Options Template Set
-        ASSERT_EQ(fds_sets_iter_next(&it_set), FDS_OK);
-        ASSERT_EQ(ntohs(it_set.set->flowset_id), FDS_IPFIX_SET_OPTS_TMPLT);
-        fds_tset_iter it_tset;
-        fds_tset_iter_init(&it_tset, it_set.set);
-        ASSERT_EQ(fds_tset_iter_next(&it_tset), FDS_OK);
-        // Parse the Options Template
-        auto tmplt = parse_template(it_tset, FDS_TYPE_TEMPLATE_OPTS);
-        rec_ptr->compare_template(tmplt.get());
-        // Expect no more Options Templates in the Set
-        EXPECT_EQ(fds_tset_iter_next(&it_tset), FDS_EOC);
+                // Try to parse the message
+                msg_data = ipx_msg_ipfix_get_packet(m_msg.get());
+                auto *ipfix_hdr = reinterpret_cast<struct fds_ipfix_msg_hdr*>(msg_data);
+                EXPECT_EQ(ntohs(ipfix_hdr->version), FDS_IPFIX_VERSION);
+                EXPECT_GE(ntohs(ipfix_hdr->length), FDS_IPFIX_MSG_HDR_LEN);
+                EXPECT_EQ(ntohl(ipfix_hdr->odid), VALUE_ODID);
+                EXPECT_EQ(ntohl(ipfix_hdr->export_time), VALUE_EXPORT);
+                EXPECT_EQ(ntohl(ipfix_hdr->seq_num), 0);
 
-        // Expect Data Set
-        ASSERT_EQ(fds_sets_iter_next(&it_set), FDS_OK);
-        ASSERT_EQ(ntohs(it_set.set->flowset_id), tid);
-        struct fds_dset_iter it_dset;
-        fds_dset_iter_init(&it_dset, it_set.set, tmplt.get());
-        ASSERT_EQ(fds_dset_iter_next(&it_dset), FDS_OK);
+                // Try to parse the body
+                struct fds_sets_iter it_set;
+                fds_sets_iter_init(&it_set, ipfix_hdr);
 
-        struct fds_drec drec = {it_dset.rec, it_dset.size, tmplt.get(), nullptr};
-        rec_ptr->compare_data(&drec, VALUE_EXPORT, VALUE_UPTIME);
+                // Expect Options Template Set
+                ASSERT_EQ(fds_sets_iter_next(&it_set), FDS_OK);
+                ASSERT_EQ(ntohs(it_set.set->flowset_id), FDS_IPFIX_SET_OPTS_TMPLT);
+                fds_tset_iter it_tset;
+                fds_tset_iter_init(&it_tset, it_set.set);
+                ASSERT_EQ(fds_tset_iter_next(&it_tset), FDS_OK);
+                // Parse the Options Template
+                auto tmplt = parse_template(it_tset, FDS_TYPE_TEMPLATE_OPTS);
+                rec_ptr->compare_template(tmplt.get());
+                // Expect no more Options Templates in the Set
+                EXPECT_EQ(fds_tset_iter_next(&it_tset), FDS_EOC);
 
-        // No more records
-        EXPECT_EQ(fds_dset_iter_next(&it_dset), FDS_EOC);
-        EXPECT_EQ(fds_sets_iter_next(&it_set), FDS_EOC);
+                // Expect Data Set
+                ASSERT_EQ(fds_sets_iter_next(&it_set), FDS_OK);
+                ASSERT_EQ(ntohs(it_set.set->flowset_id), tid);
+                struct fds_dset_iter it_dset;
+                fds_dset_iter_init(&it_dset, it_set.set, tmplt.get());
+                ASSERT_EQ(fds_dset_iter_next(&it_dset), FDS_OK);
+
+                struct fds_drec drec = {it_dset.rec, it_dset.size, tmplt.get(), nullptr};
+                rec_ptr->compare_data(&drec, VALUE_EXPORT, VALUE_UPTIME);
+
+                // No more records
+                EXPECT_EQ(fds_dset_iter_next(&it_dset), FDS_EOC);
+                EXPECT_EQ(fds_sets_iter_next(&it_set), FDS_EOC);
+            }
+        }
     }
 }
 
@@ -1268,17 +1330,20 @@ TEST_F(MsgBase, templateRefresh)
     // Create a simple NetFlow message -----------------------------------------
     const uint16_t tid_flow1 = 256;
     const uint16_t tid_flow2 = 257;
-    const uint16_t tid_opts = 258;
+    const uint16_t tid_opts1 = 258;
+    const uint16_t tid_opts2 = 259;
 
     Rec_norm_basic      r_flow1(tid_flow1);
     Rec_norm_enterprise r_flow2(tid_flow2);
-    Rec_opts_simple     r_opts(tid_opts);
+    Rec_opts_simple     r_opts1(tid_opts1);
+    Rec_opts_unknown    r_opts2(tid_opts2);
 
     nf9_set nf9_1a_tset(IPX_NF9_SET_TMPLT);
     nf9_1a_tset.add_rec(r_flow1.get_nf9_template());
     nf9_1a_tset.add_rec(r_flow2.get_nf9_template());
     nf9_set nf9_1b_tset(IPX_NF9_SET_OPTS_TMPLT);
-    nf9_1b_tset.add_rec(r_opts.get_nf9_template());
+    nf9_1b_tset.add_rec(r_opts1.get_nf9_template());
+    nf9_1b_tset.add_rec(r_opts2.get_nf9_template()); // Unsupported template
     nf9_set nf9_1c_dset(tid_flow1);
     nf9_1c_dset.add_rec(r_flow1.get_nf9_record());
     nf9_msg nf9_1;
@@ -1330,7 +1395,8 @@ TEST_F(MsgBase, templateRefresh)
     fds_tset_iter_init(&it_tset, it_set.set);
     ASSERT_EQ(fds_tset_iter_next(&it_tset), FDS_OK);
     auto tmplt_opts = parse_template(it_tset, FDS_TYPE_TEMPLATE_OPTS);
-    r_opts.compare_template(tmplt_opts.get());
+    r_opts1.compare_template(tmplt_opts.get());
+    // Note: Unsupported template should not be converted
     EXPECT_EQ(fds_tset_iter_next(&it_tset), FDS_EOC);
 
     // Expect Data Set
@@ -1347,15 +1413,19 @@ TEST_F(MsgBase, templateRefresh)
 
     // Create another message but refresh only few templates -------------------
     nf9_set nf9_2a_tset(IPX_NF9_SET_OPTS_TMPLT);
-    nf9_2a_tset.add_rec(r_opts.get_nf9_template());
+    nf9_2a_tset.add_rec(r_opts2.get_nf9_template()); // Unsupported template
+    nf9_2a_tset.add_rec(r_opts1.get_nf9_template());
     nf9_set nf9_2b_tset(IPX_NF9_SET_TMPLT);
     nf9_2b_tset.add_rec(r_flow1.get_nf9_template());
     nf9_set nf9_2c_dset(tid_flow1);
     nf9_2c_dset.add_rec(r_flow1.get_nf9_record());
-    nf9_set nf9_2d_dset(tid_opts);
-    nf9_2d_dset.add_rec(r_opts.get_nf9_record());
-    nf9_set nf9_2e_dset(tid_flow2);
-    nf9_2e_dset.add_rec(r_flow2.get_nf9_record());
+    nf9_set nf9_2d_dset(tid_opts1);
+    nf9_2d_dset.add_rec(r_opts1.get_nf9_record());
+    nf9_set nf9_2e_dset(tid_opts2);                  // Data FlowSet with unsupported record
+    nf9_2e_dset.add_rec(r_opts2.get_nf9_record());
+    nf9_set nf9_2f_dset(tid_flow2);
+    nf9_2f_dset.add_rec(r_flow2.get_nf9_record());
+
     nf9_msg nf9_2;
     nf9_2.set_odid(VALUE_ODID);
     nf9_2.set_time_unix(VALUE_EXPORT);
@@ -1366,6 +1436,7 @@ TEST_F(MsgBase, templateRefresh)
     nf9_2.add_set(nf9_2c_dset);
     nf9_2.add_set(nf9_2d_dset);
     nf9_2.add_set(nf9_2e_dset);
+    nf9_2.add_set(nf9_2f_dset);
 
     // Try to convert the message
     msg_size = nf9_2.size();
@@ -1391,7 +1462,8 @@ TEST_F(MsgBase, templateRefresh)
     fds_tset_iter_init(&it_tset, it_set.set);
     ASSERT_EQ(fds_tset_iter_next(&it_tset), FDS_OK);
     tmplt_opts = parse_template(it_tset, FDS_TYPE_TEMPLATE_OPTS);
-    r_opts.compare_template(tmplt_opts.get());
+    // Note: Unsupported template should not be converted
+    r_opts1.compare_template(tmplt_opts.get());
     EXPECT_EQ(fds_tset_iter_next(&it_tset), FDS_EOC);
 
     // Expect Template Set
@@ -1414,12 +1486,14 @@ TEST_F(MsgBase, templateRefresh)
 
     // Expect Data Set
     ASSERT_EQ(fds_sets_iter_next(&it_set), FDS_OK);
-    ASSERT_EQ(ntohs(it_set.set->flowset_id), tid_opts);
+    ASSERT_EQ(ntohs(it_set.set->flowset_id), tid_opts1);
     fds_dset_iter_init(&it_dset, it_set.set, tmplt_opts.get());
     ASSERT_EQ(fds_dset_iter_next(&it_dset), FDS_OK);
     drec = {it_dset.rec, it_dset.size, tmplt_opts.get(), nullptr};
-    r_opts.compare_data(&drec, VALUE_EXPORT, VALUE_UPTIME);
+    r_opts1.compare_data(&drec, VALUE_EXPORT, VALUE_UPTIME);
     EXPECT_EQ(fds_dset_iter_next(&it_dset), FDS_EOC);
+
+    // Note: Data Set based on unsupported Template should be skipped
 
     // Expect Data Set
     ASSERT_EQ(fds_sets_iter_next(&it_set), FDS_OK);
@@ -2026,20 +2100,525 @@ TEST_F(MsgBase, outOfOrderMessages)
     EXPECT_EQ(fds_sets_iter_next(&it_set), FDS_EOC);
 }
 
-/*
-TODO: add following tests
-- padding in FlowSet (normal + options template)
-- padding in DataSet
-- refresh of unsupported Options Template
-- FlowSet with 1 < ID < 256 - should be ignored during conversion
+// Try to convert NetFlow Message with unknown FlowSets (i.e. 1 < ID < 256)
+// Unknown FlowSets should be skipped/ignored!
+TEST_F(MsgBase, unknownFlowSets)
+{
+    // Message context
+    const uint32_t VALUE_EXPORT = 1562857357U; // 2019-07-11T15:02:37+00:00
+    const uint32_t VALUE_UPTIME = 7278632U;
+    const uint32_t VALUE_ODID = 12345678UL;
+    uint32_t VALUE_SEQ = 625372U;
+    struct ipx_msg_ctx msg_ctx = {m_session.get(), VALUE_ODID, 0};
 
-TODO: add following with invalid data
-- conversion of too long NetFlow message (converted IPFIX Message is too long)
-- try to convert non-NetFlow message
-- template definition with invalid ID (<256)
-- unexpected end of a Template definition
-- Options Template with invalid definition of Scope fields (not multiple of 4)
-- Options Template without Scope fields
-- invalid size of field in the Template definition (too long Data Record)
-- invalid count in the message header (produce only warning)
-*/
+    // Create a simple NetFlow message -----------------------------------------
+    uint16_t set_id1 = 2;   // Unknown
+    uint16_t set_id2 = IPX_NF9_SET_TMPLT; // Template FlowSet
+    uint16_t set_id3 = 255; // Unknown
+    uint16_t set_id4 = 256; // Data FlowSet
+
+    Rec_norm_multi r_flow(set_id4);
+
+    nf9_set nf9_un1(set_id1);  // Unknown FlowSet
+    nf9_un1.add_padding(40);
+    nf9_set nf9_tset(set_id2);
+    nf9_tset.add_rec(r_flow.get_nf9_template());
+    nf9_set nf9_un2(set_id3);  // Unknown FlowSet
+    nf9_un2.add_padding(1234);
+    nf9_set nf9_dset(set_id4);
+    nf9_dset.add_rec(r_flow.get_nf9_record());
+
+    nf9_msg nf9;
+    nf9.set_odid(VALUE_ODID);
+    nf9.set_time_unix(VALUE_EXPORT);
+    nf9.set_time_uptime(VALUE_UPTIME);
+    nf9.set_seq(VALUE_SEQ);
+    nf9.add_set(nf9_un1);
+    nf9.add_set(nf9_tset);
+    nf9.add_set(nf9_un2);
+    nf9.add_set(nf9_dset);
+
+    // Try to convert it
+    uint16_t msg_size = nf9.size();
+    uint8_t *msg_data = (uint8_t *) nf9.release();
+    prepare_msg(&msg_ctx, msg_data, msg_size);
+    ASSERT_EQ(ipx_nf9_conv_process(m_conv.get(), m_msg.get()), IPX_OK);
+
+    // Try to parse the message
+    msg_data = ipx_msg_ipfix_get_packet(m_msg.get());
+    auto *ipfix_hdr = reinterpret_cast<struct fds_ipfix_msg_hdr*>(msg_data);
+    EXPECT_EQ(ntohs(ipfix_hdr->version), FDS_IPFIX_VERSION);
+    EXPECT_GE(ntohs(ipfix_hdr->length), FDS_IPFIX_MSG_HDR_LEN);
+    EXPECT_EQ(ntohl(ipfix_hdr->odid), VALUE_ODID);
+    EXPECT_EQ(ntohl(ipfix_hdr->export_time), VALUE_EXPORT);
+    EXPECT_EQ(ntohl(ipfix_hdr->seq_num), 0);
+
+    // Try to parse the body (unknown FlowSets should be skipped!)
+    struct fds_sets_iter it_set;
+    fds_sets_iter_init(&it_set, ipfix_hdr);
+
+    // Expect Template Set
+    ASSERT_EQ(fds_sets_iter_next(&it_set), FDS_OK);
+    ASSERT_EQ(ntohs(it_set.set->flowset_id), FDS_IPFIX_SET_TMPLT);
+    fds_tset_iter it_tset;
+    fds_tset_iter_init(&it_tset, it_set.set);
+    ASSERT_EQ(fds_tset_iter_next(&it_tset), FDS_OK);
+    // Parse the Template
+    auto tmplt = parse_template(it_tset, FDS_TYPE_TEMPLATE);
+    r_flow.compare_template(tmplt.get());
+    // Expect no more Templates in the Set
+    EXPECT_EQ(fds_tset_iter_next(&it_tset), FDS_EOC);
+
+    // Expect Data Set
+    ASSERT_EQ(fds_sets_iter_next(&it_set), FDS_OK);
+    ASSERT_EQ(ntohs(it_set.set->flowset_id), set_id4);
+    struct fds_dset_iter it_dset;
+    fds_dset_iter_init(&it_dset, it_set.set, tmplt.get());
+    ASSERT_EQ(fds_dset_iter_next(&it_dset), FDS_OK);
+
+    struct fds_drec drec = {it_dset.rec, it_dset.size, tmplt.get(), nullptr};
+    r_flow.compare_data(&drec, VALUE_EXPORT, VALUE_UPTIME);
+
+    // No more records
+    EXPECT_EQ(fds_dset_iter_next(&it_dset), FDS_EOC);
+    EXPECT_EQ(fds_sets_iter_next(&it_set), FDS_EOC);
+}
+
+// Conversion of flow record based on inapropriate template
+TEST_F(MsgBase, templateAndRecordMismatch)
+{
+    // Message context
+    const uint32_t VALUE_EXPORT = 1562857357U; // 2019-07-11T15:02:37+00:00
+    const uint32_t VALUE_UPTIME = 10001;
+    const uint32_t VALUE_ODID = 0;
+    uint32_t VALUE_SEQ = 625372U;
+    struct ipx_msg_ctx msg_ctx = {m_session.get(), VALUE_ODID, 0};
+
+    // Create a simple NetFlow Message
+    uint16_t tid = 256;
+    Rec_norm_basic rec_multi(tid);
+    Rec_norm_multi rec_norm(tid);
+
+    nf9_set nf9_tset(IPX_NF9_SET_TMPLT);
+    nf9_tset.add_rec(rec_norm.get_nf9_template());
+    nf9_set nf9_dset(tid);
+    nf9_dset.add_rec(rec_multi.get_nf9_record());
+    nf9_msg nf9;
+    nf9.set_odid(VALUE_ODID);
+    nf9.set_time_unix(VALUE_EXPORT);
+    nf9.set_time_uptime(VALUE_UPTIME);
+    nf9.set_seq(VALUE_SEQ);
+    nf9.add_set(nf9_tset);
+    nf9.add_set(nf9_dset);
+
+    // Try to convert the message
+    uint16_t msg_size = nf9.size();
+    uint8_t *msg_data = (uint8_t *) nf9.release();
+    prepare_msg(&msg_ctx, msg_data, msg_size);
+    ASSERT_EQ(ipx_nf9_conv_process(m_conv.get(), m_msg.get()), IPX_ERR_FORMAT);
+}
+
+// Try to convert non-NetFlow message
+TEST_F(MsgBase, conversionOfNonNetFlow)
+{
+    const uint32_t VALUE_ODID = 12110;
+    struct ipx_msg_ctx msg_ctx = {m_session.get(), VALUE_ODID, 0};
+
+    // Prepare invalid data
+    const uint16_t size = 512;
+    uint8_t *mem = (uint8_t *) malloc(size);
+    ASSERT_NE(mem, nullptr);
+    memset(mem, 0, size);
+
+    // Try to convert the data
+    uint16_t msg_size = size;
+    uint8_t *msg_data = mem;
+    prepare_msg(&msg_ctx, msg_data, msg_size);
+    ASSERT_EQ(ipx_nf9_conv_process(m_conv.get(), m_msg.get()), IPX_ERR_FORMAT);
+}
+
+// Try to convert too short NetFlow message (shorter than the message header)
+TEST_F(MsgBase, conversionOfTooShortMessage)
+{
+    // Message context
+    const uint32_t VALUE_EXPORT = 1562857357U; // 2019-07-11T15:02:37+00:00
+    const uint32_t VALUE_UPTIME = 10001;
+    const uint32_t VALUE_ODID = 0;
+    uint32_t VALUE_SEQ = 625372U;
+    struct ipx_msg_ctx msg_ctx = {m_session.get(), VALUE_ODID, 0};
+
+    // Create a simple (valid) NetFlow Message
+    nf9_msg nf9;
+    nf9.set_odid(VALUE_ODID);
+    nf9.set_time_unix(VALUE_EXPORT);
+    nf9.set_time_uptime(VALUE_UPTIME);
+    nf9.set_seq(VALUE_SEQ);
+
+    // Try to convert the message, but trim last few bytes
+    uint16_t msg_size = nf9.size();
+    uint8_t *msg_data = (uint8_t *) nf9.release();
+
+    for (uint16_t new_size = 0; new_size < msg_size; ++new_size) {
+        SCOPED_TRACE("Size: " + std::to_string(new_size));
+
+        // Create a new converter for each message
+        converter_create(IPX_VERB_DEBUG);
+
+        uint8_t *new_data = (uint8_t *) malloc(new_size);
+        memcpy(new_data, msg_data, new_size);
+        prepare_msg(&msg_ctx, new_data, new_size);
+        ASSERT_EQ(ipx_nf9_conv_process(m_conv.get(), m_msg.get()), IPX_ERR_FORMAT);
+    }
+
+    free(msg_data);
+}
+
+// Try to convert Template FlowSet with invalid Template ID (< 256)
+TEST_F(MsgBase, invalidTemplateID)
+{
+    // Create a record and its context
+    const uint32_t VALUE_EXPORT = 1562857357U; // 2019-07-11T15:02:37+00:00
+    const uint32_t VALUE_UPTIME = 10001;
+    const uint32_t VALUE_ODID = 10;
+    struct ipx_msg_ctx msg_ctx = {m_session.get(), VALUE_ODID, 0};
+
+    uint16_t tid = 255; // lower than expected
+    Rec_norm_enterprise rec(tid);
+
+    nf9_set nf9_tset(IPX_NF9_SET_TMPLT);
+    nf9_tset.add_rec(rec.get_nf9_template());
+    nf9_msg nf9;
+    nf9.set_odid(VALUE_ODID);
+    nf9.set_time_unix(VALUE_EXPORT);
+    nf9.set_time_uptime(VALUE_UPTIME);
+    nf9.add_set(nf9_tset);
+
+    // Try to convert the message
+    uint16_t msg_size = nf9.size();
+    uint8_t *msg_data = (uint8_t *) nf9.release();
+    prepare_msg(&msg_ctx, msg_data, msg_size);
+    ASSERT_EQ(ipx_nf9_conv_process(m_conv.get(), m_msg.get()), IPX_ERR_FORMAT);
+}
+
+// Invalid size of field in the Template definition
+// i.e. Data Record would be longer than max. possible NetFlow Message
+TEST_F(MsgBase, longTemplateDataLength)
+{
+    // Create a record and its context
+    const uint32_t VALUE_EXPORT = 1562857357U; // 2019-07-11T15:02:37+00:00
+    const uint32_t VALUE_UPTIME = 10001;
+    const uint32_t VALUE_ODID = 10;
+    struct ipx_msg_ctx msg_ctx = {m_session.get(), VALUE_ODID, 0};
+
+    Rec_norm_basic rec(256);
+
+    nf9_set nf9_tset(IPX_NF9_SET_TMPLT);
+    nf9_tset.add_rec(rec.get_nf9_template());
+    nf9_msg nf9;
+    nf9.set_odid(VALUE_ODID);
+    nf9.set_time_unix(VALUE_EXPORT);
+    nf9.set_time_uptime(VALUE_UPTIME);
+    nf9.add_set(nf9_tset);
+
+    // Try to convert the message
+    uint16_t msg_size = nf9.size();
+    uint8_t *msg_data = (uint8_t *) nf9.release();
+    // Overwrite size of few template fields
+    struct ipx_nf9_tset *tset = (struct ipx_nf9_tset *) (msg_data + IPX_NF9_MSG_HDR_LEN);
+    struct ipx_nf9_trec *trec = &tset->first_record;
+    trec->fields[0].length = htons(20196);
+    trec->fields[1].length = htons(27324);
+    trec->fields[2].length = htons(10000);
+    trec->fields[3].length = htons(20120);
+
+    prepare_msg(&msg_ctx, msg_data, msg_size);
+    ASSERT_EQ(ipx_nf9_conv_process(m_conv.get(), m_msg.get()), IPX_ERR_FORMAT);
+}
+
+// Invalid size of field in the Template definition (zero size Data Record)
+TEST_F(MsgBase, zeroSizeTemplateDataLength)
+{
+    // Create an invalid Data Record
+    class Rec_empty : public Rec_base {
+    public:
+        Rec_empty(uint16_t tid) {
+            // Create a zero Template with few zero size fields -> size of Data Record is also 0
+            add_field_octets(IPX_NF9_IE_IN_BYTES,       0, nullptr);
+            add_field_octets(IPX_NF9_IE_IN_PKTS,        0, nullptr);
+            add_field_octets(IPX_NF9_IE_IPV4_SRC_ADDR,  0, nullptr);
+            add_field_octets(IPX_NF9_IE_IPV4_DST_ADDR,  0, nullptr);
+            build(tid);
+        }
+    };
+
+    // Create a record and its context
+    const uint32_t VALUE_EXPORT = 1562857357U; // 2019-07-11T15:02:37+00:00
+    const uint32_t VALUE_UPTIME = 10001;
+    const uint32_t VALUE_ODID = 10;
+    struct ipx_msg_ctx msg_ctx = {m_session.get(), VALUE_ODID, 0};
+
+    Rec_empty rec(256);
+
+    nf9_set nf9_tset(IPX_NF9_SET_TMPLT);
+    nf9_tset.add_rec(rec.get_nf9_template());
+    nf9_msg nf9;
+    nf9.set_odid(VALUE_ODID);
+    nf9.set_time_unix(VALUE_EXPORT);
+    nf9.set_time_uptime(VALUE_UPTIME);
+    nf9.add_set(nf9_tset);
+
+    // Try to convert the message
+    uint16_t msg_size = nf9.size();
+    uint8_t *msg_data = (uint8_t *) nf9.release();
+    prepare_msg(&msg_ctx, msg_data, msg_size);
+    ASSERT_EQ(ipx_nf9_conv_process(m_conv.get(), m_msg.get()), IPX_ERR_FORMAT);
+}
+
+// Conversion of very long NetFlow message (converted IPFIX Message is too long)
+// Due to additional information, IPFIX Message can exceed its max. size 2^16
+TEST_F(MsgBase, tooLongIPFIX)
+{
+    // Create a record and its context
+    const uint32_t VALUE_EXPORT = 1562857357U; // 2019-07-11T15:02:37+00:00
+    const uint32_t VALUE_UPTIME = 10001;
+    const uint32_t VALUE_ODID = 10;
+    struct ipx_msg_ctx msg_ctx = {m_session.get(), VALUE_ODID, 0};
+
+    uint16_t tid = 256;
+    Rec_norm_basic rec(tid);
+
+    /* Try to create a max. size NetFlow message (i.e. up to 2^16)
+     * NF9 header = 20B
+     * Template FlowSet header = 4B
+     * Template def (basic) = 36B
+     * Data FlowSet header = 4B
+     * N x Data Record (basic i.e. 28B per rec) -> N = 2338 basic records
+     */
+
+    nf9_set nf9_tset(IPX_NF9_SET_TMPLT);
+    nf9_tset.add_rec(rec.get_nf9_template());
+    nf9_set nf9_dset(tid);
+    for (size_t i = 0; i < 2338U; ++i) {
+        nf9_dset.add_rec(rec.get_nf9_record());
+    }
+    nf9_msg nf9;
+    nf9.set_odid(VALUE_ODID);
+    nf9.set_time_unix(VALUE_EXPORT);
+    nf9.set_time_uptime(VALUE_UPTIME);
+    nf9.add_set(nf9_tset);
+    nf9.add_set(nf9_dset);
+
+    // Try to convert the message
+    uint16_t msg_size = nf9.size();
+    uint8_t *msg_data = (uint8_t *) nf9.release();
+    prepare_msg(&msg_ctx, msg_data, msg_size);
+    ASSERT_EQ(ipx_nf9_conv_process(m_conv.get(), m_msg.get()), IPX_ERR_FORMAT);
+}
+
+// Unexpected end of a Template definition
+TEST_F(MsgBase, unexpectedEndOfTemplate)
+{
+    // Create a record and its context
+    const uint32_t VALUE_EXPORT = 1562857357U; // 2019-07-11T15:02:37+00:00
+    const uint32_t VALUE_UPTIME = 10001;
+    const uint32_t VALUE_ODID = 10;
+    struct ipx_msg_ctx msg_ctx = {m_session.get(), VALUE_ODID, 0};
+
+    uint16_t tid = 3452;
+    Rec_norm_enterprise rec_norm(tid);
+
+    nf9_set nf9_tset(IPX_NF9_SET_TMPLT);
+    nf9_tset.add_rec(rec_norm.get_nf9_template());
+    const uint16_t hdr_size = IPX_NF9_MSG_HDR_LEN;
+    uint16_t set_size = nf9_tset.size();
+
+    for (uint16_t i = 1; i < set_size; ++i) {
+        // Prepare a NetFlow message with too short Template FlowSet
+        SCOPED_TRACE("FlowSet size: " + std::to_string(i));
+        nf9_tset.overwrite_len(i);    // Override FlowSet size
+
+        nf9_msg nf9;
+        nf9.set_odid(VALUE_ODID);
+        nf9.set_time_unix(VALUE_EXPORT);
+        nf9.set_time_uptime(VALUE_UPTIME);
+        nf9.add_set(nf9_tset);
+        uint8_t *msg_orig = (uint8_t *) nf9.release();
+
+        // Create a copy of the original message with reduced size for valgrind check
+        uint16_t new_size = hdr_size + i;
+        uint8_t *new_msg = (uint8_t *) malloc(new_size);
+        ASSERT_NE(new_msg, nullptr);
+        memcpy(new_msg, msg_orig, new_size);
+        free(msg_orig);
+
+        converter_create(IPX_VERB_DEBUG); // Create a new converter for each message
+        prepare_msg(&msg_ctx, new_msg, new_size);
+        ASSERT_EQ(ipx_nf9_conv_process(m_conv.get(), m_msg.get()), IPX_ERR_FORMAT);
+    }
+
+    // Now do the same thing for Options Template
+    Rec_opts_simple rec_opts(tid);
+    nf9_set nf9_tset_opt(IPX_NF9_SET_OPTS_TMPLT);
+    nf9_tset_opt.add_rec(rec_opts.get_nf9_template());
+    set_size = nf9_tset_opt.size();
+
+    for (uint16_t i = 1; i < set_size; ++i) {
+        // Prepare a NetFlow message with too short Template FlowSet
+        SCOPED_TRACE("FlowSet size: " + std::to_string(i));
+        nf9_tset_opt.overwrite_len(i);    // Override FlowSet size
+
+        nf9_msg nf9;
+        nf9.set_odid(VALUE_ODID);
+        nf9.set_time_unix(VALUE_EXPORT);
+        nf9.set_time_uptime(VALUE_UPTIME);
+        nf9.add_set(nf9_tset_opt);
+        uint8_t *msg_orig = (uint8_t *) nf9.release();
+
+        // Create a copy of the original message with reduced size for valgrind check
+        uint16_t new_size = hdr_size + i;
+        uint8_t *new_msg = (uint8_t *) malloc(new_size);
+        ASSERT_NE(new_msg, nullptr);
+        memcpy(new_msg, msg_orig, new_size);
+        free(msg_orig);
+
+        converter_create(IPX_VERB_DEBUG); // Create a new converter for each message
+        prepare_msg(&msg_ctx, new_msg, new_size);
+        ASSERT_EQ(ipx_nf9_conv_process(m_conv.get(), m_msg.get()), IPX_ERR_FORMAT);
+    }
+}
+
+// Template definition without fields (zero field count)
+TEST_F(MsgBase, invalidTemplateDef)
+{
+    // Create a record and its context
+    const uint32_t VALUE_EXPORT = 1562857357U; // 2019-07-11T15:02:37+00:00
+    const uint32_t VALUE_UPTIME = 10001;
+    const uint32_t VALUE_ODID = 10;
+    struct ipx_msg_ctx msg_ctx = {m_session.get(), VALUE_ODID, 0};
+
+    Rec_norm_basic rec(256);
+
+    nf9_set nf9_tset(IPX_NF9_SET_TMPLT);
+    nf9_tset.add_rec(rec.get_nf9_template());
+    nf9_msg nf9;
+    nf9.set_odid(VALUE_ODID);
+    nf9.set_time_unix(VALUE_EXPORT);
+    nf9.set_time_uptime(VALUE_UPTIME);
+    nf9.add_set(nf9_tset);
+
+    // Try to convert the message
+    uint16_t msg_size = nf9.size();
+    uint8_t *msg_data = (uint8_t *) nf9.release();
+    // Overwrite field count
+    struct ipx_nf9_tset *tset = (struct ipx_nf9_tset *) (msg_data + IPX_NF9_MSG_HDR_LEN);
+    struct ipx_nf9_trec *trec = &tset->first_record;
+    trec->count = htons(0);
+
+    prepare_msg(&msg_ctx, msg_data, msg_size);
+    ASSERT_EQ(ipx_nf9_conv_process(m_conv.get(), m_msg.get()), IPX_ERR_FORMAT);
+}
+
+// Options Template with invalid definition of Scope fields (not multiple of 4, etc.)
+TEST_F(MsgBase, invalidOptionsTemplateDef)
+{
+    // Create a record and its context
+    const uint32_t VALUE_EXPORT = 1562857357U; // 2019-07-11T15:02:37+00:00
+    const uint32_t VALUE_UPTIME = 10001;
+    const uint32_t VALUE_ODID = 10;
+    struct ipx_msg_ctx msg_ctx = {m_session.get(), VALUE_ODID, 0};
+
+    Rec_opts_simple rec(256);
+
+    nf9_set nf9_tset(IPX_NF9_SET_OPTS_TMPLT);
+    nf9_tset.add_rec(rec.get_nf9_template());
+    nf9_msg nf9;
+    nf9.set_odid(VALUE_ODID);
+    nf9.set_time_unix(VALUE_EXPORT);
+    nf9.set_time_uptime(VALUE_UPTIME);
+    nf9.add_set(nf9_tset);
+
+    uint16_t msg_size = nf9.size();
+    uint8_t *msg_orig = (uint8_t *) nf9.release();
+    uint8_t *msg_data;
+    struct ipx_nf9_opts_tset *tset;
+
+    // -------- Try to convert a message with zero scope fields -----------
+    msg_data = (uint8_t *) malloc(msg_size);
+    ASSERT_NE(msg_data, nullptr);
+    memcpy(msg_data, msg_orig, msg_size);
+    tset = (struct ipx_nf9_opts_tset *) (msg_data + IPX_NF9_MSG_HDR_LEN);
+    tset->first_record.scope_length = htons(0); // << Zero size
+
+    converter_create(IPX_VERB_DEBUG);
+    prepare_msg(&msg_ctx, msg_data, msg_size);
+    // NOTE: RFC3954 doesn't say that at least one field is required -> it is probably ok
+    ASSERT_EQ(ipx_nf9_conv_process(m_conv.get(), m_msg.get()), IPX_OK);
+
+    // ------- Try to convert a message with invalid size of Scope fields -----------
+    msg_data = (uint8_t *) malloc(msg_size);
+    ASSERT_NE(msg_data, nullptr);
+    memcpy(msg_data, msg_orig, msg_size);
+    tset = (struct ipx_nf9_opts_tset *) (msg_data + IPX_NF9_MSG_HDR_LEN);
+    tset->first_record.scope_length = htons(6); // << Not a multiple of 4
+
+    converter_create(IPX_VERB_DEBUG);
+    prepare_msg(&msg_ctx, msg_data, msg_size);
+    ASSERT_EQ(ipx_nf9_conv_process(m_conv.get(), m_msg.get()), IPX_ERR_FORMAT);
+
+    // ------ Try to convert a message with zero scope fields -----------
+    msg_data = (uint8_t *) malloc(msg_size);
+    ASSERT_NE(msg_data, nullptr);
+    memcpy(msg_data, msg_orig, msg_size);
+    tset = (struct ipx_nf9_opts_tset *) (msg_data + IPX_NF9_MSG_HDR_LEN);
+    tset->first_record.option_length = htons(7); // << Not a multiple of 4
+
+    converter_create(IPX_VERB_DEBUG);
+    prepare_msg(&msg_ctx, msg_data, msg_size);
+    ASSERT_EQ(ipx_nf9_conv_process(m_conv.get(), m_msg.get()), IPX_ERR_FORMAT);
+
+    free(msg_orig);
+}
+
+// Unexpected end of Data FlowSet
+TEST_F(MsgBase, unexpectedEndOfDataSet)
+{
+    // Create a record and its context
+    const uint32_t VALUE_EXPORT = 1562857357U; // 2019-07-11T15:02:37+00:00
+    const uint32_t VALUE_UPTIME = 10001;
+    const uint32_t VALUE_ODID = 10;
+    struct ipx_msg_ctx msg_ctx = {m_session.get(), VALUE_ODID, 0};
+
+    uint16_t tid = 256;
+    Rec_norm_enterprise rec(tid);
+
+    nf9_set nf9_tset(IPX_NF9_SET_TMPLT);
+    nf9_tset.add_rec(rec.get_nf9_template());
+    nf9_set nf9_dset(tid);
+    nf9_dset.add_rec(rec.get_nf9_record());
+    nf9_msg nf9;
+    nf9.set_odid(VALUE_ODID);
+    nf9.set_time_unix(VALUE_EXPORT);
+    nf9.set_time_uptime(VALUE_UPTIME);
+    nf9.add_set(nf9_tset);
+    nf9.add_set(nf9_dset);
+
+    // Try to convert the message
+    uint16_t msg_size = nf9.size();
+    uint8_t *msg_data = (uint8_t *) nf9.release();
+
+    for (uint16_t i = 1; i < nf9_dset.size(); ++i) {
+        // Create a copy and try different Data FlowSet sizes
+        SCOPED_TRACE("Removed (bytes): " + std::to_string(i));
+
+        uint16_t new_size = msg_size - i;
+        uint8_t *new_msg = (uint8_t *) malloc(new_size);
+        ASSERT_NE(new_msg, nullptr);
+        memcpy(new_msg, msg_data, new_size);
+
+        converter_create(IPX_VERB_DEBUG);
+        prepare_msg(&msg_ctx, new_msg, new_size);
+        ASSERT_EQ(ipx_nf9_conv_process(m_conv.get(), m_msg.get()), IPX_ERR_FORMAT);
+    }
+
+    free(msg_data);
+}

@@ -302,7 +302,6 @@ conv_mem_reserve(ipx_nf9_conv_t *conv, size_t size)
     new_alloc /= 1024U;
     new_alloc += 1U;
     new_alloc *= 1024U;
-    // TODO: during TEST allocate only to required size and use valgrind
     uint8_t *new_msg = realloc(conv->data.ipx_msg, new_alloc * sizeof(uint8_t));
     if (!new_msg) {
         return IPX_ERR_NOMEM;
@@ -1042,7 +1041,7 @@ conv_process_dset(ipx_nf9_conv_t *conv, const struct ipx_nf9_set_hdr *flowset_hd
     size_t hdr_offset = conv_mem_pos_get(conv);
     conv_mem_commit(conv, FDS_IPFIX_SET_HDR_LEN);
 
-    // Convert all records in the Template Set
+    // Convert all records in the Data Set
     uint16_t rec_processed = 0;
     struct ipx_nf9_dset_iter it;
     ipx_nf9_dset_iter_init(&it, flowset_hdr, tmplt->nf9_drec_len);
@@ -1106,7 +1105,7 @@ conv_process_msg(ipx_nf9_conv_t *conv, const struct ipx_nf9_msg_hdr *nf9_msg, ui
      * be also part of the message and we need to change their template definition (i.e. add
      * Enterprise Numbers).
      */
-    size_t new_size = (size_t) nf9_size + (8U * ntohs(nf9_msg->count));   // TODO: try only header size during tests...
+    size_t new_size = (size_t) nf9_size + (8U * ntohs(nf9_msg->count));
     if (conv_mem_reserve(conv, new_size) != IPX_OK) {
         CONV_ERROR(conv, "A memory allocation failed (%s:%d).", __FILE__, __LINE__);
         return IPX_ERR_NOMEM;
@@ -1131,9 +1130,9 @@ conv_process_msg(ipx_nf9_conv_t *conv, const struct ipx_nf9_msg_hdr *nf9_msg, ui
             // (Options) Template FlowSet
             rc_conv = conv_process_tset(conv, it.set);
         } else {
-            // Unknown FlowSet ID // TODO: skip unknown
-            CONV_ERROR(conv, "Unknown FlowSet ID %" PRIu16, flowset_id);
-            rc_conv = IPX_ERR_FORMAT;
+            // Unknown FlowSet ID -> skip
+            CONV_INFO(conv, "Ignoring FlowSet with unsupported ID %" PRIu16, flowset_id);
+            rc_conv = IPX_OK;
         }
     }
 
