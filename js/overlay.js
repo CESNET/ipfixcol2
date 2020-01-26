@@ -88,6 +88,9 @@ class Overlay extends React.Component {
         // var changedModule = changedSubmodule;
         // var changedModule = this.state.module;
         // changedModule[propertyName] = changedSubmodule;
+        var valid = ajv.validate(this.props.jsonSchema, changedSubmodule);
+        console.log("valid: " + valid);
+        if (!valid) console.log(ajv.errors);
         this.setState({
             module: changedSubmodule
         });
@@ -594,18 +597,19 @@ class StringProperty extends React.Component {
 
 class IntegerProperty extends React.Component {
     handleChange(event) {
+        var value = Number(event.target.value);
         if (
             this.props.jsonSchema.hasOwnProperty("minimum") &&
-            event.target.value < this.props.jsonSchema.minimum
+            value < this.props.jsonSchema.minimum
         ) {
             this.props.onChange(this.props.name, this.props.jsonSchema.minimum);
         } else if (
             this.props.jsonSchema.hasOwnProperty("maximum") &&
-            event.target.value > this.props.jsonSchema.maximum
+            value > this.props.jsonSchema.maximum
         ) {
             this.props.onChange(this.props.name, this.props.jsonSchema.maximum);
         } else {
-            this.props.onChange(this.props.name, event.target.value);
+            this.props.onChange(this.props.name, value);
         }
     }
     handleRemove() {
@@ -758,18 +762,19 @@ class BooleanProperty extends React.Component {
 
 class NumberProperty extends React.Component {
     handleChange(event) {
+        var value = Number(event.target.value);
         if (
             this.props.jsonSchema.hasOwnProperty("minimum") &&
-            event.target.value < this.props.jsonSchema.minimum
+            value < this.props.jsonSchema.minimum
         ) {
             this.props.onChange(this.props.name, this.props.jsonSchema.minimum);
         } else if (
             this.props.jsonSchema.hasOwnProperty("maximum") &&
-            event.target.value > this.props.jsonSchema.maximum
+            value > this.props.jsonSchema.maximum
         ) {
             this.props.onChange(this.props.name, this.props.jsonSchema.maximum);
         } else {
-            this.props.onChange(this.props.name, event.target.value);
+            this.props.onChange(this.props.name, value);
         }
     }
     handleRemove() {

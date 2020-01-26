@@ -55,6 +55,7 @@ const defaultConfig = {
 };
 
 const x2js = new X2JS();
+const ajv = new Ajv();
 
 class App extends React.Component {
     constructor(props) {

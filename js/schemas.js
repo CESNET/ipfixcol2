@@ -6,7 +6,8 @@ const jsonSchemaUDP = {
     properties: {
         name: {
             type: "string",
-            default: "UDP input"
+            default: "UDP input",
+            minLength: 1
         },
         plugin: {
             type: "string",
@@ -22,7 +23,8 @@ const jsonSchemaUDP = {
                 },
                 localIPAddress: {
                     type: "string",
-                    default: ""
+                    default: "",
+                    minLength: 1
                 },
                 connectionTimeout: {
                     type: "integer",
@@ -50,7 +52,8 @@ const jsonSchemaTCP = {
     properties: {
         name: {
             type: "string",
-            default: "TCP input"
+            default: "TCP input",
+            minLength: 1
         },
         plugin: {
             type: "string",
@@ -66,7 +69,8 @@ const jsonSchemaTCP = {
                 },
                 localIPAddress: {
                     type: "string",
-                    default: ""
+                    default: "",
+                    minLength: 1
                 }
             },
             required: ["localPort", "localIPAddress"]
@@ -82,7 +86,8 @@ const jsonSchemaAnonymization = {
     properties: {
         name: {
             type: "string",
-            default: "Flow anonymization"
+            default: "Flow anonymization",
+            minLength: 1
         },
         plugin: {
             type: "string",
@@ -97,7 +102,8 @@ const jsonSchemaAnonymization = {
                 },
                 key: {
                     type: "string",
-                    default: ""
+                    default: "",
+                    minLength: 1
                 }
             },
             required: ["type", "key"]
@@ -113,7 +119,8 @@ const jsonSchemaJSON = {
     properties: {
         name: {
             type: "string",
-            default: "JSON output"
+            default: "JSON output",
+            minLength: 1
         },
         plugin: {
             type: "string",
@@ -162,7 +169,8 @@ const jsonSchemaJSON = {
                                 type: "object",
                                 properties: {
                                     name: {
-                                        type: "string"
+                                        type: "string",
+                                        minLength: 1
                                     },
                                     port: {
                                         type: "integer"
@@ -182,10 +190,12 @@ const jsonSchemaJSON = {
                                 type: "object",
                                 properties: {
                                     name: {
-                                        type: "string"
+                                        type: "string",
+                                        minLength: 1
                                     },
                                     ip: {
-                                        type: "string"
+                                        type: "string",
+                                        minLength: 1
                                     },
                                     port: {
                                         type: "integer"
@@ -209,13 +219,16 @@ const jsonSchemaJSON = {
                                 type: "object",
                                 properties: {
                                     name: {
-                                        type: "string"
+                                        type: "string",
+                                        minLength: 1
                                     },
                                     path: {
-                                        type: "string"
+                                        type: "string",
+                                        minLength: 1
                                     },
                                     prefix: {
-                                        type: "string"
+                                        type: "string",
+                                        minLength: 1
                                     },
                                     timeWindow: {
                                         type: "integer",
@@ -234,7 +247,8 @@ const jsonSchemaJSON = {
                             type: "object",
                             properties: {
                                 name: {
-                                    type: "string"
+                                    type: "string",
+                                    minLength: 1
                                 }
                             },
                             required: ["name"]
@@ -264,7 +278,8 @@ const jsonSchemaDummy = {
     properties: {
         name: {
             type: "string",
-            default: "Dummy output"
+            default: "Dummy output",
+            minLength: 1
         },
         plugin: {
             type: "string",
@@ -291,7 +306,8 @@ const jsonSchemaLNF = {
     properties: {
         name: {
             type: "string",
-            default: "LNF storage"
+            default: "LNF storage",
+            minLength: 1
         },
         plugin: {
             type: "string",
@@ -301,7 +317,8 @@ const jsonSchemaLNF = {
             type: "object",
             properties: {
                 storagePath: {
-                    type: "string"
+                    type: "string",
+                    minLength: 1
                 },
                 compress: {
                     type: "string",
@@ -310,7 +327,8 @@ const jsonSchemaLNF = {
                 },
                 identificatorField: {
                     type: "string",
-                    default: ""
+                    default: "",
+                    minLength: 1
                 },
                 dumpInterval: {
                     type: "object",
@@ -367,7 +385,8 @@ const jsonSchemaUniRec = {
     properties: {
         name: {
             type: "string",
-            default: "UniRec plugin"
+            default: "UniRec plugin",
+            minLength: 1
         },
         plugin: {
             type: "string",
@@ -377,7 +396,8 @@ const jsonSchemaUniRec = {
             type: "object",
             properties: {
                 uniRecFormat: {
-                    type: "string"
+                    type: "string",
+                    minLength: 1
                 },
                 trapIfcCommon: {
                     type: "object",
@@ -406,7 +426,8 @@ const jsonSchemaUniRec = {
                             type: "object",
                             properties: {
                                 name: {
-                                    type: "string"
+                                    type: "string",
+                                    minLength: 1
                                 },
                                 maxClients: {
                                     type: "integer",
@@ -441,13 +462,16 @@ const jsonSchemaUniRec = {
                                     default: 64
                                 },
                                 keyFile: {
-                                    type: "string"
+                                    type: "string",
+                                    minLength: 1
                                 },
                                 certFile: {
-                                    type: "string"
+                                    type: "string",
+                                    minLength: 1
                                 },
                                 caFile: {
-                                    type: "string"
+                                    type: "string",
+                                    minLength: 1
                                 }
                             },
                             required: ["port", "maxClients", "keyFile", "certFile", "caFile"]
@@ -456,7 +480,8 @@ const jsonSchemaUniRec = {
                             type: "object",
                             properties: {
                                 name: {
-                                    type: "string"
+                                    type: "string",
+                                    minLength: 1
                                 },
                                 mode: {
                                     type: "string",
