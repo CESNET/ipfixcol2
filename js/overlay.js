@@ -68,12 +68,21 @@ function moduleArrayAddItem(array, jsonSchema) {
 class Overlay extends React.Component {
     constructor(props) {
         super(props);
+        var module =
+            this.props.module !== undefined
+                ? this.props.module
+                : moduleCreate(this.props.jsonSchema);
+        var valid = ajv.validate(this.props.jsonSchema, module);
+        var errors = undefined;
+        console.log("valid: " + valid);
+        if (!valid) {
+            console.log(ajv.errors);
+            errors = JSON.parse(JSON.stringify(ajv.errors));
+        }
         this.state = {
-            module:
-                this.props.module !== undefined
-                    ? this.props.module
-                    : moduleCreate(this.props.jsonSchema),
-            isNew: this.props.module === undefined
+            module: module,
+            isNew: this.props.module === undefined,
+            errors: errors
         };
     }
     handleComfirm() {
@@ -89,10 +98,15 @@ class Overlay extends React.Component {
         // var changedModule = this.state.module;
         // changedModule[propertyName] = changedSubmodule;
         var valid = ajv.validate(this.props.jsonSchema, changedSubmodule);
+        var errors = undefined;
         console.log("valid: " + valid);
-        if (!valid) console.log(ajv.errors);
+        if (!valid) {
+            console.log(ajv.errors);
+            errors = JSON.parse(JSON.stringify(ajv.errors));
+        }
         this.setState({
-            module: changedSubmodule
+            module: changedSubmodule,
+            errors: errors
         });
     }
     render() {
@@ -113,6 +127,8 @@ class Overlay extends React.Component {
                             <Properties
                                 module={this.state.module}
                                 jsonSchema={this.props.jsonSchema}
+                                errors={this.state.errors}
+                                dataPath={""}
                                 onChange={this.handleChange.bind(this)}
                                 required={true}
                                 isRoot={true}
@@ -195,9 +211,14 @@ class Properties extends React.Component {
     render() {
         var name = this.props.isRoot ? "" : this.props.name;
         var optionalMenu = "";
+        var errorIcon = "";
         var removeButton = "";
         var expandButton = "";
         var properties = "";
+        var hasError = false;
+        var propsErrors;
+        var childErrorsNum = 0;
+        var errorMessage = "";
         if (
             (!this.props.jsonSchema.hasOwnProperty("required") ||
                 Object.keys(this.props.jsonSchema.properties).length >
@@ -243,6 +264,26 @@ class Properties extends React.Component {
                 </div>
             );
         }
+        if (this.props.errors !== undefined) {
+            propsErrors = Object.values(this.props.errors).filter(error => {
+                if (error.dataPath == this.props.dataPath) {
+                    return true;
+                }
+                return false;
+            });
+            hasError = propsErrors.length > 0;
+            childErrorsNum = this.props.errors.length - propsErrors.length;
+        }
+        if (hasError) {
+            errorMessage = propsErrors.pop().message;
+            errorIcon = (
+                <IconButton>
+                    <Tooltip title={errorMessage} arrow>
+                        <Icon color={"error"}>error</Icon>
+                    </Tooltip>
+                </IconButton>
+            );
+        }
         if (this.props.hasOwnProperty("required") && !this.props.required) {
             removeButton = (
                 <IconButton onClick={this.handleRemove.bind(this)}>
@@ -256,16 +297,23 @@ class Properties extends React.Component {
         ) {
             expandButton = (
                 <IconButton
-                    className={"expandable" + (this.state.expanded ? " expanded" : "")}
                     onClick={this.handleExpandClick.bind(this)}
                     aria-expanded={this.state.expanded}
                     aria-label="show more"
                 >
-                    <Icon>expand_more</Icon>
+                    <Badge
+                        color={"error"}
+                        badgeContent={childErrorsNum}
+                        invisible={this.state.expanded || childErrorsNum == 0}
+                    >
+                        <Icon className={"expandable" + (this.state.expanded ? " expanded" : "")}>
+                            expand_more
+                        </Icon>
+                    </Badge>
                 </IconButton>
             );
             properties = (
-                <Collapse in={this.state.expanded} timeout="auto" unmountOnExit>
+                <Collapse in={this.state.expanded} timeout="auto">
                     {Object.keys(this.props.jsonSchema.properties).map(propertyName => {
                         if (
                             (!this.props.jsonSchema.hasOwnProperty("required") ||
@@ -277,6 +325,27 @@ class Properties extends React.Component {
                         var isOptional =
                             this.props.jsonSchema.hasOwnProperty("required") &&
                             this.props.jsonSchema.required.includes(propertyName);
+                        var dataPath = this.props.dataPath + "." + propertyName;
+                        var errors = undefined;
+                        if (this.props.errors !== undefined) {
+                            errors = Object.values(this.props.errors).filter(error => {
+                                {
+                                    /* console.log(error);
+                                console.log(error.dataPath); */
+                                }
+                                if (
+                                    error.dataPath == dataPath ||
+                                    error.dataPath.startsWith(dataPath + ".") ||
+                                    error.dataPath.startsWith(dataPath + "[")
+                                ) {
+                                    return true;
+                                }
+                                return false;
+                            });
+                            if (errors === []) {
+                                errors = undefined;
+                            }
+                        }
                         return (
                             <CardContent key={propertyName}>
                                 <Item
@@ -285,6 +354,8 @@ class Properties extends React.Component {
                                     module={this.props.module[propertyName]}
                                     required={isOptional}
                                     jsonSchema={this.props.jsonSchema.properties[propertyName]}
+                                    errors={errors}
+                                    dataPath={dataPath}
                                     onChange={this.handleChange.bind(this)}
                                     onRemove={this.handleRemoveChild.bind(this)}
                                 />
@@ -300,6 +371,7 @@ class Properties extends React.Component {
                     <CardHeader
                         action={
                             <div>
+                                {errorIcon}
                                 {removeButton}
                                 {expandButton}
                             </div>
@@ -330,6 +402,8 @@ class Item extends React.Component {
                         module={this.props.module}
                         required={this.props.required}
                         jsonSchema={this.props.jsonSchema}
+                        errors={this.props.errors}
+                        dataPath={this.props.dataPath}
                         onChange={this.props.onChange}
                         onRemove={this.props.onRemove}
                     />
@@ -341,6 +415,8 @@ class Item extends React.Component {
                         module={this.props.module}
                         required={this.props.required}
                         jsonSchema={this.props.jsonSchema}
+                        errors={this.props.errors}
+                        dataPath={this.props.dataPath}
                         onChange={this.props.onChange}
                         onRemove={this.props.onRemove}
                     />
@@ -352,6 +428,8 @@ class Item extends React.Component {
                         module={this.props.module}
                         required={this.props.required}
                         jsonSchema={this.props.jsonSchema}
+                        errors={this.props.errors}
+                        dataPath={this.props.dataPath}
                         onChange={this.props.onChange}
                         onRemove={this.props.onRemove}
                         isRoot={false}
@@ -364,6 +442,8 @@ class Item extends React.Component {
                         module={this.props.module}
                         required={this.props.required}
                         jsonSchema={this.props.jsonSchema}
+                        errors={this.props.errors}
+                        dataPath={this.props.dataPath}
                         onChange={this.props.onChange}
                         onRemove={this.props.onRemove}
                     />
@@ -375,6 +455,8 @@ class Item extends React.Component {
                         module={this.props.module}
                         required={this.props.required}
                         jsonSchema={this.props.jsonSchema}
+                        errors={this.props.errors}
+                        dataPath={this.props.dataPath}
                         onChange={this.props.onChange}
                         onRemove={this.props.onRemove}
                     />
@@ -386,6 +468,8 @@ class Item extends React.Component {
                         module={this.props.module}
                         required={this.props.required}
                         jsonSchema={this.props.jsonSchema}
+                        errors={this.props.errors}
+                        dataPath={this.props.dataPath}
                         onChange={this.props.onChange}
                         onRemove={this.props.onRemove}
                     />
@@ -422,6 +506,7 @@ class ArrayProperty extends React.Component {
         var changedModule = JSON.parse(JSON.stringify(this.props.module));
         moduleArrayAddItem(changedModule, this.props.jsonSchema.items);
         this.props.onChange(this.props.name, changedModule);
+        this.setState({ expanded: true });
     }
     handleExpandClick() {
         this.setState({ expanded: !this.state.expanded });
@@ -431,8 +516,13 @@ class ArrayProperty extends React.Component {
         var name = this.props.name;
         var buttonText = "Add item";
         var button = "";
+        var errorIcon = "";
         var expandButton = "";
         var items = "";
+        var hasError = false;
+        var propsErrors;
+        var childErrorsNum = 0;
+        var errorMessage = "";
         if (
             !this.props.jsonSchema.hasOwnProperty("maxItems") ||
             (this.props.jsonSchema.hasOwnProperty("maxItems") &&
@@ -444,19 +534,67 @@ class ArrayProperty extends React.Component {
                 </Button>
             );
         }
+        if (this.props.errors !== undefined) {
+            propsErrors = Object.values(this.props.errors).filter(error => {
+                if (error.dataPath == this.props.dataPath) {
+                    return true;
+                }
+                return false;
+            });
+            hasError = propsErrors.length > 0;
+            childErrorsNum = this.props.errors.length - propsErrors.length;
+        }
+        if (hasError) {
+            errorMessage = propsErrors.pop().message;
+            errorIcon = (
+                <IconButton>
+                    <Tooltip title={errorMessage} arrow>
+                        <Icon color={"error"}>error</Icon>
+                    </Tooltip>
+                </IconButton>
+            );
+        }
         expandButton = (
             <IconButton
-                className={"expandable" + (this.state.expanded ? " expanded" : "")}
                 onClick={this.handleExpandClick.bind(this)}
                 aria-expanded={this.state.expanded}
                 aria-label="show more"
             >
-                <Icon>expand_more</Icon>
+                <Badge
+                    color={"error"}
+                    badgeContent={childErrorsNum}
+                    invisible={this.state.expanded || childErrorsNum == 0}
+                >
+                    <Icon className={"expandable" + (this.state.expanded ? " expanded" : "")}>
+                        expand_more
+                    </Icon>
+                </Badge>
             </IconButton>
         );
         items = (
-            <Collapse in={this.state.expanded} timeout="auto" unmountOnExit>
+            <Collapse in={this.state.expanded} timeout="auto">
                 {this.props.module.map((item, index) => {
+                    var dataPath = this.props.dataPath + "[" + index + "]";
+                    var errors = undefined;
+                    if (this.props.errors !== undefined) {
+                        errors = Object.values(this.props.errors).filter(error => {
+                            {
+                                /* console.log(error);
+                            console.log(error.dataPath); */
+                            }
+                            if (
+                                error.dataPath == dataPath ||
+                                error.dataPath.startsWith(dataPath + ".") ||
+                                error.dataPath.startsWith(dataPath + "[")
+                            ) {
+                                return true;
+                            }
+                            return false;
+                        });
+                        if (errors === []) {
+                            errors = undefined;
+                        }
+                    }
                     return (
                         <CardContent key={index}>
                             <Item
@@ -465,6 +603,8 @@ class ArrayProperty extends React.Component {
                                 module={item}
                                 required={false}
                                 jsonSchema={this.props.jsonSchema.items}
+                                errors={errors}
+                                dataPath={dataPath}
                                 onChange={this.handleChange.bind(this, index)}
                                 onRemove={this.handleRemove.bind(this, index)}
                             />
@@ -475,7 +615,16 @@ class ArrayProperty extends React.Component {
         );
         return (
             <Card>
-                <CardHeader action={expandButton} title={name} subheader={"(Array)"} />
+                <CardHeader
+                    action={
+                        <div>
+                            {errorIcon}
+                            {expandButton}
+                        </div>
+                    }
+                    title={name}
+                    subheader={"(Array)"}
+                />
                 {items}
                 {button !== "" ? <CardActions disableSpacing>{button}</CardActions> : ""}
             </Card>
@@ -506,10 +655,15 @@ class StringProperty extends React.Component {
         if (value === null) {
             value = "";
         }
+        var hasError = this.props.errors !== undefined && this.props.errors.length > 0;
+        var errorMessage = "";
+        if (hasError) {
+            errorMessage = this.props.errors.pop().message;
+        }
         if (this.props.jsonSchema.hasOwnProperty("enum")) {
             if (this.props.required) {
                 inputCode = (
-                    <FormControl>
+                    <FormControl error={hasError}>
                         <InputLabel>{this.props.name}</InputLabel>
                         <Select
                             className={"select"}
@@ -529,7 +683,7 @@ class StringProperty extends React.Component {
                 );
             } else {
                 inputCode = (
-                    <FormControl>
+                    <FormControl error={hasError}>
                         <InputLabel>{this.props.name}</InputLabel>
                         <Select
                             className={"select"}
@@ -557,7 +711,7 @@ class StringProperty extends React.Component {
             }
         } else if (!this.props.required) {
             inputCode = (
-                <FormControl>
+                <FormControl error={hasError}>
                     <InputLabel>{this.props.name}</InputLabel>
                     <Input
                         className={"select"}
@@ -565,7 +719,6 @@ class StringProperty extends React.Component {
                         name={this.props.name}
                         value={value}
                         readOnly={readOnly}
-                        required={this.props.required}
                         onChange={onChange}
                         endAdornment={
                             <InputAdornment position="end">
@@ -586,11 +739,16 @@ class StringProperty extends React.Component {
                     name={this.props.name}
                     value={value}
                     readOnly={readOnly}
-                    required={this.props.required}
                     onChange={onChange}
+                    error={hasError}
                 />
             );
         }
+        inputCode = (
+            <Tooltip open={hasError} title={errorMessage} arrow placement={"right"}>
+                {inputCode}
+            </Tooltip>
+        );
         return <div>{inputCode}</div>;
     }
 }
@@ -639,6 +797,11 @@ class IntegerProperty extends React.Component {
         if (value === null) {
             value = "";
         }
+        var hasError = this.props.errors !== undefined && this.props.errors.length > 0;
+        var errorMessage = "";
+        if (hasError) {
+            errorMessage = this.props.errors.pop().message;
+        }
         if (this.props.required) {
             inputCode = (
                 <TextField
@@ -648,14 +811,14 @@ class IntegerProperty extends React.Component {
                     name={this.props.name}
                     value={value}
                     readOnly={readOnly}
-                    required={this.props.required}
                     inputProps={{ min: min, max: max, step: 1 }}
                     onChange={onChange}
+                    error={hasError}
                 />
             );
         } else {
             inputCode = (
-                <FormControl>
+                <FormControl error={hasError}>
                     <InputLabel>{this.props.name}</InputLabel>
                     <Input
                         className={"select"}
@@ -663,7 +826,6 @@ class IntegerProperty extends React.Component {
                         name={this.props.name}
                         value={value}
                         readOnly={readOnly}
-                        required={this.props.required}
                         inputProps={{ min: min, max: max, step: 1 }}
                         onChange={onChange}
                         endAdornment={
@@ -677,6 +839,11 @@ class IntegerProperty extends React.Component {
                 </FormControl>
             );
         }
+        inputCode = (
+            <Tooltip open={hasError} title={errorMessage} arrow placement={"right"}>
+                {inputCode}
+            </Tooltip>
+        );
         return <div>{inputCode}</div>;
     }
 }
@@ -708,9 +875,14 @@ class BooleanProperty extends React.Component {
         if (this.props.jsonSchema.hasOwnProperty("enum")) {
             enumValues = this.props.jsonSchema.enum;
         }
+        var hasError = this.props.errors !== undefined && this.props.errors.length > 0;
+        var errorMessage = "";
+        if (hasError) {
+            errorMessage = this.props.errors.pop().message;
+        }
         if (this.props.required) {
             inputCode = (
-                <FormControl>
+                <FormControl error={hasError}>
                     <InputLabel>{this.props.name}</InputLabel>
                     <Select
                         className={"select"}
@@ -730,7 +902,7 @@ class BooleanProperty extends React.Component {
             );
         } else {
             inputCode = (
-                <FormControl>
+                <FormControl error={hasError}>
                     <InputLabel>{this.props.name}</InputLabel>
                     <Select
                         className={"select"}
@@ -756,6 +928,11 @@ class BooleanProperty extends React.Component {
                 </FormControl>
             );
         }
+        inputCode = (
+            <Tooltip open={hasError} title={errorMessage} arrow placement={"right"}>
+                {inputCode}
+            </Tooltip>
+        );
         return <div>{inputCode}</div>;
     }
 }
@@ -804,21 +981,28 @@ class NumberProperty extends React.Component {
         if (value === null) {
             value = "";
         }
+        var hasError = this.props.errors !== undefined && this.props.errors.length > 0;
+        var errorMessage = "";
+        if (hasError) {
+            errorMessage = this.props.errors.pop().message;
+        }
         if (this.props.required) {
-            <TextField
-                className={"select"}
-                label={this.props.name}
-                type={"number"}
-                name={this.props.name}
-                value={value}
-                readOnly={readOnly}
-                required={this.props.required}
-                inputProps={{ min: min, max: max, step: 0.01 }}
-                onChange={onChange}
-            />;
+            inputCode = (
+                <TextField
+                    className={"select"}
+                    label={this.props.name}
+                    type={"number"}
+                    name={this.props.name}
+                    value={value}
+                    readOnly={readOnly}
+                    inputProps={{ min: min, max: max, step: 0.01 }}
+                    onChange={onChange}
+                    error={hasError}
+                />
+            );
         } else {
             inputCode = (
-                <FormControl>
+                <FormControl error={hasError}>
                     <InputLabel>{this.props.name}</InputLabel>
                     <Input
                         className={"select"}
@@ -826,8 +1010,7 @@ class NumberProperty extends React.Component {
                         name={this.props.name}
                         value={value}
                         readOnly={readOnly}
-                        required={this.props.required}
-                        inputProps={{ min: min, max: max, step: 1 }}
+                        inputProps={{ min: min, max: max, step: 0.01 }}
                         onChange={onChange}
                         endAdornment={
                             <InputAdornment position="end">
@@ -840,6 +1023,11 @@ class NumberProperty extends React.Component {
                 </FormControl>
             );
         }
+        inputCode = (
+            <Tooltip open={hasError} title={errorMessage} arrow placement={"right"}>
+                {inputCode}
+            </Tooltip>
+        );
         return <div>{inputCode}</div>;
     }
 }

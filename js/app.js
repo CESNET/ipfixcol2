@@ -1,5 +1,6 @@
 const {
     Allert,
+    Badge,
     Button,
     Card,
     CardContent,
@@ -29,6 +30,7 @@ const {
     Select,
     Snackbar,
     TextareaAutosize,
+    Tooltip,
     Typography
 } = MaterialUI;
 // Obtain the root element
@@ -55,7 +57,7 @@ const defaultConfig = {
 };
 
 const x2js = new X2JS();
-const ajv = new Ajv();
+const ajv = new Ajv({ allErrors: true });
 
 class App extends React.Component {
     constructor(props) {

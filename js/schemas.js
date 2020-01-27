@@ -24,7 +24,7 @@ const jsonSchemaUDP = {
                 localIPAddress: {
                     type: "string",
                     default: "",
-                    minLength: 1
+                    minLength: 7
                 },
                 connectionTimeout: {
                     type: "integer",
@@ -70,7 +70,7 @@ const jsonSchemaTCP = {
                 localIPAddress: {
                     type: "string",
                     default: "",
-                    minLength: 1
+                    minLength: 7
                 }
             },
             required: ["localPort", "localIPAddress"]
