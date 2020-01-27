@@ -207,7 +207,7 @@ ipx_plugin_mgr::cache_add_file(const char *path)
     dlerror();
 
     // Try to load the plugin (and unload it automatically)
-    const int flags = RTLD_LAZY | RTLD_LOCAL;
+    const int flags = RTLD_LAZY | RTLD_LOCAL | RTLD_DEEPBIND;
     auto delete_fn = [](void *handle) {dlclose(handle);};
     std::unique_ptr<void, std::function<void(void*)>> handle(dlopen(path, flags), delete_fn);
     if (!handle) {
@@ -308,7 +308,7 @@ ipx_plugin_mgr::plugin_list()
         dlerror();
 
         const char *path = cache_entry.path.c_str();
-        const int flags = RTLD_LAZY | RTLD_LOCAL;
+        const int flags = RTLD_LAZY | RTLD_LOCAL | RTLD_DEEPBIND;
         auto delete_fn = [](void *handle) {dlclose(handle);};
 
         std::unique_ptr<void, std::function<void(void*)>> handle(dlopen(path, flags), delete_fn);
@@ -512,7 +512,7 @@ ipx_plugin_mgr::plugin::plugin(const std::string &path,  bool auto_unload)
 
     // Load the plugin
     auto delete_fn = [](void *handle) {dlclose(handle);};
-    int flags = RTLD_NOW | RTLD_LOCAL;
+    int flags = RTLD_NOW | RTLD_LOCAL | RTLD_DEEPBIND;
     dlerror(); // Clear all errors first
     std::unique_ptr<void, std::function<void(void*)>> handle_wrap(dlopen(path.c_str(), flags), delete_fn);
     if (!handle_wrap) {
