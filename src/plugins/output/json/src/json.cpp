@@ -49,6 +49,7 @@
 #include "File.hpp"
 #include "Server.hpp"
 #include "Sender.hpp"
+#include "Kafka.hpp"
 
 /** Plugin description */
 IPX_API struct ipx_plugin_info ipx_plugin_info = {
@@ -61,7 +62,7 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
     // Configuration flags (reserved for future use)
     0,
     // Plugin version string (like "1.2.3")
-    "2.1.0",
+    "2.2.0",
     // Minimal IPFIXcol version string (like "1.2.3")
     "2.1.0"
 };
@@ -100,6 +101,10 @@ outputs_initialize(ipx_ctx_t *ctx, Storage *storage, Config *cfg)
 
     for (const auto &send : cfg->outputs.sends) {
         storage->output_add(new Sender(send, ctx));
+    }
+
+    for (const auto &kafka : cfg->outputs.kafkas) {
+        storage->output_add(new Kafka(kafka, ctx));
     }
 }
 
