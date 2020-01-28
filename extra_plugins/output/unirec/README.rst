@@ -50,7 +50,7 @@ except the one you would like to use.
         <plugin>unirec</plugin>
         <params>
             <uniRecFormat>TIME_FIRST,TIME_LAST,SRC_IP,DST_IP,PROTOCOL,?SRC_PORT,?DST_PORT,?TCP_FLAGS,PACKETS,BYTES</uniRecFormat>
-            <splitBiflow>false</splitBiflow>
+            <splitBiflow>true</splitBiflow>
 
             <trapIfcCommon>
                 <timeout>NO_WAIT</timeout>
