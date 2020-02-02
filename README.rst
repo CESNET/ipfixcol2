@@ -79,7 +79,7 @@ Second, install build dependencies of the collector
 
 .. code-block::
 
-    yum install gcc gcc-c++ cmake make python3-docutils zlib-devel
+    yum install gcc gcc-c++ cmake make python3-docutils zlib-devel librdkafka-devel
     # Optionally: doxygen pkgconfig
 
 * Note: latest systems (e.g. Fedora) use ``dnf`` instead of ``yum``.
@@ -90,7 +90,7 @@ Second, install build dependencies of the collector
 
 .. code-block::
 
-    apt-get install gcc g++ cmake make python3-docutils zlib1g-dev
+    apt-get install gcc g++ cmake make python3-docutils zlib1g-dev librdkafka-dev
     # Optionally: doxygen pkg-config
 
 Finally, build and install the collector:
