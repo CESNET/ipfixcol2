@@ -39,6 +39,7 @@
  *
  */
 
+#include <cstdio>
 #include <memory>
 #include <set>
 #include <sstream>
@@ -149,7 +150,7 @@ static const struct fds_xml_args args_kafka[] = {
     FDS_OPTS_ELEM(KAFKA_NAME,       "name",          FDS_OPTS_T_STRING, 0),
     FDS_OPTS_ELEM(KAFKA_BROKERS,    "brokers",       FDS_OPTS_T_STRING, 0),
     FDS_OPTS_ELEM(KAFKA_TOPIC,      "topic",         FDS_OPTS_T_STRING, 0),
-    FDS_OPTS_ELEM(KAFKA_PARTION,    "partition",     FDS_OPTS_T_UINT,   FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(KAFKA_PARTION,    "partition",     FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(KAFKA_BVERSION,   "brokerVersion", FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(KAFKA_BLOCKING,   "blocking",      FDS_OPTS_T_BOOL,   FDS_OPTS_P_OPT),
     FDS_OPTS_NESTED(KAFKA_PROPERTY, "property", args_kafka_prop, FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
@@ -485,6 +486,10 @@ Config::parse_kafka(fds_xml_ctx_t *kafka)
     output.partition = RD_KAFKA_PARTITION_UA;
     output.blocking = false;
 
+    // For partition parser
+    int32_t value;
+    char aux;
+
     const struct fds_xml_cont *content;
     while (fds_xml_next(kafka, &content) != FDS_EOC) {
         switch (content->id) {
@@ -501,11 +506,16 @@ Config::parse_kafka(fds_xml_ctx_t *kafka)
             output.topic = content->ptr_string;
             break;
         case KAFKA_PARTION:
-            assert(content->type == FDS_OPTS_T_UINT);
-            if (content->val_uint > INT32_MAX) {
+            assert(content->type == FDS_OPTS_T_STRING);
+            if (strcasecmp(content->ptr_string, "unassigned") == 0) {
+                output.partition = RD_KAFKA_PARTITION_UA;
+                break;
+            }
+
+            if (sscanf(content->ptr_string, "%" SCNi32 "%c", &value, &aux) != 1 || value < 0) {
                 throw std::invalid_argument("Invalid partition number of a <kafka> output!");
             }
-            output.partition = static_cast<int32_t>(content->val_uint);
+            output.partition = value;
             break;
         case KAFKA_BVERSION:
             assert(content->type == FDS_OPTS_T_STRING);

@@ -43,6 +43,9 @@
 #define JSON_KAFKA_H
 
 #include "Storage.hpp"
+
+#include <atomic>
+#include <ctime>
 #include <memory>
 #include <librdkafka/rdkafka.h>
 
@@ -61,9 +64,28 @@ private:
     using uniq_kafka = std::unique_ptr<rd_kafka_t, decltype(&rd_kafka_destroy)>;
     using uniq_topic = std::unique_ptr<rd_kafka_topic_t, decltype(&rd_kafka_topic_destroy)>;
     using uniq_config = std::unique_ptr<rd_kafka_conf_t, decltype(&rd_kafka_conf_destroy)>;
+    using map_params = std::map<std::string, std::string>;
+
+    /// Poller timeout for events (milliseconds)
+    static constexpr int POLLER_TIMEOUT = 100;
+    /// Flush timeout before shutdown of the connector (milliseconds)
+    static constexpr int FLUSH_TIMEOUT = 1000;
+    /// Information about librdkafka version used during build of this plugin
+    static const int BUILD_VERSION = RD_KAFKA_VERSION;
+
+    /// Polling thread for Kafka events
+    typedef struct thread_ctx_s {
+        ipx_ctx_t *ctx;         ///< Plugin context (for log only!)
+        pthread_t thread;       ///< Thread
+        std::atomic<bool> stop; ///< Stop flag for termination
+        rd_kafka_t *kafka;      ///< Kafka polling object
+
+        uint64_t cnt_delivered; ///< Number of successful deliveries
+        uint64_t cnt_failed;    ///< Number of failed deliveries
+    } thread_ctx_t;
 
     /// Configuration
-    std::map<std::string, std::string> m_params;
+    map_params m_params;
     /// Kafka object
     uniq_kafka m_kafka = {nullptr, &rd_kafka_destroy};
     /// Topic object
@@ -72,6 +94,28 @@ private:
     int32_t m_partition;
     /// Producer flags
     int m_produce_flags;
+    /// Polling thread
+    std::unique_ptr<thread_ctx_t> m_thread = {nullptr};
+
+    /// Timestamp of last print of the kafka produce error
+    struct timespec m_err_ts;
+    /// Type of the kafka produce error
+    rd_kafka_resp_err_t m_err_type = RD_KAFKA_RESP_ERR_NO_ERROR;
+    /// Number of produce errors of the given type since the last print
+    uint64_t m_err_cnt = 0;
+
+    // Prepare parameters for Kafka
+    void
+    prepare_params(const struct cfg_kafka &cfg, map_params &params);
+    /// Print aggregation of produce errors
+    void
+    produce_error(struct timespec ts_now);
+    // Pooling thread function
+    static void *
+    thread_polling(void *context);
+    // Kafka messagage delivery callback
+    static void
+    thread_cb_delivery(rd_kafka_t *rk, const rd_kafka_message_t *rkmessage, void *opaque);
 };
 
 #endif // JSON_KAFKA_H
