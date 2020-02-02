@@ -21,6 +21,14 @@ body {
 
 #configurator_app {
   width: 100%;
+}
+
+.title {
+  flex-grow: 1;
+}
+
+.form {
+  width: 100%;
   max-width: 1260px;
   min-width: 420px;
   margin: 10px auto 0 auto;

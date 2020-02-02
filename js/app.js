@@ -1,5 +1,6 @@
 const {
     Allert,
+    AppBar,
     Badge,
     Button,
     Card,
@@ -30,6 +31,7 @@ const {
     Select,
     Snackbar,
     TextareaAutosize,
+    Toolbar,
     Tooltip,
     Typography
 } = MaterialUI;
@@ -206,7 +208,10 @@ class Form extends React.Component {
     download() {
         var element = document.createElement("a");
         element.style.display = "none";
-        element.setAttribute("href", "data:text/xml;charset=utf-8," + encodeURIComponent(this.createConfigXML()));
+        element.setAttribute(
+            "href",
+            "data:text/xml;charset=utf-8," + encodeURIComponent(this.createConfigXML())
+        );
         element.setAttribute("download", "config.xml");
 
         document.body.appendChild(element);
@@ -216,43 +221,57 @@ class Form extends React.Component {
 
     render() {
         return (
-            <div className="form">
-                {this.state.overlay}
-                <div className="mainLayer">
-                    <FormColumn
-                        key={columnNames[0]}
-                        columnIndex={0}
-                        modules={this.state.modules[0]}
-                        color={colors[0]}
-                        name={columnNames[0]}
-                        modulesAvailable={moduleSchemas[0]}
-                        addModule={this.newModuleOverlay.bind(this)}
-                        editModule={this.editModuleOverlay.bind(this)}
-                        removeModule={this.removeModule.bind(this)}
-                    />
-                    <FormColumn
-                        key={columnNames[1]}
-                        columnIndex={1}
-                        modules={this.state.modules[1]}
-                        color={colors[1]}
-                        name={columnNames[1]}
-                        modulesAvailable={moduleSchemas[1]}
-                        addModule={this.newModuleOverlay.bind(this)}
-                        editModule={this.editModuleOverlay.bind(this)}
-                        removeModule={this.removeModule.bind(this)}
-                    />
-                    <FormColumn
-                        key={columnNames[2]}
-                        columnIndex={2}
-                        modules={this.state.modules[2]}
-                        color={colors[2]}
-                        name={columnNames[2]}
-                        modulesAvailable={moduleSchemas[2]}
-                        addModule={this.newModuleOverlay.bind(this)}
-                        editModule={this.editModuleOverlay.bind(this)}
-                        removeModule={this.removeModule.bind(this)}
-                    />
-                    {/* <ExpansionPanel>
+            <React.Fragment>
+                <AppBar position="sticky">
+                    <Toolbar variant="dense">
+                        <Typography variant="h6" color="inherit" className="title">
+                            Configuration generator
+                        </Typography>
+                        <Button
+                            color="inherit"
+                            onClick={this.download.bind(this)}
+                        >
+                            {"Download file"}
+                        </Button>
+                    </Toolbar>
+                </AppBar>
+                <div className="form">
+                    {this.state.overlay}
+                    <div className="mainLayer">
+                        <FormColumn
+                            key={columnNames[0]}
+                            columnIndex={0}
+                            modules={this.state.modules[0]}
+                            color={colors[0]}
+                            name={columnNames[0]}
+                            modulesAvailable={moduleSchemas[0]}
+                            addModule={this.newModuleOverlay.bind(this)}
+                            editModule={this.editModuleOverlay.bind(this)}
+                            removeModule={this.removeModule.bind(this)}
+                        />
+                        <FormColumn
+                            key={columnNames[1]}
+                            columnIndex={1}
+                            modules={this.state.modules[1]}
+                            color={colors[1]}
+                            name={columnNames[1]}
+                            modulesAvailable={moduleSchemas[1]}
+                            addModule={this.newModuleOverlay.bind(this)}
+                            editModule={this.editModuleOverlay.bind(this)}
+                            removeModule={this.removeModule.bind(this)}
+                        />
+                        <FormColumn
+                            key={columnNames[2]}
+                            columnIndex={2}
+                            modules={this.state.modules[2]}
+                            color={colors[2]}
+                            name={columnNames[2]}
+                            modulesAvailable={moduleSchemas[2]}
+                            addModule={this.newModuleOverlay.bind(this)}
+                            editModule={this.editModuleOverlay.bind(this)}
+                            removeModule={this.removeModule.bind(this)}
+                        />
+                        {/* <ExpansionPanel>
                         <ExpansionPanelSummary
                             expandIcon={<Icon>expand_more</Icon>}
                             aria-controls="panel1c-content"
@@ -269,38 +288,32 @@ class Form extends React.Component {
                             </Typography>
                         </ExpansionPanelDetails>
                     </ExpansionPanel> */}
-                    {this.renderXML()}
-                    <Snackbar
-                        anchorOrigin={{
-                            vertical: "bottom",
-                            horizontal: "center"
-                        }}
-                        open={this.state.snackbarOpen}
-                        autoHideDuration={5000}
-                        onClose={this.closeSnackbar.bind(this)}
-                        message={this.state.snackbarText}
-                        action={
-                            <React.Fragment>
-                                <IconButton
-                                    size="small"
-                                    aria-label="close"
-                                    color="inherit"
-                                    onClick={this.closeSnackbar.bind(this)}
-                                >
-                                    <Icon fontSize="small">close</Icon>
-                                </IconButton>
-                            </React.Fragment>
-                        }
-                    />
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={this.download.bind(this)}
-                    >
-                        {"Download file"}
-                    </Button>
+                        {this.renderXML()}
+                        <Snackbar
+                            anchorOrigin={{
+                                vertical: "bottom",
+                                horizontal: "center"
+                            }}
+                            open={this.state.snackbarOpen}
+                            autoHideDuration={5000}
+                            onClose={this.closeSnackbar.bind(this)}
+                            message={this.state.snackbarText}
+                            action={
+                                <React.Fragment>
+                                    <IconButton
+                                        size="small"
+                                        aria-label="close"
+                                        color="inherit"
+                                        onClick={this.closeSnackbar.bind(this)}
+                                    >
+                                        <Icon fontSize="small">close</Icon>
+                                    </IconButton>
+                                </React.Fragment>
+                            }
+                        />
+                    </div>
                 </div>
-            </div>
+            </React.Fragment>
         );
     }
 }
