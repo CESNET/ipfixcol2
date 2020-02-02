@@ -161,12 +161,16 @@ class Form extends React.Component {
         console.log("Module removed");
     }
 
-    renderXML() {
+    createConfigXML() {
         var config = defaultConfig;
         config.ipfixcol2.inputPlugins.input = this.state.modules[0];
         config.ipfixcol2.intermediatePlugins.intermediate = this.state.modules[1];
         config.ipfixcol2.outputPlugins.output = this.state.modules[2];
         var xml = x2js.json2xml_str(config);
+        return formatXml(xml);
+    }
+
+    renderXML() {
         return (
             <FormControl fullWidth>
                 <TextField
@@ -175,7 +179,7 @@ class Form extends React.Component {
                     InputProps={{
                         readOnly: true
                     }}
-                    value={formatXml(xml)}
+                    value={this.createConfigXML()}
                 />
                 <FormHelperText>Read only</FormHelperText>
             </FormControl>
@@ -197,6 +201,17 @@ class Form extends React.Component {
         this.setState({
             snackbarOpen: false
         });
+    }
+
+    download() {
+        var element = document.createElement("a");
+        element.style.display = "none";
+        element.setAttribute("href", "data:text/xml;charset=utf-8," + encodeURIComponent(this.createConfigXML()));
+        element.setAttribute("download", "config.xml");
+
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
     }
 
     render() {
@@ -277,6 +292,13 @@ class Form extends React.Component {
                             </React.Fragment>
                         }
                     />
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={this.download.bind(this)}
+                    >
+                        {"Download file"}
+                    </Button>
                 </div>
             </div>
         );
