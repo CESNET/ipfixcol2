@@ -89,7 +89,7 @@ Second, install build dependencies of the collector
 
 .. code-block::
 
-    yum config-manager --set-enabled AppStream PowerTools
+    dnf config-manager --set-enabled AppStream PowerTools
 
 **Debian/Ubuntu:**
 
