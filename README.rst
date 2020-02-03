@@ -79,18 +79,23 @@ Second, install build dependencies of the collector
 
 .. code-block::
 
-    yum install gcc gcc-c++ cmake make python3-docutils zlib-devel
+    yum install gcc gcc-c++ cmake make python3-docutils zlib-devel librdkafka-devel
     # Optionally: doxygen pkgconfig
 
-* Note: latest systems (e.g. Fedora) use ``dnf`` instead of ``yum``.
+* Note: latest systems (e.g. Fedora/CentOS 8) use ``dnf`` instead of ``yum``.
 * Note: package ``python3-docutils`` may by also named as ``python-docutils`` or ``python2-docutils``
 * Note: package ``pkgconfig`` may by also named as ``pkg-config``
+* Note: CentOS 8 requires additional system repositories (``AppStream`` and ``PowerTools``) to be enabled:
+
+.. code-block::
+
+    dnf config-manager --set-enabled AppStream PowerTools
 
 **Debian/Ubuntu:**
 
 .. code-block::
 
-    apt-get install gcc g++ cmake make python3-docutils zlib1g-dev
+    apt-get install gcc g++ cmake make python3-docutils zlib1g-dev librdkafka-dev
     # Optionally: doxygen pkg-config
 
 Finally, build and install the collector:
