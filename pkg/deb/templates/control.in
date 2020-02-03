@@ -12,7 +12,7 @@ Build-Depends:     debhelper (>= 9), cmake (>= 2.8.8), make (>= 4.0),
 Package:           @CPACK_PACKAGE_NAME@
 Architecture:      any
 Depends:           ${shlibs:Depends}, ${misc:Depends}, libfds (>= 0.2.0), zlib1g,
-                   librdkafka (>= 0.9.3)
+                   librdkafka1 (>= 0.9.3)
 Description:       @CPACK_PACKAGE_DESCRIPTION_SUMMARY@
  IPFIXcol is a flexible IPFIX (RFC 7011) flow data collector designed to
  be extensible by plugins.
