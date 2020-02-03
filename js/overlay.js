@@ -157,6 +157,7 @@ class Overlay extends React.Component {
                         variant="contained"
                         color="primary"
                         onClick={this.handleComfirm.bind(this)}
+                        disabled={this.state.errors === undefined ? false : true}
                     >
                         {buttonText}
                     </Button>
