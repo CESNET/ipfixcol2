@@ -397,6 +397,92 @@ IPX_API const fds_iemgr_t *
 ipx_ctx_iemgr_get(ipx_ctx_t *ctx);
 
 /**
+ * \brief Register an extension of Data Records (Intermediate and Output plugins ONLY!)
+ *
+ * Reserve space for metadata that will be part of each Data Record. The purpose of extension
+ * it is to add non-flow information which can be useful during record processing. For example,
+ * one plugin can add some labels and one or more plugins further in the pipeline can use them
+ * later.
+ *
+ * Structure or data type of the extension is up to the producer. Nevertheless, the producer and
+ * all consumers must use the same. The producer is also RESPONSIBLE for filling content of the
+ * extension to EACH Data Record in the IPFIX Message!
+ *
+ * One plugin instance can register multiple extensions.
+ * \warning
+ *   This function can be called only during ipx_plugin_init() of Intermediate and Output plugins.
+ * \note
+ *   Only single plugin instance at time can produce extension with the given combination
+ *   of the \p type and the \p name.
+ * \param[in]  ctx  Plugin context
+ * \param[in]  type Identification of the extension type (e.g. "profiles-v1")
+ * \param[in]  name Identification of the extension name (e.g. "main_profiles")
+ * \param[in]  size Size of memory required for the extension (in bytes)
+ * \param[out] rext Internal description of the extension
+ *
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_ARG if the \p type or \p name are not valid (i.e. empty or NULL)
+ * \return #IPX_ERR_DENIED if the plugin doesn't have permission to register extension
+ * \return #IPX_ERR_NOMEM if the maximum number of extensions has been reached
+ */
+IPX_API int
+ipx_ctx_rext_producer(ipx_ctx_t *ctx, const char *type, const char *name, size_t size,
+    ipx_ctx_rext **rext);
+
+/**
+ * @brief Add dependency on an extension of Data Records (Intermediate and Output plugins ONLY!)
+ *
+ * Register dependency on an extension. This will make sure that the required extension is
+ * available for EACH Data Record during ipx_plugin_process() and that there is a particular
+ * producer earlier in the processing pipeline.
+ *
+ * One plugin instance can register multiple dependencies.
+ *
+ * \warning
+ *   This function can be called only during ipx_plugin_init() of Intermediate and Output plugins.
+ * \note
+ *   If the function has succeeded, it doesn't mean that there is particular extension producer.
+ *   Since dependencies are resolved later during configuration of the collector, startup
+ *   process will be interrupted if all requirements are not met.
+ * \note
+ *   The plugin instance CANNOT add dependency on an extension which it is producing.
+ *
+ * \param[in]  ctx  Plugin context
+ * \param[in]  type Identification of the extension type (e.g. "profiles-v1")
+ * \param[in]  name Identification of the extension name (e.g. "main_profiles")
+ * \param[out] rext Internal description of the extension
+ *
+ * \return #IPX_OK on success (see notes)
+ * \return #IPX_ERR_ARG if the \p type or \p name are not valid (i.e. empty or NULL)
+ * \return #IPX_ERR_DENIED if the plugin doesn't have permission to register dependency
+ * \return #IPX_ERR_NOMEM if the maximum number of extensions has been reached
+ */
+IPX_API int
+ipx_ctx_rext_consumer(ipx_ctx_t *ctx, const char *type, const char *name, ipx_ctx_rext_t **rext);
+
+/**
+ * \brief Get size of an extension
+ *
+ * Information about the extension are not available during ipx_plugin_init().
+ * \param[in]  rext Internal description of the extension
+ * \param[out] size Size of the extension
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_DENIED if the information is not available
+ */
+IPX_API int
+ipx_ctx_rext_size(ipx_ctx_rext *rext, size_t *size);
+
+/**
+ * \brief Get data of an extension
+ *
+ * \param[in] rext     Internal description of the extension
+ * \param[in] ipx_drec Data Record with extensions
+ * \return Pointer to the extension
+ */
+IPX_API void *
+ipx_ctx_rext_get(ipx_ctx_rext *rext, struct ipx_ipfix_record *ipx_drec);
+
+/**
  * @}
  * @}
  */
