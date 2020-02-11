@@ -4,8 +4,12 @@
 # fields. You can change setting by editing this file. Each entry consists
 # of the following parameters:
 #  - UniRec field name
-#  - UniRec data type (int{8,16,32,64}, uint{8,16,32,64}, float, double, time,
-#      ipaddr, macaddr, char, string, bytes)
+#  - UniRec data type - one of the following:
+#      int{8,16,32,64}, uint{8,16,32,64},
+#      float, double, time, ipaddr, macaddr, char, string, bytes
+#      int{8,16,32,64}*, uint{8,16,32,64}*,          // "array of" types
+#      float*, double*, time*, ipaddr*, macaddr*     // "array of" types
+#      string_trimmed                                // trimmed string (i.e. no tailing '\0')
 #  - Comma separated list of IPFIX Information Elements identifiers
 #      ("eXXidYY" where XX is Private Enterprise Number and YY is field ID)
 #
@@ -118,32 +122,36 @@ IPV6_TUN_TYPE                  uint8         e16982id405      # IPv6 tunnel type
 APP_ID                         bytes         e0id95           # Application ID from libprotoident / NBAR2 / Flowmon's NBAR plugin
 
 # --- Flowmon TLS fields
-TLS_CONTENT_TYPE	uint8	flowmon:tlsContentType		# tlsContentType
-TLS_HANDSHAKE_TYPE	uint32	flowmon:tlsHandshakeType	# https://tools.ietf.org/html/rfc5246#appendix-A.4
-TLS_SETUP_TIME		uint64	flowmon:tlsSetupTime		# tlsSetupTime
-TLS_SERVER_VERSION	uint16	flowmon:tlsServerVersion	# 8b major and 8b minor, 0x0303 ~ TLS1.2
-TLS_SERVER_RANDOM	bytes	flowmon:tlsServerRandom		# tlsServerRandom
-TLS_SERVER_SESSIONID	bytes	flowmon:tlsServerSessionId	# tlsServerSessionId
-TLS_CIPHER_SUITE	uint16	flowmon:tlsCipherSuite		# https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4
-TLS_ALPN		string	flowmon:tlsAlpn			# TLS Application-Layer Protocol Negotiation https://www.iana.org/assignments/tls-extensiontype-values/tls-extensiontype-values.xhtml#alpn-protocol-ids
-TLS_SNI			string	flowmon:tlsSni			# Server Name Indication https://en.wikipedia.org/wiki/Server_Name_Indication
-TLS_SNI_LENGTH		uint16	flowmon:tlsSniLength		# Length of TLS_SNI field
-TLS_CLIENT_VERSION	uint16	flowmon:tlsClientVersion	# tlsClientVersion
-TLS_CIPHER_SUITES	bytes	flowmon:tlsCipherSuites		# List of 2B ciphers, beware of network byte order. See https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4
-TLS_CLIENT_RANDOM	bytes	flowmon:tlsClientRandom		# tlsClientRandom
-TLS_CLIENT_SESSIONID	bytes	flowmon:tlsClientSessionId	# tlsClientSessionId
-TLS_EXTENSION_TYPES	bytes	flowmon:tlsExtensionTypes	# tlsExtensionTypes
-TLS_EXTENSION_LENGTHS	bytes	flowmon:tlsExtensionLengths	# tlsExtensionLengths
-TLS_ELLIPTIC_CURVES	bytes	flowmon:tlsEllipticCurves	# tlsEllipticCurves
-TLS_EC_POINTFORMATS	bytes	flowmon:tlsEcPointFormats	# tlsEcPointFormats
-TLS_CLIENT_KEYLENGTH	int32	flowmon:tlsClientKeyLength	# Length of client's key
-TLS_ISSUER_CN		string	flowmon:tlsIssuerCn		# Common name of certificate issuer
-TLS_SUBJECT_CN		string	flowmon:tlsSubjectCn		# Certificate Common Name
-TLS_SUBJECT_ON		string	flowmon:tlsSubjectOn		# Certificate Organization Name
-TLS_VALIDITY_NOTBEFORE	int64	flowmon:tlsValidityNotBefore	# UNIX timestamp of certificate creation
-TLS_VALIDITY_NOTAFTER	int64	flowmon:tlsValidityNotAfter	# UNIX timestamp of certificate expiration
-TLS_SIGNATURE_ALG	uint16	flowmon:tlsSignatureAlg		# tlsSignatureAlg
-TLS_PUBLIC_KEYALG	uint16	flowmon:tlsPublicKeyAlg		# tlsPublicKeyAlg
-TLS_PUBLIC_KEYLENGTH	int32	flowmon:tlsPublicKeyLength	# tlsPublicKeyLength
-TLS_JA_3FINGERPRINT	bytes	flowmon:tlsJa3Fingerprint	# tlsJa3Fingerprint
+TLS_CONTENT_TYPE               uint8         flowmon:tlsContentType       # tlsContentType
+TLS_HANDSHAKE_TYPE             uint32        flowmon:tlsHandshakeType     # https://tools.ietf.org/html/rfc5246#appendix-A.4
+TLS_SETUP_TIME                 uint64        flowmon:tlsSetupTime         # tlsSetupTime
+TLS_SERVER_VERSION             uint16        flowmon:tlsServerVersion     # 8b major and 8b minor, 0x0303 ~ TLS1.2
+TLS_SERVER_RANDOM              bytes         flowmon:tlsServerRandom      # tlsServerRandom
+TLS_SERVER_SESSIONID           bytes         flowmon:tlsServerSessionId   # tlsServerSessionId
+TLS_CIPHER_SUITE               uint16        flowmon:tlsCipherSuite       # https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4
+TLS_ALPN                       string        flowmon:tlsAlpn              # TLS Application-Layer Protocol Negotiation https://www.iana.org/assignments/tls-extensiontype-values/tls-extensiontype-values.xhtml#alpn-protocol-ids
+TLS_SNI                        string        flowmon:tlsSni               # Server Name Indication https://en.wikipedia.org/wiki/Server_Name_Indication
+TLS_SNI_LENGTH                 uint16        flowmon:tlsSniLength         # Length of TLS_SNI field
+TLS_CLIENT_VERSION             uint16        flowmon:tlsClientVersion     # tlsClientVersion
+TLS_CIPHER_SUITES              bytes         flowmon:tlsCipherSuites      # List of 2B ciphers, beware of network byte order. See https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4
+TLS_CLIENT_RANDOM              bytes         flowmon:tlsClientRandom      # tlsClientRandom
+TLS_CLIENT_SESSIONID           bytes         flowmon:tlsClientSessionId   # tlsClientSessionId
+TLS_EXTENSION_TYPES            bytes         flowmon:tlsExtensionTypes    # tlsExtensionTypes
+TLS_EXTENSION_LENGTHS          bytes         flowmon:tlsExtensionLengths  # tlsExtensionLengths
+TLS_ELLIPTIC_CURVES            bytes         flowmon:tlsEllipticCurves    # tlsEllipticCurves
+TLS_EC_POINTFORMATS            bytes         flowmon:tlsEcPointFormats    # tlsEcPointFormats
+TLS_CLIENT_KEYLENGTH           int32         flowmon:tlsClientKeyLength   # Length of client's key
+TLS_ISSUER_CN                  string        flowmon:tlsIssuerCn          # Common name of certificate issuer
+TLS_SUBJECT_CN                 string        flowmon:tlsSubjectCn         # Certificate Common Name
+TLS_SUBJECT_ON                 string        flowmon:tlsSubjectOn         # Certificate Organization Name
+TLS_VALIDITY_NOTBEFORE         int64         flowmon:tlsValidityNotBefore # UNIX timestamp of certificate creation
+TLS_VALIDITY_NOTAFTER          int64         flowmon:tlsValidityNotAfter  # UNIX timestamp of certificate expiration
+TLS_SIGNATURE_ALG              uint16        flowmon:tlsSignatureAlg      # tlsSignatureAlg
+TLS_PUBLIC_KEYALG              uint16        flowmon:tlsPublicKeyAlg      # tlsPublicKeyAlg
+TLS_PUBLIC_KEYLENGTH           int32         flowmon:tlsPublicKeyLength   # tlsPublicKeyLength
+TLS_JA_3FINGERPRINT            bytes         flowmon:tlsJa3Fingerprint    # tlsJa3Fingerprint
 
+# --- Cisco Joy exporter ---
+JOY_TLS_RECORD_LENGTHS         int16*        e0id291/e9id12188  # basicList of packet lengths
+JOY_TLS_RECORD_TIMES           uint16*       e0id291/e9id12189  # basicList of packet timestamps
+JOY_TLS_CONTENT_TYPES          uint8*        e0id291/e9id12190  # basicList of packet types
