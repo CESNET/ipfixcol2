@@ -7,7 +7,7 @@ set(UNIREC_DESCRIPTION
 )
 
 set(UNIREC_VERSION_MAJOR 2)
-set(UNIREC_VERSION_MINOR 0)
+set(UNIREC_VERSION_MINOR 2)
 set(UNIREC_VERSION_PATCH 0)
 set(UNIREC_VERSION
     ${UNIREC_VERSION_MAJOR}.${UNIREC_VERSION_MINOR}.${UNIREC_VERSION_PATCH})
@@ -19,9 +19,9 @@ include(CheckCXXCompilerFlag)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMakeModules")
 
 # Find IPFIXcol and libnf
-find_package(IPFIXcol2 2.0.0 REQUIRED)
-find_package(LibTrap REQUIRED)
-find_package(LibUnirec REQUIRED)
+find_package(IPFIXcol2 2.1.0 REQUIRED)  # support for basicList is required
+find_package(LibTrap 1.13.1 REQUIRED)
+find_package(LibUnirec 2.8.0 REQUIRED)
 
 # Set default build type if not specified by user
 if (NOT CMAKE_BUILD_TYPE)
