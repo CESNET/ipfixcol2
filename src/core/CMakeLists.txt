@@ -28,6 +28,8 @@ set(CORE_SOURCE
     api.c
     context.c
     context.h
+    extension.c
+    extension.h
     fpipe.c
     fpipe.h
     message_base.c
