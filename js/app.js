@@ -16,7 +16,6 @@ const {
     ExpansionPanel,
     ExpansionPanelSummary,
     ExpansionPanelDetails,
-    TextField,
     FormControl,
     FormControlLabel,
     FormHelperText,
@@ -31,6 +30,7 @@ const {
     Select,
     Snackbar,
     TextareaAutosize,
+    TextField,
     Toolbar,
     Tooltip,
     Typography
@@ -227,10 +227,7 @@ class Form extends React.Component {
                         <Typography variant="h6" color="inherit" className="title">
                             Configuration generator
                         </Typography>
-                        <Button
-                            color="inherit"
-                            onClick={this.download.bind(this)}
-                        >
+                        <Button color="inherit" onClick={this.download.bind(this)}>
                             {"Download file"}
                         </Button>
                     </Toolbar>
@@ -271,47 +268,60 @@ class Form extends React.Component {
                             editModule={this.editModuleOverlay.bind(this)}
                             removeModule={this.removeModule.bind(this)}
                         />
-                        {/* <ExpansionPanel>
+                    </div>
+                    <ExpansionPanel>
                         <ExpansionPanelSummary
                             expandIcon={<Icon>expand_more</Icon>}
                             aria-controls="panel1c-content"
                             id="panel1c-header"
                         >
-                            <Typography>Location</Typography>
-                            <IconButton size="small" aria-label="close" onClick={() => {}}>
-                                <Icon fontSize="small">close</Icon>
-                            </IconButton>
+                            <Typography className="title">Location</Typography>
+                            <FormControlLabel
+                                onClick={() => {}}
+                                control={
+                                    <IconButton size="small" aria-label="close" onClick={() => {}}>
+                                        <Icon fontSize="small">edit</Icon>
+                                    </IconButton>
+                                }
+                            />
+                            <FormControlLabel
+                                onClick={() => {}}
+                                control={
+                                    <IconButton size="small" aria-label="close" onClick={() => {}}>
+                                        <Icon fontSize="small">close</Icon>
+                                    </IconButton>
+                                }
+                            />
                         </ExpansionPanelSummary>
                         <ExpansionPanelDetails>
                             <Typography variant="caption">
                                 Select your destination of choice
                             </Typography>
                         </ExpansionPanelDetails>
-                    </ExpansionPanel> */}
-                        {this.renderXML()}
-                        <Snackbar
-                            anchorOrigin={{
-                                vertical: "bottom",
-                                horizontal: "center"
-                            }}
-                            open={this.state.snackbarOpen}
-                            autoHideDuration={5000}
-                            onClose={this.closeSnackbar.bind(this)}
-                            message={this.state.snackbarText}
-                            action={
-                                <React.Fragment>
-                                    <IconButton
-                                        size="small"
-                                        aria-label="close"
-                                        color="inherit"
-                                        onClick={this.closeSnackbar.bind(this)}
-                                    >
-                                        <Icon fontSize="small">close</Icon>
-                                    </IconButton>
-                                </React.Fragment>
-                            }
-                        />
-                    </div>
+                    </ExpansionPanel>
+                    {this.renderXML()}
+                    <Snackbar
+                        anchorOrigin={{
+                            vertical: "bottom",
+                            horizontal: "center"
+                        }}
+                        open={this.state.snackbarOpen}
+                        autoHideDuration={5000}
+                        onClose={this.closeSnackbar.bind(this)}
+                        message={this.state.snackbarText}
+                        action={
+                            <React.Fragment>
+                                <IconButton
+                                    size="small"
+                                    aria-label="close"
+                                    color="inherit"
+                                    onClick={this.closeSnackbar.bind(this)}
+                                >
+                                    <Icon fontSize="small">close</Icon>
+                                </IconButton>
+                            </React.Fragment>
+                        }
+                    />
                 </div>
             </React.Fragment>
         );
