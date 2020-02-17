@@ -119,7 +119,7 @@ class Overlay extends React.Component {
                 fullWidth={true}
                 maxWidth={"md"}
             >
-                <DialogTitle>{buttonText}</DialogTitle>
+                <DialogTitle>{buttonText + ": " + this.props.jsonSchema.title}</DialogTitle>
                 <Divider />
                 <DialogContent dividers>
                     <Grid container spacing={2}>
@@ -172,7 +172,8 @@ class Properties extends React.Component {
         super(props);
         this.state = {
             anchorEl: null,
-            expanded: true
+            expanded: true,
+            descriptionOpen: false
         };
     }
     handleMenuClick(event) {
@@ -208,9 +209,19 @@ class Properties extends React.Component {
     handleExpandClick() {
         this.setState({ expanded: !this.state.expanded });
     }
+    handleDescriptionOpen() {
+        this.setState({
+            descriptionOpen: true
+        });
+    }
+    handleDescriptionClose() {
+        this.setState({
+            descriptionOpen: false
+        });
+    }
 
     render() {
-        var name = this.props.isRoot ? "" : this.props.name;
+        var name = this.props.isRoot ? "" : this.props.jsonSchema.title;
         var optionalMenu = "";
         var errorIcon = "";
         var removeButton = "";
@@ -256,7 +267,7 @@ class Properties extends React.Component {
                                         key={propertyName}
                                         onClick={this.handleMenuSelect.bind(this, propertyName)}
                                     >
-                                        {propertyName}
+                                        {this.props.jsonSchema.properties[propertyName].title}
                                     </MenuItem>
                                 );
                             }
@@ -367,28 +378,38 @@ class Properties extends React.Component {
             );
         }
         return (
-            <Card>
-                {name !== "" || removeButton !== "" ? (
-                    <CardHeader
-                        action={
-                            <div>
-                                {errorIcon}
-                                {removeButton}
-                                {expandButton}
-                            </div>
-                        }
-                        title={name}
-                    />
-                ) : (
-                    ""
-                )}
-                {properties}
-                {optionalMenu !== "" ? (
-                    <CardActions disableSpacing>{optionalMenu}</CardActions>
-                ) : (
-                    ""
-                )}
-            </Card>
+            <React.Fragment>
+                <Card>
+                    {name !== "" || removeButton !== "" ? (
+                        <CardHeader
+                            action={
+                                <div>
+                                    {errorIcon}
+                                    {removeButton}
+                                    <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
+                                        <Icon>help</Icon>
+                                    </IconButton>
+                                    {expandButton}
+                                </div>
+                            }
+                            title={name}
+                        />
+                    ) : (
+                        ""
+                    )}
+                    {properties}
+                    {optionalMenu !== "" ? (
+                        <CardActions disableSpacing>{optionalMenu}</CardActions>
+                    ) : (
+                        ""
+                    )}
+                </Card>
+                <Description
+                    open={this.state.descriptionOpen}
+                    content={this.props.jsonSchema.description}
+                    onClose={this.handleDescriptionClose.bind(this)}
+                />
+            </React.Fragment>
         );
     }
 }
@@ -514,7 +535,7 @@ class ArrayProperty extends React.Component {
     }
 
     render() {
-        var name = this.props.name;
+        var name = this.props.jsonSchema.title;
         var buttonText = "Add item";
         var button = "";
         var errorIcon = "";
@@ -634,11 +655,27 @@ class ArrayProperty extends React.Component {
 }
 
 class StringProperty extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            descriptionOpen: false
+        };
+    }
     handleChange(event) {
         this.props.onChange(this.props.name, event.target.value);
     }
     handleRemove() {
         this.props.onRemove(this.props.name);
+    }
+    handleDescriptionOpen() {
+        this.setState({
+            descriptionOpen: true
+        });
+    }
+    handleDescriptionClose() {
+        this.setState({
+            descriptionOpen: false
+        });
     }
     render() {
         var value = this.props.module;
@@ -665,12 +702,19 @@ class StringProperty extends React.Component {
             if (this.props.required) {
                 inputCode = (
                     <FormControl error={hasError}>
-                        <InputLabel>{this.props.name}</InputLabel>
+                        <InputLabel>{this.props.jsonSchema.title}</InputLabel>
                         <Select
                             className={"select"}
                             value={value}
                             onChange={onChange}
                             readOnly={readOnly}
+                            endAdornment={
+                                <InputAdornment position="end">
+                                    <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
+                                        <Icon>help</Icon>
+                                    </IconButton>
+                                </InputAdornment>
+                            }
                         >
                             {this.props.jsonSchema.enum.map(enumValue => {
                                 return (
@@ -685,7 +729,7 @@ class StringProperty extends React.Component {
             } else {
                 inputCode = (
                     <FormControl error={hasError}>
-                        <InputLabel>{this.props.name}</InputLabel>
+                        <InputLabel>{this.props.jsonSchema.title}</InputLabel>
                         <Select
                             className={"select"}
                             value={value}
@@ -695,6 +739,9 @@ class StringProperty extends React.Component {
                                 <InputAdornment position="end">
                                     <IconButton onClick={this.handleRemove.bind(this)}>
                                         <Icon>delete</Icon>
+                                    </IconButton>
+                                    <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
+                                        <Icon>help</Icon>
                                     </IconButton>
                                 </InputAdornment>
                             }
@@ -713,7 +760,7 @@ class StringProperty extends React.Component {
         } else if (!this.props.required) {
             inputCode = (
                 <FormControl error={hasError}>
-                    <InputLabel>{this.props.name}</InputLabel>
+                    <InputLabel>{this.props.jsonSchema.title}</InputLabel>
                     <Input
                         className={"select"}
                         type={"text"}
@@ -726,6 +773,9 @@ class StringProperty extends React.Component {
                                 <IconButton onClick={this.handleRemove.bind(this)}>
                                     <Icon>delete</Icon>
                                 </IconButton>
+                                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
+                                    <Icon>help</Icon>
+                                </IconButton>
                             </InputAdornment>
                         }
                     />
@@ -733,16 +783,24 @@ class StringProperty extends React.Component {
             );
         } else {
             inputCode = (
-                <TextField
-                    className={"select"}
-                    label={this.props.name}
-                    type={"text"}
-                    name={this.props.name}
-                    value={value}
-                    readOnly={readOnly}
-                    onChange={onChange}
-                    error={hasError}
-                />
+                <FormControl error={hasError}>
+                    <InputLabel>{this.props.jsonSchema.title}</InputLabel>
+                    <Input
+                        className={"select"}
+                        type={"text"}
+                        name={this.props.name}
+                        value={value}
+                        readOnly={readOnly}
+                        onChange={onChange}
+                        endAdornment={
+                            <InputAdornment position="end">
+                                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
+                                    <Icon>help</Icon>
+                                </IconButton>
+                            </InputAdornment>
+                        }
+                    />
+                </FormControl>
             );
         }
         inputCode = (
@@ -750,11 +808,26 @@ class StringProperty extends React.Component {
                 {inputCode}
             </Tooltip>
         );
-        return <div>{inputCode}</div>;
+        return (
+            <div>
+                {inputCode}
+                <Description
+                    open={this.state.descriptionOpen}
+                    content={this.props.jsonSchema.description}
+                    onClose={this.handleDescriptionClose.bind(this)}
+                />
+            </div>
+        );
     }
 }
 
 class IntegerProperty extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            descriptionOpen: false
+        };
+    }
     handleChange(event) {
         var value = Number(event.target.value);
         if (
@@ -773,6 +846,16 @@ class IntegerProperty extends React.Component {
     }
     handleRemove() {
         this.props.onRemove(this.props.name);
+    }
+    handleDescriptionOpen() {
+        this.setState({
+            descriptionOpen: true
+        });
+    }
+    handleDescriptionClose() {
+        this.setState({
+            descriptionOpen: false
+        });
     }
     render() {
         var value = this.props.module;
@@ -805,22 +888,30 @@ class IntegerProperty extends React.Component {
         }
         if (this.props.required) {
             inputCode = (
-                <TextField
-                    className={"select"}
-                    label={this.props.name}
-                    type={"number"}
-                    name={this.props.name}
-                    value={value}
-                    readOnly={readOnly}
-                    inputProps={{ min: min, max: max, step: 1 }}
-                    onChange={onChange}
-                    error={hasError}
-                />
+                <FormControl error={hasError}>
+                    <InputLabel>{this.props.jsonSchema.title}</InputLabel>
+                    <Input
+                        className={"select"}
+                        type={"number"}
+                        name={this.props.name}
+                        value={value}
+                        readOnly={readOnly}
+                        inputProps={{ min: min, max: max, step: 1 }}
+                        onChange={onChange}
+                        endAdornment={
+                            <InputAdornment position="end">
+                                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
+                                    <Icon>help</Icon>
+                                </IconButton>
+                            </InputAdornment>
+                        }
+                    />
+                </FormControl>
             );
         } else {
             inputCode = (
                 <FormControl error={hasError}>
-                    <InputLabel>{this.props.name}</InputLabel>
+                    <InputLabel>{this.props.jsonSchema.title}</InputLabel>
                     <Input
                         className={"select"}
                         type={"number"}
@@ -834,6 +925,9 @@ class IntegerProperty extends React.Component {
                                 <IconButton onClick={this.handleRemove.bind(this)}>
                                     <Icon>delete</Icon>
                                 </IconButton>
+                                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
+                                    <Icon>help</Icon>
+                                </IconButton>
                             </InputAdornment>
                         }
                     />
@@ -845,16 +939,41 @@ class IntegerProperty extends React.Component {
                 {inputCode}
             </Tooltip>
         );
-        return <div>{inputCode}</div>;
+        return (
+            <div>
+                {inputCode}
+                <Description
+                    open={this.state.descriptionOpen}
+                    content={this.props.jsonSchema.description}
+                    onClose={this.handleDescriptionClose.bind(this)}
+                />
+            </div>
+        );
     }
 }
 
 class BooleanProperty extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            descriptionOpen: false
+        };
+    }
     handleChange(event) {
         this.props.onChange(this.props.name, event.target.value);
     }
     handleRemove() {
         this.props.onRemove(this.props.name);
+    }
+    handleDescriptionOpen() {
+        this.setState({
+            descriptionOpen: true
+        });
+    }
+    handleDescriptionClose() {
+        this.setState({
+            descriptionOpen: false
+        });
     }
     render() {
         var value = this.props.module;
@@ -884,12 +1003,19 @@ class BooleanProperty extends React.Component {
         if (this.props.required) {
             inputCode = (
                 <FormControl error={hasError}>
-                    <InputLabel>{this.props.name}</InputLabel>
+                    <InputLabel>{this.props.jsonSchema.title}</InputLabel>
                     <Select
                         className={"select"}
                         value={value}
                         onChange={onChange}
                         readOnly={readOnly}
+                        endAdornment={
+                            <InputAdornment position="end">
+                                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
+                                    <Icon>help</Icon>
+                                </IconButton>
+                            </InputAdornment>
+                        }
                     >
                         {enumValues.map(enumValue => {
                             return (
@@ -904,7 +1030,7 @@ class BooleanProperty extends React.Component {
         } else {
             inputCode = (
                 <FormControl error={hasError}>
-                    <InputLabel>{this.props.name}</InputLabel>
+                    <InputLabel>{this.props.jsonSchema.title}</InputLabel>
                     <Select
                         className={"select"}
                         value={value}
@@ -914,6 +1040,9 @@ class BooleanProperty extends React.Component {
                             <InputAdornment position="end">
                                 <IconButton onClick={this.handleRemove.bind(this)}>
                                     <Icon>delete</Icon>
+                                </IconButton>
+                                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
+                                    <Icon>help</Icon>
                                 </IconButton>
                             </InputAdornment>
                         }
@@ -934,11 +1063,26 @@ class BooleanProperty extends React.Component {
                 {inputCode}
             </Tooltip>
         );
-        return <div>{inputCode}</div>;
+        return (
+            <div>
+                {inputCode}
+                <Description
+                    open={this.state.descriptionOpen}
+                    content={this.props.jsonSchema.description}
+                    onClose={this.handleDescriptionClose.bind(this)}
+                />
+            </div>
+        );
     }
 }
 
 class NumberProperty extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            descriptionOpen: false
+        };
+    }
     handleChange(event) {
         var value = Number(event.target.value);
         if (
@@ -957,6 +1101,16 @@ class NumberProperty extends React.Component {
     }
     handleRemove() {
         this.props.onRemove(this.props.name);
+    }
+    handleDescriptionOpen() {
+        this.setState({
+            descriptionOpen: true
+        });
+    }
+    handleDescriptionClose() {
+        this.setState({
+            descriptionOpen: false
+        });
     }
     render() {
         var value = this.props.module;
@@ -991,7 +1145,7 @@ class NumberProperty extends React.Component {
             inputCode = (
                 <TextField
                     className={"select"}
-                    label={this.props.name}
+                    label={this.props.jsonSchema.title}
                     type={"number"}
                     name={this.props.name}
                     value={value}
@@ -1004,7 +1158,7 @@ class NumberProperty extends React.Component {
         } else {
             inputCode = (
                 <FormControl error={hasError}>
-                    <InputLabel>{this.props.name}</InputLabel>
+                    <InputLabel>{this.props.jsonSchema.title}</InputLabel>
                     <Input
                         className={"select"}
                         type={"number"}
@@ -1018,6 +1172,9 @@ class NumberProperty extends React.Component {
                                 <IconButton onClick={this.handleRemove.bind(this)}>
                                     <Icon>delete</Icon>
                                 </IconButton>
+                                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
+                                    <Icon>help</Icon>
+                                </IconButton>
                             </InputAdornment>
                         }
                     />
@@ -1029,6 +1186,45 @@ class NumberProperty extends React.Component {
                 {inputCode}
             </Tooltip>
         );
-        return <div>{inputCode}</div>;
+        return (
+            <React.Fragment>
+                {inputCode}
+                <Description
+                    open={this.state.descriptionOpen}
+                    content={this.props.jsonSchema.description}
+                    onClose={this.handleDescriptionClose.bind(this)}
+                />
+            </React.Fragment>
+        );
+    }
+}
+
+class Description extends React.Component {
+    handleClose() {
+        this.props.onClose();
+    }
+    render() {
+        return (
+            <Dialog
+                disableBackdropClick
+                disableEscapeKeyDown
+                open={this.props.open}
+                fullWidth={false}
+                maxWidth={"sm"}
+            >
+                <DialogTitle>{"Description"}</DialogTitle>
+                <Divider />
+                <DialogContent dividers>{this.props.content}</DialogContent>
+                <DialogActions>
+                    <Button
+                        variant="outlined"
+                        color="primary"
+                        onClick={this.handleClose.bind(this)}
+                    >
+                        {"Close"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        );
     }
 }

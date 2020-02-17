@@ -1,59 +1,59 @@
 const jsonSchemaUDP = {
     $schema: "http://json-schema.org/draft-07/schema#",
     title: "UDP input",
-    desription: "UDP input plugin",
+    description: "UDP input plugin",
     type: "object",
     properties: {
         name: {
             title: "Name",
-            desription: "User identification of the instance. Must be unique within the section.",
+            description: "User identification of the instance. Must be unique within the section.",
             type: "string",
             default: "UDP input",
             minLength: 1
         },
         plugin: {
             title: "Plugin",
-            desription:
+            description:
                 "Internal identification of a plugin to whom the instance belongs. The identification is assigned by an author of the plugin.",
             type: "string",
             const: "udp"
         },
         params: {
             title: "Parameters",
-            desription: "Configuration parameters of the instance.",
+            description: "Configuration parameters of the instance.",
             type: "object",
             properties: {
                 localPort: {
                     title: "Local port",
-                    desription: "Local port on which the plugin listens. [default: 4739]",
+                    description: "Local port on which the plugin listens. [default: 4739]",
                     type: "integer",
                     minimum: 0,
                     default: 4739
                 },
                 localIPAddress: {
                     title: "Local IP address",
-                    desription:
+                    description:
                         "Local IPv4/IPv6 address on which the UDP input plugin listens. If the element is left empty, the plugin binds to all available network interfaces. The element can occur multiple times (one IP address per occurrence) to manually select multiple interfaces. [default: empty]",
                     type: "string",
                     default: ""
                 },
                 connectionTimeout: {
                     title: "Connection timeout",
-                    desription:
+                    description:
                         "Exporter connection timeout in seconds. If no message is received from an exporter for a specified time, the connection is considered closed and all resources (associated with the exporter) are removed, such as flow templates, etc. [default: 600]",
                     type: "integer",
                     default: 600
                 },
                 templateLifeTime: {
                     title: "Template lifetime",
-                    desription:
+                    description:
                         "(Options) Template lifetime in seconds for all UDP Transport Sessions terminating at this UDP socket. (Options) Templates that are not received again within the configured lifetime become invalid. The lifetime of Templates and Options Templates should be at least three times higher than the same values configured on the corresponding exporter. [default: 1800]",
                     type: "integer",
                     default: 1800
                 },
                 optionsTemplateLifeTime: {
                     title: "Options template lifetime",
-                    desription:
+                    description:
                         "(Options) Template lifetime in seconds for all UDP Transport Sessions terminating at this UDP socket. (Options) Templates that are not received again within the configured lifetime become invalid. The lifetime of Templates and Options Templates should be at least three times higher than the same values configured on the corresponding exporter. [default: 1800]",
                     type: "integer",
                     default: 1800
@@ -67,38 +67,38 @@ const jsonSchemaUDP = {
 const jsonSchemaTCP = {
     $schema: "http://json-schema.org/draft-07/schema#",
     title: "TCP input",
-    desription: "TCP input plugin",
+    description: "TCP input plugin",
     type: "object",
     properties: {
         name: {
             title: "Name",
-            desription: "User identification of the instance. Must be unique within the section.",
+            description: "User identification of the instance. Must be unique within the section.",
             type: "string",
             default: "TCP input",
             minLength: 1
         },
         plugin: {
             title: "Plugin",
-            desription:
+            description:
                 "Internal identification of a plugin to whom the instance belongs. The identification is assigned by an author of the plugin.",
             type: "string",
             const: "tcp"
         },
         params: {
             title: "Parameters",
-            desription: "Configuration parameters of the instance.",
+            description: "Configuration parameters of the instance.",
             type: "object",
             properties: {
                 localPort: {
                     title: "Local port",
-                    desription: "Local port on which the plugin listens. [default: 4739]",
+                    description: "Local port on which the plugin listens. [default: 4739]",
                     type: "integer",
                     minimum: 0,
                     default: 4739
                 },
                 localIPAddress: {
                     title: "Local IP address",
-                    desription:
+                    description:
                         "Local IPv4/IPv6 address on which the TCP input plugin listens. If the element is left empty, the plugin binds to all available network interfaces. The element can occur multiple times (one IP address per occurrence) to manually select multiple interfaces. [default: empty]",
                     type: "string",
                     default: ""
@@ -112,38 +112,38 @@ const jsonSchemaTCP = {
 const jsonSchemaAnonymization = {
     $schema: "http://json-schema.org/draft-07/schema#",
     title: "Flow anonymization",
-    desription: "Flow anonymization plugin",
+    description: "Flow anonymization plugin",
     type: "object",
     properties: {
         name: {
             title: "Name",
-            desription: "User identification of the instance. Must be unique within the section.",
+            description: "User identification of the instance. Must be unique within the section.",
             type: "string",
             default: "Flow anonymization",
             minLength: 1
         },
         plugin: {
             title: "Plugin",
-            desription:
+            description:
                 "Internal identification of a plugin to whom the instance belongs. The identification is assigned by an author of the plugin.",
             type: "string",
             const: "anonymization"
         },
         params: {
             title: "Parameters",
-            desription: "Configuration parameters of the instance.",
+            description: "Configuration parameters of the instance.",
             type: "object",
             properties: {
                 type: {
                     title: "Type",
-                    desription:
+                    description:
                         'Type of anonymization method. The string is case insensitive.\nCryptoPAn: Cryptography-based sanitization and prefix-preserving method. The mapping from original IP addresses to anonymized IP addresses is one-to-one and if two original IP addresses share a k-bit prefix, their anonymized mappings will also share a k-bit prefix. Be aware that this cryptography method is very demanding and can limit throughput of the collector.\nTruncation: This method keeps the top part and erases the bottom part of an IP address. Compared to the CryptoPAn method, it is considerably faster, however, mapping from the original to anonymized IP address is many-to-one. For example the IPv4 address "1.2.3.4" is mapped to the address "1.2.0.0".',
                     type: "string",
                     enum: ["CryptoPAn", "Truncation"]
                 },
                 key: {
                     title: "Key",
-                    desription:
+                    description:
                         "Optional cryptography key for CryptoPAn anonymization. The length of the string must be exactly 32 bytes. If the key is not specified, a random one is generated during the initialization.",
                     type: "string",
                     default: ""
@@ -157,31 +157,31 @@ const jsonSchemaAnonymization = {
 const jsonSchemaJSON = {
     $schema: "http://json-schema.org/draft-07/schema#",
     title: "JSON output",
-    desription: "JSON output plugin",
+    description: "JSON output plugin",
     type: "object",
     properties: {
         name: {
             title: "Name",
-            desription: "User identification of the instance. Must be unique within the section.",
+            description: "User identification of the instance. Must be unique within the section.",
             type: "string",
             default: "JSON output",
             minLength: 1
         },
         plugin: {
             title: "Plugin",
-            desription:
+            description:
                 "Internal identification of a plugin to whom the instance belongs. The identification is assigned by an author of the plugin.",
             type: "string",
             const: "json"
         },
         params: {
             title: "Parameters",
-            desription: "Configuration parameters of the instance.",
+            description: "Configuration parameters of the instance.",
             type: "object",
             properties: {
                 tcpFlags: {
                     title: "TCP flags",
-                    desription:
+                    description:
                         'Convert TCP flags to common textual representation (formatted, e.g. ".A..S.") or to a number (raw). [values: formatted/raw, default: formatted]',
                     type: "string",
                     default: "formatted",
@@ -189,7 +189,7 @@ const jsonSchemaJSON = {
                 },
                 timestamp: {
                     title: "Timestamp",
-                    desription:
+                    description:
                         'Convert timestamp to ISO 8601 textual representation (all timestamps in UTC and milliseconds, e.g. "2018-01-22T09:29:57.828Z") or to a unix timestamp (all timestamps in milliseconds). [values: formatted/unix, default: formatted]',
                     type: "string",
                     default: "formatted",
@@ -197,7 +197,7 @@ const jsonSchemaJSON = {
                 },
                 protocol: {
                     title: "Protocol",
-                    desription:
+                    description:
                         'Convert protocol identification to formatted style (e.g. instead 6 writes "TCP") or to a number. [values: formatted/raw, default: formatted]',
                     type: "string",
                     default: "formatted",
@@ -205,7 +205,7 @@ const jsonSchemaJSON = {
                 },
                 ignoreUnknown: {
                     title: "Ignore unknown",
-                    desription:
+                    description:
                         "Skip unknown Information Elements (i.e. record fields with unknown name and data type). If disabled, data of unknown elements are formatted as unsigned integer or hexadecimal values. For more information, see octetArrayAsUint option. [values: true/false, default: true]",
                     type: "boolean",
                     default: true,
@@ -213,7 +213,7 @@ const jsonSchemaJSON = {
                 },
                 ignoreOptions: {
                     title: "Ignore options",
-                    desription:
+                    description:
                         "Skip non-flow records used for reporting metadata about IPFIX Exporting and Metering Processes (i.e. records described by Options Templates). [values: true/false, default: true]",
                     type: "boolean",
                     default: true,
@@ -221,7 +221,7 @@ const jsonSchemaJSON = {
                 },
                 nonPrintableChar: {
                     title: "Non-printable characters",
-                    desription:
+                    description:
                         "Ignore non-printable characters (newline, tab, control characters, etc.) in IPFIX strings. If disabled, these characters are escaped on output. [values: true/false, default: true]",
                     type: "boolean",
                     default: true,
@@ -229,7 +229,7 @@ const jsonSchemaJSON = {
                 },
                 octetArrayAsUint: {
                     title: "Octet array as uint",
-                    desription:
+                    description:
                         'Converter each IPFIX field with octetArray type (including IPFIX fields with unknown definitions) as unsigned integer if the size of the field is less or equal to 8 bytes. Fields with the size above the limit are always converted as string representing hexadecimal value, which is typically in network byte order (e.g. "0x71E1"). Keep on mind, that there might be octetArray fields with variable length that might be interpreted differently based on their size. If disabled, octetArray fields are never interpreted as unsigned integers. [values: true/false, default: true]',
                     type: "boolean",
                     default: true,
@@ -237,7 +237,7 @@ const jsonSchemaJSON = {
                 },
                 numericNames: {
                     title: "Numeric names",
-                    desription:
+                    description:
                         'Use only short identification of Information Elements (i.e. "enXX:idYY"). If enabled, the short version is used even if the definition of the field is known. This option can help to create a shorter JSON records with key identifiers which are independent on the internal configuration. [values: true/false, default: false]',
                     type: "boolean",
                     default: false,
@@ -245,7 +245,7 @@ const jsonSchemaJSON = {
                 },
                 splitBiflow: {
                     title: "Split Biflow",
-                    desription:
+                    description:
                         "In case of Biflow records, split the record to two unidirectional flow records. Non-biflow records are unaffected. [values: true/false, default: false]",
                     type: "boolean",
                     default: false,
@@ -253,7 +253,7 @@ const jsonSchemaJSON = {
                 },
                 detailedInfo: {
                     title: "Detailed info",
-                    desription:
+                    description:
                         'Add additional information about the IPFIX message (such as export time, Observation Domain ID, IP address of the exporter, etc.) to which each record belongs. Additional fields starts with "ipfix:" prefix. [values: true/false, default: false]',
                     type: "boolean",
                     default: false,
@@ -261,7 +261,7 @@ const jsonSchemaJSON = {
                 },
                 templateInfo: {
                     title: "Template info",
-                    desription:
+                    description:
                         "Convert Template and Options Template records. See the particular section below for information about the formatting of these records. [values: true/false, default: false]",
                     type: "boolean",
                     default: false,
@@ -269,34 +269,35 @@ const jsonSchemaJSON = {
                 },
                 outputs: {
                     title: "Output types",
-                    desription:
+                    description:
                         "At least one output must be configured. Multiple server/send/file outputs can be used at the same time if the outputs are not in collision with each other.",
                     type: "object",
                     properties: {
                         server: {
+                            title: "Server",
                             type: "array",
                             minItems: 1,
                             items: {
                                 title: "Server",
-                                desription:
+                                description:
                                     'TCP (push) server provides data on a local port. Converted records are automatically send to all clients that are connected to the port. To test the server you can use, for example, ncat(1) utility: "ncat <server ip> <port>".',
                                 type: "object",
                                 properties: {
                                     name: {
                                         title: "Name",
-                                        desription:
+                                        description:
                                             "Identification name of the output. Used only for readability.",
                                         type: "string",
                                         minLength: 1
                                     },
                                     port: {
                                         title: "Port",
-                                        desription: "Local port number of the server.",
+                                        description: "Local port number of the server.",
                                         type: "integer"
                                     },
                                     blocking: {
                                         title: "Blocking",
-                                        desription:
+                                        description:
                                             "Enable blocking on TCP sockets (true/false). If blocking mode is disabled and a client is not able to retrieve records fast enough, some flow records may be dropped (only individual clients are affected). On the other hand, if the blocking mode is enabled, no records are dropped. However, if at least one client is slow, the plugin waits (i.e. blocks) until data are send. This can significantly slow down the whole collector and other output plugins because processing records is suspended. In the worst-case scenario, if the client is not responding at all, the whole collector is blocked! Therefore, it is usually preferred (and much safer) to disable blocking.",
                                         type: "boolean",
                                         enum: [true, false]
@@ -306,42 +307,43 @@ const jsonSchemaJSON = {
                             }
                         },
                         send: {
+                            title: "Send",
                             type: "array",
                             minItems: 1,
                             items: {
                                 title: "Send",
-                                desription:
+                                description:
                                     'Send records over network to a client. If the destination is not reachable or the client is disconnected, the plugin drops all records and tries to reconnect every 5 seconds. As with the server, you can verify functionality using ncat(1) utility: "ncat -lk <local ip> <local port>"',
                                 type: "object",
                                 properties: {
                                     name: {
                                         title: "Name",
-                                        desription:
+                                        description:
                                             "Identification name of the output. Used only for readability.",
                                         type: "string",
                                         minLength: 1
                                     },
                                     ip: {
                                         title: "IP address",
-                                        desription: "IPv4/IPv6 address of the client",
+                                        description: "IPv4/IPv6 address of the client",
                                         type: "string",
                                         minLength: 1
                                     },
                                     port: {
                                         title: "Port",
-                                        desription: "Remote port number",
+                                        description: "Remote port number",
                                         type: "integer"
                                     },
                                     protocol: {
                                         title: "Protocol",
-                                        desription:
+                                        description:
                                             "Transport protocol: TCP or UDP (this field is case insensitive)",
                                         type: "string",
                                         enum: ["TCP", "UDP"]
                                     },
                                     blocking: {
                                         title: "Blocking",
-                                        desription:
+                                        description:
                                             "Enable blocking on TCP sockets (true/false). If blocking mode is disabled and a client is not able to retrieve records fast enough, some flow records may be dropped (only individual clients are affected). On the other hand, if the blocking mode is enabled, no records are dropped. However, if at least one client is slow, the plugin waits (i.e. blocks) until data are send. This can significantly slow down the whole collector and other output plugins because processing records is suspended. In the worst-case scenario, if the client is not responding at all, the whole collector is blocked! Therefore, it is usually preferred (and much safer) to disable blocking.",
                                         type: "boolean",
                                         enum: [true, false]
@@ -351,36 +353,37 @@ const jsonSchemaJSON = {
                             }
                         },
                         file: {
+                            title: "File",
                             type: "array",
                             minItems: 1,
                             items: {
                                 title: "File",
-                                desription: "Store data to files.",
+                                description: "Store data to files.",
                                 type: "object",
                                 properties: {
                                     name: {
                                         title: "Name",
-                                        desription:
+                                        description:
                                             "Identification name of the output. Used only for readability.",
                                         type: "string",
                                         minLength: 1
                                     },
                                     path: {
                                         title: "Path",
-                                        desription:
+                                        description:
                                             'The path specifies storage directory for data collected by the plugin. Format specifiers for day, month, etc. are supported so you can create suitable directory hierarchy. See "strftime" for conversion specification. (Note: UTC time)',
                                         type: "string",
                                         minLength: 1
                                     },
                                     prefix: {
                                         title: "Prefix",
-                                        desription: "Specifies name prefix for output files.",
+                                        description: "Specifies name prefix for output files.",
                                         type: "string",
                                         minLength: 1
                                     },
                                     timeWindow: {
                                         title: "Time window",
-                                        desription:
+                                        description:
                                             "Specifies the time interval in seconds to rotate files [minimum 60, default 300]",
                                         type: "integer",
                                         default: 300,
@@ -388,14 +391,14 @@ const jsonSchemaJSON = {
                                     },
                                     timeAlignment: {
                                         title: "Time alignment",
-                                        desription:
+                                        description:
                                             "Align file rotation with next N minute interval (yes/no).",
                                         type: "string",
                                         enum: ["yes", "no"]
                                     },
                                     compression: {
                                         title: "Compression",
-                                        desription:
+                                        description:
                                             "Data compression helps to significantly reduce size of output files. Following compression algorithms are available:\nnone: Compression disabled [default]\ngzip: GZIP compression",
                                         type: "string",
                                         enum: ["none", "gzip"],
@@ -414,12 +417,12 @@ const jsonSchemaJSON = {
                         },
                         print: {
                             title: "Print",
-                            desription: "Write data on standard output.",
+                            description: "Write data on standard output.",
                             type: "object",
                             properties: {
                                 name: {
                                     title: "Name",
-                                    desription:
+                                    description:
                                         "Identification name of the output. Used only for readability.",
                                     type: "string",
                                     minLength: 1
@@ -452,31 +455,31 @@ const jsonSchemaJSON = {
 const jsonSchemaDummy = {
     $schema: "http://json-schema.org/draft-07/schema#",
     title: "Dummy output",
-    desription: "Dummy output plugin",
+    description: "Dummy output plugin",
     type: "object",
     properties: {
         name: {
             title: "Name",
-            desription: "User identification of the instance. Must be unique within the section.",
+            description: "User identification of the instance. Must be unique within the section.",
             type: "string",
             default: "Dummy output",
             minLength: 1
         },
         plugin: {
             title: "Plugin",
-            desription:
+            description:
                 "Internal identification of a plugin to whom the instance belongs. The identification is assigned by an author of the plugin.",
             type: "string",
             const: "dummy"
         },
         params: {
             title: "Parameters",
-            desription: "Configuration parameters of the instance.",
+            description: "Configuration parameters of the instance.",
             type: "object",
             properties: {
                 delay: {
                     title: "Delay",
-                    desription:
+                    description:
                         "Minimum delay between processing of two consecutive messages in microseconds.",
                     type: "integer",
                     minimum: 0
@@ -490,38 +493,38 @@ const jsonSchemaDummy = {
 const jsonSchemaLNF = {
     $schema: "http://json-schema.org/draft-07/schema#",
     title: "LNF storage",
-    desription: "LNF storage plugin",
+    description: "LNF storage plugin",
     type: "object",
     properties: {
         name: {
             title: "Name",
-            desription: "User identification of the instance. Must be unique within the section.",
+            description: "User identification of the instance. Must be unique within the section.",
             type: "string",
             default: "LNF storage",
             minLength: 1
         },
         plugin: {
             title: "Plugin",
-            desription:
+            description:
                 "Internal identification of a plugin to whom the instance belongs. The identification is assigned by an author of the plugin.",
             type: "string",
             const: "lnfstore"
         },
         params: {
             title: "Parameters",
-            desription: "Configuration parameters of the instance.",
+            description: "Configuration parameters of the instance.",
             type: "object",
             properties: {
                 storagePath: {
                     title: "Storage path",
-                    desription:
+                    description:
                         "The path element specifies the storage directory for data files. Keep on mind that the path must exist in your system. Otherwise, no records are stored. All files will be stored based on the configuration using the following template: <storagePath>/YYYY/MM/DD/lnf.<suffix> where YYYY/MM/DD means year/month/day and <suffix> represents a UTC timestamp in format YYMMDDhhmmss.",
                     type: "string",
                     minLength: 1
                 },
                 compress: {
                     title: "Compress",
-                    desription:
+                    description:
                         "Enable/disable LZO compression for files. [values: yes/no, default: no]",
                     type: "string",
                     default: "no",
@@ -529,7 +532,7 @@ const jsonSchemaLNF = {
                 },
                 identificatorField: {
                     title: "Identificator field",
-                    desription:
+                    description:
                         "Specifies an identification string, which is put into statistic records to describe the source. [default: <empty>]",
                     type: "string",
                     default: "",
@@ -537,12 +540,12 @@ const jsonSchemaLNF = {
                 },
                 dumpInterval: {
                     title: "Dump interval",
-                    desription: "Configuration of output files rotation.",
+                    description: "Configuration of output files rotation.",
                     type: "object",
                     properties: {
                         timeWindow: {
                             title: "Time window",
-                            desription:
+                            description:
                                 "Specifies time interval in seconds to rotate files i.e. close the current file and create a new one. [default: 300]",
                             type: "integer",
                             default: 300,
@@ -550,7 +553,7 @@ const jsonSchemaLNF = {
                         },
                         align: {
                             title: "Align",
-                            desription:
+                            description:
                                 "Align file rotation with next N minute interval. For example, if enabled and window size is 5 minutes long, files will be created at 0, 5, 10, etc. [values: yes/no, default: yes]",
                             type: "string",
                             default: "yes",
@@ -561,13 +564,13 @@ const jsonSchemaLNF = {
                 },
                 index: {
                     title: "Index",
-                    desription:
+                    description:
                         'Configuration of IP address indexes. Index files are independent and exists besides "lnf.*" files as "bfi.*" files with matching identification.',
                     type: "object",
                     properties: {
                         enable: {
                             title: "Enable",
-                            desription:
+                            description:
                                 "Enable/disable Bloom Filter indexes. [values: yes/no, default: no]",
                             type: "string",
                             default: "no",
@@ -575,7 +578,7 @@ const jsonSchemaLNF = {
                         },
                         autosize: {
                             title: "Autosize",
-                            desription:
+                            description:
                                 "Enable/disable automatic resize of index files based on the number of unique IP addresses in the last dump interval. [values: yes/no, default: yes]",
                             type: "string",
                             default: "yes",
@@ -583,7 +586,7 @@ const jsonSchemaLNF = {
                         },
                         estimatedItemCount: {
                             title: "Estimated item count",
-                            desription:
+                            description:
                                 "Expected number of unique IP addresses in dump interval. If autosize is enabled this value is continuously recalculated to suit current utilization. The value affects the size of index files i.e. higher value, larger files. [default: 100000]",
                             type: "integer",
                             default: 100000,
@@ -591,7 +594,7 @@ const jsonSchemaLNF = {
                         },
                         falsePositiveProbability: {
                             title: "False positive probability",
-                            desription:
+                            description:
                                 "False positive probability of the index. The probability that presence test of an IP address indicates that the IP address is present in a data file, when it actually is not. It does not affect the situation when the IP address is actually in the data file i.e. if the IP is in the file, the result of the test is always correct. The value affects the size of index files i.e. smaller value, larger files. [default: 0.01]",
                             type: "number",
                             default: 0.01,
@@ -609,26 +612,26 @@ const jsonSchemaLNF = {
 const jsonSchemaUniRec = {
     $schema: "http://json-schema.org/draft-07/schema#",
     title: "UniRec plugin",
-    desription: "UniRec plugin",
+    description: "UniRec plugin",
     type: "object",
     properties: {
         name: {
             title: "Name",
-            desription: "User identification of the instance. Must be unique within the section.",
+            description: "User identification of the instance. Must be unique within the section.",
             type: "string",
             default: "UniRec plugin",
             minLength: 1
         },
         plugin: {
             title: "Plugin",
-            desription:
+            description:
                 "Internal identification of a plugin to whom the instance belongs. The identification is assigned by an author of the plugin.",
             type: "string",
             const: "unirec"
         },
         params: {
             title: "Parameters",
-            desription: "Configuration parameters of the instance.",
+            description: "Configuration parameters of the instance.",
             type: "object",
             properties: {
                 uniRecFormat: {
@@ -793,7 +796,7 @@ const jsonSchemaUniRec = {
                                 size: {
                                     title: "Size",
                                     description:
-                                        "If the parameter is non-zero, the output interface will split captured data into individual files after a size of a current file (in MB) exceeds given threshold. Numeric suffix is added to the original file name for each file in ascending order starting with 0. [default: 0]",
+                                        "If the parameter is non-zero, the output interface will split captured data into individual files after a size of a current file (in MB) exceeds given threshold. Numeric suffix is added to the original file name for each file in ascending order starting with 0. [default: 0] ",
                                     type: "integer",
                                     default: 0
                                 }
