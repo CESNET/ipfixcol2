@@ -181,6 +181,10 @@ textarea, pre {
 
 .select {
     min-width: 182px;
+    .MuiSelect-selectMenu {
+        min-width: 182px;
+        padding-right: 0;
+    }
 }
 
 .expandable {

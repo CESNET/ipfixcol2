@@ -227,9 +227,19 @@ class Form extends React.Component {
                         <Typography variant="h6" color="inherit" className="title">
                             Configuration generator
                         </Typography>
-                        <Button color="inherit" onClick={this.download.bind(this)}>
+                        {/* <Button color="inherit" onClick={this.download.bind(this)}>
                             {"Download file"}
-                        </Button>
+                        </Button> */}
+                        <Tooltip title={"Download file"} arrow placement={"bottom"}>
+                            <IconButton color="inherit" onClick={this.download.bind(this)}>
+                                <Icon>get_app</Icon>
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title={"Settings"} arrow placement={"bottom"}>
+                            <IconButton color="inherit" onClick={this.download.bind(this)}>
+                                <Icon>settings</Icon>
+                            </IconButton>
+                        </Tooltip>
                     </Toolbar>
                 </AppBar>
                 <div className="form">
