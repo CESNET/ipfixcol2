@@ -1,3 +1,10 @@
+// TODO
+// - Zredukovat opakování kódu
+// - Plugin UniRec (timeout) přidat možnost zadat čas ručně
+// - Přidat nové pluginy
+// - Opravit zobrazování chyb
+
+
 function moduleCreate(jsonSchema) {
     var newModule = {};
     for (var i in jsonSchema.required) {
