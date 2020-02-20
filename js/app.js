@@ -46,7 +46,7 @@ const columnNames = ["Input plugins", "Intermediate plugins", "Output plugins"];
 const moduleSchemas = [
     [jsonSchemaUDP, jsonSchemaTCP],
     [jsonSchemaAnonymization],
-    [jsonSchemaJSON, jsonSchemaDummy, jsonSchemaLNF, jsonSchemaUniRec, jsonSchemaTimeCheck]
+    [jsonSchemaJSON, jsonSchemaDummy, jsonSchemaLNF, jsonSchemaUniRec, jsonSchemaTimeCheck, jsonSchemaViewer]
 ];
 const defaultConfig = {
     ipfixcol2: {

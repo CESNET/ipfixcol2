@@ -385,7 +385,9 @@ class Properties extends React.Component {
                 </Collapse>
             );
         }
-        return (
+        return Object.keys(this.props.jsonSchema.properties).length == 0 ? (
+            <CardContent>{"No available parameters"}</CardContent>
+        ) : (
             <React.Fragment>
                 <Card>
                     {name !== "" || removeButton !== "" ? (
@@ -406,6 +408,11 @@ class Properties extends React.Component {
                         ""
                     )}
                     {properties}
+                    {/* {Object.keys(this.props.jsonSchema.properties).length == 0 ? (
+                        <CardContent>{"No available parameters"}</CardContent>
+                    ) : (
+                        ""
+                    )} */}
                     {optionalMenu !== "" ? (
                         <CardActions disableSpacing>{optionalMenu}</CardActions>
                     ) : (

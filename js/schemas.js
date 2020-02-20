@@ -860,3 +860,33 @@ const jsonSchemaTimeCheck = {
     },
     required: ["name", "plugin", "params"]
 };
+const jsonSchemaViewer = {
+    $schema: "http://json-schema.org/draft-07/schema#",
+    title: "Viewer",
+    description: "Viewer plugin",
+    type: "object",
+    properties: {
+        name: {
+            title: "Name",
+            description: "User identification of the instance. Must be unique within the section.",
+            type: "string",
+            default: "Viewer output",
+            minLength: 1
+        },
+        plugin: {
+            title: "Plugin",
+            description:
+                "Internal identification of a plugin to whom the instance belongs. The identification is assigned by an author of the plugin.",
+            type: "string",
+            const: "viewer"
+        },
+        params: {
+            title: "Parameters",
+            description: "Configuration parameters of the instance.",
+            type: "object",
+            properties: {
+            }
+        }
+    },
+    required: ["name", "plugin", "params"]
+};

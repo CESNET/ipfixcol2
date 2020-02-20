@@ -121,7 +121,7 @@ body {
   box-shadow: none;
 }
 .column .addModule:hover .modules {
-  max-height: 13em;
+  max-height: 15em;
 }
 
 .blue {
