@@ -137,6 +137,16 @@ public:
      */
     std::tuple<ipx_ring_t *, enum ipx_odid_filter_type, const ipx_orange_t *>
     get_input();
+
+    /**
+     * \brief Get registered extension dependencies
+     *
+     * \note Since output instances cannot produce extensions, the array contains only registered
+     *   dependencies.
+     * \return An array of dependencies and the size of the array
+     */
+    std::tuple<struct ipx_ctx_ext *, size_t>
+    get_extensions() override;
 };
 
 #endif //IPFIXCOL_INSTANCE_OUTPUT_HPP

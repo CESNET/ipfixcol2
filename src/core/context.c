@@ -375,6 +375,18 @@ ipx_ctx_ring_dst_set(ipx_ctx_t *ctx, ipx_ring_t *ring)
     ctx->pipeline.dst = ring;
 }
 
+void
+ipx_ctx_ext_defs(ipx_ctx_t *ctx, struct ipx_ctx_ext **arr, size_t *arr_size)
+{
+    if (ctx->cfg_extension.items_cnt == 0) {
+        *arr = NULL;
+        *arr_size = 0;
+        return;
+    }
+
+    *arr = ctx->cfg_extension.items;
+    *arr_size = ctx->cfg_extension.items_cnt;
+}
 
 // -------------------------------------------------------------------------------------------------
 
@@ -448,6 +460,7 @@ ipx_ctx_ext_producer(ipx_ctx_t *ctx, const char *type, const char *name, size_t 
         return rc;
     }
 
+    IPX_CTX_DEBUG(ctx, "Data Record extension '%s/%s' has been registered.", type, name);
     *ext = rec;
     return IPX_OK;
 }
@@ -474,6 +487,7 @@ ipx_ctx_ext_consumer(ipx_ctx_t *ctx, const char *type, const char *name, ipx_ctx
         return rc;
     }
 
+    IPX_CTX_DEBUG(ctx, "Dependency on Data Record extension '%s/%s' has been added.", type, name);
     *ext = rec;
     return IPX_OK;
 }

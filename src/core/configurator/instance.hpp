@@ -116,6 +116,25 @@ public:
 
     /** \brief Start a thread of the instance                                                    */
     virtual void start() = 0;
+
+    /**
+     * \brief Get name of the instance
+     * \return Name
+     */
+    const std::string &
+    get_name() {
+        return _name;
+    }
+
+    /**
+     * \brief Get registered extensions and dependencies
+     * \return An array of extensions and dependencies and the size of the array
+     * \throw runtime_error if extension are not supported by the instance type
+     */
+    virtual std::tuple<struct ipx_ctx_ext *, size_t>
+    get_extensions() {
+        throw std::runtime_error("Extensions are not supported the plugin");
+    }
 };
 
 #endif //IPFIXCOL_INSTANCE_H

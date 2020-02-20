@@ -135,3 +135,12 @@ ipx_instance_intermediate::connect_to(ipx_instance_intermediate &intermediate)
     assert(_state == state::NEW); // Only configuration of an uninitialized instance can be changed!
     ipx_ctx_ring_dst_set(_ctx, intermediate.get_input());
 }
+
+std::tuple<struct ipx_ctx_ext *, size_t>
+ipx_instance_intermediate::get_extensions()
+{
+    struct ipx_ctx_ext *ext_arr = nullptr;
+    size_t ext_size = 0;
+    ipx_ctx_ext_defs(_ctx, &ext_arr, &ext_size);
+    return std::make_tuple(ext_arr, ext_size);
+}

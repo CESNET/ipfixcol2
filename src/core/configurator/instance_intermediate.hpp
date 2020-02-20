@@ -152,6 +152,14 @@ public:
      * \param[in] intermediate Intermediate plugin to receive our messages
      */
     virtual void connect_to(ipx_instance_intermediate &intermediate);
+
+    /**
+     * \brief Get registered extensions and dependencies
+     * \return An array of extensions and dependencies and the size of the array
+     * \throw runtime_error if extension are not supported by the instance type
+     */
+    virtual std::tuple<struct ipx_ctx_ext *, size_t>
+    get_extensions() override;
 };
 
 #endif //IPFIXCOL_INSTANCE_INTERMEDIATE_HPP

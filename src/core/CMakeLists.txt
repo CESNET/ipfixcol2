@@ -4,6 +4,8 @@ set(CORE_SOURCE
     configurator/config_file.hpp
     configurator/configurator.cpp
     configurator/configurator.hpp
+    configurator/extensions.cpp
+    configurator/extensions.hpp
     configurator/instance.hpp
     configurator/instance_input.cpp
     configurator/instance_input.hpp

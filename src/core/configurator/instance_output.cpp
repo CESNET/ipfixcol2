@@ -141,3 +141,12 @@ ipx_instance_output::get_input()
 {
     return std::make_tuple(_instance_buffer, _type, _filter);
 }
+
+std::tuple<struct ipx_ctx_ext *, size_t>
+ipx_instance_output::get_extensions()
+{
+    struct ipx_ctx_ext *ext_arr = nullptr;
+    size_t ext_size = 0;
+    ipx_ctx_ext_defs(_ctx, &ext_arr, &ext_size);
+    return std::make_tuple(ext_arr, ext_size);
+}
