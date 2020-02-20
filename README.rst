@@ -102,6 +102,8 @@ Finally, build and install the collector:
 
 .. code-block:: bash
 
+    $ git clone https://github.com/CESNET/ipfixcol2.git
+    $ cd ipfixcol2
     $ mkdir build && cd build && cmake ..
     $ make
     # make install
