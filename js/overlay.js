@@ -1,9 +1,10 @@
 // TODO
 // - Zredukovat opakování kódu
+// - Formátovat popisky
+// - Předělat mainForm
 // - Plugin UniRec (timeout) přidat možnost zadat čas ručně
 // - Přidat nové pluginy
 // - Opravit zobrazování chyb
-
 
 function moduleCreate(jsonSchema) {
     var newModule = {};
@@ -966,8 +967,8 @@ class BooleanProperty extends React.Component {
             descriptionOpen: false
         };
     }
-    handleChange(event) {
-        this.props.onChange(this.props.name, event.target.value);
+    handleChange() {
+        this.props.onChange(this.props.name, !this.props.module);
     }
     handleRemove() {
         this.props.onRemove(this.props.name);
@@ -996,75 +997,39 @@ class BooleanProperty extends React.Component {
             onChange = null;
         }
         if (value === null) {
-            value = "";
-        }
-        var enumValues = [true, false];
-        if (this.props.jsonSchema.hasOwnProperty("enum")) {
-            enumValues = this.props.jsonSchema.enum;
+            value = false;
         }
         var hasError = this.props.errors !== undefined && this.props.errors.length > 0;
         var errorMessage = "";
         if (hasError) {
             errorMessage = this.props.errors.pop().message;
         }
-        if (this.props.required) {
-            inputCode = (
-                <FormControl error={hasError}>
-                    <InputLabel>{this.props.jsonSchema.title}</InputLabel>
-                    <Select
-                        className={"select"}
-                        value={value}
-                        onChange={onChange}
-                        readOnly={readOnly}
-                        endAdornment={
-                            <InputAdornment position="end">
-                                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
-                                    <Icon>help</Icon>
-                                </IconButton>
-                            </InputAdornment>
-                        }
-                    >
-                        {enumValues.map(enumValue => {
-                            return (
-                                <MenuItem key={enumValue} value={enumValue}>
-                                    {enumValue.toString()}
-                                </MenuItem>
-                            );
-                        })}
-                    </Select>
-                </FormControl>
-            );
-        } else {
-            inputCode = (
-                <FormControl error={hasError}>
-                    <InputLabel>{this.props.jsonSchema.title}</InputLabel>
-                    <Select
-                        className={"select"}
-                        value={value}
-                        onChange={onChange}
-                        readOnly={readOnly}
-                        endAdornment={
-                            <InputAdornment position="end">
-                                <IconButton onClick={this.handleRemove.bind(this)}>
-                                    <Icon>delete</Icon>
-                                </IconButton>
-                                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
-                                    <Icon>help</Icon>
-                                </IconButton>
-                            </InputAdornment>
-                        }
-                    >
-                        {enumValues.map(enumValue => {
-                            return (
-                                <MenuItem key={enumValue} value={enumValue}>
-                                    {enumValue.toString()}
-                                </MenuItem>
-                            );
-                        })}
-                    </Select>
-                </FormControl>
-            );
-        }
+        inputCode = (
+            <FormControl error={hasError}>
+                <FormLabel>{this.props.jsonSchema.title}</FormLabel>
+                <Grid component="label" container alignItems="center" spacing={1}>
+                    <Grid item>False</Grid>
+                    <Grid item>
+                        <Switch disabled={readOnly} checked={value} onChange={onChange} />
+                    </Grid>
+                    <Grid item>True</Grid>
+                    <Grid item>
+                        <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
+                            <Icon>help</Icon>
+                        </IconButton>
+                    </Grid>
+                    {!this.props.required ? (
+                        <Grid item>
+                            <IconButton onClick={this.handleRemove.bind(this)}>
+                                <Icon>delete</Icon>
+                            </IconButton>
+                        </Grid>
+                    ) : (
+                        ""
+                    )}
+                </Grid>
+            </FormControl>
+        );
         inputCode = (
             <Tooltip open={hasError} title={errorMessage} arrow placement={"right"}>
                 {inputCode}
