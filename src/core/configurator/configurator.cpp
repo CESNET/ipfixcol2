@@ -46,6 +46,7 @@
 #include <signal.h>
 
 #include "configurator.hpp"
+#include "extensions.hpp"
 
 extern "C" {
 #include "../message_terminate.h"
@@ -249,16 +250,40 @@ ipx_configurator::start(const ipx_config_model &model)
 
     IPX_DEBUG(comp_str, "All instances have been successfully initialized.", '\0');
 
-    // Phase 4. Start threads of all plugins
+    // Phase 4. Register and resolved Data Record extensions and dependencies
+    ipx_cfg_extensions ext_mgr;
+    size_t pos = 0; // Position of an instance in the collector pipeline
+
+    for (auto &input : inputs) {
+        input->extensions_register(&ext_mgr, pos);
+    }
+
+    pos++;
+    for (auto &inter : inters) {
+        inter->extensions_register(&ext_mgr, pos);
+        pos++;
+    }
+
     for (auto &output : outputs) {
+        output->extensions_register(&ext_mgr, pos);
+    }
+
+    ext_mgr.resolve();
+    ext_mgr.list_extensions();
+
+    // Phase 5. Start threads of all plugins and update definitions of extensions
+    for (auto &output : outputs) {
+        output->extensions_resolve(&ext_mgr);
         output->start();
     }
 
     for (auto &inter : inters) {
+        inter->extensions_resolve(&ext_mgr);
         inter->start();
     }
 
     for (auto &input : inputs) {
+        input->extensions_resolve(&ext_mgr);
         input->start();
     }
 

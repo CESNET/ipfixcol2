@@ -2,10 +2,10 @@
  * \file src/core/configurator/instance.hpp
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief Pipeline instance wrappers (header file)
- * \date 2018
+ * \date 2018-2020
  */
 
-/* Copyright (C) 2018 CESNET, z.s.p.o.
+/* Copyright (C) 2018-2020 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,6 +47,7 @@
 #include <stdexcept>
 #include <memory>
 #include "plugin_mgr.hpp"
+#include "extensions.hpp"
 
 extern "C" {
 #include <ipfixcol2.h>
@@ -127,13 +128,23 @@ public:
     }
 
     /**
-     * \brief Get registered extensions and dependencies
-     * \return An array of extensions and dependencies and the size of the array
-     * \throw runtime_error if extension are not supported by the instance type
+     * \brief Registered extensions and dependencies
+     * \param[in] ext_mgr Extension manager
      */
-    virtual std::tuple<struct ipx_ctx_ext *, size_t>
-    get_extensions() {
-        throw std::runtime_error("Extensions are not supported the plugin");
+    virtual void
+    extensions_register(ipx_cfg_extensions *ext_mgr, size_t pos) {
+        ext_mgr->register_instance(_ctx, pos);
+    }
+
+    /**
+     * \brief Resolve definition of the extension/dependency definitions of the instance
+     *
+     * Description of each extension/dependency is updated to contain size, offset, etc.
+     * \param[in] ext_mgr Extension manager
+     */
+    virtual void
+    extensions_resolve(ipx_cfg_extensions *ext_mgr) {
+        ext_mgr->update_instance(_ctx);
     }
 };
 
