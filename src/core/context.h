@@ -264,4 +264,19 @@ ipx_ctx_verb_set(ipx_ctx_t *ctx, enum ipx_verb_level verb);
 IPX_API int
 ipx_ctx_term_cnt_set(ipx_ctx_t *ctx, unsigned int cnt);
 
+/**
+ * \brief Get registered extensions and dependencies
+ *
+ * \note
+ *   Keep on mind that the array is filled only after plugin initialization. Moreover,
+ *   the most plugins don't use extension at all, so the array is usually empty.
+ * \warning
+ *   Don't change the size and offset of extensions if the plugin is already running!
+ * \param[in] ctx       Plugin context
+ * \param[out] arr      Array with extensions and dependencies
+ * \param[out] arr_size Size of the array
+ */
+IPX_API void
+ipx_ctx_ext_defs(ipx_ctx_t *ctx, struct ipx_ctx_ext **arr, size_t *arr_size);
+
 #endif // IPFIXCOL_CONTEXT_INTERNAL_H

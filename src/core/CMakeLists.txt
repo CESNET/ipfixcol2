@@ -4,6 +4,8 @@ set(CORE_SOURCE
     configurator/config_file.hpp
     configurator/configurator.cpp
     configurator/configurator.hpp
+    configurator/extensions.cpp
+    configurator/extensions.hpp
     configurator/instance.hpp
     configurator/instance_input.cpp
     configurator/instance_input.hpp
@@ -28,6 +30,8 @@ set(CORE_SOURCE
     api.c
     context.c
     context.h
+    extension.c
+    extension.h
     fpipe.c
     fpipe.h
     message_base.c

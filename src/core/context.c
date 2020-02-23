@@ -47,6 +47,7 @@
 #include <sys/prctl.h>
 
 #include "context.h"
+#include "extension.h"
 #include "verbose.h"
 #include "utils.h"
 #include "fpipe.h"
@@ -150,6 +151,13 @@ struct ipx_ctx {
          */
         unsigned int term_msg_cnt;
     } cfg_system; /**< System configuration                                                      */
+
+    struct {
+        /** Array of extensions (producers and consumers)                                        */
+        struct ipx_ctx_ext *items;
+        /** Size of extension definitions in the array                                           */
+        size_t items_cnt;
+    } cfg_extension; /**< Extension configuration                                                */
 };
 
 ipx_ctx_t *
@@ -176,6 +184,9 @@ ipx_ctx_create(const char *name, const struct ipx_ctx_callbacks *callbacks)
     ctx->cfg_system.msg_mask_selected = 0; // No messages to process selected
     ctx->cfg_system.msg_mask_allowed = IPX_MSG_IPFIX | IPX_MSG_SESSION;
     ctx->cfg_system.term_msg_cnt = 1; // By default, wait for 1 termination message
+
+    ctx->cfg_extension.items = NULL;
+    ctx->cfg_extension.items_cnt = 0;
 
     if (callbacks == NULL) {
         // Dummy context for testing
@@ -214,6 +225,13 @@ ipx_ctx_destroy(ipx_ctx_t *ctx)
         ctx->plugin_cbs->destroy(ctx, ctx->cfg_plugin.private);
         ctx->pipeline.dst = tmp;
     }
+
+    // Destroy all extensions
+    for (size_t idx = 0; idx < ctx->cfg_extension.items_cnt; ++idx) {
+        struct ipx_ctx_ext *ext = &ctx->cfg_extension.items[idx];
+        ipx_ctx_ext_destroy(ext);
+    }
+    free(ctx->cfg_extension.items);
 
     free(ctx->name);
     free(ctx);
@@ -357,6 +375,122 @@ ipx_ctx_ring_dst_set(ipx_ctx_t *ctx, ipx_ring_t *ring)
     ctx->pipeline.dst = ring;
 }
 
+void
+ipx_ctx_ext_defs(ipx_ctx_t *ctx, struct ipx_ctx_ext **arr, size_t *arr_size)
+{
+    if (ctx->cfg_extension.items_cnt == 0) {
+        *arr = NULL;
+        *arr_size = 0;
+        return;
+    }
+
+    *arr = ctx->cfg_extension.items;
+    *arr_size = ctx->cfg_extension.items_cnt;
+}
+
+// -------------------------------------------------------------------------------------------------
+
+/**
+ * @brief Create a new extension record
+ *
+ * First, make sure that the extension hasn't been previously added. Then append a new
+ * (uninitialized) record to the array of extensions.
+ *
+ * @param[in] ctx  Plugin context
+ * @param[in] type Identification of extension type
+ * @param[in] name Identification of extension name
+ * @return #IPX_OK on success
+ * @return #IPX_ERR_EXISTS if the extension has been already defined
+ * @return #IPX_ERR_ARG if @p type or @p name are not valid strings
+ * @return #IPX_ERR_NOMEM in case of a memory allocation error
+ */
+static int
+ipx_ctx_ext_create(ipx_ctx_t *ctx, const char *type, const char *name)
+{
+    size_t new_size, alloc_size;
+    struct ipx_ctx_ext *new_items = NULL;
+
+    if (!type || !name) {
+        return IPX_ERR_ARG;
+    }
+
+    // Try to find it
+    for (size_t idx = 0; idx < ctx->cfg_extension.items_cnt; ++idx) {
+        const struct ipx_ctx_ext *rec = &ctx->cfg_extension.items[idx];
+        if (strcmp(type, rec->data_type) != 0 || strcmp(name, rec->data_name) != 0) {
+            continue;
+        }
+
+        return IPX_ERR_EXISTS;
+    }
+
+    // Create a new record
+    new_size = ctx->cfg_extension.items_cnt + 1U;
+    alloc_size = new_size * sizeof(struct ipx_ctx_ext);
+    new_items = realloc(ctx->cfg_extension.items, alloc_size);
+    if (!new_items) {
+        IPX_CTX_ERROR(ctx, "%s(): Memory allocation failed", __func__);
+        return IPX_ERR_NOMEM;
+    }
+
+    ctx->cfg_extension.items = new_items;
+    ctx->cfg_extension.items_cnt = new_size;
+    return IPX_OK;
+}
+
+int
+ipx_ctx_ext_producer(ipx_ctx_t *ctx, const char *type, const char *name, size_t size,
+    ipx_ctx_ext_t **ext)
+{
+    struct ipx_ctx_ext *rec = NULL;
+    int rc = IPX_OK;
+
+    // Check permissions (only intermediate plugins during initialization)
+    if (ctx->type != IPX_PT_INTERMEDIATE || ctx->state != IPX_CS_NEW) {
+        return IPX_ERR_DENIED;
+    }
+
+    if ((rc = ipx_ctx_ext_create(ctx, type, name)) != IPX_OK) {
+        return rc;
+    }
+
+    rec = &ctx->cfg_extension.items[ctx->cfg_extension.items_cnt - 1];
+    if ((rc = ipx_ctx_ext_init(rec, IPX_EXTENSION_PRODUCER, type, name, size)) != IPX_OK) {
+        ctx->cfg_extension.items_cnt--; // The added extension is not valid!
+        return rc;
+    }
+
+    IPX_CTX_DEBUG(ctx, "Data Record extension '%s/%s' has been registered.", type, name);
+    *ext = rec;
+    return IPX_OK;
+}
+
+int
+ipx_ctx_ext_consumer(ipx_ctx_t *ctx, const char *type, const char *name, ipx_ctx_ext_t **ext)
+{
+    struct ipx_ctx_ext *rec = NULL;
+    int rc = IPX_OK;
+
+    // Check permissions (only intermediate and output plugins during initialization) + duplicities
+    if ((ctx->type != IPX_PT_INTERMEDIATE && ctx->type != IPX_PT_OUTPUT)
+            || ctx->state != IPX_CS_NEW) {
+        return IPX_ERR_DENIED;
+    }
+
+    if ((rc = ipx_ctx_ext_create(ctx, type, name)) != IPX_OK) {
+        return rc;
+    }
+
+    rec = &ctx->cfg_extension.items[ctx->cfg_extension.items_cnt - 1];
+    if ((rc = ipx_ctx_ext_init(rec, IPX_EXTENSION_CONSUMER, type, name, 0)) != IPX_OK) {
+        ctx->cfg_extension.items_cnt--; // The added extension is not valid!
+        return rc;
+    }
+
+    IPX_CTX_DEBUG(ctx, "Dependency on Data Record extension '%s/%s' has been added.", type, name);
+    *ext = rec;
+    return IPX_OK;
+}
 
 // -------------------------------------------------------------------------------------------------
 
@@ -585,6 +719,7 @@ ipx_ctx_init(ipx_ctx_t *ctx, const char *params)
     // Try to initialize the plugin
     const char *plugin_name = ctx->plugin_cbs->info->name;
     IPX_CTX_DEBUG(ctx, "Calling instance constructor of the plugin '%s'", plugin_name);
+    ctx->type = plugin_type;
     // Temporarily remove permission to pass messages
     uint32_t permissions_old = ctx->permissions;
     ctx->permissions &= ~(uint32_t) IPX_CP_MSG_PASS;
@@ -598,6 +733,7 @@ ipx_ctx_init(ipx_ctx_t *ctx, const char *params)
     if (rc != IPX_OK) {
         IPX_CTX_ERROR(ctx, "Initialization function of the instance failed!", '\0');
         // Restore default default parameters
+        ctx->type = 0;
         ctx->permissions = 0;
         ctx->cfg_system.msg_mask_selected = 0;
         ctx->cfg_system.msg_mask_allowed = IPX_MSG_IPFIX | IPX_MSG_SESSION;
@@ -612,7 +748,6 @@ ipx_ctx_init(ipx_ctx_t *ctx, const char *params)
         IPX_CTX_WARNING(ctx, "The instance didn't set its private data.", '\0');
     }
 
-    ctx->type = plugin_type;
     ctx->state = IPX_CS_INIT;
     return IPX_OK;
 }
