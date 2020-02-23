@@ -719,6 +719,7 @@ ipx_ctx_init(ipx_ctx_t *ctx, const char *params)
     // Try to initialize the plugin
     const char *plugin_name = ctx->plugin_cbs->info->name;
     IPX_CTX_DEBUG(ctx, "Calling instance constructor of the plugin '%s'", plugin_name);
+    ctx->type = plugin_type;
     // Temporarily remove permission to pass messages
     uint32_t permissions_old = ctx->permissions;
     ctx->permissions &= ~(uint32_t) IPX_CP_MSG_PASS;
@@ -732,6 +733,7 @@ ipx_ctx_init(ipx_ctx_t *ctx, const char *params)
     if (rc != IPX_OK) {
         IPX_CTX_ERROR(ctx, "Initialization function of the instance failed!", '\0');
         // Restore default default parameters
+        ctx->type = 0;
         ctx->permissions = 0;
         ctx->cfg_system.msg_mask_selected = 0;
         ctx->cfg_system.msg_mask_allowed = IPX_MSG_IPFIX | IPX_MSG_SESSION;
@@ -746,7 +748,6 @@ ipx_ctx_init(ipx_ctx_t *ctx, const char *params)
         IPX_CTX_WARNING(ctx, "The instance didn't set its private data.", '\0');
     }
 
-    ctx->type = plugin_type;
     ctx->state = IPX_CS_INIT;
     return IPX_OK;
 }

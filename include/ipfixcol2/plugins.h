@@ -467,38 +467,30 @@ IPX_API int
 ipx_ctx_ext_consumer(ipx_ctx_t *ctx, const char *type, const char *name, ipx_ctx_ext_t **ext);
 
 /**
- * \brief Get size of an extension
+ * \brief Get an extension
  *
- * Information about the extension are not available during ipx_plugin_init().
+ * In case of a producer of the extension, it always returns #IPX_OK and fills the pointer and
+ * size. If the producer decides to fill the extension, it also must call ipx_ctx_ext_set_filled().
+ * Otherwise, consumers will not be able to get its content.
+ *
  * \param[in]  ext  Internal description of the extension
- * \param[out] size Size of the extension
+ * \param[in]  drec Data Record with extensions
+ * \param[out] data Pointer to extension data
+ * \param[out] size Size of the extensions (bytes)
  * \return #IPX_OK on success
- * \return #IPX_ERR_DENIED if the information is not available
+ * \return #IPX_ERR_NOTFOUND if the extension hasn't been filled by its producer
  */
 IPX_API int
-ipx_ctx_ext_size(ipx_ctx_ext_t *ext, size_t *size);
-
-/**
- * \brief Get data of an extension
- *
- * \note
- *   In case of a consumer, the function can return NULL if the extension hasn't been filled
- *   by the producer!
- * \param[in] ext      Internal description of the extension
- * \param[in] ipx_drec Data Record with extensions
- * \return Pointer to the extension or NULL
- */
-IPX_API void *
-ipx_ctx_ext_get(ipx_ctx_ext_t *ext, struct ipx_ipfix_record *ipx_drec);
+ipx_ctx_ext_get(ipx_ctx_ext_t *ext, struct ipx_ipfix_record *drec, void **data, size_t *size);
 
 /**
  * \brief Set the extension of a Data Record as filled (ONLY for the producer of the extension)
  *
- * \param[in] ext      Internal description of the extension
- * \param[in] ipx_drec Data Record with extensions
+ * \param[in] ext  Internal description of the extension
+ * \param[in] drec Data Record with extensions
  */
 IPX_API void
-ipx_ctx_ext_set_filled(ipx_ctx_ext_t *ext, struct ipx_ipfix_record *ipx_drec);
+ipx_ctx_ext_set_filled(ipx_ctx_ext_t *ext, struct ipx_ipfix_record *drec);
 
 /**
  * @}

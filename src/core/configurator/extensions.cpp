@@ -98,7 +98,7 @@ ipx_cfg_extensions::check_dependencies(const std::string &ident, const struct ex
 
     // No producers?
     if (rec.producers.empty()) {
-        throw std::runtime_error("No provider of Data Record extension " + ident + "found. "
+        throw std::runtime_error("No provider of Data Record extension " + ident + " found. "
             "The extension is required by " + name_consumers);
     }
 
@@ -122,7 +122,7 @@ ipx_cfg_extensions::check_dependencies(const std::string &ident, const struct ex
         throw std::runtime_error("Instance '" + producer_rec.name + "', which is a provider "
             "of Data Record extension " + ident + ", is placed in the collector pipeline "
             "after '" + min_cons->name + "' instance, which depends on the extension. "
-            "Please, swap the order of the plugin instances");
+            "Please, swap the order of the plugin instances.");
     }
 }
 
@@ -176,8 +176,8 @@ ipx_cfg_extensions::resolve()
             ext.mask = mask;
 
             // Align the offset to multiple of 8
-            ext.offset += (ext.size % 8U == 0) ? (ext.size) : (((ext.size / 8U) + 1U) * 8U);
-            ext.mask <<= 1U;
+            offset += (ext.size % 8U == 0) ? (ext.size) : (((ext.size / 8U) + 1U) * 8U);
+            mask <<= 1U;
         }
     }
 

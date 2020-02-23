@@ -45,36 +45,26 @@
 #include <string.h>
 
 int
-ipx_ctx_ext_size(ipx_ctx_ext_t *ext, size_t *size)
+ipx_ctx_ext_get(ipx_ctx_ext_t *ext, struct ipx_ipfix_record *drec, void **data, size_t *size)
 {
-    if (!ext->mask) {
-        // Mask is not filled -> initialization hasn't been completed yet
-        return IPX_ERR_DENIED;
+    if (ext->etype == IPX_EXTENSION_CONSUMER && (drec->ext_mask & ext->mask) == 0) {
+        // The extension hasn't been filled by the producer
+        return IPX_ERR_NOTFOUND;
     }
 
+    *data = &drec->ext[ext->offset];
     *size = ext->size;
     return IPX_OK;
 }
 
-void *
-ipx_ctx_ext_get(ipx_ctx_ext_t *ext, struct ipx_ipfix_record *ipx_drec)
-{
-    if (ext->etype == IPX_EXTENSION_CONSUMER && (ipx_drec->ext_mask & ext->mask) == 0) {
-        // The extension hasn't been filled by the producer
-        return NULL;
-    }
-
-    return (ipx_drec->ext + ext->offset);
-}
-
 void
-ipx_ctx_ext_set_filled(ipx_ctx_ext_t *ext, struct ipx_ipfix_record *ipx_drec)
+ipx_ctx_ext_set_filled(ipx_ctx_ext_t *ext, struct ipx_ipfix_record *drec)
 {
     if (ext->etype != IPX_EXTENSION_PRODUCER) {
         return; // Not allowed!
     }
 
-    ipx_drec->ext_mask |= ext->mask;
+    drec->ext_mask |= ext->mask;
 }
 
 int
