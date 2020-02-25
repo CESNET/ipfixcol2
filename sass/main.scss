@@ -191,6 +191,10 @@ textarea, pre {
     transform: rotate(180deg);
 }
 
+p + p {
+    margin-top: 16px;
+}
+
 // html {
 //     background: black;
 //     filter: invert(1) hue-rotate(180deg);

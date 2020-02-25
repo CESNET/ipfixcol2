@@ -179,4 +179,8 @@ textarea, pre {
   transform: rotate(180deg);
 }
 
+p + p {
+  margin-top: 16px;
+}
+
 /*# sourceMappingURL=main.css.map */

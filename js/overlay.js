@@ -1,6 +1,6 @@
 // TODO
 // - Zredukovat opakování kódu
-// - Formátovat popisky
+// + Formátovat popisky
 // - Předělat mainForm
 // - Plugin UniRec (timeout) přidat možnost zadat čas ručně
 // -+ Přidat nové pluginy
@@ -1137,6 +1137,15 @@ class Description extends React.Component {
         this.props.onClose();
     }
     render() {
+        var descContent;
+        var contentParts = this.props.content.split("\n");
+        descContent = (
+            <DialogContent dividers>
+                {contentParts.map(part => {
+                    return <p>{part}</p>;
+                })}
+            </DialogContent>
+        );
         return (
             <Dialog
                 disableBackdropClick
@@ -1147,7 +1156,7 @@ class Description extends React.Component {
             >
                 <DialogTitle>{"Description"}</DialogTitle>
                 <Divider />
-                <DialogContent dividers>{this.props.content}</DialogContent>
+                {descContent}
                 <DialogActions>
                     <Button
                         variant="outlined"
