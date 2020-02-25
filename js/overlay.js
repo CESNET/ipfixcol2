@@ -3,8 +3,8 @@
 // - Formátovat popisky
 // - Předělat mainForm
 // - Plugin UniRec (timeout) přidat možnost zadat čas ručně
-// - Přidat nové pluginy
-// - Opravit zobrazování chyb
+// -+ Přidat nové pluginy
+// + Opravit zobrazování chyb
 
 function moduleCreate(jsonSchema) {
     var newModule = {};
@@ -44,6 +44,10 @@ function moduleSetProperty(module, propertyName, jsonSchema) {
         var newArray = [];
         moduleArrayAddItem(newArray, jsonSchema.items);
         module[propertyName] = newArray;
+        return;
+    }
+    if (jsonSchema.type === "boolean") {
+        module[propertyName] = false;
         return;
     }
     module[propertyName] = null;
@@ -286,10 +290,7 @@ class Properties extends React.Component {
         }
         if (this.props.errors !== undefined) {
             propsErrors = Object.values(this.props.errors).filter(error => {
-                if (error.dataPath == this.props.dataPath) {
-                    return true;
-                }
-                return false;
+                return error.dataPath == this.props.dataPath;
             });
             hasError = propsErrors.length > 0;
             childErrorsNum = this.props.errors.length - propsErrors.length;
@@ -349,10 +350,6 @@ class Properties extends React.Component {
                         var errors = undefined;
                         if (this.props.errors !== undefined) {
                             errors = Object.values(this.props.errors).filter(error => {
-                                {
-                                    /* console.log(error);
-                                console.log(error.dataPath); */
-                                }
                                 if (
                                     error.dataPath == dataPath ||
                                     error.dataPath.startsWith(dataPath + ".") ||
@@ -408,11 +405,6 @@ class Properties extends React.Component {
                         ""
                     )}
                     {properties}
-                    {/* {Object.keys(this.props.jsonSchema.properties).length == 0 ? (
-                        <CardContent>{"No available parameters"}</CardContent>
-                    ) : (
-                        ""
-                    )} */}
                     {optionalMenu !== "" ? (
                         <CardActions disableSpacing>{optionalMenu}</CardActions>
                     ) : (
@@ -615,10 +607,6 @@ class ArrayProperty extends React.Component {
                     var errors = undefined;
                     if (this.props.errors !== undefined) {
                         errors = Object.values(this.props.errors).filter(error => {
-                            {
-                                /* console.log(error);
-                            console.log(error.dataPath); */
-                            }
                             if (
                                 error.dataPath == dataPath ||
                                 error.dataPath.startsWith(dataPath + ".") ||
@@ -696,7 +684,18 @@ class StringProperty extends React.Component {
         var value = this.props.module;
         var readOnly = false;
         var onChange = this.handleChange.bind(this);
+        var deleteButton = "";
+        var hasError = this.props.errors !== undefined && this.props.errors.length > 0;
+        var errorIcon = "";
         var inputCode;
+        var inputStyle;
+        var helpIcon = (
+            <Grid item>
+                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
+                    <Icon>help</Icon>
+                </IconButton>
+            </Grid>
+        );
         if (this.props.jsonSchema.hasOwnProperty("default") && value === null) {
             value = this.props.jsonSchema.default;
         }
@@ -708,98 +707,49 @@ class StringProperty extends React.Component {
         if (value === null) {
             value = "";
         }
-        var hasError = this.props.errors !== undefined && this.props.errors.length > 0;
-        var errorMessage = "";
         if (hasError) {
-            errorMessage = this.props.errors.pop().message;
+            var errorMessage = this.props.errors.pop().message;
+            errorIcon = (
+                <Grid item>
+                    <IconButton>
+                        <Tooltip title={errorMessage} arrow>
+                            <Icon color={"error"}>error</Icon>
+                        </Tooltip>
+                    </IconButton>
+                </Grid>
+            );
+        }
+        if (!this.props.required) {
+            deleteButton = (
+                <Grid item>
+                    <IconButton onClick={this.handleRemove.bind(this)}>
+                        <Icon>delete</Icon>
+                    </IconButton>
+                </Grid>
+            );
         }
         if (this.props.jsonSchema.hasOwnProperty("enum")) {
-            if (this.props.required) {
-                inputCode = (
-                    <FormControl error={hasError}>
-                        <InputLabel>{this.props.jsonSchema.title}</InputLabel>
-                        <Select
-                            className={"select"}
-                            value={value}
-                            onChange={onChange}
-                            readOnly={readOnly}
-                            endAdornment={
-                                <InputAdornment position="end">
-                                    <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
-                                        <Icon>help</Icon>
-                                    </IconButton>
-                                </InputAdornment>
-                            }
-                        >
-                            {this.props.jsonSchema.enum.map(enumValue => {
-                                return (
-                                    <MenuItem key={enumValue} value={enumValue}>
-                                        {enumValue}
-                                    </MenuItem>
-                                );
-                            })}
-                        </Select>
-                    </FormControl>
-                );
-            } else {
-                inputCode = (
-                    <FormControl error={hasError}>
-                        <InputLabel>{this.props.jsonSchema.title}</InputLabel>
-                        <Select
-                            className={"select"}
-                            value={value}
-                            onChange={onChange}
-                            readOnly={readOnly}
-                            endAdornment={
-                                <InputAdornment position="end">
-                                    <IconButton onClick={this.handleRemove.bind(this)}>
-                                        <Icon>delete</Icon>
-                                    </IconButton>
-                                    <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
-                                        <Icon>help</Icon>
-                                    </IconButton>
-                                </InputAdornment>
-                            }
-                        >
-                            {enumValues.map(enumValue => {
-                                return (
-                                    <MenuItem key={enumValue} value={enumValue}>
-                                        {enumValue.toString()}
-                                    </MenuItem>
-                                );
-                            })}
-                        </Select>
-                    </FormControl>
-                );
-            }
-        } else if (!this.props.required) {
-            inputCode = (
-                <FormControl error={hasError}>
-                    <InputLabel>{this.props.jsonSchema.title}</InputLabel>
-                    <Input
+            inputStyle = (
+                <Grid item>
+                    <Select
                         className={"select"}
-                        type={"text"}
-                        name={this.props.name}
                         value={value}
-                        readOnly={readOnly}
                         onChange={onChange}
-                        endAdornment={
-                            <InputAdornment position="end">
-                                <IconButton onClick={this.handleRemove.bind(this)}>
-                                    <Icon>delete</Icon>
-                                </IconButton>
-                                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
-                                    <Icon>help</Icon>
-                                </IconButton>
-                            </InputAdornment>
-                        }
-                    />
-                </FormControl>
+                        readOnly={readOnly}
+                    >
+                        {this.props.jsonSchema.enum.map(enumValue => {
+                            return (
+                                <MenuItem key={enumValue} value={enumValue}>
+                                    {enumValue.toString()}
+                                </MenuItem>
+                            );
+                        })}
+                    </Select>
+                </Grid>
             );
         } else {
-            inputCode = (
-                <FormControl error={hasError}>
-                    <InputLabel>{this.props.jsonSchema.title}</InputLabel>
+            inputStyle = (
+                <Grid item>
                     <Input
                         className={"select"}
                         type={"text"}
@@ -807,21 +757,20 @@ class StringProperty extends React.Component {
                         value={value}
                         readOnly={readOnly}
                         onChange={onChange}
-                        endAdornment={
-                            <InputAdornment position="end">
-                                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
-                                    <Icon>help</Icon>
-                                </IconButton>
-                            </InputAdornment>
-                        }
                     />
-                </FormControl>
+                </Grid>
             );
         }
         inputCode = (
-            <Tooltip open={hasError} title={errorMessage} arrow placement={"right"}>
-                {inputCode}
-            </Tooltip>
+            <FormControl error={hasError}>
+                <FormLabel>{this.props.jsonSchema.title}</FormLabel>
+                <Grid component="label" container alignItems="center" spacing={0}>
+                    {inputStyle}
+                    {errorIcon}
+                    {helpIcon}
+                    {deleteButton}
+                </Grid>
+            </FormControl>
         );
         return (
             <div>
@@ -875,10 +824,21 @@ class IntegerProperty extends React.Component {
     render() {
         var value = this.props.module;
         var readOnly = false;
+        var onChange = this.handleChange.bind(this);
         var min = null;
         var max = null;
+        var deleteButton = "";
+        var hasError = this.props.errors !== undefined && this.props.errors.length > 0;
+        var errorIcon = "";
         var inputCode;
-        var onChange = this.handleChange.bind(this);
+        var inputStyle;
+        var helpIcon = (
+            <Grid item>
+                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
+                    <Icon>help</Icon>
+                </IconButton>
+            </Grid>
+        );
         if (this.props.jsonSchema.hasOwnProperty("default") && value === null) {
             value = this.props.jsonSchema.default;
         }
@@ -896,63 +856,50 @@ class IntegerProperty extends React.Component {
         if (value === null) {
             value = "";
         }
-        var hasError = this.props.errors !== undefined && this.props.errors.length > 0;
-        var errorMessage = "";
         if (hasError) {
-            errorMessage = this.props.errors.pop().message;
-        }
-        if (this.props.required) {
-            inputCode = (
-                <FormControl error={hasError}>
-                    <InputLabel>{this.props.jsonSchema.title}</InputLabel>
-                    <Input
-                        className={"select"}
-                        type={"number"}
-                        name={this.props.name}
-                        value={value}
-                        readOnly={readOnly}
-                        inputProps={{ min: min, max: max, step: 1 }}
-                        onChange={onChange}
-                        endAdornment={
-                            <InputAdornment position="end">
-                                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
-                                    <Icon>help</Icon>
-                                </IconButton>
-                            </InputAdornment>
-                        }
-                    />
-                </FormControl>
-            );
-        } else {
-            inputCode = (
-                <FormControl error={hasError}>
-                    <InputLabel>{this.props.jsonSchema.title}</InputLabel>
-                    <Input
-                        className={"select"}
-                        type={"number"}
-                        name={this.props.name}
-                        value={value}
-                        readOnly={readOnly}
-                        inputProps={{ min: min, max: max, step: 1 }}
-                        onChange={onChange}
-                        endAdornment={
-                            <InputAdornment position="end">
-                                <IconButton onClick={this.handleRemove.bind(this)}>
-                                    <Icon>delete</Icon>
-                                </IconButton>
-                                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
-                                    <Icon>help</Icon>
-                                </IconButton>
-                            </InputAdornment>
-                        }
-                    />
-                </FormControl>
+            var errorMessage = this.props.errors.pop().message;
+            errorIcon = (
+                <Grid item>
+                    <IconButton>
+                        <Tooltip title={errorMessage} arrow>
+                            <Icon color={"error"}>error</Icon>
+                        </Tooltip>
+                    </IconButton>
+                </Grid>
             );
         }
+        if (!this.props.required) {
+            deleteButton = (
+                <Grid item>
+                    <IconButton onClick={this.handleRemove.bind(this)}>
+                        <Icon>delete</Icon>
+                    </IconButton>
+                </Grid>
+            );
+        }
+        inputStyle = (
+            <Grid item>
+                <Input
+                    className={"select"}
+                    type={"number"}
+                    name={this.props.name}
+                    value={value}
+                    readOnly={readOnly}
+                    inputProps={{ min: min, max: max, step: 1 }}
+                    onChange={onChange}
+                />
+            </Grid>
+        );
         inputCode = (
-            <Tooltip open={hasError} title={errorMessage} arrow placement={"right"}>
-                {inputCode}
-            </Tooltip>
+            <FormControl error={hasError}>
+                <FormLabel>{this.props.jsonSchema.title}</FormLabel>
+                <Grid component="label" container alignItems="center" spacing={0}>
+                    {inputStyle}
+                    {errorIcon}
+                    {helpIcon}
+                    {deleteButton}
+                </Grid>
+            </FormControl>
         );
         return (
             <div>
@@ -993,8 +940,17 @@ class BooleanProperty extends React.Component {
     render() {
         var value = this.props.module;
         var readOnly = false;
-        var inputCode;
         var onChange = this.handleChange.bind(this);
+        var deleteButton = "";
+        var inputCode;
+        var inputStyle;
+        var helpIcon = (
+            <Grid item>
+                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
+                    <Icon>help</Icon>
+                </IconButton>
+            </Grid>
+        );
         if (this.props.jsonSchema.hasOwnProperty("default") && value === undefined) {
             value = this.props.jsonSchema.default;
         }
@@ -1006,41 +962,33 @@ class BooleanProperty extends React.Component {
         if (value === null) {
             value = false;
         }
-        var hasError = this.props.errors !== undefined && this.props.errors.length > 0;
-        var errorMessage = "";
-        if (hasError) {
-            errorMessage = this.props.errors.pop().message;
-        }
-        inputCode = (
-            <FormControl error={hasError}>
-                <FormLabel>{this.props.jsonSchema.title}</FormLabel>
-                <Grid component="label" container alignItems="center" spacing={1}>
-                    <Grid item>False</Grid>
-                    <Grid item>
-                        <Switch disabled={readOnly} checked={value} onChange={onChange} />
-                    </Grid>
-                    <Grid item>True</Grid>
-                    <Grid item>
-                        <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
-                            <Icon>help</Icon>
-                        </IconButton>
-                    </Grid>
-                    {!this.props.required ? (
-                        <Grid item>
-                            <IconButton onClick={this.handleRemove.bind(this)}>
-                                <Icon>delete</Icon>
-                            </IconButton>
-                        </Grid>
-                    ) : (
-                        ""
-                    )}
+        if (!this.props.required) {
+            deleteButton = (
+                <Grid item>
+                    <IconButton onClick={this.handleRemove.bind(this)}>
+                        <Icon>delete</Icon>
+                    </IconButton>
                 </Grid>
-            </FormControl>
+            );
+        }
+        inputStyle = (
+            <React.Fragment>
+                <Grid item>False</Grid>
+                <Grid item>
+                    <Switch disabled={readOnly} checked={value} onChange={onChange} />
+                </Grid>
+                <Grid item>True</Grid>
+            </React.Fragment>
         );
         inputCode = (
-            <Tooltip open={hasError} title={errorMessage} arrow placement={"right"}>
-                {inputCode}
-            </Tooltip>
+            <FormControl>
+                <FormLabel>{this.props.jsonSchema.title}</FormLabel>
+                <Grid component="label" container alignItems="center" spacing={0}>
+                    {inputStyle}
+                    {helpIcon}
+                    {deleteButton}
+                </Grid>
+            </FormControl>
         );
         return (
             <div>
@@ -1094,10 +1042,21 @@ class NumberProperty extends React.Component {
     render() {
         var value = this.props.module;
         var readOnly = false;
+        var onChange = this.handleChange.bind(this);
         var min = null;
         var max = null;
+        var deleteButton = "";
+        var hasError = this.props.errors !== undefined && this.props.errors.length > 0;
+        var errorIcon = "";
         var inputCode;
-        var onChange = this.handleChange.bind(this);
+        var inputStyle;
+        var helpIcon = (
+            <Grid item>
+                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
+                    <Icon>help</Icon>
+                </IconButton>
+            </Grid>
+        );
         if (this.props.jsonSchema.hasOwnProperty("default") && value === null) {
             value = this.props.jsonSchema.default;
         }
@@ -1115,65 +1074,60 @@ class NumberProperty extends React.Component {
         if (value === null) {
             value = "";
         }
-        var hasError = this.props.errors !== undefined && this.props.errors.length > 0;
-        var errorMessage = "";
         if (hasError) {
-            errorMessage = this.props.errors.pop().message;
+            var errorMessage = this.props.errors.pop().message;
+            errorIcon = (
+                <Grid item>
+                    <IconButton>
+                        <Tooltip title={errorMessage} arrow>
+                            <Icon color={"error"}>error</Icon>
+                        </Tooltip>
+                    </IconButton>
+                </Grid>
+            );
         }
-        if (this.props.required) {
-            inputCode = (
-                <TextField
+        if (!this.props.required) {
+            deleteButton = (
+                <Grid item>
+                    <IconButton onClick={this.handleRemove.bind(this)}>
+                        <Icon>delete</Icon>
+                    </IconButton>
+                </Grid>
+            );
+        }
+        inputStyle = (
+            <Grid item>
+                <Input
                     className={"select"}
-                    label={this.props.jsonSchema.title}
                     type={"number"}
                     name={this.props.name}
                     value={value}
                     readOnly={readOnly}
                     inputProps={{ min: min, max: max, step: 0.01 }}
                     onChange={onChange}
-                    error={hasError}
                 />
-            );
-        } else {
-            inputCode = (
-                <FormControl error={hasError}>
-                    <InputLabel>{this.props.jsonSchema.title}</InputLabel>
-                    <Input
-                        className={"select"}
-                        type={"number"}
-                        name={this.props.name}
-                        value={value}
-                        readOnly={readOnly}
-                        inputProps={{ min: min, max: max, step: 0.01 }}
-                        onChange={onChange}
-                        endAdornment={
-                            <InputAdornment position="end">
-                                <IconButton onClick={this.handleRemove.bind(this)}>
-                                    <Icon>delete</Icon>
-                                </IconButton>
-                                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
-                                    <Icon>help</Icon>
-                                </IconButton>
-                            </InputAdornment>
-                        }
-                    />
-                </FormControl>
-            );
-        }
+            </Grid>
+        );
         inputCode = (
-            <Tooltip open={hasError} title={errorMessage} arrow placement={"right"}>
-                {inputCode}
-            </Tooltip>
+            <FormControl error={hasError}>
+                <FormLabel>{this.props.jsonSchema.title}</FormLabel>
+                <Grid component="label" container alignItems="center" spacing={0}>
+                    {inputStyle}
+                    {errorIcon}
+                    {helpIcon}
+                    {deleteButton}
+                </Grid>
+            </FormControl>
         );
         return (
-            <React.Fragment>
+            <div>
                 {inputCode}
                 <Description
                     open={this.state.descriptionOpen}
                     content={this.props.jsonSchema.description}
                     onClose={this.handleDescriptionClose.bind(this)}
                 />
-            </React.Fragment>
+            </div>
         );
     }
 }
