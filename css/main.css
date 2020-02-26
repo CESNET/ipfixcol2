@@ -1,4 +1,4 @@
-.column .addModule, .column .module, .column h2 {
+.column .addModule, .column .module {
   margin: 20px;
   box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.24);
   border-radius: 20px;
@@ -8,6 +8,7 @@
 * {
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
 }
 
 body {
@@ -29,28 +30,23 @@ body {
 
 .form {
   width: 100%;
-  max-width: 1260px;
+  max-width: 1920px;
   min-width: 420px;
-  margin: 10px auto 0 auto;
+  margin-top: 10px;
 }
 
 .mainLayer {
   display: flex;
-  flex-direction: row;
-  justify-content: baseline;
-  flex-wrap: wrap;
+  flex-flow: row wrap;
+  justify-content: center;
+  margin-bottom: 20px;
 }
 
 .column {
-  width: 400px;
-  border-radius: 30px;
-  background: white;
-  box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.24);
-  width: 400px;
+  min-width: 400px;
+  width: 31%;
   margin: 10px;
-}
-.column h2 {
-  text-align: center;
+  margin-bottom: auto;
 }
 .column .module {
   text-align: center;
@@ -163,7 +159,8 @@ body {
   background: #ffb078;
 }
 
-textarea, pre {
+textarea,
+pre {
   width: 100%;
 }
 
@@ -181,6 +178,23 @@ textarea, pre {
 
 p + p {
   margin-top: 16px;
+}
+
+.MuiExpansionPanelSummary-root {
+  padding: 0 12px 0 12px;
+}
+.MuiExpansionPanelSummary-root .MuiExpansionPanelSummary-content {
+  margin: 0;
+}
+.MuiExpansionPanelSummary-root .MuiExpansionPanelSummary-content .title {
+  flex-grow: 1;
+  margin: 12px 0;
+}
+.MuiExpansionPanelSummary-root .MuiFormControlLabel-root {
+  margin-right: 12px;
+}
+.MuiExpansionPanelSummary-root .MuiFormControlLabel-root:last-child {
+  margin-right: 0px;
 }
 
 /*# sourceMappingURL=main.css.map */

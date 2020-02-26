@@ -46,7 +46,14 @@ const columnNames = ["Input plugins", "Intermediate plugins", "Output plugins"];
 const moduleSchemas = [
     [jsonSchemaUDP, jsonSchemaTCP],
     [jsonSchemaAnonymization],
-    [jsonSchemaJSON, jsonSchemaDummy, jsonSchemaLNF, jsonSchemaUniRec, jsonSchemaTimeCheck, jsonSchemaViewer]
+    [
+        jsonSchemaJSON,
+        jsonSchemaDummy,
+        jsonSchemaLNF,
+        jsonSchemaUniRec,
+        jsonSchemaTimeCheck,
+        jsonSchemaViewer
+    ]
 ];
 const defaultConfig = {
     ipfixcol2: {
@@ -294,36 +301,6 @@ class Form extends React.Component {
                             removeModule={this.removeModule.bind(this)}
                         />
                     </div>
-                    <ExpansionPanel>
-                        <ExpansionPanelSummary
-                            expandIcon={<Icon>expand_more</Icon>}
-                            aria-controls="panel1c-content"
-                            id="panel1c-header"
-                        >
-                            <Typography className="title">Location</Typography>
-                            <FormControlLabel
-                                onClick={() => {}}
-                                control={
-                                    <IconButton size="small" aria-label="close" onClick={() => {}}>
-                                        <Icon fontSize="small">edit</Icon>
-                                    </IconButton>
-                                }
-                            />
-                            <FormControlLabel
-                                onClick={() => {}}
-                                control={
-                                    <IconButton size="small" aria-label="close" onClick={() => {}}>
-                                        <Icon fontSize="small">close</Icon>
-                                    </IconButton>
-                                }
-                            />
-                        </ExpansionPanelSummary>
-                        <ExpansionPanelDetails>
-                            <Typography variant="caption">
-                                Select your destination of choice
-                            </Typography>
-                        </ExpansionPanelDetails>
-                    </ExpansionPanel>
                     {this.renderXML()}
                     <Snackbar
                         anchorOrigin={{
@@ -354,7 +331,16 @@ class Form extends React.Component {
 }
 
 class FormColumn extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            anchorEl: null,
+            expanded: true
+        };
+    }
+
     addModule(moduleIndex) {
+        this.setState({ anchorEl: null });
         this.props.addModule(this.props.columnIndex, moduleIndex);
     }
 
@@ -366,37 +352,69 @@ class FormColumn extends React.Component {
         this.props.editModule(this.props.columnIndex, index);
     }
 
+    handleMenuClick(event) {
+        this.setState({ anchorEl: event.currentTarget });
+    }
+    handleMenuClose() {
+        this.setState({ anchorEl: null });
+    }
+
     render() {
+        var modules = "";
+        if (this.props.modules.length > 0) {
+            modules = (
+                <CardContent>
+                    {this.props.modules.map((module, index) => {
+                        return (
+                            <Module
+                                key={index}
+                                index={index}
+                                module={module}
+                                onRemove={this.removeModule.bind(this)}
+                                onEdit={this.editModule.bind(this)}
+                            />
+                        );
+                    })}
+                </CardContent>
+            );
+        }
+        var addMenu = (
+            <React.Fragment>
+                <Button
+                    variant="outlined"
+                    color="primary"
+                    aria-controls="simple-menu"
+                    aria-haspopup="true"
+                    onClick={this.handleMenuClick.bind(this)}
+                >
+                    Add module
+                </Button>
+                <Menu
+                    id="simple-menu"
+                    anchorEl={this.state.anchorEl}
+                    keepMounted
+                    open={Boolean(this.state.anchorEl)}
+                    onClose={this.handleMenuClose.bind(this)}
+                >
+                    {this.props.modulesAvailable.map((moduleAvailable, index) => {
+                        return (
+                            <ModuleAvailable
+                                key={index}
+                                moduleIndex={index}
+                                module={moduleAvailable}
+                                onAdd={this.addModule.bind(this)}
+                            />
+                        );
+                    })}
+                </Menu>
+            </React.Fragment>
+        );
         return (
-            <div className={"column " + this.props.color}>
-                <h2>{this.props.name}</h2>
-                {this.props.modules.map((module, index) => {
-                    return (
-                        <Module
-                            key={index}
-                            index={index}
-                            module={module}
-                            onRemove={this.removeModule.bind(this)}
-                            onEdit={this.editModule.bind(this)}
-                        />
-                    );
-                })}
-                <div className={"addModule"} id={"add" + this.props.name}>
-                    <button>Add plugin</button>
-                    <div className={"modules"}>
-                        {this.props.modulesAvailable.map((moduleAvailable, index) => {
-                            return (
-                                <ModuleAvailable
-                                    key={index}
-                                    moduleIndex={index}
-                                    module={moduleAvailable}
-                                    onAdd={this.addModule.bind(this)}
-                                />
-                            );
-                        })}
-                    </div>
-                </div>
-            </div>
+            <Card className={"column " + this.props.color}>
+                <CardHeader title={"Input plugins"} />
+                {modules}
+                <CardActions disableSpacing>{addMenu}</CardActions>
+            </Card>
         );
     }
 }
@@ -407,11 +425,7 @@ class ModuleAvailable extends React.Component {
     }
 
     render() {
-        return (
-            <button onClick={this.handleAdd.bind(this)}>
-                {this.props.module.properties.plugin.const}
-            </button>
-        );
+        return <MenuItem onClick={this.handleAdd.bind(this)}>{this.props.module.title}</MenuItem>;
     }
 }
 
@@ -439,32 +453,41 @@ class Module extends React.Component {
 
     render() {
         return (
-            <div className={"module" + (this.state.detailVisible ? " visible" : "")}>
-                <div className={"header"}>
-                    <button
-                        onClick={
-                            this.state.detailVisible
-                                ? () => this.setDetailHidden()
-                                : () => this.setDetailVisibile()
+            <ExpansionPanel>
+                <ExpansionPanelSummary
+                    expandIcon={<Icon>expand_more</Icon>}
+                    aria-controls="panel1c-content"
+                    id="panel1c-header"
+                >
+                    <Typography className={"title"}>{this.props.module.name}</Typography>
+                    <FormControlLabel
+                        onClick={this.handleEdit.bind(this)}
+                        onFocus={this.handleEdit.bind(this)}
+                        control={
+                            <IconButton aria-label="edit">
+                                <Icon>edit</Icon>
+                            </IconButton>
                         }
-                    >
-                        <i className={"fas fa-angle-down"}></i>
-                    </button>
-                    <h3>{this.props.module.name}</h3>
-                    <div>
-                        <button onClick={this.handleEdit.bind(this)}>
-                            <i className="fas fa-pen"></i>
-                        </button>
-                        <button onClick={this.props.onRemove}>
-                            <i className="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
-                <div className={"content"}>
-                    <p>plugin: {this.props.module.plugin}</p>
-                    <p>params: {this.props.module.params.toString()}</p>
-                </div>
-            </div>
+                        label={""}
+                    />
+                    <FormControlLabel
+                        onClick={this.props.onRemove}
+                        onFocus={this.props.onRemove}
+                        control={
+                            <IconButton aria-label="delete">
+                                <Icon>delete</Icon>
+                            </IconButton>
+                        }
+                    />
+                </ExpansionPanelSummary>
+                <ExpansionPanelDetails>
+                    <Typography variant="caption">
+                        plugin: {this.props.module.plugin}
+                        <br />
+                        params: {this.props.module.params.toString()}
+                    </Typography>
+                </ExpansionPanelDetails>
+            </ExpansionPanel>
         );
     }
 }

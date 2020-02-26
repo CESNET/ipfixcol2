@@ -1,10 +1,11 @@
 // TODO
-// - Zredukovat opakování kódu
+// -+ Zredukovat opakování kódu
 // + Formátovat popisky
-// - Předělat mainForm
+// -+ Předělat mainForm
 // - Plugin UniRec (timeout) přidat možnost zadat čas ručně
 // -+ Přidat nové pluginy
 // + Opravit zobrazování chyb
+// ? Overlay - menší padding
 
 function moduleCreate(jsonSchema) {
     var newModule = {};
@@ -251,7 +252,7 @@ class Properties extends React.Component {
                 Object.keys(this.props.jsonSchema.properties).length
         ) {
             optionalMenu = (
-                <div>
+                <React.Fragment>
                     <Button
                         variant="outlined"
                         color="primary"
@@ -285,7 +286,7 @@ class Properties extends React.Component {
                             }
                         })}
                     </Menu>
-                </div>
+                </React.Fragment>
             );
         }
         if (this.props.errors !== undefined) {
@@ -1141,8 +1142,8 @@ class Description extends React.Component {
         var contentParts = this.props.content.split("\n");
         descContent = (
             <DialogContent dividers>
-                {contentParts.map(part => {
-                    return <p>{part}</p>;
+                {contentParts.map((part, index) => {
+                    return <p key={index}>{part}</p>;
                 })}
             </DialogContent>
         );
