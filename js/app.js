@@ -175,10 +175,22 @@ class Form extends React.Component {
     }
 
     createConfigXML() {
-        var config = defaultConfig;
-        config.ipfixcol2.inputPlugins.input = this.state.modules[0];
-        config.ipfixcol2.intermediatePlugins.intermediate = this.state.modules[1];
-        config.ipfixcol2.outputPlugins.output = this.state.modules[2];
+        var config = JSON.parse(JSON.stringify(defaultConfig));
+        if (this.state.modules[0].length === 0) {
+            delete config.ipfixcol2.inputPlugins;
+        } else {
+            config.ipfixcol2.inputPlugins.input = this.state.modules[0];
+        }
+        if (this.state.modules[1].length === 0) {
+            delete config.ipfixcol2.intermediatePlugins;
+        } else {
+            config.ipfixcol2.intermediatePlugins.intermediate = this.state.modules[1];
+        }
+        if (this.state.modules[2].length === 0) {
+            delete config.ipfixcol2.outputPlugins;
+        } else {
+            config.ipfixcol2.outputPlugins.output = this.state.modules[2];
+        }
         var xml = x2js.json2xml_str(config);
         return formatXml(xml);
     }
@@ -367,7 +379,7 @@ class FormColumn extends React.Component {
                     {this.props.modules.map((module, index) => {
                         return (
                             <Module
-                                key={index}
+                                key={module.name}
                                 index={index}
                                 module={module}
                                 onRemove={this.removeModule.bind(this)}
@@ -412,7 +424,9 @@ class FormColumn extends React.Component {
         return (
             <Card className={"column " + this.props.color}>
                 <CardHeader title={"Input plugins"} />
+                <Divider />
                 {modules}
+                <Divider />
                 <CardActions disableSpacing>{addMenu}</CardActions>
             </Card>
         );
@@ -462,7 +476,6 @@ class Module extends React.Component {
                     <Typography className={"title"}>{this.props.module.name}</Typography>
                     <FormControlLabel
                         onClick={this.handleEdit.bind(this)}
-                        onFocus={this.handleEdit.bind(this)}
                         control={
                             <IconButton aria-label="edit">
                                 <Icon>edit</Icon>
@@ -472,7 +485,6 @@ class Module extends React.Component {
                     />
                     <FormControlLabel
                         onClick={this.props.onRemove}
-                        onFocus={this.props.onRemove}
                         control={
                             <IconButton aria-label="delete">
                                 <Icon>delete</Icon>

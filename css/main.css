@@ -197,4 +197,12 @@ p + p {
   margin-right: 0px;
 }
 
+.MuiCardContent-root {
+  padding: 12px;
+}
+
+.MuiCardContent-root:last-child {
+  padding-bottom: 20px;
+}
+
 /*# sourceMappingURL=main.css.map */

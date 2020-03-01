@@ -1,11 +1,16 @@
 // TODO
-// -+ Zredukovat opakování kódu
-// + Formátovat popisky
-// -+ Předělat mainForm
+// - Zredukovat opakování kódu
+// - Předělat mainForm
 // - Plugin UniRec (timeout) přidat možnost zadat čas ručně
-// -+ Přidat nové pluginy
-// + Opravit zobrazování chyb
+// - Přidat nové pluginy
+// - barevně podbarvit výpis Confix XML
+// - rezdělit schémata do souborů
+// - podívat se na tabindex
+// - validace IP adres
+// - zpracovávání odkazů v hlavičce schématu + ikonka v overlay
 // ? Overlay - menší padding
+//
+// + Opravit generování prázdného <input /> atd.
 
 function moduleCreate(jsonSchema) {
     var newModule = {};
@@ -1150,10 +1155,11 @@ class Description extends React.Component {
         return (
             <Dialog
                 disableBackdropClick
-                disableEscapeKeyDown
                 open={this.props.open}
                 fullWidth={false}
                 maxWidth={"sm"}
+                onEscapeKeyDown={this.handleClose.bind(this)}
+                onBackdropClick={this.handleClose.bind(this)}
             >
                 <DialogTitle>{"Description"}</DialogTitle>
                 <Divider />
