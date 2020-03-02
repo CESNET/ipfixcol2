@@ -110,11 +110,7 @@ class Overlay extends React.Component {
             this.props.onSuccess(this.props.columnIndex, this.props.index, this.state.module);
         }
     }
-    handleChange(propertyName, changedSubmodule) {
-        //TODO rework - 2 params => 1 param
-        // var changedModule = changedSubmodule;
-        // var changedModule = this.state.module;
-        // changedModule[propertyName] = changedSubmodule;
+    handleChange(changedSubmodule) {
         var valid = ajv.validate(this.props.jsonSchema, changedSubmodule);
         var errors = undefined;
         console.log("valid: " + valid);
@@ -200,6 +196,13 @@ class Properties extends React.Component {
     handleMenuClose() {
         this.setState({ anchorEl: null });
     }
+    callOnChange(changedModule) {
+        if (this.props.isRoot) {
+            this.props.onChange(changedModule);
+            return;
+        }
+        this.props.onChange(this.props.name, changedModule);
+    }
     handleMenuSelect(selectedPropertyName) {
         var changedModule = JSON.parse(JSON.stringify(this.props.module));
         moduleSetProperty(
@@ -208,18 +211,18 @@ class Properties extends React.Component {
             this.props.jsonSchema.properties[selectedPropertyName]
         );
         this.handleMenuClose();
-        this.props.onChange(this.props.name, changedModule);
+        this.callOnChange(changedModule);
         this.setState({ expanded: true });
     }
     handleChange(propertyName, changedSubmodule) {
         var changedModule = JSON.parse(JSON.stringify(this.props.module));
         changedModule[propertyName] = changedSubmodule;
-        this.props.onChange(this.props.name, changedModule);
+        this.callOnChange(changedModule);
     }
     handleRemoveChild(propertyName) {
         var changedModule = JSON.parse(JSON.stringify(this.props.module));
         delete changedModule[propertyName];
-        this.props.onChange(this.props.name, changedModule);
+        this.callOnChange(changedModule);
     }
     handleRemove() {
         this.props.onRemove(this.props.name);
