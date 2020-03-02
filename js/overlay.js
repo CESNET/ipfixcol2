@@ -3,13 +3,14 @@
 // - Předělat mainForm
 // - Plugin UniRec (timeout) přidat možnost zadat čas ručně
 // - Přidat nové pluginy
-// - barevně podbarvit výpis Confix XML
+// - barevně podbarvit výpis Config XML
 // - rezdělit schémata do souborů
-// - podívat se na tabindex
 // - validace IP adres
 // - zpracovávání odkazů v hlavičce schématu + ikonka v overlay
 // ? Overlay - menší padding
 //
+// +? podívat se na tabindex
+// + Overlay > handleChange() používá jeden parametr (dříve 2)
 // + Opravit generování prázdného <input /> atd.
 
 function moduleCreate(jsonSchema) {
@@ -146,6 +147,7 @@ class Overlay extends React.Component {
                                 onChange={this.handleChange.bind(this)}
                                 required={true}
                                 isRoot={true}
+                                tabIndex={1}
                             />
                         </Grid>
                         <Grid item md={6} sm={12} xs={12}>
@@ -164,7 +166,12 @@ class Overlay extends React.Component {
                     </Grid>
                 </DialogContent>
                 <DialogActions>
-                    <Button variant="outlined" color="primary" onClick={this.props.onCancel}>
+                    <Button
+                        variant="outlined"
+                        color="primary"
+                        onClick={this.props.onCancel}
+                        tabIndex={1000000000 - 1}
+                    >
                         Cancel
                     </Button>
                     <Button
@@ -172,6 +179,7 @@ class Overlay extends React.Component {
                         color="primary"
                         onClick={this.handleComfirm.bind(this)}
                         disabled={this.state.errors === undefined ? false : true}
+                        tabIndex={1000000000}
                     >
                         {buttonText}
                     </Button>
@@ -344,7 +352,7 @@ class Properties extends React.Component {
             );
             properties = (
                 <Collapse in={this.state.expanded} timeout="auto">
-                    {Object.keys(this.props.jsonSchema.properties).map(propertyName => {
+                    {Object.keys(this.props.jsonSchema.properties).map((propertyName, index) => {
                         if (
                             (!this.props.jsonSchema.hasOwnProperty("required") ||
                                 !this.props.jsonSchema.required.includes(propertyName)) &&
@@ -384,6 +392,7 @@ class Properties extends React.Component {
                                     dataPath={dataPath}
                                     onChange={this.handleChange.bind(this)}
                                     onRemove={this.handleRemoveChild.bind(this)}
+                                    tabIndex={index + this.props.tabIndex}
                                 />
                             </CardContent>
                         );
@@ -444,6 +453,7 @@ class Item extends React.Component {
                         dataPath={this.props.dataPath}
                         onChange={this.props.onChange}
                         onRemove={this.props.onRemove}
+                        tabIndex={this.props.tabIndex}
                     />
                 );
             case "integer":
@@ -457,6 +467,7 @@ class Item extends React.Component {
                         dataPath={this.props.dataPath}
                         onChange={this.props.onChange}
                         onRemove={this.props.onRemove}
+                        tabIndex={this.props.tabIndex}
                     />
                 );
             case "object":
@@ -471,6 +482,7 @@ class Item extends React.Component {
                         onChange={this.props.onChange}
                         onRemove={this.props.onRemove}
                         isRoot={false}
+                        tabIndex={this.props.tabIndex * 100}
                     />
                 );
             case "boolean":
@@ -484,6 +496,7 @@ class Item extends React.Component {
                         dataPath={this.props.dataPath}
                         onChange={this.props.onChange}
                         onRemove={this.props.onRemove}
+                        tabIndex={this.props.tabIndex}
                     />
                 );
             case "number":
@@ -497,6 +510,7 @@ class Item extends React.Component {
                         dataPath={this.props.dataPath}
                         onChange={this.props.onChange}
                         onRemove={this.props.onRemove}
+                        tabIndex={this.props.tabIndex}
                     />
                 );
             case "array":
@@ -510,6 +524,7 @@ class Item extends React.Component {
                         dataPath={this.props.dataPath}
                         onChange={this.props.onChange}
                         onRemove={this.props.onRemove}
+                        tabIndex={this.props.tabIndex * 100}
                     />
                 );
             default:
@@ -641,6 +656,7 @@ class ArrayProperty extends React.Component {
                                 dataPath={dataPath}
                                 onChange={this.handleChange.bind(this, index)}
                                 onRemove={this.handleRemove.bind(this, index)}
+                                tabIndex={index + this.props.tabIndex}
                             />
                         </CardContent>
                     );
@@ -745,6 +761,7 @@ class StringProperty extends React.Component {
                         value={value}
                         onChange={onChange}
                         readOnly={readOnly}
+                        inputProps={{ tabIndex: this.props.tabIndex }}
                     >
                         {this.props.jsonSchema.enum.map(enumValue => {
                             return (
@@ -766,6 +783,7 @@ class StringProperty extends React.Component {
                         value={value}
                         readOnly={readOnly}
                         onChange={onChange}
+                        inputProps={{ tabIndex: this.props.tabIndex }}
                     />
                 </Grid>
             );
@@ -896,6 +914,7 @@ class IntegerProperty extends React.Component {
                     readOnly={readOnly}
                     inputProps={{ min: min, max: max, step: 1 }}
                     onChange={onChange}
+                    inputProps={{ tabIndex: this.props.tabIndex }}
                 />
             </Grid>
         );
@@ -984,7 +1003,12 @@ class BooleanProperty extends React.Component {
             <React.Fragment>
                 <Grid item>False</Grid>
                 <Grid item>
-                    <Switch disabled={readOnly} checked={value} onChange={onChange} />
+                    <Switch
+                        disabled={readOnly}
+                        checked={value}
+                        onChange={onChange}
+                        inputProps={{ tabIndex: this.props.tabIndex }}
+                    />
                 </Grid>
                 <Grid item>True</Grid>
             </React.Fragment>
@@ -1114,6 +1138,7 @@ class NumberProperty extends React.Component {
                     readOnly={readOnly}
                     inputProps={{ min: min, max: max, step: 0.01 }}
                     onChange={onChange}
+                    inputProps={{ tabIndex: this.props.tabIndex }}
                 />
             </Grid>
         );
