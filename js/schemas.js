@@ -35,7 +35,8 @@ const jsonSchemaUDP = {
                     description:
                         "Local IPv4/IPv6 address on which the UDP input plugin listens. If the element is left empty, the plugin binds to all available network interfaces. The element can occur multiple times (one IP address per occurrence) to manually select multiple interfaces. [default: empty]",
                     type: "string",
-                    default: ""
+                    default: "",
+                    oneOf: [{format: "ipv4"}, {format: "ipv6"}]
                 },
                 connectionTimeout: {
                     title: "Connection timeout",
@@ -101,7 +102,8 @@ const jsonSchemaTCP = {
                     description:
                         "Local IPv4/IPv6 address on which the TCP input plugin listens. If the element is left empty, the plugin binds to all available network interfaces. The element can occur multiple times (one IP address per occurrence) to manually select multiple interfaces. [default: empty]",
                     type: "string",
-                    default: ""
+                    default: "",
+                    oneOf: [{format: "ipv4"}, {format: "ipv6"}]
                 }
             },
             required: ["localPort", "localIPAddress"]
@@ -327,12 +329,13 @@ const jsonSchemaJSON = {
                                         title: "IP address",
                                         description: "IPv4/IPv6 address of the client",
                                         type: "string",
-                                        minLength: 1
+                                        oneOf: [{format: "ipv4"}, {format: "ipv6"}]
                                     },
                                     port: {
                                         title: "Port",
                                         description: "Remote port number",
-                                        type: "integer"
+                                        type: "integer",
+                                        minimum: 0
                                     },
                                     protocol: {
                                         title: "Protocol",
