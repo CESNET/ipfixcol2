@@ -651,9 +651,12 @@ const jsonSchemaUniRec = {
                             title: "Timeout",
                             description:
                                 'Time in microseconds that the output interface can block waiting for message to be send. There are also special values: "WAIT" (block indefinitely), "NO_WAIT" (don\'t block), "HALF_WAIT" (block only if some client is connected). Be very careful, inappropriate configuration can significantly slowdown the collector and lead to loss of data. [default: "HALF_WAIT"]',
-                            type: "string",
+                            type: ["string", "integer"],
                             default: "HALF_WAIT",
-                            enum: ["WAIT", "HALF_WAIT", "NO_WAIT"]
+                            oneOf: [
+                                { type: "string", enum: ["WAIT", "HALF_WAIT", "NO_WAIT"] },
+                                { type: "integer", minimum: 0 }
+                            ]
                         },
                         buffer: {
                             title: "Buffer",

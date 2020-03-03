@@ -1,7 +1,6 @@
 // TODO
 // - Zredukovat opakování kódu
 // - Předělat mainForm
-// - Plugin UniRec (timeout) přidat možnost zadat čas ručně
 // - Přidat nové pluginy
 // - rezdělit schémata do souborů
 // - validace IP adres
@@ -9,6 +8,7 @@
 // ? Overlay - menší padding
 //
 // +? podívat se na tabindex
+// +- Plugin UniRec (timeout) přidat možnost zadat čas ručně
 // + barevně podbarvit výpis Config XML
 // + Overlay > handleChange() používá jeden parametr (dříve 2)
 // + Opravit generování prázdného <input /> atd.
@@ -528,7 +528,26 @@ class Item extends React.Component {
                     />
                 );
             default:
-                console.log("Unknown type: " + this.props.jsonSchema.properties[propertyName].type);
+                if (typeof this.props.type === typeof []) {
+                    console.log("Multiple types");
+                    return (
+                        <MultipleTypesProperty
+                            name={this.props.name}
+                            module={this.props.module}
+                            required={this.props.required}
+                            jsonSchema={this.props.jsonSchema}
+                            errors={this.props.errors}
+                            dataPath={this.props.dataPath}
+                            onChange={this.props.onChange}
+                            onRemove={this.props.onRemove}
+                            tabIndex={this.props.tabIndex}
+                        />
+                    );
+                } else {
+                    console.log(
+                        "Unknown type: " + this.props.jsonSchema.properties[propertyName].type
+                    );
+                }
         }
     }
 }
@@ -1166,6 +1185,118 @@ class NumberProperty extends React.Component {
     }
 }
 
+class MultipleTypesProperty extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            descriptionOpen: false
+        };
+    }
+    handleChange(event) {
+        var value = Number(event.target.value);
+        if (isNaN(value) || event.target.value === "") {
+            value = event.target.value;
+        }
+        this.props.onChange(this.props.name, value);
+    }
+    handleRemove() {
+        this.props.onRemove(this.props.name);
+    }
+    handleDescriptionOpen() {
+        this.setState({
+            descriptionOpen: true
+        });
+    }
+    handleDescriptionClose() {
+        this.setState({
+            descriptionOpen: false
+        });
+    }
+    render() {
+        var value = this.props.module;
+        var readOnly = false;
+        var onChange = this.handleChange.bind(this);
+        var deleteButton = "";
+        var hasError = this.props.errors !== undefined && this.props.errors.length > 0;
+        var errorIcon = "";
+        var inputCode;
+        var inputStyle;
+        var helpIcon = (
+            <Grid item>
+                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
+                    <Icon>help</Icon>
+                </IconButton>
+            </Grid>
+        );
+        if (this.props.jsonSchema.hasOwnProperty("default") && value === null) {
+            value = this.props.jsonSchema.default;
+        }
+        if (this.props.jsonSchema.hasOwnProperty("const")) {
+            value = this.props.jsonSchema.const;
+            readOnly = true;
+            onChange = null;
+        }
+        if (value === null) {
+            value = "";
+        }
+        if (hasError) {
+            var errorMessage = this.props.errors.pop().message;
+            errorIcon = (
+                <Grid item>
+                    <IconButton>
+                        <Tooltip title={errorMessage} arrow>
+                            <Icon color={"error"}>error</Icon>
+                        </Tooltip>
+                    </IconButton>
+                </Grid>
+            );
+        }
+        if (!this.props.required) {
+            deleteButton = (
+                <Grid item>
+                    <IconButton onClick={this.handleRemove.bind(this)}>
+                        <Icon>delete</Icon>
+                    </IconButton>
+                </Grid>
+            );
+        }
+        inputStyle = (
+            <Grid item>
+                <Input
+                    className={"select"}
+                    type={"text"}
+                    name={this.props.name}
+                    value={value}
+                    readOnly={readOnly}
+                    onChange={onChange}
+                    inputProps={{ tabIndex: this.props.tabIndex }}
+                />
+            </Grid>
+        );
+        inputCode = (
+            <FormControl error={hasError}>
+                <FormLabel>{this.props.jsonSchema.title}</FormLabel>
+                <Grid component="label" container alignItems="center" spacing={0}>
+                    {inputStyle}
+                    {errorIcon}
+                    {helpIcon}
+                    {deleteButton}
+                </Grid>
+            </FormControl>
+        );
+        return (
+            <div>
+                {inputCode}
+                <Description
+                    open={this.state.descriptionOpen}
+                    content={this.props.jsonSchema.description}
+                    onClose={this.handleDescriptionClose.bind(this)}
+                />
+            </div>
+        );
+    }
+}
+
 class Description extends React.Component {
     handleClose() {
         this.props.onClose();
@@ -1204,4 +1335,15 @@ class Description extends React.Component {
             </Dialog>
         );
     }
+}
+
+{
+    /* <Autocomplete
+    freeSolo
+    options={options}
+    value={value}
+    onChange={onChange}
+    inputProps={{ tabIndex: this.props.tabIndex }}
+    renderInput={params => <TextField {...params} readOnly={readOnly} />}
+/>; */
 }
