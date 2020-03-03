@@ -47,7 +47,7 @@ body {
 
 .column {
     min-width: 400px;
-    width: 31%;
+    width: calc(33% - 20px);
     margin: 10px;
     margin-bottom: auto;
     .module {
@@ -214,6 +214,25 @@ p + p {
 
 .MuiCardContent-root:last-child {
     padding-bottom: 20px;
+}
+
+.XMLPrint {
+    margin: auto 20px;
+}
+
+.input {
+    background: #91cfff;
+    border-radius: 4px;
+}
+
+.intermediate {
+    background: #ffe25f;
+    border-radius: 4px;
+}
+
+.output {
+    background: #ffb078;
+    border-radius: 4px;
 }
 
 // html {

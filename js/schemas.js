@@ -884,8 +884,7 @@ const jsonSchemaViewer = {
             title: "Parameters",
             description: "Configuration parameters of the instance.",
             type: "object",
-            properties: {
-            }
+            properties: {}
         }
     },
     required: ["name", "plugin", "params"]

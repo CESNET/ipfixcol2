@@ -3,13 +3,13 @@
 // - Předělat mainForm
 // - Plugin UniRec (timeout) přidat možnost zadat čas ručně
 // - Přidat nové pluginy
-// - barevně podbarvit výpis Config XML
 // - rezdělit schémata do souborů
 // - validace IP adres
 // - zpracovávání odkazů v hlavičce schématu + ikonka v overlay
 // ? Overlay - menší padding
 //
 // +? podívat se na tabindex
+// + barevně podbarvit výpis Config XML
 // + Overlay > handleChange() používá jeden parametr (dříve 2)
 // + Opravit generování prázdného <input /> atd.
 

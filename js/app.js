@@ -211,6 +211,59 @@ class Form extends React.Component {
         );
     }
 
+    printColoredXML() {
+        var input = false;
+        var intermediate = false;
+        var output = false;
+        var formatedXML = this.createConfigXML();
+        var parts = formatedXML.split(
+            /\s*(<inputPlugins>|<\/inputPlugins>|<intermediatePlugins>|<\/intermediatePlugins>|<outputPlugins>|<\/outputPlugins>)\r\n/
+        );
+        console.log(parts);
+        return (
+            <div className={"XMLPrint"}>
+                {parts.map((part, index) => {
+                    if (index === 0 || index === parts.length - 1) {
+                        return <pre key={index}>{part}</pre>;
+                    }
+                    if (part == "<inputPlugins>") {
+                        input = true;
+                        return <pre key={index}>{"  <inputPlugins>"}</pre>;
+                    }
+                    if (part == "<intermediatePlugins>") {
+                        intermediate = true;
+                        return <pre key={index}>{"  <intermediatePlugins>"}</pre>;
+                    }
+                    if (part == "<outputPlugins>") {
+                        output = true;
+                        return <pre key={index}>{"  <outputPlugins>"}</pre>;
+                    }
+                    if (part == "</inputPlugins>") {
+                        input = false;
+                        return <pre key={index}>{"  </inputPlugins>"}</pre>;
+                    }
+                    if (part == "</intermediatePlugins>") {
+                        intermediate = false;
+                        return <pre key={index}>{"  </intermediatePlugins>"}</pre>;
+                    }
+                    if (part == "</outputPlugins>") {
+                        output = false;
+                        return <pre key={index}>{"  </outputPlugins>"}</pre>;
+                    }
+                    if (input) {
+                        return <pre key={index} className={"input"}>{part}</pre>;
+                    }
+                    if (intermediate) {
+                        return <pre key={index} className={"intermediate"}>{part}</pre>;
+                    }
+                    if (output) {
+                        return <pre key={index} className={"output"}>{part}</pre>;
+                    }
+                })}
+            </div>
+        );
+    }
+
     openSnackbar(text) {
         this.setState({
             snackbarOpen: true,
@@ -250,9 +303,6 @@ class Form extends React.Component {
                         <Typography variant="h6" color="inherit" className="title">
                             IPFIXcol2 configurator
                         </Typography>
-                        {/* <Button color="inherit" onClick={this.download.bind(this)}>
-                            {"Download file"}
-                        </Button> */}
                         <Tooltip title={"IPFIXcol2 GitHub"} arrow placement={"bottom"}>
                             <IconButton
                                 color="inherit"
@@ -313,7 +363,8 @@ class Form extends React.Component {
                             removeModule={this.removeModule.bind(this)}
                         />
                     </div>
-                    {this.renderXML()}
+                    {this.printColoredXML()}
+                    {/* {this.renderXML()} */}
                     <Snackbar
                         anchorOrigin={{
                             vertical: "bottom",
