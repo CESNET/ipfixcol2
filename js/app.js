@@ -427,7 +427,7 @@ class FormColumn extends React.Component {
                     {this.props.modules.map((module, index) => {
                         return (
                             <Module
-                                key={module.name}
+                                key={index}
                                 index={index}
                                 module={module}
                                 onRemove={this.removeModule.bind(this)}
