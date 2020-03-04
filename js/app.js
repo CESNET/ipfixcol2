@@ -471,7 +471,7 @@ class FormColumn extends React.Component {
         );
         return (
             <Card className={"column " + this.props.color}>
-                <CardHeader title={"Input plugins"} />
+                <CardHeader className={"title"} title={this.props.name} />
                 <Divider />
                 {modules}
                 <Divider />

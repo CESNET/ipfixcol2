@@ -66,81 +66,13 @@ body {
     width: calc(33% - 20px);
     margin: 10px;
     margin-bottom: auto;
-    .module {
-        @extend %default_column_elem_settings;
-        text-align: center;
-        .header {
-            display: flex;
-            flex-direction: row;
-            justify-content: space-between;
-            h2 {
-                display: inline;
-                margin: auto 10px;
-            }
-            div {
-                display: flex;
-            }
-            button {
-                text-align: center;
-                align-content: center;
-                font-size: 1.3rem;
-                border-radius: 50%;
-                width: 30px;
-                border: none;
-                outline-style: none;
-                margin: 5px;
-                transition: 0.3s ease;
-                .fa-angle-down {
-                    transition: transform 0.3s ease;
-                }
-            }
-        }
-        .content {
-            text-align: left;
-            margin: 0 13px;
-            transition: max-height 0.3s;
-            max-height: 0;
-            overflow: hidden;
-        }
-    }
-    .module.visible {
-        .header button .fa-angle-down {
-            // transform: rotate(-180deg);
-            transform: scaleY(-1);
-        }
-        .content {
-            max-height: 10em;
-        }
-    }
-    .addModule {
-        @extend %default_column_elem_settings;
-        background: #fff;
-        button {
-            line-height: $default_line_height;
-            border-radius: $default_border_radius;
-            border: none;
-            font-size: x-large;
-            font-weight: bold;
-            width: 100%;
-            transition: 0.3s ease;
-            display: block;
-            outline-style: none;
-            color: black;
-            text-decoration: none;
-            text-align: center;
-        }
-        .modules {
-            transition: max-height 0.3s;
-            max-height: 0;
-            overflow: hidden;
-            button {
-                background: white;
-                box-shadow: none;
-            }
-        }
-    }
-    .addModule:hover .modules {
-        max-height: 15em;
+    // .title span{
+    //     color: white;
+    //     font-weight: 500;
+    // }
+    button,
+    button:hover {
+        background: white;
     }
 }
 
@@ -148,42 +80,25 @@ body {
 
 .blue {
     background: linear-gradient(135deg, #6599ff 0%, #3266cc 100%);
-    .module,
-    button,
-    h2 {
-        background: #f1f9ff;
-    }
-    button:hover,
-    .modules button:hover {
-        background: #91cfff;
-    }
+    // border: 4px solid rgba(63, 81, 181, 1);
+    // hr {
+    //     border: 0.5px solid rgba(63, 81, 181, 0.5);
+    // }
 }
+// background: #f1f9ff
+// background: #91cfff
 
 .orange {
     background: linear-gradient(135deg, #fe9900 0%, #ff7c00 100%);
-    .module,
-    button,
-    h2 {
-        background: #fff4c1;
-    }
-    button:hover,
-    .modules button:hover {
-        background: #ffe25f;
-    }
 }
+// background: #fff4c1
+// background: #ffe25f
 
 .red {
     background: linear-gradient(135deg, #ff5e34 0%, #f63c01 100%);
-    .module,
-    button,
-    h2 {
-        background: #ffe1cb;
-    }
-    button:hover,
-    .modules button:hover {
-        background: #ffb078;
-    }
 }
+// background: #ffe1cb
+// background: #ffb078
 
 textarea,
 pre {
@@ -234,21 +149,21 @@ p + p {
 
 .XMLPrint {
     margin: auto 20px;
-}
-
-.input {
-    background: #91cfff;
-    border-radius: 4px;
-}
-
-.intermediate {
-    background: #ffe25f;
-    border-radius: 4px;
-}
-
-.output {
-    background: #ffb078;
-    border-radius: 4px;
+    pre {
+        border-radius: 4px;
+    }
+    .input {
+        // background: #91cfff;
+        background: #6599ff;
+    }
+    .intermediate {
+        // background: #ffe25f;
+        background: #fe9900;
+    }
+    .output {
+        // background: #ffb078;
+        background: #ff5e34;
+    }
 }
 
 .overlaySubtitle {
