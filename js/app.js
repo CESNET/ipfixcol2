@@ -74,10 +74,6 @@ const x2js = new X2JS();
 const ajv = new Ajv({ allErrors: true });
 
 class App extends React.Component {
-    constructor(props) {
-        super(props);
-    }
-
     render() {
         return <Form />;
     }

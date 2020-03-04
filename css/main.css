@@ -224,4 +224,15 @@ p + p {
   border-radius: 4px;
 }
 
+.overlaySubtitle {
+  font-size: small;
+  font-weight: 400;
+}
+
+.MuiButtonBase-root.overlayIcon {
+  position: absolute;
+  right: 12px;
+  top: 18px;
+}
+
 /*# sourceMappingURL=main.css.map */

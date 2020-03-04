@@ -1,7 +1,8 @@
 const jsonSchemaUDP = {
     $schema: "http://json-schema.org/draft-07/schema#",
     title: "UDP input",
-    description: "UDP input plugin",
+    description:
+        "The plugin receives IPFIX messages over UDP transport protocol from one or more exporters and pass them into the collector.|https://github.com/CESNET/ipfixcol2/tree/master/src/plugins/input/udp",
     type: "object",
     properties: {
         name: {
@@ -36,7 +37,7 @@ const jsonSchemaUDP = {
                         "Local IPv4/IPv6 address on which the UDP input plugin listens. If the element is left empty, the plugin binds to all available network interfaces. The element can occur multiple times (one IP address per occurrence) to manually select multiple interfaces. [default: empty]",
                     type: "string",
                     default: "",
-                    oneOf: [{format: "ipv4"}, {format: "ipv6"}]
+                    oneOf: [{ format: "ipv4" }, { format: "ipv6" }]
                 },
                 connectionTimeout: {
                     title: "Connection timeout",
@@ -68,7 +69,8 @@ const jsonSchemaUDP = {
 const jsonSchemaTCP = {
     $schema: "http://json-schema.org/draft-07/schema#",
     title: "TCP input",
-    description: "TCP input plugin",
+    description:
+        "The plugin receives IPFIX messages over TCP transport protocol from one or more exporters and pass them into the collector.|https://github.com/CESNET/ipfixcol2/tree/master/src/plugins/input/tcp",
     type: "object",
     properties: {
         name: {
@@ -103,7 +105,7 @@ const jsonSchemaTCP = {
                         "Local IPv4/IPv6 address on which the TCP input plugin listens. If the element is left empty, the plugin binds to all available network interfaces. The element can occur multiple times (one IP address per occurrence) to manually select multiple interfaces. [default: empty]",
                     type: "string",
                     default: "",
-                    oneOf: [{format: "ipv4"}, {format: "ipv6"}]
+                    oneOf: [{ format: "ipv4" }, { format: "ipv6" }]
                 }
             },
             required: ["localPort", "localIPAddress"]
@@ -114,7 +116,8 @@ const jsonSchemaTCP = {
 const jsonSchemaAnonymization = {
     $schema: "http://json-schema.org/draft-07/schema#",
     title: "Flow anonymization",
-    description: "Flow anonymization plugin",
+    description:
+        "The plugin performs IP address anonymization of all flow records|https://github.com/CESNET/ipfixcol2/tree/master/src/plugins/intermediate/anonymization",
     type: "object",
     properties: {
         name: {
@@ -159,7 +162,8 @@ const jsonSchemaAnonymization = {
 const jsonSchemaJSON = {
     $schema: "http://json-schema.org/draft-07/schema#",
     title: "JSON output",
-    description: "JSON output plugin",
+    description:
+        "The plugin converts IPFIX flow records into JSON format and sends them, stores them or prints them.|https://github.com/CESNET/ipfixcol2/tree/master/src/plugins/output/json",
     type: "object",
     properties: {
         name: {
@@ -329,7 +333,7 @@ const jsonSchemaJSON = {
                                         title: "IP address",
                                         description: "IPv4/IPv6 address of the client",
                                         type: "string",
-                                        oneOf: [{format: "ipv4"}, {format: "ipv6"}]
+                                        oneOf: [{ format: "ipv4" }, { format: "ipv6" }]
                                     },
                                     port: {
                                         title: "Port",
@@ -458,7 +462,8 @@ const jsonSchemaJSON = {
 const jsonSchemaDummy = {
     $schema: "http://json-schema.org/draft-07/schema#",
     title: "Dummy output",
-    description: "Dummy output plugin",
+    description:
+        "The plugin provides a means to test the collector without actually storing any data.|https://github.com/CESNET/ipfixcol2/tree/master/src/plugins/output/dummy",
     type: "object",
     properties: {
         name: {
@@ -496,7 +501,8 @@ const jsonSchemaDummy = {
 const jsonSchemaLNF = {
     $schema: "http://json-schema.org/draft-07/schema#",
     title: "LNF storage",
-    description: "LNF storage plugin",
+    description:
+        "The plugin converts and store IPFIX flow records into NfDump compatible files.|https://github.com/CESNET/ipfixcol2/tree/master/extra_plugins/output/lnfstore",
     type: "object",
     properties: {
         name: {
@@ -615,7 +621,8 @@ const jsonSchemaLNF = {
 const jsonSchemaUniRec = {
     $schema: "http://json-schema.org/draft-07/schema#",
     title: "UniRec plugin",
-    description: "UniRec plugin",
+    description:
+        "The plugin converts IPFIX flow records into UniRec format and sends them as UniRec records via a TRAP output interface.|https://github.com/CESNET/ipfixcol2/tree/master/extra_plugins/output/unirec",
     type: "object",
     properties: {
         name: {
@@ -822,7 +829,8 @@ const jsonSchemaUniRec = {
 const jsonSchemaTimeCheck = {
     $schema: "http://json-schema.org/draft-07/schema#",
     title: "Time Check",
-    description: "Time Check plugin",
+    description:
+        "The plugin checks that start and end timestamps of each flow record are relatively recent.|https://github.com/CESNET/ipfixcol2/tree/master/src/plugins/output/timecheck",
     type: "object",
     properties: {
         name: {
@@ -869,7 +877,8 @@ const jsonSchemaTimeCheck = {
 const jsonSchemaViewer = {
     $schema: "http://json-schema.org/draft-07/schema#",
     title: "Viewer",
-    description: "Viewer plugin",
+    description:
+        "The plugin converts IPFIX Messages into plain text and prints them on standard output.|https://github.com/CESNET/ipfixcol2/tree/master/src/plugins/output/viewer",
     type: "object",
     properties: {
         name: {
