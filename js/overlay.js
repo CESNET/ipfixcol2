@@ -3,6 +3,10 @@
 // - Předělat mainForm
 // - Přidat nové pluginy
 // - rezdělit schémata do souborů
+// - overlay - křížek
+// - IP adresa může být i prázdná
+// - musí být možnost zadat více IP adres
+// - světlejší barvy (lepší kontrast) podbarvení XML výpisu (celkově styl výpisu)
 // ? Overlay - menší padding
 //
 // +? podívat se na tabindex
