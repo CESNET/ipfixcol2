@@ -37,7 +37,7 @@ const jsonSchemaUDP = {
                         "Local IPv4/IPv6 address on which the UDP input plugin listens. If the element is left empty, the plugin binds to all available network interfaces. The element can occur multiple times (one IP address per occurrence) to manually select multiple interfaces. [default: empty]",
                     type: "string",
                     default: "",
-                    oneOf: [{ format: "ipv4" }, { format: "ipv6" }]
+                    oneOf: [{ format: "ipv4" }, { format: "ipv6" }, { regex: "^$"}]
                 },
                 connectionTimeout: {
                     title: "Connection timeout",
@@ -105,7 +105,7 @@ const jsonSchemaTCP = {
                         "Local IPv4/IPv6 address on which the TCP input plugin listens. If the element is left empty, the plugin binds to all available network interfaces. The element can occur multiple times (one IP address per occurrence) to manually select multiple interfaces. [default: empty]",
                     type: "string",
                     default: "",
-                    oneOf: [{ format: "ipv4" }, { format: "ipv6" }]
+                    oneOf: [{ format: "ipv4" }, { format: "ipv6" }, { regex: "^$"}]
                 }
             },
             required: ["localPort", "localIPAddress"]

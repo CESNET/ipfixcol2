@@ -4,7 +4,6 @@
 // - Přidat nové pluginy
 // - rezdělit schémata do souborů
 // - overlay - křížek
-// - IP adresa může být i prázdná
 // - musí být možnost zadat více IP adres
 // - světlejší barvy (lepší kontrast) podbarvení XML výpisu (celkově styl výpisu)
 // ? Overlay - menší padding
@@ -13,6 +12,7 @@
 // +- Plugin UniRec (timeout) přidat možnost zadat čas ručně
 // + zpracovávání odkazů v hlavičce schématu + ikonka v overlay
 // + validace IP adres
+// + IP adresa může být i prázdná
 // + barevně podbarvit výpis Config XML
 // + Overlay > handleChange() používá jeden parametr (dříve 2)
 // + Opravit generování prázdného <input /> atd.
