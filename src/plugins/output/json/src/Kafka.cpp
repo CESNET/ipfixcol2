@@ -44,6 +44,11 @@
 #include <pthread.h>
 #include <stdexcept>
 
+/// Optimized value for "batch.num.messages"
+#define PERF_BATCH_NUM_MSG "60000"
+/// Optimized value for "queue.buffering.max.ms"
+#define PERF_BUFFERING_MS  "200"
+
 /**
  * \brief Class constructor
  * \param[in] cfg Kafka configuration
@@ -244,6 +249,24 @@ Kafka::prepare_params(const struct cfg_kafka &cfg, map_params &params)
             // Broker version 0.9.x and 0.8.x
             params["api.version.request"] = "false";
             params["broker.version.fallback"] = cfg.broker_fallback;
+        }
+    }
+
+    if (cfg.perf_tuning) {
+        // Default performance tuning
+        params["batch.num.messages"] = PERF_BATCH_NUM_MSG;
+
+        /* "linger.ms" and "queue.buffering.max.ms" are aliases. Since we don't know which could
+         * be set by the user, so we have to check it in advance here to avoid redefinition */
+        bool key_found = false;
+        for (const auto &name : {"queue.buffering.max.ms", "linger.ms"}) {
+            if (cfg.properties.find(name) != cfg.properties.end()) {
+                key_found = true;
+                break;
+            }
+        }
+        if (!key_found) {
+            params["queue.buffering.max.ms"] = PERF_BUFFERING_MS;
         }
     }
 

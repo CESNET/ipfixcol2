@@ -98,6 +98,7 @@ enum params_xml_nodes {
     KAFKA_PARTION,     /**< Producer partition              */
     KAFKA_BVERSION,    /**< Broker fallback version         */
     KAFKA_BLOCKING,    /**< Block when queue is full        */
+    KAFKA_PERF_TUN,    /**< Add performance tuning options  */
     KAFKA_PROPERTY,    /**< Additional librdkafka property  */
     KAFKA_PROP_KEY,    /**< Property key                    */
     KAFKA_PROP_VALUE,  /**< Property value                  */
@@ -153,6 +154,7 @@ static const struct fds_xml_args args_kafka[] = {
     FDS_OPTS_ELEM(KAFKA_PARTION,    "partition",     FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(KAFKA_BVERSION,   "brokerVersion", FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(KAFKA_BLOCKING,   "blocking",      FDS_OPTS_T_BOOL,   FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(KAFKA_PERF_TUN,   "performanceTuning", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
     FDS_OPTS_NESTED(KAFKA_PROPERTY, "property", args_kafka_prop, FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
     FDS_OPTS_END
 };
@@ -485,6 +487,7 @@ Config::parse_kafka(fds_xml_ctx_t *kafka)
     struct cfg_kafka output;
     output.partition = RD_KAFKA_PARTITION_UA;
     output.blocking = false;
+    output.perf_tuning = true;
 
     // For partition parser
     int32_t value;
@@ -524,6 +527,10 @@ Config::parse_kafka(fds_xml_ctx_t *kafka)
         case KAFKA_BLOCKING:
             assert(content->type == FDS_OPTS_T_BOOL);
             output.blocking = content->val_bool;
+            break;
+        case KAFKA_PERF_TUN:
+            assert(content->type == FDS_OPTS_T_BOOL);
+            output.perf_tuning = content->val_bool;
             break;
         case KAFKA_PROPERTY:
             assert(content->type == FDS_OPTS_T_CONTEXT);

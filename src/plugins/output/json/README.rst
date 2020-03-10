@@ -280,6 +280,13 @@ with each other.
         if enabled, no records are dropped. However, if the cluster is slow or not accessible
         at all, the plugin waits (i.e. blocks) until data are send. This can significantly slow
         down or block(!) the whole collector and other output plugins [true/false, default: false]
+    :``performanceTuning``:
+        By default, the connection provided by librdkafka is not optimized for high throughput
+        required for transport of JSON records. This option adds optional library parameters,
+        which reduces messaging overhead and significantly improves throughput. In particular,
+        Kafka message capacity is increased and maximal buffering interval is prolonged.
+        These options can be overwritten by user defined properties.
+        [true/false, default: true]
     :``property``:
         Additional configuration properties of librdkafka library as key/value pairs.
         Multiple <property> parameters, which can improve performance, can be defined.

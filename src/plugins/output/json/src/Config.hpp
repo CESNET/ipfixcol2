@@ -138,6 +138,8 @@ struct cfg_kafka : cfg_output {
     std::string broker_fallback;
     /// Block conversion if sender buffer is full
     bool blocking;
+    /// Add default properties for librdkafka
+    bool perf_tuning;
 
     /// Additional librdkafka properties (might overwrite common parameters)
     std::map<std::string, std::string> properties;
