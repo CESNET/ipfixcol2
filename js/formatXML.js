@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 
-function formatXml(xml) {
+function formatXml(xml, indentChar, indentNumber) {
     var formatted = '';
     var reg = /(>)(<)(\/*)/g;
     xml = xml.replace(reg, '$1\r\n$2$3');
@@ -42,7 +42,7 @@ function formatXml(xml) {
 
         var padding = '';
         for (var i = 0; i < pad; i++) {
-            padding += '  ';
+            padding += indentChar.repeat(indentNumber);
         }
 
         formatted += padding + node + '\r\n';

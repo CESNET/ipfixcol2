@@ -1,7 +1,7 @@
 const {
     Allert,
     AppBar,
-//    Autocomplete,
+    //    Autocomplete,
     Badge,
     Button,
     Card,
@@ -69,6 +69,11 @@ const defaultConfig = {
         }
     }
 };
+const indentationTypes = [
+    { name: "Space", character: " " },
+    { name: "Tab", character: "\t" }
+];
+const indentationSpaces = [1, 2, 3, 4, 5, 6, 7, 8];
 
 const x2js = new X2JS();
 const ajv = new Ajv({ allErrors: true });
@@ -87,7 +92,10 @@ class Form extends React.Component {
             overlay: null,
             snackbarOpen: false,
             snackbarText: "",
-            snackbarType: null
+            snackbarType: null,
+            settingsOpen: false,
+            indentType: indentationTypes[0],
+            indentNumber: 2
         };
     }
 
@@ -189,7 +197,7 @@ class Form extends React.Component {
             config.ipfixcol2.outputPlugins.output = this.state.modules[2];
         }
         var xml = x2js.json2xml_str(config);
-        return formatXml(xml);
+        return formatXml(xml, this.state.indentType.character, this.state.indentNumber);
     }
 
     renderXML() {
@@ -216,6 +224,7 @@ class Form extends React.Component {
         var parts = formatedXML.split(
             /\s*(<inputPlugins>|<\/inputPlugins>|<intermediatePlugins>|<\/intermediatePlugins>|<outputPlugins>|<\/outputPlugins>)\r\n/
         );
+        var indentation = this.state.indentType.character.repeat(this.state.indentNumber);
         console.log(parts);
         return (
             <div className={"XMLPrint"}>
@@ -225,36 +234,48 @@ class Form extends React.Component {
                     }
                     if (part == "<inputPlugins>") {
                         input = true;
-                        return <pre key={index}>{"  <inputPlugins>"}</pre>;
+                        return <pre key={index}>{indentation + "<inputPlugins>"}</pre>;
                     }
                     if (part == "<intermediatePlugins>") {
                         intermediate = true;
-                        return <pre key={index}>{"  <intermediatePlugins>"}</pre>;
+                        return <pre key={index}>{indentation + "<intermediatePlugins>"}</pre>;
                     }
                     if (part == "<outputPlugins>") {
                         output = true;
-                        return <pre key={index}>{"  <outputPlugins>"}</pre>;
+                        return <pre key={index}>{indentation + "<outputPlugins>"}</pre>;
                     }
                     if (part == "</inputPlugins>") {
                         input = false;
-                        return <pre key={index}>{"  </inputPlugins>"}</pre>;
+                        return <pre key={index}>{indentation + "</inputPlugins>"}</pre>;
                     }
                     if (part == "</intermediatePlugins>") {
                         intermediate = false;
-                        return <pre key={index}>{"  </intermediatePlugins>"}</pre>;
+                        return <pre key={index}>{indentation + "</intermediatePlugins>"}</pre>;
                     }
                     if (part == "</outputPlugins>") {
                         output = false;
-                        return <pre key={index}>{"  </outputPlugins>"}</pre>;
+                        return <pre key={index}>{indentation + "</outputPlugins>"}</pre>;
                     }
                     if (input) {
-                        return <pre key={index} className={"input"}>{part}</pre>;
+                        return (
+                            <pre key={index} className={"input"}>
+                                {part}
+                            </pre>
+                        );
                     }
                     if (intermediate) {
-                        return <pre key={index} className={"intermediate"}>{part}</pre>;
+                        return (
+                            <pre key={index} className={"intermediate"}>
+                                {part}
+                            </pre>
+                        );
                     }
                     if (output) {
-                        return <pre key={index} className={"output"}>{part}</pre>;
+                        return (
+                            <pre key={index} className={"output"}>
+                                {part}
+                            </pre>
+                        );
                     }
                 })}
             </div>
@@ -275,6 +296,25 @@ class Form extends React.Component {
 
         this.setState({
             snackbarOpen: false
+        });
+    }
+
+    openSettings() {
+        this.setState({
+            settingsOpen: true
+        });
+    }
+
+    closeSettings() {
+        this.setState({
+            settingsOpen: false
+        });
+    }
+
+    changeSettings(type, number) {
+        this.setState({
+            indentType: type,
+            indentNumber: number
         });
     }
 
@@ -317,12 +357,19 @@ class Form extends React.Component {
                             </IconButton>
                         </Tooltip>
                         <Tooltip title={"Settings"} arrow placement={"bottom"}>
-                            <IconButton color="inherit" onClick={this.download.bind(this)}>
+                            <IconButton color="inherit" onClick={this.openSettings.bind(this)}>
                                 <Icon>settings</Icon>
                             </IconButton>
                         </Tooltip>
                     </Toolbar>
                 </AppBar>
+                <Settings
+                    open={this.state.settingsOpen}
+                    indentType={this.state.indentType}
+                    indentNumber={this.state.indentNumber}
+                    onChange={this.changeSettings.bind(this)}
+                    onClose={this.closeSettings.bind(this)}
+                />
                 <div className="form">
                     {this.state.overlay}
                     <div className="mainLayer">
@@ -548,6 +595,86 @@ class Module extends React.Component {
                     </Typography>
                 </ExpansionPanelDetails>
             </ExpansionPanel>
+        );
+    }
+}
+
+class Settings extends React.Component {
+    handleChangeType(event) {
+        if (event.target.value === indentationTypes[1].name) {
+            this.props.onChange(indentationTypes[1], 1);
+        } else if (this.props.indentType === indentationTypes[1]) {
+            this.props.onChange(indentationTypes[0], 2);
+        } else {
+            this.props.onChange(indentationTypes[0], this.props.indentNumber);
+        }
+    }
+
+    handleChangeNumber(event) {
+        this.props.onChange(this.props.indentType, event.target.value);
+    }
+
+    render() {
+        return (
+            <Dialog
+                className={"settings"}
+                open={this.props.open}
+                fullWidth={false}
+                maxWidth={"sm"}
+                onEscapeKeyDown={this.props.onClose.bind()}
+                onBackdropClick={this.props.onClose.bind()}
+            >
+                <DialogTitle>{"Settings"}</DialogTitle>
+                <Divider />
+                <DialogContent dividers>
+                    <FormControl>
+                        <FormLabel>{"Indentation character"}</FormLabel>
+                        <Select
+                            className={"select"}
+                            value={this.props.indentType.name}
+                            onChange={this.handleChangeType.bind(this)}
+                            inputProps={{ tabIndex: 1 }}
+                        >
+                            {indentationTypes.map(indentType => {
+                                return (
+                                    <MenuItem key={indentType.name} value={indentType.name}>
+                                        {indentType.name}
+                                    </MenuItem>
+                                );
+                            })}
+                        </Select>
+                    </FormControl>
+                    <FormControl>
+                        <FormLabel>
+                            {"Number of " + this.props.indentType.name.toLowerCase() + "s"}
+                        </FormLabel>
+                        <Input
+                            className={"select"}
+                            type={"number"}
+                            name={"numberOfIndentChars"}
+                            value={this.props.indentNumber}
+                            disabled={this.props.indentType === indentationTypes[1]}
+                            inputProps={{
+                                min: 1,
+                                max: 8,
+                                step: 1
+                            }}
+                            onChange={this.handleChangeNumber.bind(this)}
+                            inputProps={{ tabIndex: 2 }}
+                        />
+                    </FormControl>
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        variant="outlined"
+                        color="primary"
+                        onClick={this.props.onClose}
+                        tabIndex={3}
+                    >
+                        {"Close"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         );
     }
 }

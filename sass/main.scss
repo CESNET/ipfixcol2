@@ -154,22 +154,28 @@ p + p {
         border-radius: 4px;
     }
     .input {
-        // background: #91cfff;
-        background: #6599ff;
+        background: #91cfff;
+        // background: #6599ff;
     }
     .intermediate {
-        // background: #ffe25f;
-        background: #fe9900;
+        background: #ffe25f;
+        // background: #fe9900;
     }
     .output {
-        // background: #ffb078;
-        background: #ff5e34;
+        background: #ffb078;
+        // background: #ff5e34;
     }
 }
 
 .overlaySubtitle {
     font-size: small;
     font-weight: 400;
+}
+
+.settings {
+    .MuiFormControl-root + .MuiFormControl-root {
+        padding-left: 1.5rem;
+    }
 }
 
 .MuiButtonBase-root.overlayIcon {

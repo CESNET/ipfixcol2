@@ -647,7 +647,7 @@ const jsonSchemaUniRec = {
                 uniRecFormat: {
                     title: "UniRec format",
                     description:
-                        "Comma separated list of UniRec fields. All fields are mandatory be default, therefore, if a flow record to convert doesn't contain all mandatory fields, it is dropped. However, UniRec fields that start with '?' are optional and if they are not present in the record (e.g. TCP_FLAGS) default value (typically zero) is used. List of all supported UniRec fields is defined in unirec-element.txt file. Example value: \"DST_IP,SRC_IP,BYTES,DST_PORT,?TCP_FLAGS,SRC_PORT,PROTOCOL\".",
+                        "Comma separated list of UniRec fields. All fields are mandatory by default, therefore, if a flow record to convert doesn't contain all mandatory fields, it is dropped. However, UniRec fields that start with '?' are optional and if they are not present in the record (e.g. TCP_FLAGS) default value (typically zero) is used. List of all supported UniRec fields is defined in unirec-element.txt file. Example value: \"DST_IP,SRC_IP,BYTES,DST_PORT,?TCP_FLAGS,SRC_PORT,PROTOCOL\".",
                     type: "string",
                     minLength: 1
                 },

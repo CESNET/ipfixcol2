@@ -3,18 +3,23 @@
 // - Předělat mainForm
 // - Přidat nové pluginy
 // - rezdělit schémata do souborů
-// - overlay - křížek
+// - overlay - přidat křížek s funkcí cancel (v případě změny se dotázat, zda to chce uživatel opravdu udělat?)
 // - musí být možnost zadat více IP adres
-// - světlejší barvy (lepší kontrast) podbarvení XML výpisu (celkově styl výpisu)
-// ? Overlay - menší padding
+// - opravit pole pro zadávání číselných hodnot (formulář nerespektuje nastavené meze)
+// ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
-// +? podívat se na tabindex
-// +- Plugin UniRec (timeout) přidat možnost zadat čas ručně
+// +- Plugin UniRec (timeout) přidat možnost zadat čas ručně - řešení není ideální, chybí našeptávač možných hodnot
+// +- světlejší barvy (lepší kontrast) podbarvení XML výpisu - možná by chtělo celkově trochu vylepšit styl výpisu
+// +- přidáno okno s nastavením odsazení XML výpisu - výpis při editaci modulů zatím nerespektuje nastavení odsaszení
+// +- tabindex - současné řešení by mělo být funkční, ale z není ideální
+//      (hodnoty tabIndexu se nezvyšují postupně, ale v některých případech skokově viz. řádek 526,
+//      v případě většího množství hodnot to nemusí fungovat -> předělat)
+//
 // + zpracovávání odkazů v hlavičce schématu + ikonka v overlay
 // + validace IP adres
 // + IP adresa může být i prázdná
 // + barevně podbarvit výpis Config XML
-// + Overlay > handleChange() používá jeden parametr (dříve 2)
+// + Overlay > handleChange() používá jeden parametr (dříve 2) + tomu odpovídající změna ve tříde Properties
 // + Opravit generování prázdného <input /> atd.
 // + Změněn styl scrollbaru
 
@@ -194,7 +199,7 @@ class Overlay extends React.Component {
                                     InputProps={{
                                         readOnly: true
                                     }}
-                                    value={formatXml(x2js.json2xml_str(this.state.module))}
+                                    value={formatXml(x2js.json2xml_str(this.state.module), " ", 2)}
                                 />
                                 <FormHelperText>Read only</FormHelperText>
                             </FormControl>
