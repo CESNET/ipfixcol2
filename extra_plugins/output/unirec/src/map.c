@@ -101,6 +101,13 @@ map_clear(map_t *map)
 {
     for (size_t i = 0; i < map->rec_size; ++i) {
         struct map_rec *rec = map->rec_array[i];
+        struct map_ipfix_s *ipfix = rec->ipfix.next;
+        while (ipfix) {
+           struct map_ipfix_s *tmp = ipfix->next;
+           free(ipfix);
+           ipfix = tmp;
+        }
+
         free(rec->unirec.name);
         free(rec->unirec.type_str);
         free(rec);
@@ -280,15 +287,48 @@ map_load_line_ie_defs(map_t *map, char *ur_name, int ur_type, char *ur_type_str,
         }
 
         // Parse IPFIX specifier
-        const struct fds_iemgr_elem *elem_def = map_elem_get_ipfix(map->iemgr, subtoken);
+        const struct fds_iemgr_elem *elem_def = NULL;
+        char *subsave_ptr_list = NULL;
+        struct map_ipfix_s *ipfix = &rec.ipfix;
+        rec.ipfix.next = NULL;
+        for (char *list = subtoken; ;list = NULL) {
+           char *list_token = strtok_r(list, "/", &subsave_ptr_list);
+           if (!list_token) {
+              break;
+           }
+
+           elem_def = map_elem_get_ipfix(map->iemgr, list_token);
+           if (elem_def != NULL) {
+              if (list == NULL) {
+                  ipfix->next = malloc(sizeof(struct map_ipfix_s));
+                  if (!ipfix->next) {
+                     rc = IPX_ERR_NOMEM;
+                     elem_def = NULL;
+                     break;
+                  }
+                  ipfix = ipfix->next;
+              }
+              // Store the "IPFIX element" record
+              ipfix->source = MAP_SRC_IPFIX;
+              ipfix->def = elem_def;
+              ipfix->id = elem_def->id;
+              ipfix->en = elem_def->scope->pen;
+              ipfix->next = NULL;
+
+              continue;
+           }
+           break;
+        }
         if (elem_def != NULL) {
-            // Store the "IPFIX element" record
-            rec.ipfix.source = MAP_SRC_IPFIX;
-            rec.ipfix.def = elem_def;
-            rec.ipfix.id = elem_def->id;
-            rec.ipfix.en = elem_def->scope->pen;
-            rc = map_rec_add(map, &rec);
-            continue;
+           rc = map_rec_add(map, &rec);
+           continue;
+        }
+
+        ipfix = rec.ipfix.next;
+        while (ipfix) {
+           struct map_ipfix_s *tmp = ipfix->next;
+           free(ipfix);
+           ipfix = tmp;
         }
 
         enum MAP_SRC fn_id = map_elem_get_internal(subtoken);
@@ -298,6 +338,7 @@ map_load_line_ie_defs(map_t *map, char *ur_name, int ur_type, char *ur_type_str,
             rec.ipfix.def = NULL;
             rec.ipfix.id = 0;
             rec.ipfix.en = 0;
+            rec.ipfix.next = NULL;
             rc = map_rec_add(map, &rec);
             continue;
         }
@@ -431,6 +472,24 @@ map_sort_fn(const void *p1, const void *p2)
         return (rec1->ipfix.id < rec2->ipfix.id) ? (-1) : 1;
     }
 
+    // TODO: better and more readable code
+    // TODO: check all elements in linked list
+    if (rec1->ipfix.next != NULL && rec2->ipfix.next != NULL) {
+       // Primary sort by PEN
+       if (rec1->ipfix.next->en != rec2->ipfix.next->en) {
+           return (rec1->ipfix.next->en < rec2->ipfix.next->en) ? (-1) : 1;
+       }
+
+       // Secondary sort by ID
+       if (rec1->ipfix.next->id != rec2->ipfix.next->id) {
+           return (rec1->ipfix.next->id < rec2->ipfix.next->id) ? (-1) : 1;
+       }
+    } else if (rec1->ipfix.next != NULL) {
+      return -1;
+    } else if (rec2->ipfix.next != NULL) {
+      return 1;
+    }
+
     return 0;
 }
 
@@ -507,9 +566,24 @@ map_load(map_t *map, const char *file)
             continue;
         }
 
-        if (rec_prev->ipfix.en != rec_now->ipfix.en || rec_prev->ipfix.id != rec_now->ipfix.id) {
-            rec_prev = rec_now;
-            continue;
+        bool collision = false;
+        const struct map_ipfix_s *ipfix_prev = &rec_prev->ipfix;
+        const struct map_ipfix_s *ipfix_now = &rec_now->ipfix;
+        while (1) {
+           if (ipfix_prev->en != ipfix_now->en || ipfix_prev->id != ipfix_now->id || !ipfix_prev || !ipfix_now) {
+              rec_prev = rec_now;
+              break;
+           }
+
+           ipfix_prev = ipfix_prev->next;
+           ipfix_now = ipfix_now->next;
+           if (!ipfix_prev && !ipfix_now) {
+              collision = true;
+              break;
+           }
+        }
+        if (!collision) {
+           continue;
         }
 
         // Collision detected!

@@ -68,7 +68,7 @@ typedef int (*translator_func)(translator_t *trans, const struct translator_rec 
 
 /** Translator record                                                   */
 struct translator_rec {
-    struct {
+    struct tr_ipfix_s {
         /** Private Enterprise number                                   */
         uint32_t pen;
         /** Information Element ID                                      */
@@ -77,6 +77,7 @@ struct translator_rec {
         enum fds_iemgr_element_type type;
         /** Field semantic                                              */
         enum fds_iemgr_element_semantic sem;
+        struct tr_ipfix_s *next;
     } ipfix; /** IPFIX field identification                             */
 
     struct {
@@ -301,6 +302,291 @@ translate_int(translator_t *trans, const struct translator_rec *rec,
     }
 
     return 0;
+}
+
+static int
+translate_array_uint(translator_t *trans, const struct translator_rec *rec,
+    const struct fds_drec_field *field)
+{
+   ur_field_id_t ur_id = rec->unirec.id;
+   const enum fds_iemgr_element_semantic ipx_sem = rec->ipfix.next->sem;
+   struct fds_blist_iter list_it;
+   int rc;
+
+   fds_blist_iter_init(&list_it, field, NULL);
+   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
+       uint64_t value;
+       void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
+       if (fds_get_uint_be(list_it.field.data, list_it.field.size, &value) != FDS_OK || field_ptr == NULL) {
+           return 1; // Conversion failed
+       }
+
+       switch (rec->unirec.type) {
+       case UR_TYPE_A_UINT64:
+           *((uint64_t *) field_ptr) = value;
+           break;
+       case UR_TYPE_A_UINT32:
+           UINT_CONV(uint32_t, field_ptr, value, UINT32_MAX, ipx_sem);
+           break;
+       case UR_TYPE_A_UINT16:
+           UINT_CONV(uint16_t, field_ptr, value, UINT16_MAX, ipx_sem);
+           break;
+       case UR_TYPE_A_UINT8:
+           UINT_CONV(uint8_t, field_ptr, value, UINT8_MAX, ipx_sem);
+           break;
+       case UR_TYPE_A_INT64:
+           UINT_CONV(int64_t, field_ptr, value, INT64_MAX, ipx_sem);
+           break;
+       case UR_TYPE_A_INT32:
+           UINT_CONV(int32_t, field_ptr, value, INT32_MAX, ipx_sem);
+           break;
+       case UR_TYPE_A_INT16:
+           UINT_CONV(int16_t, field_ptr, value, INT16_MAX, ipx_sem);
+           break;
+       case UR_TYPE_A_INT8:
+           UINT_CONV(int8_t, field_ptr, value, INT8_MAX, ipx_sem);
+           break;
+       default:
+           return 1; // Unsupported data type
+       }
+    }
+
+    return rc != FDS_OK;
+}
+
+static int
+translate_array_int(translator_t *trans, const struct translator_rec *rec,
+    const struct fds_drec_field *field)
+{
+   ur_field_id_t ur_id = rec->unirec.id;
+   const enum fds_iemgr_element_semantic ipx_sem = rec->ipfix.next->sem;
+   struct fds_blist_iter list_it;
+   int rc;
+
+   fds_blist_iter_init(&list_it, field, NULL);
+   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
+       int64_t value;
+       void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
+       if (fds_get_int_be(list_it.field.data, list_it.field.size, &value) != FDS_OK || field_ptr == NULL) {
+           return 1; // Conversion failed
+       }
+
+       switch (rec->unirec.type) {
+       case UR_TYPE_A_INT64:
+           *((int64_t *) field_ptr) = value;
+           break;
+       case UR_TYPE_A_INT32:
+           INT_CONV(int32_t, field_ptr, value, INT32_MIN, INT32_MAX, ipx_sem);
+           break;
+       case UR_TYPE_A_INT16:
+           INT_CONV(int16_t, field_ptr, value, INT16_MIN, INT16_MAX, ipx_sem);
+           break;
+       case UR_TYPE_A_INT8:
+           INT_CONV(int8_t, field_ptr, value, INT8_MIN, INT8_MAX, ipx_sem);
+           break;
+       case UR_TYPE_A_UINT64:
+           INT_CONV(uint64_t, field_ptr, value, 0, INT64_MAX, ipx_sem); // Must be int64!
+           break;
+       case UR_TYPE_A_UINT32:
+           INT_CONV(uint32_t, field_ptr, value, 0, UINT32_MAX, ipx_sem);
+           break;
+       case UR_TYPE_A_UINT16:
+           INT_CONV(uint16_t, field_ptr, value, 0, UINT16_MAX, ipx_sem);
+           break;
+       case UR_TYPE_A_UINT8:
+           INT_CONV(uint8_t, field_ptr, value, 0, UINT8_MAX, ipx_sem);
+           break;
+       default:
+           return 1; // Unsupported data type
+       }
+    }
+
+    return rc != FDS_OK;
+}
+
+/**
+ * \brief Convert IPFIX boolean to UniRec char/(un)signed integer
+ * \copydetails translate_uint()
+ */
+static int
+translate_array_bool(translator_t *trans, const struct translator_rec *rec,
+    const struct fds_drec_field *field)
+{
+   ur_field_id_t ur_id = rec->unirec.id;
+   struct fds_blist_iter list_it;
+   int rc;
+
+   fds_blist_iter_init(&list_it, field, NULL);
+   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
+      bool value;
+      void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
+      if (fds_get_bool(list_it.field.data, list_it.field.size, &value) != FDS_OK || field_ptr == NULL) {
+         return 1; // Conversion failed
+      }
+
+      const uint8_t res = value ? 1U : 0U;
+      switch (ur_array_get_elem_size(ur_id)) {
+         case 1:
+            *((uint8_t  *) field_ptr) = res;
+            break;
+         case 2:
+            *((uint16_t *) field_ptr) = res;
+            break;
+         case 4:
+            *((uint32_t *) field_ptr) = res;
+            break;
+         case 8:
+            *((uint64_t *) field_ptr) = res;
+            break;
+         default:
+            // Invalid size of the field
+            return 1;
+      }
+   }
+
+    return rc != FDS_OK;
+}
+
+/**
+ * \brief Convert IPFIX float to UniRec float
+ * \copydetails translate_uint()
+ */
+static int
+translate_array_float(translator_t *trans, const struct translator_rec *rec,
+    const struct fds_drec_field *field)
+{
+   ur_field_id_t ur_id = rec->unirec.id;
+   struct fds_blist_iter list_it;
+   int rc;
+
+   fds_blist_iter_init(&list_it, field, NULL);
+   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
+      double value;
+      void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
+      if (fds_get_float_be(list_it.field.data, list_it.field.size, &value) != FDS_OK || field_ptr == NULL) {
+         return 1; // Conversion failed
+      }
+
+      switch (rec->unirec.type) {
+         case UR_TYPE_A_FLOAT:
+            if (value < -FLT_MAX && isnormal(value)) {
+               *((float *) field_ptr) = -FLT_MAX;
+            } else if (value > FLT_MAX && isnormal(value)) {
+               *((float *) field_ptr) = FLT_MAX;
+            } else {
+               *((float *) field_ptr) = (float) value;
+            }
+            break;
+         case UR_TYPE_A_DOUBLE:
+            *((double *) field_ptr) = value;
+            break;
+         default:
+            // Invalid type of the field
+            return 1;
+      }
+   }
+
+    return rc != FDS_OK;
+}
+
+/**
+ * \brief Convert IPFIX IPv4/IPv6 address to UniRec IPv4/IPv6 address
+ * \copydetails translate_uint()
+ */
+static int
+translate_array_ip(translator_t *trans, const struct translator_rec *rec,
+    const struct fds_drec_field *field)
+{
+   ur_field_id_t ur_id = rec->unirec.id;
+   struct fds_blist_iter list_it;
+   int rc;
+
+   fds_blist_iter_init(&list_it, field, NULL);
+   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
+      void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
+
+      switch (list_it.field.size) {
+         case 4: // IPv4
+            *((ip_addr_t *) field_ptr) = ip_from_4_bytes_be((char *) list_it.field.data);
+            break;
+         case 16: // IPv6
+            *((ip_addr_t *) field_ptr) = ip_from_16_bytes_be((char *) list_it.field.data);
+            break;
+         default:
+            // Invalid size of the field
+            return 1;
+      }
+   }
+
+   return rc != FDS_OK;
+}
+
+/**
+ * \brief Convert IPFIX MAC address to UniRec MAC address
+ * \copydetails translate_uint()
+ */
+static int
+translate_array_mac(translator_t *trans, const struct translator_rec *rec,
+    const struct fds_drec_field *field)
+{
+   ur_field_id_t ur_id = rec->unirec.id;
+   struct fds_blist_iter list_it;
+   int rc;
+
+   fds_blist_iter_init(&list_it, field, NULL);
+   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
+      if (list_it.field.size != 6U) {
+         return 1;
+      }
+
+      ur_time_t *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
+      memcpy(field_ptr, list_it.field.data, 6U);
+   }
+
+   return rc != FDS_OK;
+}
+
+/**
+ * \brief Convert IPFIX timestamp to UniRec timestamp
+ * \copydetails translate_uint()
+ */
+static int
+translate_array_time(translator_t *trans, const struct translator_rec *rec,
+    const struct fds_drec_field *field)
+{
+   ur_field_id_t ur_id = rec->unirec.id;
+   const enum fds_iemgr_element_type type_ipx = rec->ipfix.next->type;
+   struct fds_blist_iter list_it;
+   int rc;
+
+   fds_blist_iter_init(&list_it, field, NULL);
+   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
+      // Get the value
+      ur_time_t *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
+
+      if (type_ipx == FDS_ET_DATE_TIME_MILLISECONDS || type_ipx == FDS_ET_DATE_TIME_SECONDS) {
+         // Low precision timestamp
+         uint64_t ts;
+         if (fds_get_datetime_lp_be(list_it.field.data, list_it.field.size, type_ipx, &ts) != FDS_OK) {
+            return 1;
+         }
+
+         *field_ptr = ur_time_from_sec_msec(ts / 1000, ts % 1000);
+         continue;
+      } else if (type_ipx == FDS_ET_DATE_TIME_MICROSECONDS || type_ipx == FDS_ET_DATE_TIME_NANOSECONDS) {
+         // High precision timestamp
+         struct timespec ts;
+         if (fds_get_datetime_hp_be(list_it.field.data, list_it.field.size, type_ipx, &ts) != FDS_OK) {
+            return 1;
+         }
+
+         *field_ptr = ur_time_from_sec_msec(ts.tv_sec, ts.tv_nsec / 1000000);
+         continue;
+      }
+      return 1;
+   }
+
+    return rc != FDS_OK;
 }
 
 /**
@@ -579,17 +865,27 @@ translator_size_ur_int(ur_field_type_t type)
     case UR_TYPE_CHAR:
     case UR_TYPE_UINT8:
     case UR_TYPE_INT8:
+    case UR_TYPE_A_UINT8:
+    case UR_TYPE_A_INT8:
         return 1U;
     case UR_TYPE_UINT16:
     case UR_TYPE_INT16:
+    case UR_TYPE_A_UINT16:
+    case UR_TYPE_A_INT16:
         return 2U;
     case UR_TYPE_UINT32:
     case UR_TYPE_INT32:
     case UR_TYPE_FLOAT:
+    case UR_TYPE_A_UINT32:
+    case UR_TYPE_A_INT32:
+    case UR_TYPE_A_FLOAT:
         return 4U;
     case UR_TYPE_UINT64:
     case UR_TYPE_INT64:
     case UR_TYPE_DOUBLE:
+    case UR_TYPE_A_UINT64:
+    case UR_TYPE_A_INT64:
+    case UR_TYPE_A_DOUBLE:
         return 8U;
     default:
         return 0U;
@@ -632,10 +928,17 @@ translator_size_ipx_int(enum fds_iemgr_element_type type)
  * \return Pointer to the function or NULL (i.e. conversion not supported)
  */
 static translator_func
-translator_get_numeric_func(ipx_ctx_t *ctx, const struct map_rec *rec)
+translator_get_numeric_func(ipx_ctx_t *ctx, const struct map_rec *rec, bool is_array)
 {
     ur_field_type_t type_ur = rec->unirec.type;
     enum fds_iemgr_element_type type_ipx = rec->ipfix.def->data_type;
+
+    if (is_array) {
+       if (rec->ipfix.next == NULL || rec->ipfix.next->next != NULL) {
+          return NULL;
+       }
+       type_ipx = rec->ipfix.next->def->data_type;
+    }
 
     uint16_t size_ur = translator_size_ur_int(type_ur);
     uint16_t size_ipx = translator_size_ipx_int(type_ipx);
@@ -647,13 +950,21 @@ translator_get_numeric_func(ipx_ctx_t *ctx, const struct map_rec *rec)
     bool warn_msg;
 
     if (fds_iemgr_is_type_unsigned(type_ipx)) {
-        fn = translate_uint;
+        if (is_array) {
+           fn = translate_array_uint;
+        } else {
+           fn = translate_uint;
+        }
         // Check possible conversion errors
         bool is_signed = (type_ur == UR_TYPE_INT8 || type_ur == UR_TYPE_INT16
             || type_ur == UR_TYPE_INT32  || type_ur == UR_TYPE_INT64);
         warn_msg = ((is_signed && size_ur <= size_ipx) || (!is_signed && size_ur < size_ipx));
     } else if (fds_iemgr_is_type_signed(type_ipx)) {
-        fn = translate_int;
+        if (is_array) {
+           fn = translate_array_int;
+        } else {
+           fn = translate_int;
+        }
         // Check possible conversion errors
         bool is_unsigned = (type_ur == UR_TYPE_UINT8 || type_ur == UR_TYPE_UINT16
             || type_ur == UR_TYPE_UINT32 || type_ur == UR_TYPE_UINT64);
@@ -664,6 +975,9 @@ translator_get_numeric_func(ipx_ctx_t *ctx, const struct map_rec *rec)
 
     if (warn_msg) {
         const struct fds_iemgr_elem *el = rec->ipfix.def;
+        if (is_array) {
+            el = rec->ipfix.next->def;
+        }
         IPX_CTX_WARNING(ctx, "Conversion from IPFIX IE '%s:%s' (%s) to UniRec '%s' (%s) may alter "
             "its value!", el->scope->name, el->name, fds_iemgr_type2str(type_ipx),
             rec->unirec.name, rec->unirec.type_str);
@@ -679,10 +993,17 @@ translator_get_numeric_func(ipx_ctx_t *ctx, const struct map_rec *rec)
  * \return Pointer to the function or NULL (i.e. conversion not supported)
  */
 static translator_func
-translator_get_float_func(ipx_ctx_t *ctx, const struct map_rec *rec)
+translator_get_float_func(ipx_ctx_t *ctx, const struct map_rec *rec, bool is_array)
 {
     ur_field_type_t type_ur = rec->unirec.type;
     enum fds_iemgr_element_type type_ipx = rec->ipfix.def->data_type;
+
+    if (is_array) {
+       if (rec->ipfix.next == NULL || rec->ipfix.next->next != NULL) {
+          return NULL;
+       }
+       type_ipx = rec->ipfix.next->def->data_type;
+    }
 
     uint16_t size_ur = translator_size_ur_int(type_ur);
     uint16_t size_ipx = translator_size_ipx_int(type_ipx);
@@ -692,12 +1013,15 @@ translator_get_float_func(ipx_ctx_t *ctx, const struct map_rec *rec)
 
     if (size_ur < size_ipx) {
         const struct fds_iemgr_elem *el = rec->ipfix.def;
+        if (is_array) {
+            el = rec->ipfix.next->def;
+        }
         IPX_CTX_WARNING(ctx, "Conversion from IPFIX IE '%s:%s' (%s) to UniRec '%s' (%s) may alter "
             "its value!", el->scope->name, el->name, fds_iemgr_type2str(type_ipx),
             rec->unirec.name, rec->unirec.type_str);
     }
 
-    return translate_float;
+    return (is_array ? translate_array_float : translate_float);
 }
 
 /**
@@ -712,6 +1036,10 @@ translator_get_func(ipx_ctx_t *ctx, const struct map_rec *rec)
     // Types
     ur_field_type_t type_ur = rec->unirec.type;
     enum fds_iemgr_element_type type_ipx = rec->ipfix.def->data_type;
+
+    if (rec->ipfix.next) {
+       type_ipx = rec->ipfix.next->def->data_type;
+    }
 
     switch (type_ur) {
     case UR_TYPE_STRING:
@@ -737,7 +1065,7 @@ translator_get_func(ipx_ctx_t *ctx, const struct map_rec *rec)
     case UR_TYPE_UINT64:
         // Char and (un)signed integer
         if (fds_iemgr_is_type_unsigned(type_ipx) || fds_iemgr_is_type_signed(type_ipx)) {
-            return translator_get_numeric_func(ctx, rec);
+            return translator_get_numeric_func(ctx, rec, false);
         } else if (type_ipx == FDS_ET_BOOLEAN) {
             return translate_bool;
         }
@@ -746,7 +1074,7 @@ translator_get_func(ipx_ctx_t *ctx, const struct map_rec *rec)
     case UR_TYPE_DOUBLE:
         // Floating-point number
         if (fds_iemgr_is_type_float(type_ipx)) {
-            return translator_get_float_func(ctx, rec);
+            return translator_get_float_func(ctx, rec, false);
         }
         break;
     case UR_TYPE_IP:
@@ -765,6 +1093,46 @@ translator_get_func(ipx_ctx_t *ctx, const struct map_rec *rec)
         // Timestamp
         if (fds_iemgr_is_type_time(type_ipx)) {
             return translate_time;
+        }
+        break;
+    case UR_TYPE_A_INT8:
+    case UR_TYPE_A_INT16:
+    case UR_TYPE_A_INT32:
+    case UR_TYPE_A_INT64:
+    case UR_TYPE_A_UINT8:
+    case UR_TYPE_A_UINT16:
+    case UR_TYPE_A_UINT32:
+    case UR_TYPE_A_UINT64:
+        // Char and (un)signed integer
+        if (fds_iemgr_is_type_unsigned(type_ipx) || fds_iemgr_is_type_signed(type_ipx)) {
+            return translator_get_numeric_func(ctx, rec, true);
+        } else if (type_ipx == FDS_ET_BOOLEAN) {
+            return translate_array_bool;
+        }
+        break;
+    case UR_TYPE_A_FLOAT:
+    case UR_TYPE_A_DOUBLE:
+        // Floating-point number
+        if (fds_iemgr_is_type_float(type_ipx)) {
+            return translator_get_float_func(ctx, rec, true);
+        }
+        break;
+    case UR_TYPE_A_IP:
+        // IP addresses
+        if (fds_iemgr_is_type_ip(type_ipx)) {
+            return translate_array_ip;
+        }
+        break;
+    case UR_TYPE_A_MAC:
+        // MAC address
+        if (type_ipx == FDS_ET_MAC_ADDRESS) {
+            return translate_array_mac;
+        }
+        break;
+    case UR_TYPE_A_TIME:
+        // Timestamp
+        if (fds_iemgr_is_type_time(type_ipx)) {
+            return translate_array_time;
         }
         break;
     default:
@@ -937,15 +1305,31 @@ translator_destroy_record(translator_t *trans)
 static int
 translator_cmp(const void *p1, const void *p2)
 {
-    const struct translator_rec *elem1, *elem2;
-    elem1 = (const struct translator_rec *) p1;
-    elem2 = (const struct translator_rec *) p2;
+    const struct tr_ipfix_s *ipfix1 = &((const struct translator_rec *) p1)->ipfix;
+    const struct tr_ipfix_s *ipfix2 = &((const struct translator_rec *) p2)->ipfix;
 
-    uint64_t elem1_val = ((uint64_t) elem1->ipfix.pen) << 16 | elem1->ipfix.id;
-    uint64_t elem2_val = ((uint64_t) elem2->ipfix.pen) << 16 | elem2->ipfix.id;
+    uint64_t elem1_val = ((uint64_t) ipfix1->pen) << 16 | ipfix1->id;
+    uint64_t elem2_val = ((uint64_t) ipfix2->pen) << 16 | ipfix2->id;
 
     if (elem1_val == elem2_val) {
-        return 0;
+      // TODO: check all ipfix elements
+
+       ipfix1 = ipfix1->next;
+       ipfix2 = ipfix2->next;
+       if (ipfix1 && ipfix2) {
+          elem1_val = ((uint64_t) ipfix1->pen) << 16 | ipfix1->id;
+          elem2_val = ((uint64_t) ipfix2->pen) << 16 | ipfix2->id;
+          if (elem1_val == elem2_val) {
+             return 0;
+          } else {
+             return (elem1_val < elem2_val) ? (-1) : 1;
+          }
+       } else if (ipfix1) {
+          return -1;
+       } else if (ipfix2) {
+          return 1;
+       }
+       return 0;
     } else {
         return (elem1_val < elem2_val) ? (-1) : 1;
     }
@@ -988,10 +1372,21 @@ translator_table_fill_rec(translator_t *trans, const struct map_rec *map_rec,
     trans_rec->unirec.size = ur_get_size(ur_id);
     trans_rec->unirec.type = ur_get_type(ur_id);
     trans_rec->unirec.req_idx = field_idx;
-    trans_rec->ipfix.pen   = map_rec->ipfix.en;
-    trans_rec->ipfix.id    = map_rec->ipfix.id;
-    trans_rec->ipfix.type  = map_rec->ipfix.def->data_type;
-    trans_rec->ipfix.sem   = map_rec->ipfix.def->data_semantic;
+
+    const struct map_ipfix_s *ipfix = &map_rec->ipfix;
+    struct tr_ipfix_s *tr_ipfix = &trans_rec->ipfix;
+    while (ipfix) {
+       tr_ipfix->pen   = ipfix->en;
+       tr_ipfix->id    = ipfix->id;
+       tr_ipfix->type  = ipfix->def->data_type;
+       tr_ipfix->sem   = ipfix->def->data_semantic;
+       if (ipfix->next) {
+         tr_ipfix->next = malloc(sizeof(struct tr_ipfix_s));
+       } else {
+         tr_ipfix->next = NULL;
+       }
+       ipfix = ipfix->next;
+    }
 
     IPX_CTX_DEBUG(trans->ctx, "Added conversion from IPFIX IE '%s:%s' to UniRec '%s'",
         map_rec->ipfix.def->scope->name, map_rec->ipfix.def->name, map_rec->unirec.name);
@@ -1181,6 +1576,14 @@ translator_init_table(translator_t *trans, const map_t *map, const ur_template_t
 static void
 translator_destroy_table(translator_t *trans)
 {
+    for (size_t i = 0; i < trans->table.size; ++i) {
+        struct tr_ipfix_s *ipfix = trans->table.recs[i].ipfix.next;
+        while (ipfix) {
+           struct tr_ipfix_s *tmp = ipfix->next;
+           free(ipfix);
+           ipfix = tmp;
+        }
+    }
     free(trans->table.recs);
 }
 
