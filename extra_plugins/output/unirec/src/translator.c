@@ -77,6 +77,7 @@ struct translator_rec {
         enum fds_iemgr_element_type type;
         /** Field semantic                                              */
         enum fds_iemgr_element_semantic sem;
+        /** Pointer to element of IPFIX list                            */
         struct tr_ipfix_s *next;
     } ipfix; /** IPFIX field identification                             */
 
@@ -304,6 +305,10 @@ translate_int(translator_t *trans, const struct translator_rec *rec,
     return 0;
 }
 
+/**
+ * \brief Convert IPFIX list of uint elements to UniRec uint array
+ * \copydetails translate_uint()
+ */
 static int
 translate_array_uint(translator_t *trans, const struct translator_rec *rec,
     const struct fds_drec_field *field)
@@ -354,6 +359,10 @@ translate_array_uint(translator_t *trans, const struct translator_rec *rec,
     return rc != FDS_OK;
 }
 
+/**
+ * \brief Convert IPFIX list of int elements to UniRec int array
+ * \copydetails translate_uint()
+ */
 static int
 translate_array_int(translator_t *trans, const struct translator_rec *rec,
     const struct fds_drec_field *field)
@@ -405,7 +414,7 @@ translate_array_int(translator_t *trans, const struct translator_rec *rec,
 }
 
 /**
- * \brief Convert IPFIX boolean to UniRec char/(un)signed integer
+ * \brief Convert IPFIX list of bool elements to UniRec bool array
  * \copydetails translate_uint()
  */
 static int
@@ -448,7 +457,7 @@ translate_array_bool(translator_t *trans, const struct translator_rec *rec,
 }
 
 /**
- * \brief Convert IPFIX float to UniRec float
+ * \brief Convert IPFIX list of float elements to UniRec float array
  * \copydetails translate_uint()
  */
 static int
@@ -490,7 +499,7 @@ translate_array_float(translator_t *trans, const struct translator_rec *rec,
 }
 
 /**
- * \brief Convert IPFIX IPv4/IPv6 address to UniRec IPv4/IPv6 address
+ * \brief Convert IPFIX list of IPv4/IPv6 elements to UniRec IP array
  * \copydetails translate_uint()
  */
 static int
@@ -522,7 +531,7 @@ translate_array_ip(translator_t *trans, const struct translator_rec *rec,
 }
 
 /**
- * \brief Convert IPFIX MAC address to UniRec MAC address
+ * \brief Convert IPFIX list of MAC elements to UniRec MAC array
  * \copydetails translate_uint()
  */
 static int
@@ -547,7 +556,7 @@ translate_array_mac(translator_t *trans, const struct translator_rec *rec,
 }
 
 /**
- * \brief Convert IPFIX timestamp to UniRec timestamp
+ * \brief Convert IPFIX list of timestamp elements to UniRec timestamp array
  * \copydetails translate_uint()
  */
 static int
