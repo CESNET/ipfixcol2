@@ -1308,31 +1308,26 @@ translator_cmp(const void *p1, const void *p2)
     const struct tr_ipfix_s *ipfix1 = &((const struct translator_rec *) p1)->ipfix;
     const struct tr_ipfix_s *ipfix2 = &((const struct translator_rec *) p2)->ipfix;
 
-    uint64_t elem1_val = ((uint64_t) ipfix1->pen) << 16 | ipfix1->id;
-    uint64_t elem2_val = ((uint64_t) ipfix2->pen) << 16 | ipfix2->id;
+    while (ipfix1 && ipfix2) {
+       uint64_t elem1_val = ((uint64_t) ipfix1->pen) << 16 | ipfix1->id;
+       uint64_t elem2_val = ((uint64_t) ipfix2->pen) << 16 | ipfix2->id;
 
-    if (elem1_val == elem2_val) {
-      // TODO: check all ipfix elements
+      if (elem1_val < elem2_val) {
+         return -1;
+      } else if (elem1_val > elem2_val) {
+         return 1;
+      }
 
        ipfix1 = ipfix1->next;
        ipfix2 = ipfix2->next;
-       if (ipfix1 && ipfix2) {
-          elem1_val = ((uint64_t) ipfix1->pen) << 16 | ipfix1->id;
-          elem2_val = ((uint64_t) ipfix2->pen) << 16 | ipfix2->id;
-          if (elem1_val == elem2_val) {
-             return 0;
-          } else {
-             return (elem1_val < elem2_val) ? (-1) : 1;
-          }
-       } else if (ipfix1) {
-          return -1;
-       } else if (ipfix2) {
-          return 1;
-       }
-       return 0;
-    } else {
-        return (elem1_val < elem2_val) ? (-1) : 1;
     }
+
+    if (ipfix1) {
+       return -1;
+    } else if (ipfix2) {
+       return 1;
+    }
+    return 0;
 }
 
 /**

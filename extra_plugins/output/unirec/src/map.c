@@ -455,39 +455,32 @@ end:
 static int
 map_sort_fn(const void *p1, const void *p2)
 {
-    struct map_rec *rec1 = *(struct map_rec **) p1;
-    struct map_rec *rec2 = *(struct map_rec **) p2;
+    const struct map_ipfix_s *ipfix1 = &(*(struct map_rec **) p1)->ipfix;
+    const struct map_ipfix_s *ipfix2 = &(*(struct map_rec **) p2)->ipfix;
 
-    if (rec1->ipfix.source != rec2->ipfix.source) {
-        return (rec1->ipfix.source < rec2->ipfix.source) ? (-1) : 1;
-    }
+    while (ipfix1 && ipfix2) {
+       if (ipfix1->source != ipfix2->source) {
+           return (ipfix1->source < ipfix2->source) ? (-1) : 1;
+       }
 
-    // Primary sort by PEN
-    if (rec1->ipfix.en != rec2->ipfix.en) {
-        return (rec1->ipfix.en < rec2->ipfix.en) ? (-1) : 1;
-    }
-
-    // Secondary sort by ID
-    if (rec1->ipfix.id != rec2->ipfix.id) {
-        return (rec1->ipfix.id < rec2->ipfix.id) ? (-1) : 1;
-    }
-
-    // TODO: better and more readable code
-    // TODO: check all elements in linked list
-    if (rec1->ipfix.next != NULL && rec2->ipfix.next != NULL) {
        // Primary sort by PEN
-       if (rec1->ipfix.next->en != rec2->ipfix.next->en) {
-           return (rec1->ipfix.next->en < rec2->ipfix.next->en) ? (-1) : 1;
+       if (ipfix1->en != ipfix2->en) {
+           return (ipfix1->en < ipfix2->en) ? (-1) : 1;
        }
 
        // Secondary sort by ID
-       if (rec1->ipfix.next->id != rec2->ipfix.next->id) {
-           return (rec1->ipfix.next->id < rec2->ipfix.next->id) ? (-1) : 1;
+       if (ipfix1->id != ipfix2->id) {
+           return (ipfix1->id < ipfix2->id) ? (-1) : 1;
        }
-    } else if (rec1->ipfix.next != NULL) {
-      return -1;
-    } else if (rec2->ipfix.next != NULL) {
-      return 1;
+
+       ipfix1 = ipfix1->next;
+       ipfix2 = ipfix2->next;
+    }
+
+    if (ipfix1->next) {
+       return -1;
+    } else if (ipfix2->next) {
+       return 1;
     }
 
     return 0;
