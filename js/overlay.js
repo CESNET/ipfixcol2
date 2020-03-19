@@ -6,22 +6,12 @@
 // - overlay - přidat křížek s funkcí cancel (v případě změny se dotázat, zda to chce uživatel opravdu udělat?)
 // - musí být možnost zadat více IP adres
 // - opravit pole pro zadávání číselných hodnot (formulář nerespektuje nastavené meze)
+// - Plugin UniRec (timeout) přidat našeptávač možných hodnot
+// - trochu vylepšit styl výpisu
+// - XML výpis při editaci modulů nerespektuje nastavení odsaszení
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
-// +- Plugin UniRec (timeout) přidat možnost zadat čas ručně - řešení není ideální, chybí našeptávač možných hodnot
-// +- světlejší barvy (lepší kontrast) podbarvení XML výpisu - možná by chtělo celkově trochu vylepšit styl výpisu
-// +- přidáno okno s nastavením odsazení XML výpisu - výpis při editaci modulů zatím nerespektuje nastavení odsaszení
-// +- tabindex - současné řešení by mělo být funkční, ale z není ideální
-//      (hodnoty tabIndexu se nezvyšují postupně, ale v některých případech skokově viz. řádek 526,
-//      v případě většího množství hodnot to nemusí fungovat -> předělat)
-//
-// + zpracovávání odkazů v hlavičce schématu + ikonka v overlay
-// + validace IP adres
-// + IP adresa může být i prázdná
-// + barevně podbarvit výpis Config XML
-// + Overlay > handleChange() používá jeden parametr (dříve 2) + tomu odpovídající změna ve tříde Properties
-// + Opravit generování prázdného <input /> atd.
-// + Změněn styl scrollbaru
+// +- tabindex - tlačítka Cancel a Add/Edit module tabIndex zatím nemají
 
 function moduleCreate(jsonSchema) {
     var newModule = {};
@@ -138,8 +128,12 @@ class Overlay extends React.Component {
         var buttonText = this.state.isNew ? "Add module" : "Edit module";
         var titleText = buttonText + ": " + this.props.jsonSchema.title;
         var descParts = this.props.jsonSchema.description.split("|");
+        var tabIndex = { counter: 0 };
         var subtitleText;
         var link;
+        var properties;
+        var btnCancel;
+        var btnSave;
         if (descParts.length === 1 || descParts.length > 2) {
             subtitleText = this.props.jsonSchema.description;
         } else {
@@ -163,6 +157,41 @@ class Overlay extends React.Component {
                 </Tooltip>
             );
         }
+        properties = (
+            <Properties
+                module={this.state.module}
+                jsonSchema={this.props.jsonSchema}
+                errors={this.state.errors}
+                dataPath={""}
+                onChange={this.handleChange.bind(this)}
+                required={true}
+                isRoot={true}
+                tabIndex={tabIndex}
+            />
+        );
+        tabIndex.counter += 1;
+        btnCancel = (
+            <Button
+                variant="outlined"
+                color="primary"
+                onClick={this.props.onCancel}
+                tabIndex={0}
+            >
+                Cancel
+            </Button>
+        );
+        tabIndex.counter += 1;
+        btnSave = (
+            <Button
+                variant="contained"
+                color="primary"
+                onClick={this.handleComfirm.bind(this)}
+                disabled={this.state.errors === undefined ? false : true}
+                tabIndex={0}
+            >
+                {buttonText}
+            </Button>
+        );
         return (
             <Dialog
                 disableBackdropClick
@@ -180,16 +209,7 @@ class Overlay extends React.Component {
                 <DialogContent dividers>
                     <Grid container spacing={2}>
                         <Grid item md={6} sm={12} xs={12}>
-                            <Properties
-                                module={this.state.module}
-                                jsonSchema={this.props.jsonSchema}
-                                errors={this.state.errors}
-                                dataPath={""}
-                                onChange={this.handleChange.bind(this)}
-                                required={true}
-                                isRoot={true}
-                                tabIndex={1}
-                            />
+                            {properties}
                         </Grid>
                         <Grid item md={6} sm={12} xs={12}>
                             <FormControl fullWidth>
@@ -207,23 +227,8 @@ class Overlay extends React.Component {
                     </Grid>
                 </DialogContent>
                 <DialogActions>
-                    <Button
-                        variant="outlined"
-                        color="primary"
-                        onClick={this.props.onCancel}
-                        tabIndex={1000000000 - 1}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={this.handleComfirm.bind(this)}
-                        disabled={this.state.errors === undefined ? false : true}
-                        tabIndex={1000000000}
-                    >
-                        {buttonText}
-                    </Button>
+                    {btnCancel}
+                    {btnSave}
                 </DialogActions>
             </Dialog>
         );
@@ -433,7 +438,7 @@ class Properties extends React.Component {
                                     dataPath={dataPath}
                                     onChange={this.handleChange.bind(this)}
                                     onRemove={this.handleRemoveChild.bind(this)}
-                                    tabIndex={index + this.props.tabIndex}
+                                    tabIndex={this.props.tabIndex}
                                 />
                             </CardContent>
                         );
@@ -523,7 +528,7 @@ class Item extends React.Component {
                         onChange={this.props.onChange}
                         onRemove={this.props.onRemove}
                         isRoot={false}
-                        tabIndex={this.props.tabIndex * 100}
+                        tabIndex={this.props.tabIndex}
                     />
                 );
             case "boolean":
@@ -565,7 +570,7 @@ class Item extends React.Component {
                         dataPath={this.props.dataPath}
                         onChange={this.props.onChange}
                         onRemove={this.props.onRemove}
-                        tabIndex={this.props.tabIndex * 100}
+                        tabIndex={this.props.tabIndex}
                     />
                 );
             default:
@@ -716,7 +721,7 @@ class ArrayProperty extends React.Component {
                                 dataPath={dataPath}
                                 onChange={this.handleChange.bind(this, index)}
                                 onRemove={this.handleRemove.bind(this, index)}
-                                tabIndex={index + this.props.tabIndex}
+                                tabIndex={this.props.tabIndex}
                             />
                         </CardContent>
                     );
@@ -813,6 +818,7 @@ class StringProperty extends React.Component {
                 </Grid>
             );
         }
+        this.props.tabIndex.counter += 1;
         if (this.props.jsonSchema.hasOwnProperty("enum")) {
             inputStyle = (
                 <Grid item>
@@ -821,7 +827,7 @@ class StringProperty extends React.Component {
                         value={value}
                         onChange={onChange}
                         readOnly={readOnly}
-                        inputProps={{ tabIndex: this.props.tabIndex }}
+                        inputProps={{ tabIndex: this.props.tabIndex.counter }}
                     >
                         {this.props.jsonSchema.enum.map(enumValue => {
                             return (
@@ -843,7 +849,7 @@ class StringProperty extends React.Component {
                         value={value}
                         readOnly={readOnly}
                         onChange={onChange}
-                        inputProps={{ tabIndex: this.props.tabIndex }}
+                        inputProps={{ tabIndex: this.props.tabIndex.counter }}
                     />
                 </Grid>
             );
@@ -964,6 +970,7 @@ class IntegerProperty extends React.Component {
                 </Grid>
             );
         }
+        this.props.tabIndex.counter += 1;
         inputStyle = (
             <Grid item>
                 <Input
@@ -972,9 +979,13 @@ class IntegerProperty extends React.Component {
                     name={this.props.name}
                     value={value}
                     readOnly={readOnly}
-                    inputProps={{ min: min, max: max, step: 1 }}
+                    inputProps={{
+                        min: min,
+                        max: max,
+                        step: 1,
+                        tabIndex: this.props.tabIndex.counter
+                    }}
                     onChange={onChange}
-                    inputProps={{ tabIndex: this.props.tabIndex }}
                 />
             </Grid>
         );
@@ -1059,6 +1070,7 @@ class BooleanProperty extends React.Component {
                 </Grid>
             );
         }
+        this.props.tabIndex.counter += 1;
         inputStyle = (
             <React.Fragment>
                 <Grid item>False</Grid>
@@ -1067,7 +1079,7 @@ class BooleanProperty extends React.Component {
                         disabled={readOnly}
                         checked={value}
                         onChange={onChange}
-                        inputProps={{ tabIndex: this.props.tabIndex }}
+                        inputProps={{ tabIndex: this.props.tabIndex.counter }}
                     />
                 </Grid>
                 <Grid item>True</Grid>
@@ -1188,6 +1200,7 @@ class NumberProperty extends React.Component {
                 </Grid>
             );
         }
+        this.props.tabIndex.counter += 1;
         inputStyle = (
             <Grid item>
                 <Input
@@ -1196,9 +1209,13 @@ class NumberProperty extends React.Component {
                     name={this.props.name}
                     value={value}
                     readOnly={readOnly}
-                    inputProps={{ min: min, max: max, step: 0.01 }}
+                    inputProps={{
+                        min: min,
+                        max: max,
+                        step: 0.01,
+                        tabIndex: this.props.tabIndex.counter
+                    }}
                     onChange={onChange}
-                    inputProps={{ tabIndex: this.props.tabIndex }}
                 />
             </Grid>
         );
@@ -1301,6 +1318,7 @@ class MultipleTypesProperty extends React.Component {
                 </Grid>
             );
         }
+        this.props.tabIndex.counter += 1;
         inputStyle = (
             <Grid item>
                 <Input
@@ -1310,7 +1328,7 @@ class MultipleTypesProperty extends React.Component {
                     value={value}
                     readOnly={readOnly}
                     onChange={onChange}
-                    inputProps={{ tabIndex: this.props.tabIndex }}
+                    inputProps={{ tabIndex: this.props.tabIndex.counter }}
                 />
             </Grid>
         );
