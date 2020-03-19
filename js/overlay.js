@@ -10,8 +10,10 @@
 // - XML výpis při editaci modulů nerespektuje nastavení odsaszení
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
-// +- overlay - přidat křížek s funkcí cancel (v případě změny se dotázat, zda to chce uživatel opravdu udělat?)
 // +- tabindex - tlačítka Cancel a Add/Edit module tabIndex zatím nemají
+//
+// + oprava validace IP adres
+// + overlay - přidat křížek s funkcí cancel (v případě změny se dotázat, zda to chce uživatel opravdu udělat)
 
 function moduleCreate(jsonSchema) {
     var newModule = {};
@@ -101,8 +103,36 @@ class Overlay extends React.Component {
         this.state = {
             module: module,
             isNew: this.props.module === undefined,
-            errors: errors
+            errors: errors,
+            saveDialogOpen: false,
+            confirmDialodOpen: false
         };
+    }
+    handleCancel() {
+        if (
+            !this.state.isNew &&
+            JSON.stringify(this.state.module) == JSON.stringify(this.props.module)
+        ) {
+            this.props.onCancel();
+        } else if (this.state.errors === undefined) {
+            this.setState({ saveDialogOpen: true });
+        } else {
+            this.setState({ confirmDialodOpen: true });
+        }
+    }
+    handleSaveDialogClose(saved) {
+        this.setState({ saveDialogOpen: false });
+        if (saved) {
+            this.handleComfirm();
+        } else {
+            this.props.onCancel();
+        }
+    }
+    handleComfirmDialogClose(confirmed) {
+        this.setState({ confirmDialodOpen: false });
+        if (confirmed) {
+            this.props.onCancel();
+        }
     }
     handleComfirm() {
         if (this.state.isNew) {
@@ -202,11 +232,9 @@ class Overlay extends React.Component {
                     <IconButton
                         className={"overlayIcon"}
                         color={"inherit"}
-                        onClick={this.props.onCancel}
+                        onClick={this.handleCancel.bind(this)}
                     >
-                        <Icon>
-                            close
-                        </Icon>
+                        <Icon>close</Icon>
                     </IconButton>
                 </DialogTitle>
                 <Divider />
@@ -234,6 +262,61 @@ class Overlay extends React.Component {
                     {btnCancel}
                     {btnSave}
                 </DialogActions>
+                <Dialog
+                    className={"settings"}
+                    open={this.state.saveDialogOpen}
+                    fullWidth={false}
+                    maxWidth={"sm"}
+                >
+                    <DialogTitle>{"Save changes?"}</DialogTitle>
+                    <Divider />
+                    <DialogContent dividers>
+                        <Typography>Do you want to save your changes?</Typography>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button
+                            autoFocus
+                            color="primary"
+                            onClick={this.handleSaveDialogClose.bind(this, true)}
+                        >
+                            {"Yes"}
+                        </Button>
+                        <Button
+                            color="primary"
+                            onClick={this.handleSaveDialogClose.bind(this, false)}
+                        >
+                            {"No"}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+                <Dialog
+                    className={"settings"}
+                    open={this.state.confirmDialodOpen}
+                    fullWidth={false}
+                    maxWidth={"sm"}
+                >
+                    <DialogTitle>{"Are you sure?"}</DialogTitle>
+                    <Divider />
+                    <DialogContent dividers>
+                        <Typography>All your changes will be lost.</Typography>
+                        <Typography>Do you want to proceed?</Typography>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button
+                            autoFocus
+                            color="primary"
+                            onClick={this.handleComfirmDialogClose.bind(this, false)}
+                        >
+                            {"Cancel"}
+                        </Button>
+                        <Button
+                            color="primary"
+                            onClick={this.handleComfirmDialogClose.bind(this, true)}
+                        >
+                            {"Continue"}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
             </Dialog>
         );
     }

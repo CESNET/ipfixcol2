@@ -148,12 +148,13 @@ p + p {
 }
 
 .MuiButtonBase-root.overlayIcon {
+  color: #9e9e9e;
   position: absolute;
   right: 48px;
-  top: 9px;
+  top: 8px;
 }
 .MuiButtonBase-root.overlayIcon + .MuiButtonBase-root.overlayIcon {
-  right: 12px;
+  right: 8px;
 }
 
 /*# sourceMappingURL=main.css.map */

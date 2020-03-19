@@ -130,7 +130,7 @@ class Form extends React.Component {
     }
 
     editModuleOverlay(columnIndex, index) {
-        var module = JSON.parse(JSON.stringify(this.state.modules[columnIndex][index]));
+        var module = this.state.modules[columnIndex][index];
         var jsonSchema = this.findSchema(module, moduleSchemas[columnIndex]);
         this.setState({
             overlay: (
