@@ -123,6 +123,8 @@ class Form extends React.Component {
                     jsonSchema={moduleSchemas[columnIndex][moduleIndex]}
                     onCancel={this.editCancel.bind(this)}
                     onSuccess={this.addModule.bind(this)}
+                    XMLIndentType={this.state.indentType}
+                    XMLIndentNumber={this.state.indentNumber}
                 />
             )
         });
@@ -141,6 +143,8 @@ class Form extends React.Component {
                     jsonSchema={jsonSchema}
                     onCancel={this.editCancel.bind(this)}
                     onSuccess={this.editModule.bind(this)}
+                    XMLIndentType={this.state.indentType}
+                    XMLIndentNumber={this.state.indentNumber}
                 />
             )
         });
@@ -657,10 +661,10 @@ class Settings extends React.Component {
                             inputProps={{
                                 min: 1,
                                 max: 8,
-                                step: 1
+                                step: 1,
+                                tabIndex: 2
                             }}
                             onChange={this.handleChangeNumber.bind(this)}
-                            inputProps={{ tabIndex: 2 }}
                         />
                     </FormControl>
                 </DialogContent>

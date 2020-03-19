@@ -4,14 +4,14 @@
 // - Přidat nové pluginy
 // - rezdělit schémata do souborů
 // - musí být možnost zadat více IP adres
-// - opravit pole pro zadávání číselných hodnot (formulář nerespektuje nastavené meze)
 // - Plugin UniRec (timeout) přidat našeptávač možných hodnot
 // - trochu vylepšit styl výpisu
-// - XML výpis při editaci modulů nerespektuje nastavení odsaszení
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
 // +- tabindex - tlačítka Cancel a Add/Edit module tabIndex zatím nemají
 //
+// + XML výpis při editaci modulů nerespektuje nastavení odsaszení
+// + opravit pole pro zadávání číselných hodnot (formulář nerespektuje nastavené meze)
 // + oprava validace IP adres
 // + overlay - přidat křížek s funkcí cancel (v případě změny se dotázat, zda to chce uživatel opravdu udělat)
 
@@ -245,14 +245,9 @@ class Overlay extends React.Component {
                         </Grid>
                         <Grid item md={6} sm={12} xs={12}>
                             <FormControl fullWidth>
-                                <TextField
-                                    label={"Module XML"}
-                                    multiline
-                                    InputProps={{
-                                        readOnly: true
-                                    }}
-                                    value={formatXml(x2js.json2xml_str(this.state.module), " ", 2)}
-                                />
+                                <Typography id={"XMLPrint-title"} variant={"subtitle1"} component={"label"} color={"textSecondary"}>Module XML</Typography>
+                                <Typography id={"XMLPrint"} component={"pre"}>{formatXml(x2js.json2xml_str(this.state.module), this.props.XMLIndentType.character, this.props.XMLIndentNumber)}</Typography>
+                                <Divider />
                                 <FormHelperText>Read only</FormHelperText>
                             </FormControl>
                         </Grid>
