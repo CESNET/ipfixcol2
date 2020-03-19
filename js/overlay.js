@@ -3,7 +3,6 @@
 // - Předělat mainForm
 // - Přidat nové pluginy
 // - rezdělit schémata do souborů
-// - overlay - přidat křížek s funkcí cancel (v případě změny se dotázat, zda to chce uživatel opravdu udělat?)
 // - musí být možnost zadat více IP adres
 // - opravit pole pro zadávání číselných hodnot (formulář nerespektuje nastavené meze)
 // - Plugin UniRec (timeout) přidat našeptávač možných hodnot
@@ -11,6 +10,7 @@
 // - XML výpis při editaci modulů nerespektuje nastavení odsaszení
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
+// +- overlay - přidat křížek s funkcí cancel (v případě změny se dotázat, zda to chce uživatel opravdu udělat?)
 // +- tabindex - tlačítka Cancel a Add/Edit module tabIndex zatím nemají
 
 function moduleCreate(jsonSchema) {
@@ -146,7 +146,7 @@ class Overlay extends React.Component {
                 >
                     <IconButton
                         className={"overlayIcon"}
-                        color="inherit"
+                        color={"inherit"}
                         target={"_blank"}
                         href={descParts[1]}
                     >
@@ -171,12 +171,7 @@ class Overlay extends React.Component {
         );
         tabIndex.counter += 1;
         btnCancel = (
-            <Button
-                variant="outlined"
-                color="primary"
-                onClick={this.props.onCancel}
-                tabIndex={0}
-            >
+            <Button variant="outlined" color="primary" onClick={this.props.onCancel} tabIndex={0}>
                 Cancel
             </Button>
         );
@@ -204,6 +199,15 @@ class Overlay extends React.Component {
                     {titleText}
                     <div className={"overlaySubtitle"}>{subtitleText}</div>
                     {link}
+                    <IconButton
+                        className={"overlayIcon"}
+                        color={"inherit"}
+                        onClick={this.props.onCancel}
+                    >
+                        <Icon>
+                            close
+                        </Icon>
+                    </IconButton>
                 </DialogTitle>
                 <Divider />
                 <DialogContent dividers>

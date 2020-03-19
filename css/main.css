@@ -21,6 +21,7 @@
 }
 
 body {
+  min-width: 420px;
   font-family: "Roboto", sans-serif;
   display: flex;
   align-content: center;
@@ -122,7 +123,7 @@ p + p {
 }
 
 .XMLPrint {
-  margin: auto 20px;
+  margin: auto 10px;
 }
 .XMLPrint pre {
   border-radius: 4px;
@@ -148,8 +149,11 @@ p + p {
 
 .MuiButtonBase-root.overlayIcon {
   position: absolute;
+  right: 48px;
+  top: 9px;
+}
+.MuiButtonBase-root.overlayIcon + .MuiButtonBase-root.overlayIcon {
   right: 12px;
-  top: 18px;
 }
 
 /*# sourceMappingURL=main.css.map */
