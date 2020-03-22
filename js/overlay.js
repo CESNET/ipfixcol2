@@ -3,12 +3,14 @@
 // - Předělat mainForm
 // - Přidat nové pluginy
 // - rezdělit schémata do souborů
-// - musí být možnost zadat více IP adres
 // - Plugin UniRec (timeout) přidat našeptávač možných hodnot
 // - trochu vylepšit styl výpisu
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
 // +- tabindex - tlačítka Cancel a Add/Edit module tabIndex zatím nemají
+// +? musí být možnost zadat více IP adres
+//      - není jasné, zda v případě více IP adres může být jedna z nich prázdná
+//      - změna by kromě větší změny ve schématu znamenala přepsání velké části třídy ArrayProperty
 //
 // + XML výpis při editaci modulů nerespektuje nastavení odsaszení
 // + opravit pole pro zadávání číselných hodnot (formulář nerespektuje nastavené meze)
@@ -245,8 +247,21 @@ class Overlay extends React.Component {
                         </Grid>
                         <Grid item md={6} sm={12} xs={12}>
                             <FormControl fullWidth>
-                                <Typography id={"XMLPrint-title"} variant={"subtitle1"} component={"label"} color={"textSecondary"}>Module XML</Typography>
-                                <Typography id={"XMLPrint"} component={"pre"}>{formatXml(x2js.json2xml_str(this.state.module), this.props.XMLIndentType.character, this.props.XMLIndentNumber)}</Typography>
+                                <Typography
+                                    id={"XMLPrint-title"}
+                                    variant={"subtitle1"}
+                                    component={"label"}
+                                    color={"textSecondary"}
+                                >
+                                    Module XML
+                                </Typography>
+                                <Typography id={"XMLPrint"} component={"pre"}>
+                                    {formatXml(
+                                        x2js.json2xml_str(this.state.module),
+                                        this.props.XMLIndentType.character,
+                                        this.props.XMLIndentNumber
+                                    )}
+                                </Typography>
                                 <Divider />
                                 <FormHelperText>Read only</FormHelperText>
                             </FormControl>
@@ -480,7 +495,7 @@ class Properties extends React.Component {
             );
             properties = (
                 <Collapse in={this.state.expanded} timeout="auto">
-                    {Object.keys(this.props.jsonSchema.properties).map((propertyName, index) => {
+                    {Object.keys(this.props.jsonSchema.properties).map(propertyName => {
                         if (
                             (!this.props.jsonSchema.hasOwnProperty("required") ||
                                 !this.props.jsonSchema.required.includes(propertyName)) &&
@@ -723,6 +738,8 @@ class ArrayProperty extends React.Component {
         var propsErrors;
         var childErrorsNum = 0;
         var errorMessage = "";
+        var minItems = 0;
+        var numOfItems = this.props.module.length;
         if (
             !this.props.jsonSchema.hasOwnProperty("maxItems") ||
             (this.props.jsonSchema.hasOwnProperty("maxItems") &&
@@ -733,6 +750,9 @@ class ArrayProperty extends React.Component {
                     {buttonText}
                 </Button>
             );
+        }
+        if (this.props.jsonSchema.hasOwnProperty("minItems")) {
+            minItems = this.props.jsonSchema.minItems;
         }
         if (this.props.errors !== undefined) {
             propsErrors = Object.values(this.props.errors).filter(error => {
@@ -794,10 +814,10 @@ class ArrayProperty extends React.Component {
                     return (
                         <CardContent key={index}>
                             <Item
-                                name={"[" + index + "]"}
+                                name={this.props.name + "[" + index + "]"}
                                 type={this.props.jsonSchema.items.type}
                                 module={item}
-                                required={false}
+                                required={minItems >= numOfItems && this.props.required}
                                 jsonSchema={this.props.jsonSchema.items}
                                 errors={errors}
                                 dataPath={dataPath}
