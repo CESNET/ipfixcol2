@@ -109,7 +109,7 @@ p + p {
 }
 
 .MuiExpansionPanelSummary-root {
-  padding: 0 12px 0 12px;
+  padding: 0 12px 0 16px;
 }
 .MuiExpansionPanelSummary-root .MuiExpansionPanelSummary-content {
   margin: 0;
@@ -131,6 +131,35 @@ p + p {
 
 .MuiCardContent-root:last-child {
   padding-bottom: 20px;
+}
+
+.MuiCollapse-container .MuiExpansionPanelDetails-root {
+  padding: 0 8px 20px 0;
+}
+.MuiCollapse-container .MuiExpansionPanelDetails-root li {
+  padding: 0;
+}
+.MuiCollapse-container .MuiExpansionPanelDetails-root li .MuiButtonBase-root {
+  padding: 0 8px;
+  cursor: default;
+}
+.MuiCollapse-container .MuiExpansionPanelDetails-root li .MuiListItemText-root {
+  display: grid;
+  grid-template-columns: auto auto;
+}
+.MuiCollapse-container .MuiExpansionPanelDetails-root li .MuiListItemText-root span, .MuiCollapse-container .MuiExpansionPanelDetails-root li .MuiListItemText-root p {
+  display: block;
+}
+.MuiCollapse-container .MuiExpansionPanelDetails-root li .MuiListItemText-root p {
+  text-align: right;
+}
+.MuiCollapse-container .MuiExpansionPanelDetails-root ul {
+  width: 100%;
+  padding: 0;
+  padding-left: 8px;
+}
+.MuiCollapse-container .MuiExpansionPanelDetails-root ul ul {
+  padding-left: 16px;
 }
 
 .XMLPrint {

@@ -136,7 +136,7 @@ p + p {
 }
 
 .MuiExpansionPanelSummary-root {
-    padding: 0 12px 0 12px;
+    padding: 0 12px 0 16px;
     .MuiExpansionPanelSummary-content {
         margin: 0;
         .title {
@@ -158,6 +158,37 @@ p + p {
 
 .MuiCardContent-root:last-child {
     padding-bottom: 20px;
+}
+
+.MuiCollapse-container {
+    .MuiExpansionPanelDetails-root {
+        padding: 0 8px 20px 0;
+        li {
+            .MuiButtonBase-root {
+                padding: 0 8px;
+                cursor: default;
+            }
+            .MuiListItemText-root {
+                display: grid;
+                grid-template-columns: auto auto;
+                span, p {
+                    display: block;
+                }
+                p {
+                    text-align: right;
+                }
+            }
+            padding: 0;
+        }
+        ul {
+            width: 100%;
+            padding: 0;
+            padding-left: 8px;
+            ul {
+                padding-left: 16px;
+            }
+        }
+    }
 }
 
 .XMLPrint {

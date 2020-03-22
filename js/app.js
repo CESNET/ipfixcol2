@@ -1,7 +1,7 @@
 const {
     Allert,
     AppBar,
-    //    Autocomplete,
+    //    Autocomplete, - in lab
     Badge,
     Button,
     Card,
@@ -28,6 +28,9 @@ const {
     Input,
     InputAdornment,
     InputLabel,
+    List,
+    ListItem,
+    ListItemText,
     Menu,
     MenuItem,
     Select,
@@ -38,6 +41,8 @@ const {
     TextField,
     Toolbar,
     Tooltip,
+    //    TreeItem, - in lab
+    //    TreeView, - in lab
     Typography
 } = MaterialUI;
 // Obtain the root element
@@ -592,13 +597,68 @@ class Module extends React.Component {
                     />
                 </ExpansionPanelSummary>
                 <ExpansionPanelDetails>
-                    <Typography variant="caption">
-                        plugin: {this.props.module.plugin}
-                        <br />
-                        params: {this.props.module.params.toString()}
-                    </Typography>
+                    <PropsItem module={this.props.module} />
                 </ExpansionPanelDetails>
             </ExpansionPanel>
+        );
+    }
+}
+
+class PropsItem extends React.Component {
+    render() {
+        if (Array.isArray(this.props.module)) {
+            return (
+                <React.Fragment>
+                    {this.props.module.map((item, index) => {
+                        return <PropsItem key={index} name={this.props.name} module={item} />;
+                    })}
+                </React.Fragment>
+            );
+        }
+        if (typeof this.props.module === "object") {
+            return Object.keys(this.props.module).length == 0 ? (
+                <ListItem button>
+                    <ListItemText primary={this.props.name} secondary={"No parameters"} />
+                </ListItem>
+            ) : (
+                <React.Fragment>
+                    {this.props.name !== undefined ? (
+                        <ListItem button>
+                            <ListItemText primary={this.props.name} />
+                        </ListItem>
+                    ) : (
+                        ""
+                    )}
+                    <ListItem>
+                        <List dense>
+                            {Object.keys(this.props.module).map(propertyName => {
+                                return (
+                                    <PropsItem
+                                        key={propertyName}
+                                        name={propertyName}
+                                        module={this.props.module[propertyName]}
+                                    />
+                                );
+                            })}
+                        </List>
+                    </ListItem>
+                </React.Fragment>
+            );
+        }
+        if (typeof this.props.module === "boolean") {
+            return (
+                <ListItem button>
+                    <ListItemText
+                        primary={this.props.name}
+                        secondary={this.props.module.toString()}
+                    />
+                </ListItem>
+            );
+        }
+        return (
+            <ListItem button>
+                <ListItemText primary={this.props.name} secondary={this.props.module} />
+            </ListItem>
         );
     }
 }

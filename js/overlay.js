@@ -1,6 +1,5 @@
 // TODO
 // - Zredukovat opakování kódu
-// - Předělat mainForm
 // - Přidat nové pluginy
 // - rezdělit schémata do souborů
 // - Plugin UniRec (timeout) přidat našeptávač možných hodnot
@@ -11,6 +10,8 @@
 // +? musí být možnost zadat více IP adres
 //      - není jasné, zda v případě více IP adres může být jedna z nich prázdná
 //      - změna by kromě větší změny ve schématu znamenala přepsání velké části třídy ArrayProperty
+// +? Předělat hlavní výpis modulů ve sloupcích
+//      - zda je to vůbec potřeba, jestli nestačí jenom název, edit, delete
 //
 // + XML výpis při editaci modulů nerespektuje nastavení odsaszení
 // + opravit pole pro zadávání číselných hodnot (formulář nerespektuje nastavené meze)
