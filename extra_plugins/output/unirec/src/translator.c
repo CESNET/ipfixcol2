@@ -172,27 +172,10 @@ struct translator_s {
         *((dst_type *) (dst_ptr)) = (dst_type) (src_val);                                  \
     }
 
-/**
- * \brief Convert IPFIX unsigned integer to UniRec (un)signed integer
- * \param[in,out] trans Translator instance (UniRec record will be modified)
- * \param[in]     rec   Translator record (description of source IPFIX and destination UniRec fields)
- * \param[in]     field IPFIX field data
- * \return On success returns 0. Otherwise returns a non-zero value.
- */
-static int
-translate_uint(translator_t *trans, const struct translator_rec *rec,
-    const struct fds_drec_field *field)
+int
+translator_store_uint(ur_field_type_t ur_type, void *field_ptr, uint64_t value, const enum fds_iemgr_element_semantic ipx_sem)
 {
-    uint64_t value;
-    if (fds_get_uint_be(field->data, field->size, &value) != FDS_OK) {
-        return 1; // Conversion failed
-    }
-
-    ur_field_id_t ur_id = rec->unirec.id;
-    void *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
-    const enum fds_iemgr_element_semantic ipx_sem = rec->ipfix.sem;
-
-    switch (rec->unirec.type) {
+    switch (ur_type) {
     case UR_TYPE_UINT64:
         *((uint64_t *) field_ptr) = value;
         break;
@@ -220,6 +203,32 @@ translate_uint(translator_t *trans, const struct translator_rec *rec,
         break;
     default:
         return 1; // Unsupported data type
+    }
+    return 0;
+}
+
+/**
+ * \brief Convert IPFIX unsigned integer to UniRec (un)signed integer
+ * \param[in,out] trans Translator instance (UniRec record will be modified)
+ * \param[in]     rec   Translator record (description of source IPFIX and destination UniRec fields)
+ * \param[in]     field IPFIX field data
+ * \return On success returns 0. Otherwise returns a non-zero value.
+ */
+static int
+translate_uint(translator_t *trans, const struct translator_rec *rec,
+    const struct fds_drec_field *field)
+{
+    uint64_t value;
+    if (fds_get_uint_be(field->data, field->size, &value) != FDS_OK) {
+        return 1; // Conversion failed
+    }
+
+    ur_field_id_t ur_id = rec->unirec.id;
+    void *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
+    const enum fds_iemgr_element_semantic ipx_sem = rec->ipfix.sem;
+
+    if (translator_store_uint(ur_id, field_ptr, value, ipx_sem)) {
+       return 1;
     }
 
     return 0;
@@ -255,24 +264,10 @@ translate_uint(translator_t *trans, const struct translator_rec *rec,
         *((dst_type *) (dst_ptr)) = (dst_type) (src_val);           \
     }
 
-/**
- * \brief Convert IPFIX signed integer to UniRec (un)signed integer
- * \copydetails translate_uint()
- */
-static int
-translate_int(translator_t *trans, const struct translator_rec *rec,
-    const struct fds_drec_field *field)
+int
+translator_store_int(ur_field_type_t ur_type, void *field_ptr, int64_t value, const enum fds_iemgr_element_semantic ipx_sem)
 {
-    int64_t value;
-    if (fds_get_int_be(field->data, field->size, &value) != FDS_OK) {
-        return 1; // Conversion failed
-    }
-
-    ur_field_id_t ur_id = rec->unirec.id;
-    void *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
-    const enum fds_iemgr_element_semantic ipx_sem = rec->ipfix.sem;
-
-    switch (rec->unirec.type) {
+    switch (ur_type) {
     case UR_TYPE_INT64:
         *((int64_t *) field_ptr) = value;
         break;
@@ -301,301 +296,31 @@ translate_int(translator_t *trans, const struct translator_rec *rec,
     default:
         return 1; // Unsupported data type
     }
-
     return 0;
 }
 
 /**
- * \brief Convert IPFIX list of uint elements to UniRec uint array
+ * \brief Convert IPFIX signed integer to UniRec (un)signed integer
  * \copydetails translate_uint()
  */
 static int
-translate_array_uint(translator_t *trans, const struct translator_rec *rec,
+translate_int(translator_t *trans, const struct translator_rec *rec,
     const struct fds_drec_field *field)
 {
-   ur_field_id_t ur_id = rec->unirec.id;
-   const enum fds_iemgr_element_semantic ipx_sem = rec->ipfix.next->sem;
-   struct fds_blist_iter list_it;
-   int rc;
-
-   fds_blist_iter_init(&list_it, field, NULL);
-   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
-       uint64_t value;
-       void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
-       if (fds_get_uint_be(list_it.field.data, list_it.field.size, &value) != FDS_OK || field_ptr == NULL) {
-           return 1; // Conversion failed
-       }
-
-       switch (rec->unirec.type) {
-       case UR_TYPE_A_UINT64:
-           *((uint64_t *) field_ptr) = value;
-           break;
-       case UR_TYPE_A_UINT32:
-           UINT_CONV(uint32_t, field_ptr, value, UINT32_MAX, ipx_sem);
-           break;
-       case UR_TYPE_A_UINT16:
-           UINT_CONV(uint16_t, field_ptr, value, UINT16_MAX, ipx_sem);
-           break;
-       case UR_TYPE_A_UINT8:
-           UINT_CONV(uint8_t, field_ptr, value, UINT8_MAX, ipx_sem);
-           break;
-       case UR_TYPE_A_INT64:
-           UINT_CONV(int64_t, field_ptr, value, INT64_MAX, ipx_sem);
-           break;
-       case UR_TYPE_A_INT32:
-           UINT_CONV(int32_t, field_ptr, value, INT32_MAX, ipx_sem);
-           break;
-       case UR_TYPE_A_INT16:
-           UINT_CONV(int16_t, field_ptr, value, INT16_MAX, ipx_sem);
-           break;
-       case UR_TYPE_A_INT8:
-           UINT_CONV(int8_t, field_ptr, value, INT8_MAX, ipx_sem);
-           break;
-       default:
-           return 1; // Unsupported data type
-       }
+    int64_t value;
+    if (fds_get_int_be(field->data, field->size, &value) != FDS_OK) {
+        return 1; // Conversion failed
     }
 
-    return rc != FDS_OK;
-}
+    ur_field_id_t ur_id = rec->unirec.id;
+    void *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
+    const enum fds_iemgr_element_semantic ipx_sem = rec->ipfix.sem;
 
-/**
- * \brief Convert IPFIX list of int elements to UniRec int array
- * \copydetails translate_uint()
- */
-static int
-translate_array_int(translator_t *trans, const struct translator_rec *rec,
-    const struct fds_drec_field *field)
-{
-   ur_field_id_t ur_id = rec->unirec.id;
-   const enum fds_iemgr_element_semantic ipx_sem = rec->ipfix.next->sem;
-   struct fds_blist_iter list_it;
-   int rc;
-
-   fds_blist_iter_init(&list_it, field, NULL);
-   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
-       int64_t value;
-       void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
-       if (fds_get_int_be(list_it.field.data, list_it.field.size, &value) != FDS_OK || field_ptr == NULL) {
-           return 1; // Conversion failed
-       }
-
-       switch (rec->unirec.type) {
-       case UR_TYPE_A_INT64:
-           *((int64_t *) field_ptr) = value;
-           break;
-       case UR_TYPE_A_INT32:
-           INT_CONV(int32_t, field_ptr, value, INT32_MIN, INT32_MAX, ipx_sem);
-           break;
-       case UR_TYPE_A_INT16:
-           INT_CONV(int16_t, field_ptr, value, INT16_MIN, INT16_MAX, ipx_sem);
-           break;
-       case UR_TYPE_A_INT8:
-           INT_CONV(int8_t, field_ptr, value, INT8_MIN, INT8_MAX, ipx_sem);
-           break;
-       case UR_TYPE_A_UINT64:
-           INT_CONV(uint64_t, field_ptr, value, 0, INT64_MAX, ipx_sem); // Must be int64!
-           break;
-       case UR_TYPE_A_UINT32:
-           INT_CONV(uint32_t, field_ptr, value, 0, UINT32_MAX, ipx_sem);
-           break;
-       case UR_TYPE_A_UINT16:
-           INT_CONV(uint16_t, field_ptr, value, 0, UINT16_MAX, ipx_sem);
-           break;
-       case UR_TYPE_A_UINT8:
-           INT_CONV(uint8_t, field_ptr, value, 0, UINT8_MAX, ipx_sem);
-           break;
-       default:
-           return 1; // Unsupported data type
-       }
+    if (translator_store_int(ur_id, field_ptr, value, ipx_sem)) {
+       return 1;
     }
 
-    return rc != FDS_OK;
-}
-
-/**
- * \brief Convert IPFIX list of bool elements to UniRec bool array
- * \copydetails translate_uint()
- */
-static int
-translate_array_bool(translator_t *trans, const struct translator_rec *rec,
-    const struct fds_drec_field *field)
-{
-   ur_field_id_t ur_id = rec->unirec.id;
-   struct fds_blist_iter list_it;
-   int rc;
-
-   fds_blist_iter_init(&list_it, field, NULL);
-   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
-      bool value;
-      void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
-      if (fds_get_bool(list_it.field.data, list_it.field.size, &value) != FDS_OK || field_ptr == NULL) {
-         return 1; // Conversion failed
-      }
-
-      const uint8_t res = value ? 1U : 0U;
-      switch (ur_array_get_elem_size(ur_id)) {
-         case 1:
-            *((uint8_t  *) field_ptr) = res;
-            break;
-         case 2:
-            *((uint16_t *) field_ptr) = res;
-            break;
-         case 4:
-            *((uint32_t *) field_ptr) = res;
-            break;
-         case 8:
-            *((uint64_t *) field_ptr) = res;
-            break;
-         default:
-            // Invalid size of the field
-            return 1;
-      }
-   }
-
-    return rc != FDS_OK;
-}
-
-/**
- * \brief Convert IPFIX list of float elements to UniRec float array
- * \copydetails translate_uint()
- */
-static int
-translate_array_float(translator_t *trans, const struct translator_rec *rec,
-    const struct fds_drec_field *field)
-{
-   ur_field_id_t ur_id = rec->unirec.id;
-   struct fds_blist_iter list_it;
-   int rc;
-
-   fds_blist_iter_init(&list_it, field, NULL);
-   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
-      double value;
-      void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
-      if (fds_get_float_be(list_it.field.data, list_it.field.size, &value) != FDS_OK || field_ptr == NULL) {
-         return 1; // Conversion failed
-      }
-
-      switch (rec->unirec.type) {
-         case UR_TYPE_A_FLOAT:
-            if (value < -FLT_MAX && isnormal(value)) {
-               *((float *) field_ptr) = -FLT_MAX;
-            } else if (value > FLT_MAX && isnormal(value)) {
-               *((float *) field_ptr) = FLT_MAX;
-            } else {
-               *((float *) field_ptr) = (float) value;
-            }
-            break;
-         case UR_TYPE_A_DOUBLE:
-            *((double *) field_ptr) = value;
-            break;
-         default:
-            // Invalid type of the field
-            return 1;
-      }
-   }
-
-    return rc != FDS_OK;
-}
-
-/**
- * \brief Convert IPFIX list of IPv4/IPv6 elements to UniRec IP array
- * \copydetails translate_uint()
- */
-static int
-translate_array_ip(translator_t *trans, const struct translator_rec *rec,
-    const struct fds_drec_field *field)
-{
-   ur_field_id_t ur_id = rec->unirec.id;
-   struct fds_blist_iter list_it;
-   int rc;
-
-   fds_blist_iter_init(&list_it, field, NULL);
-   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
-      void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
-
-      switch (list_it.field.size) {
-         case 4: // IPv4
-            *((ip_addr_t *) field_ptr) = ip_from_4_bytes_be((char *) list_it.field.data);
-            break;
-         case 16: // IPv6
-            *((ip_addr_t *) field_ptr) = ip_from_16_bytes_be((char *) list_it.field.data);
-            break;
-         default:
-            // Invalid size of the field
-            return 1;
-      }
-   }
-
-   return rc != FDS_OK;
-}
-
-/**
- * \brief Convert IPFIX list of MAC elements to UniRec MAC array
- * \copydetails translate_uint()
- */
-static int
-translate_array_mac(translator_t *trans, const struct translator_rec *rec,
-    const struct fds_drec_field *field)
-{
-   ur_field_id_t ur_id = rec->unirec.id;
-   struct fds_blist_iter list_it;
-   int rc;
-
-   fds_blist_iter_init(&list_it, field, NULL);
-   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
-      if (list_it.field.size != 6U) {
-         return 1;
-      }
-
-      ur_time_t *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
-      memcpy(field_ptr, list_it.field.data, 6U);
-   }
-
-   return rc != FDS_OK;
-}
-
-/**
- * \brief Convert IPFIX list of timestamp elements to UniRec timestamp array
- * \copydetails translate_uint()
- */
-static int
-translate_array_time(translator_t *trans, const struct translator_rec *rec,
-    const struct fds_drec_field *field)
-{
-   ur_field_id_t ur_id = rec->unirec.id;
-   const enum fds_iemgr_element_type type_ipx = rec->ipfix.next->type;
-   struct fds_blist_iter list_it;
-   int rc;
-
-   fds_blist_iter_init(&list_it, field, NULL);
-   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
-      // Get the value
-      ur_time_t *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
-
-      if (type_ipx == FDS_ET_DATE_TIME_MILLISECONDS || type_ipx == FDS_ET_DATE_TIME_SECONDS) {
-         // Low precision timestamp
-         uint64_t ts;
-         if (fds_get_datetime_lp_be(list_it.field.data, list_it.field.size, type_ipx, &ts) != FDS_OK) {
-            return 1;
-         }
-
-         *field_ptr = ur_time_from_sec_msec(ts / 1000, ts % 1000);
-         continue;
-      } else if (type_ipx == FDS_ET_DATE_TIME_MICROSECONDS || type_ipx == FDS_ET_DATE_TIME_NANOSECONDS) {
-         // High precision timestamp
-         struct timespec ts;
-         if (fds_get_datetime_hp_be(list_it.field.data, list_it.field.size, type_ipx, &ts) != FDS_OK) {
-            return 1;
-         }
-
-         *field_ptr = ur_time_from_sec_msec(ts.tv_sec, ts.tv_nsec / 1000000);
-         continue;
-      }
-      return 1;
-   }
-
-    return rc != FDS_OK;
+    return 0;
 }
 
 /**
@@ -627,6 +352,31 @@ translator_string_trim(translator_t *trans, const struct translator_rec *rec,
     return 0;
 }
 
+int
+translator_store_bool(int ur_size, void *field_ptr, bool value)
+{
+    const uint8_t res = value ? 1U : 0U;
+    switch (ur_size) {
+    case 1:
+        *((uint8_t  *) field_ptr) = res;
+        break;
+    case 2:
+        *((uint16_t *) field_ptr) = res;
+        break;
+    case 4:
+        *((uint32_t *) field_ptr) = res;
+        break;
+    case 8:
+        *((uint64_t *) field_ptr) = res;
+        break;
+    default:
+        // Invalid size of the field
+        return 1;
+    }
+    return 0;
+}
+
+
 /**
  * \brief Convert IPFIX boolean to UniRec char/(un)signed integer
  * \copydetails translate_uint()
@@ -643,22 +393,31 @@ translate_bool(translator_t *trans, const struct translator_rec *rec,
     const ur_field_id_t ur_id = rec->unirec.id;
     void *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
 
-    const uint8_t res = value ? 1U : 0U;
-    switch (rec->unirec.size) {
-    case 1:
-        *((uint8_t  *) field_ptr) = res;
+    if (translator_store_bool(rec->unirec.size, field_ptr, value)) {
+       return 1;
+    }
+
+    return 0;
+}
+
+int
+translator_store_float(ur_field_type_t ur_type, void *field_ptr, double value)
+{
+    switch (ur_type) {
+    case UR_TYPE_FLOAT:
+        if (value < -FLT_MAX && isnormal(value)) {
+            *((float *) field_ptr) = -FLT_MAX;
+        } else if (value > FLT_MAX && isnormal(value)) {
+            *((float *) field_ptr) = FLT_MAX;
+        } else {
+            *((float *) field_ptr) = (float) value;
+        }
         break;
-    case 2:
-        *((uint16_t *) field_ptr) = res;
-        break;
-    case 4:
-        *((uint32_t *) field_ptr) = res;
-        break;
-    case 8:
-        *((uint64_t *) field_ptr) = res;
+    case UR_TYPE_DOUBLE:
+        *((double *) field_ptr) = value;
         break;
     default:
-        // Invalid size of the field
+        // Invalid type of the field
         return 1;
     }
 
@@ -681,21 +440,25 @@ translate_float(translator_t *trans, const struct translator_rec *rec,
     const ur_field_id_t ur_id = rec->unirec.id;
     void *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
 
-    switch (rec->unirec.type) {
-    case UR_TYPE_FLOAT:
-        if (value < -FLT_MAX && isnormal(value)) {
-            *((float *) field_ptr) = -FLT_MAX;
-        } else if (value > FLT_MAX && isnormal(value)) {
-            *((float *) field_ptr) = FLT_MAX;
-        } else {
-            *((float *) field_ptr) = (float) value;
-        }
+    if (translator_store_float(rec->unirec.type, field_ptr, value)) {
+       return 1;
+    }
+
+    return 0;
+}
+
+int
+translator_store_ip(uint8_t *ip_bytes, uint16_t data_size, void *field_ptr)
+{
+    switch (data_size) {
+    case 4: // IPv4
+        *((ip_addr_t *) field_ptr) = ip_from_4_bytes_be((char *) ip_bytes);
         break;
-    case UR_TYPE_DOUBLE:
-        *((double *) field_ptr) = value;
+    case 16: // IPv6
+        *((ip_addr_t *) field_ptr) = ip_from_16_bytes_be((char *) ip_bytes);
         break;
     default:
-        // Invalid type of the field
+        // Invalid size of the field
         return 1;
     }
 
@@ -713,16 +476,8 @@ translate_ip(translator_t *trans, const struct translator_rec *rec,
     const ur_field_id_t ur_id = rec->unirec.id;
     void *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
 
-    switch (field->size) {
-    case 4: // IPv4
-        *((ip_addr_t *) field_ptr) = ip_from_4_bytes_be((char *) field->data);
-        break;
-    case 16: // IPv6
-        *((ip_addr_t *) field_ptr) = ip_from_16_bytes_be((char *) field->data);
-        break;
-    default:
-        // Invalid size of the field
-        return 1;
+    if (translator_store_ip(field->data, field->size, field_ptr)) {
+       return 1;
     }
 
     return 0;
@@ -746,6 +501,32 @@ translate_mac(translator_t *trans, const struct translator_rec *rec,
     return 0;
 }
 
+int
+translator_store_time(const enum fds_iemgr_element_type type_ipx, const uint8_t *time_bytes, uint16_t time_size, ur_time_t *field_ptr)
+{
+    if (type_ipx == FDS_ET_DATE_TIME_MILLISECONDS || type_ipx == FDS_ET_DATE_TIME_SECONDS) {
+        // Low precision timestamp
+        uint64_t ts;
+        if (fds_get_datetime_lp_be(time_bytes, time_size, type_ipx, &ts) != FDS_OK) {
+            return 1;
+        }
+
+        *field_ptr = ur_time_from_sec_msec(ts / 1000, ts % 1000);
+        return 0;
+    } else if (type_ipx == FDS_ET_DATE_TIME_MICROSECONDS || type_ipx == FDS_ET_DATE_TIME_NANOSECONDS) {
+        // High precision timestamp
+        struct timespec ts;
+        if (fds_get_datetime_hp_be(time_bytes, time_size, type_ipx, &ts) != FDS_OK) {
+            return 1;
+        }
+
+        *field_ptr = ur_time_from_sec_msec(ts.tv_sec, ts.tv_nsec / 1000000);
+        return 0;
+    }
+
+    return 1;
+}
+
 /**
  * \brief Convert IPFIX timestamp to UniRec timestamp
  * \copydetails translate_uint()
@@ -759,27 +540,210 @@ translate_time(translator_t *trans, const struct translator_rec *rec,
     const ur_field_id_t ur_id = rec->unirec.id;
     ur_time_t *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
 
-    if (type_ipx == FDS_ET_DATE_TIME_MILLISECONDS || type_ipx == FDS_ET_DATE_TIME_SECONDS) {
-        // Low precision timestamp
-        uint64_t ts;
-        if (fds_get_datetime_lp_be(field->data, field->size, type_ipx, &ts) != FDS_OK) {
-            return 1;
-        }
-
-        *field_ptr = ur_time_from_sec_msec(ts / 1000, ts % 1000);
-        return 0;
-    } else if (type_ipx == FDS_ET_DATE_TIME_MICROSECONDS || type_ipx == FDS_ET_DATE_TIME_NANOSECONDS) {
-        // High precision timestamp
-        struct timespec ts;
-        if (fds_get_datetime_hp_be(field->data, field->size, type_ipx, &ts) != FDS_OK) {
-            return 1;
-        }
-
-        *field_ptr = ur_time_from_sec_msec(ts.tv_sec, ts.tv_nsec / 1000000);
-        return 0;
+    if (translator_store_time(type_ipx, field->data, field->size, field_ptr)) {
+       return 1;
     }
 
-    return 1;
+    return 0;
+}
+
+/**
+ * \brief Convert IPFIX list of uint elements to UniRec uint array
+ * \copydetails translate_uint()
+ */
+static int
+translate_array_uint(translator_t *trans, const struct translator_rec *rec,
+    const struct fds_drec_field *field)
+{
+   ur_field_id_t ur_id = rec->unirec.id;
+   const enum fds_iemgr_element_semantic ipx_sem = rec->ipfix.next->sem;
+   struct fds_blist_iter list_it;
+   int rc;
+
+   fds_blist_iter_init(&list_it, field, NULL);
+   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
+       uint64_t value;
+       void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
+       if (fds_get_uint_be(list_it.field.data, list_it.field.size, &value) != FDS_OK || field_ptr == NULL) {
+           ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
+           return 1; // Conversion failed
+       }
+
+       if (translator_store_uint(ur_array_get_elem_type(ur_id), field_ptr, value, ipx_sem)) {
+           ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
+           return 1;
+       }
+    }
+
+    return 0;
+}
+
+/**
+ * \brief Convert IPFIX list of int elements to UniRec int array
+ * \copydetails translate_uint()
+ */
+static int
+translate_array_int(translator_t *trans, const struct translator_rec *rec,
+    const struct fds_drec_field *field)
+{
+   ur_field_id_t ur_id = rec->unirec.id;
+   const enum fds_iemgr_element_semantic ipx_sem = rec->ipfix.next->sem;
+   struct fds_blist_iter list_it;
+   int rc;
+
+   fds_blist_iter_init(&list_it, field, NULL);
+   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
+       int64_t value;
+       void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
+       if (fds_get_int_be(list_it.field.data, list_it.field.size, &value) != FDS_OK || field_ptr == NULL) {
+           ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
+           return 1; // Conversion failed
+       }
+
+       if (translator_store_int(ur_array_get_elem_type(ur_id), field_ptr, value, ipx_sem)) {
+          ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
+          return 1;
+       }
+    }
+
+    return 0;
+}
+
+/**
+ * \brief Convert IPFIX list of bool elements to UniRec bool array
+ * \copydetails translate_uint()
+ */
+static int
+translate_array_bool(translator_t *trans, const struct translator_rec *rec,
+    const struct fds_drec_field *field)
+{
+   ur_field_id_t ur_id = rec->unirec.id;
+   struct fds_blist_iter list_it;
+   int rc;
+
+   fds_blist_iter_init(&list_it, field, NULL);
+   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
+      bool value;
+      void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
+      if (fds_get_bool(list_it.field.data, list_it.field.size, &value) != FDS_OK || field_ptr == NULL) {
+         ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
+         return 1; // Conversion failed
+      }
+
+      if (translator_store_bool(ur_array_get_elem_size(ur_id), field_ptr, value)) {
+         ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
+         return 1;
+      }
+   }
+
+    return 0;
+}
+
+/**
+ * \brief Convert IPFIX list of float elements to UniRec float array
+ * \copydetails translate_uint()
+ */
+static int
+translate_array_float(translator_t *trans, const struct translator_rec *rec,
+    const struct fds_drec_field *field)
+{
+   ur_field_id_t ur_id = rec->unirec.id;
+   struct fds_blist_iter list_it;
+   int rc;
+
+   fds_blist_iter_init(&list_it, field, NULL);
+   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
+      double value;
+      void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
+      if (fds_get_float_be(list_it.field.data, list_it.field.size, &value) != FDS_OK || field_ptr == NULL) {
+         ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
+         return 1; // Conversion failed
+      }
+
+      if (translator_store_float(ur_array_get_elem_type(ur_id), field_ptr, value)) {
+         ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
+         return 1;
+      }
+   }
+
+    return 0;
+}
+
+/**
+ * \brief Convert IPFIX list of IPv4/IPv6 elements to UniRec IP array
+ * \copydetails translate_uint()
+ */
+static int
+translate_array_ip(translator_t *trans, const struct translator_rec *rec,
+    const struct fds_drec_field *field)
+{
+   ur_field_id_t ur_id = rec->unirec.id;
+   struct fds_blist_iter list_it;
+   int rc;
+
+   fds_blist_iter_init(&list_it, field, NULL);
+   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
+      void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
+
+      if (translator_store_ip(list_it.field.data, list_it.field.size, field_ptr)) {
+         ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
+         return 1;
+      }
+   }
+
+   return 0;
+}
+
+/**
+ * \brief Convert IPFIX list of MAC elements to UniRec MAC array
+ * \copydetails translate_uint()
+ */
+static int
+translate_array_mac(translator_t *trans, const struct translator_rec *rec,
+    const struct fds_drec_field *field)
+{
+   ur_field_id_t ur_id = rec->unirec.id;
+   struct fds_blist_iter list_it;
+   int rc;
+
+   fds_blist_iter_init(&list_it, field, NULL);
+   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
+      if (list_it.field.size != 6U) {
+         return 1;
+      }
+
+      ur_time_t *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
+      memcpy(field_ptr, list_it.field.data, 6U);
+   }
+
+   return 0;
+}
+
+/**
+ * \brief Convert IPFIX list of timestamp elements to UniRec timestamp array
+ * \copydetails translate_uint()
+ */
+static int
+translate_array_time(translator_t *trans, const struct translator_rec *rec,
+    const struct fds_drec_field *field)
+{
+   ur_field_id_t ur_id = rec->unirec.id;
+   const enum fds_iemgr_element_type type_ipx = rec->ipfix.next->type;
+   struct fds_blist_iter list_it;
+   int rc;
+
+   fds_blist_iter_init(&list_it, field, NULL);
+   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
+      // Get the value
+      ur_time_t *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
+
+      if (translator_store_time(type_ipx, list_it.field.data, list_it.field.size, field_ptr)) {
+         ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
+         return 1;
+      }
+   }
+
+    return 0;
 }
 
 /**
