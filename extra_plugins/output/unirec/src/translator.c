@@ -1350,6 +1350,7 @@ translator_table_fill_rec(translator_t *trans, const struct map_rec *map_rec,
        tr_ipfix->sem   = ipfix->def->data_semantic;
        if (ipfix->next) {
          tr_ipfix->next = malloc(sizeof(struct tr_ipfix_s));
+         tr_ipfix = tr_ipfix->next;
        } else {
          tr_ipfix->next = NULL;
        }
@@ -1647,12 +1648,29 @@ translator_translate(translator_t *trans, struct fds_drec *ipfix_rec, uint16_t f
     // First, call special internal conversion functions, if enabled
     int converted_fields = translator_call_internals(trans);
 
+    struct tr_ipfix_s ipx_list_elem;
     // Try to convert all IPFIX fields
     while (fds_drec_iter_next(&it) != FDS_EOC) {
         // Find the conversion function
         const struct fds_tfield *info = it.field.info;
         key.ipfix.id = info->id;
         key.ipfix.pen = info->en;
+        key.ipfix.next = NULL;
+
+        if (info->def && info->def->data_type == FDS_ET_BASIC_LIST) {
+           struct fds_blist_iter list_it;
+
+           fds_blist_iter_init(&list_it, &it.field, NULL);
+           if (fds_blist_iter_next(&list_it) != FDS_OK) {
+              continue;
+           }
+            const struct fds_tfield *tmp = list_it.field.info;
+            ipx_list_elem.id = tmp->id;
+            ipx_list_elem.pen = tmp->en;
+            ipx_list_elem.next = NULL;
+
+            key.ipfix.next = &ipx_list_elem;
+        }
 
         def = bsearch(&key, trans->table.recs, table_rec_cnt, table_rec_size, translator_cmp);
         if (!def) {
