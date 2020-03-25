@@ -227,7 +227,7 @@ translate_uint(translator_t *trans, const struct translator_rec *rec,
     void *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
     const enum fds_iemgr_element_semantic ipx_sem = rec->ipfix.sem;
 
-    if (translator_store_uint(ur_id, field_ptr, value, ipx_sem)) {
+    if (translator_store_uint(rec->unirec.type, field_ptr, value, ipx_sem)) {
        return 1;
     }
 
@@ -316,7 +316,7 @@ translate_int(translator_t *trans, const struct translator_rec *rec,
     void *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
     const enum fds_iemgr_element_semantic ipx_sem = rec->ipfix.sem;
 
-    if (translator_store_int(ur_id, field_ptr, value, ipx_sem)) {
+    if (translator_store_int(rec->unirec.type, field_ptr, value, ipx_sem)) {
        return 1;
     }
 
