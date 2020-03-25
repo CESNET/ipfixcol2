@@ -1658,12 +1658,12 @@ translator_translate(translator_t *trans, struct fds_drec *ipfix_rec, uint16_t f
         key.ipfix.next = NULL;
 
         if (info->def && info->def->data_type == FDS_ET_BASIC_LIST) {
-           struct fds_blist_iter list_it;
+            struct fds_blist_iter list_it;
 
-           fds_blist_iter_init(&list_it, &it.field, NULL);
-           if (fds_blist_iter_next(&list_it) != FDS_OK) {
-              continue;
-           }
+            fds_blist_iter_init(&list_it, &it.field, NULL);
+            if (fds_blist_iter_next(&list_it) == FDS_ERR_FORMAT) {
+               continue;
+            }
             const struct fds_tfield *tmp = list_it.field.info;
             ipx_list_elem.id = tmp->id;
             ipx_list_elem.pen = tmp->en;
