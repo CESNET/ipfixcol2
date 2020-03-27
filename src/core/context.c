@@ -492,6 +492,12 @@ ipx_ctx_ext_consumer(ipx_ctx_t *ctx, const char *type, const char *name, ipx_ctx
     return IPX_OK;
 }
 
+IPX_API const struct ipx_plugin_info *
+ipx_ctx_plugininfo_get(const ipx_ctx_t *ctx)
+{
+    return ctx->plugin_cbs->info;
+}
+
 // -------------------------------------------------------------------------------------------------
 
 /**

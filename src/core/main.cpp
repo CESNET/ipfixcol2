@@ -52,6 +52,7 @@
 #include <fstream>
 #include "configurator/config_file.hpp"
 #include "configurator/configurator.hpp"
+#include "configurator/controller_file.hpp"
 
 extern "C" {
 #include "verbose.h"
@@ -204,7 +205,7 @@ int main(int argc, char *argv[])
     const char *ring_size = nullptr;
     bool daemon_en = false;
     bool list_only = false;
-    ipx_configurator conf;
+    ipx_configurator configurator;
 
     // Parse configuration
     int opt;
@@ -230,7 +231,7 @@ int main(int argc, char *argv[])
             daemon_en = true;
             break;
         case 'p': // Plugin search path
-            conf.plugins.path_add(std::string(optarg));
+            configurator.plugins.path_add(std::string(optarg));
             break;
         case 'e': // Redefine path to Information Elements definition
             cfg_iedir = optarg;
@@ -242,7 +243,7 @@ int main(int argc, char *argv[])
             ring_size = optarg;
             break;
         case 'u': // Disable automatic plugin unload
-            conf.plugins.auto_unload(false);
+            configurator.plugins.auto_unload(false);
             break;
         default: // ?
             std::cerr << "Unknown parameter '" << static_cast<char>(optopt) << "'!" << std::endl;
@@ -261,11 +262,11 @@ int main(int argc, char *argv[])
     }
 
     // Always use the default directory for looking for plugins, but with the lowest priority
-    conf.plugins.path_add(IPX_DEFAULT_PLUGINS_DIR);
-    conf.iemgr_set_dir(cfg_iedir);
+    configurator.plugins.path_add(IPX_DEFAULT_PLUGINS_DIR);
+    configurator.iemgr_set_dir(cfg_iedir);
 
     if (list_only) {
-        conf.plugins.plugin_list();
+        configurator.plugins.plugin_list();
         return EXIT_SUCCESS;
     }
 
@@ -280,7 +281,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (ring_size != nullptr && ring_size_change(conf, ring_size) != IPX_OK) {
+    if (ring_size != nullptr && ring_size_change(configurator, ring_size) != IPX_OK) {
         // Failed to set the size
         return EXIT_FAILURE;
     }
@@ -290,10 +291,11 @@ int main(int argc, char *argv[])
         pid_file = nullptr; // Prevent removing the file
     }
 
-    // Pass control to the parser of the configuration file
+    // Create a configuration controller and use it to start the collector
     int rc;
     try {
-        rc = ipx_config_file(conf, std::string(cfg_startup));
+        ipx_controller_file ctrl_file(cfg_startup);
+        rc = configurator.run(&ctrl_file);
     } catch (std::exception &ex) {
         std::cerr << "An unexpected error has occurred: " << ex.what() << std::endl;
         return EXIT_FAILURE;

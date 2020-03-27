@@ -2,10 +2,10 @@
  * \file src/core/configurator/configurator.hpp
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief Main pipeline configurator (header file)
- * \date 2018
+ * \date 2018-2020
  */
 
-/* Copyright (C) 2018 CESNET, z.s.p.o.
+/* Copyright (C) 2018-2020 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -52,33 +52,15 @@
 #include "instance_outmgr.hpp"
 #include "instance_output.hpp"
 #include "plugin_mgr.hpp"
+#include "controller.hpp"
 
 extern "C" {
 #include <ipfixcol2.h>
 #include "../context.h"
 }
 
-/** Main configurator of the internal pipeline                                                */
+// Main configurator of the internal pipeline
 class ipx_configurator {
-private:
-    /** Size of ring buffers                                                                   */
-    uint32_t ring_size;
-    /** Directory with definitions of Information Elements                                     */
-    std::string iemgr_dir;
-
-    /** Manager of Information Elements                                                        */
-    fds_iemgr_t *iemgr;
-    /** Vector of running instances of input plugins                                           */
-    std::vector<std::unique_ptr<ipx_instance_input> > running_inputs;
-    /** Vector of running instances of intermediate plugins                                    */
-    std::vector<std::unique_ptr<ipx_instance_intermediate> > running_inter;
-    /** Vector of running instances of output plugins                                          */
-    std::vector<std::unique_ptr<ipx_instance_output> > running_outputs;
-
-    void model_check(const ipx_config_model &model);
-    fds_iemgr_t *iemgr_load(const std::string dir);
-    enum ipx_verb_level verbosity_str2level(const std::string &verb);
-
 public:
     /** Minimal size of ring buffers between instances of plugins                              */
     static constexpr uint32_t RING_MIN_SIZE = 128;
@@ -94,37 +76,100 @@ public:
     ipx_configurator(const ipx_configurator &) = delete;
     ipx_configurator& operator=(const ipx_configurator &) = delete;
 
-    /** Plugin manager */
+    /** Plugin manager (can be modified by a user i.e. add paths, change behaviour, etc) */
     ipx_plugin_mgr plugins;
 
     /**
-     * \brief Start the configuration with a new model
-     *
-     * Check if the model is valid (consists of at least one input and one output instance,
-     * etc.) and load definitions of Information Elements (i.e. iemgr_set_dir() must be defined).
-     * Then try to load all plugins, initialized them and, finally, start their execution threads.
-     *
-     * \param[in] model Configuration model (description of input/intermediate/output instances)
-     * \throw runtime_error in case of any error, e.g. failed to find plugins, failed to load
-     *   definitions of Information Elements, failed to initialize an instance, etc.
+     * @brief Define a path to the directory of Information Elements definitions
+     * @param[in] path Path
      */
-    void start(const ipx_config_model &model);
-
-    /**
-     * \brief Stop and destroy all instances of all plugins
-     */
-    void stop();
-
-    /**
-     * \brief Define a path to the directory of Information Elements definitions
-     * \param[in] path Path
-     */
-     void iemgr_set_dir(const std::string &path);
+     void
+     iemgr_set_dir(const std::string &path);
      /**
-      * \brief Define a size of ring buffers
-      * \param[in] size Size
+      * @brief Define a size of ring buffers
+      * @param[in] size Size
       */
-     void set_buffer_size(uint32_t size);
+     void
+     set_buffer_size(uint32_t size);
+
+     /**
+      * @brief Run the collector based on a configuration from the controller
+      *
+      * @note
+      *   Return code depends on the way how the collector was terminated. For example, if the
+      *   termination was caused by invalid configuration of a plugin, memory allocation during
+      *   processing, etc. return code corresponds to EXIT_FAILURE value.
+      *   However, if the collector was terminated by a plugin, which informed the configurator
+      *   that there are no more flow data for processing, return value is EXIT_SUCCESS.
+      *
+      * @param[in] ctrl Configuration controller
+      * @return Return code of the application
+      */
+     int
+     run(ipx_controller *ctrl);
+
+private:
+    /// State type
+    enum class STATUS {
+        RUNNING,    ///< No configuration change in progress
+        STOP_SLOW,  ///< Stop stop in progress
+        STOP_FAST,  ///< Fast stop in progress
+    } m_state; ///< Configuration state
+
+    /** Size of ring buffers                                                                   */
+    uint32_t m_ring_size;
+    /** Directory with definitions of Information Elements                                     */
+    std::string m_iemgr_dir;
+
+    /** Manager of Information Elements                                                        */
+    fds_iemgr_t *m_iemgr;
+    /** Vector of running instances of input plugins                                           */
+    std::vector<std::unique_ptr<ipx_instance_input> > m_running_inputs;
+    /** Vector of running instances of intermediate plugins                                    */
+    std::vector<std::unique_ptr<ipx_instance_intermediate> > m_running_inter;
+    /** Vector of running instances of output plugins                                          */
+    std::vector<std::unique_ptr<ipx_instance_output> > m_running_outputs;
+
+    // Internal functions
+    void
+    model_check(const ipx_config_model &model);
+    fds_iemgr_t *
+    iemgr_load(const std::string dir);
+    enum ipx_verb_level
+    verbosity_str2level(const std::string &verb);
+
+    void
+    startup(const ipx_config_model &model);
+    void
+    cleanup();
+
+    bool
+    termination_handle(const struct ipx_cpipe_req &req, ipx_controller *ctrl);
+    void
+    termination_send_msg();
+
+    void
+    termination_stop_all();
+    void
+    termination_stop_partly(const ipx_ctx_t *ctx);
 };
 
 #endif //IPFIXCOL_CONFIGURATOR_H
+
+///**
+// * \brief Start the configuration with a new model
+// *
+// * Check if the model is valid (consists of at least one input and one output instance,
+// * etc.) and load definitions of Information Elements (i.e. iemgr_set_dir() must be defined).
+// * Then try to load all plugins, initialized them and, finally, start their execution threads.
+// *
+// * \param[in] model Configuration model (description of input/intermediate/output instances)
+// * \throw runtime_error in case of any error, e.g. failed to find plugins, failed to load
+// *   definitions of Information Elements, failed to initialize an instance, etc.
+// */
+//void start(const ipx_config_model &model);
+//
+///**
+// * \brief Stop and destroy all instances of all plugins
+// */
+//void stop();

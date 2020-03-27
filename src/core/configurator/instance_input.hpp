@@ -160,6 +160,15 @@ public:
      */
     void
     extensions_resolve(ipx_cfg_extensions *ext_mgr) override;
+
+    /**
+     * \brief Enable/disable processing of data messages (IPFIX and Transport Session)
+     * \note By default, data processing is enabled.
+     * \see ipx_ctx_processing() for more details
+     * \param[in] en Enable/disable processing
+     */
+    void
+    set_processing(bool en) override;
 };
 
 #endif //IPFIXCOL_INSTANCE_INPUT_HPP

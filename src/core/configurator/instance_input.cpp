@@ -178,3 +178,10 @@ ipx_instance_input::extensions_resolve(ipx_cfg_extensions *ext_mgr)
     ext_mgr->update_instance(_ctx);
     ext_mgr->update_instance(_parser_ctx);
 }
+
+void
+ipx_instance_input::set_processing(bool en)
+{
+    ipx_ctx_processing(_ctx, en);
+    ipx_ctx_processing(_parser_ctx, en);
+}
