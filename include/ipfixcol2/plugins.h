@@ -264,6 +264,8 @@ ipx_plugin_get(ipx_ctx_t *ctx, void *cfg);
  * \return #IPX_OK on success
  * \return #IPX_ERR_DENIED if a fatal memory allocation error has occurred and/or the plugin cannot
  *   continue to work properly (the collector will exit).
+ * \return #IPX_ERR_EOF if the plugin has reached expected goal (e.g. number of processed records).
+ *   This function will not be called anymore and the collector will shut down.
  */
 IPX_API int
 ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg);

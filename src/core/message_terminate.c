@@ -43,6 +43,7 @@
 #include <stdlib.h>
 #include "message_terminate.h"
 #include "message_base.h"
+#include "configurator/cpipe.h"
 
 /** \brief Structure of a terminate message */
 struct ipx_msg_terminate {
@@ -72,9 +73,10 @@ ipx_msg_terminate_create(enum ipx_msg_terminate_type type)
 }
 
 void
-ipx_msg_termiante_destroy(ipx_msg_terminate_t *msg)
+ipx_msg_terminate_destroy(ipx_msg_terminate_t *msg)
 {
     ipx_msg_header_destroy((ipx_msg_t *) msg);
+    ipx_cpipe_send_term(NULL, IPX_CPIPE_TYPE_TERM_DONE);
     free(msg);
 }
 

@@ -155,7 +155,7 @@ public:
      */
     virtual void
     set_processing(bool en) {
-        ipx_ctx_processing(_ctx, en);
+        ipx_ctx_processing_set(_ctx, en);
     }
 };
 

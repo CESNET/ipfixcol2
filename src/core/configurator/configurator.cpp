@@ -118,11 +118,17 @@ ipx_configurator::ipx_configurator()
 ipx_configurator::~ipx_configurator()
 {
     // Make sure that all threads are terminated
-    m_running_inputs.clear();
-    m_running_inter.clear();
-    m_running_outputs.clear();
+    cleanup();
 
-    // TODO: Disable the signal handler
+    // Disable the signal handler
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sigemptyset(&sa.sa_mask);
+    sigaddset(&sa.sa_mask, SIGINT);
+    sigaddset(&sa.sa_mask, SIGTERM);
+    sa.sa_handler = SIG_DFL;
+    sigaction(SIGTERM, &sa, NULL);
+    sigaction(SIGINT, &sa, NULL);
 
     // Destroy the configuration pipe
     ipx_cpipe_destroy();
@@ -364,16 +370,25 @@ void ipx_configurator::cleanup()
 bool
 ipx_configurator::termination_handle(const struct ipx_cpipe_req &req, ipx_controller *ctrl)
 {
-    // First of all, check if termination has been complete
+    // First of all, check if termination process has been completed
     if (req.type == IPX_CPIPE_TYPE_TERM_DONE) {
-        if (m_state == STATUS::STOP_SLOW || m_state == STATUS::STOP_FAST) {
-            // Termination process complete
-            return true;
+        if (m_state != STATUS::STOP_SLOW && m_state != STATUS::STOP_FAST) {
+            IPX_ERROR(comp_str, "Got a termination done notification, but the termination process "
+                "is not in progress!", '\0');
+            return false;
         }
 
-        IPX_ERROR(comp_str, "Got a termination done notification, but the termination process is "
-            "not in progress!", '\0');
-        return false;
+        if (m_term_sent == 0) {
+            IPX_ERROR(comp_str, "[internal] Unexpected termination message", '\0');
+            abort();
+        }
+
+        if (--m_term_sent != 0) {
+            // There is still at least one termination message in the pipeline
+            return false;
+        }
+
+        return true;
     }
 
     // Format a status message and notify the controller
@@ -415,17 +430,17 @@ ipx_configurator::termination_handle(const struct ipx_cpipe_req &req, ipx_contro
     case STATUS::RUNNING:
         /* The first request to stop the collector...
          * A termination message must be delivered to all input plugins and some plugins must
-         * immediatelly stop processing all IPFIX messages.
+         * immediately stop processing all IPFIX messages.
          */
         termination_send_msg();
         // fall through
 
     case STATUS::STOP_SLOW:
         /* Another request to stop the collector has been received...
-         * There might be more plugins that should immediatelly stop processing all IPFIX messages.
-         */ 
+         * There might be more plugins that should immediately stop processing all IPFIX messages.
+         */
         if (next_state == STATUS::STOP_FAST) {
-            termination_stop_all();  
+            termination_stop_all();
         } else {
             termination_stop_partly(req.ctx);
         }
@@ -447,11 +462,11 @@ ipx_configurator::termination_handle(const struct ipx_cpipe_req &req, ipx_contro
 
 /**
  * \brief Disable data processing by all plugins
- * 
+ *
  * Calling the getter callbacks (input plugin instances) and processing callbacks (intermediate
- * and output plugin instances) will be disabled and all plugin contexts will immediatelly 
+ * and output plugin instances) will be disabled and all plugin contexts will immediately
  * drop IPFIX and Transport Session messages on arrival. Only garbage and configuration
- * pipeline messages are still procesed.
+ * pipeline messages are still processed.
  */
 void
 ipx_configurator::termination_stop_all()
@@ -469,21 +484,21 @@ ipx_configurator::termination_stop_all()
 
 /**
  * \brief Disabled data processing by all plugins before the given context (including)
- * 
+ *
  * Calling the getter callbacks (input plugin instances) and processing callbacks (intermediate
  * and output plugin instances) of the plugins before the given context (including) will be
- * disabled. Only garbage and configuration pipeline messages are still procesed by these 
+ * disabled. Only garbage and configuration pipeline messages are still processed by these
  * particular instances.
- * 
+ *
  * The plugin instances after the given context are untouched.
- * \note If the \p ctx is nullptr, no plugins are immediatelly terminated!
+ * \note If the \p ctx is nullptr, no plugins are immediately terminated!
  * \param[in] ctx Context of the plugin which invoked the termination sequence
  */
 void
 ipx_configurator::termination_stop_partly(const ipx_ctx_t *ctx)
 {
     if (!ctx) {
-        // Nothing to do... 
+        // Nothing to do...
         return;
     }
 
@@ -492,7 +507,7 @@ ipx_configurator::termination_stop_partly(const ipx_ctx_t *ctx)
     for (auto &it : m_running_inputs) {
         it->set_processing(false);
     }
-    
+
     if (ctx_info->type == IPX_PT_INPUT || ctx_info == &ipx_plugin_parser_info) {
         // The termination has been invoked by an input plugin or its message parser
         return;
@@ -516,11 +531,14 @@ ipx_configurator::termination_stop_partly(const ipx_ctx_t *ctx)
 /**
  * \brief Send a termination message to all input plugins
  *
- * The termination message will call instance destructor and stop the instance thread
+ * The termination message will call instance destructor and stop the instance thread.
+ * This function must be called only once!
  */
 void
 ipx_configurator::termination_send_msg()
 {
+    assert(m_term_sent == 0 && "The termination message counter must be zero!");
+
     for (auto &input : m_running_inputs) {
         ipx_msg_terminate_t *msg = ipx_msg_terminate_create(IPX_MSG_TERMINATE_INSTANCE);
         if (!msg) {
@@ -533,6 +551,7 @@ ipx_configurator::termination_send_msg()
 
     IPX_DEBUG(comp_str, "Requests to terminate the pipeline sent! Waiting for instances to "
         "terminate.", '\0');
+    m_term_sent = m_running_inputs.size();
 }
 
 int
@@ -560,8 +579,8 @@ ipx_configurator::run(ipx_controller *ctrl)
     }
 
     // Collector is running -> process termination/reconfiguration requests
+    m_state = STATUS::RUNNING;
     bool terminate = false;
-
     while (!terminate) {
         struct ipx_cpipe_req req;
         if (ipx_cpipe_receive(&req) != IPX_OK) {
@@ -583,7 +602,6 @@ ipx_configurator::run(ipx_controller *ctrl)
     };
 
     // The collector has been terminated
-    cleanup();
     ctrl->terminate_after();
-    return EXIT_SUCCESS; // TODO: determine by termination type
+    return EXIT_SUCCESS;
 }

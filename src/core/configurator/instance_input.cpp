@@ -182,6 +182,6 @@ ipx_instance_input::extensions_resolve(ipx_cfg_extensions *ext_mgr)
 void
 ipx_instance_input::set_processing(bool en)
 {
-    ipx_ctx_processing(_ctx, en);
-    ipx_ctx_processing(_parser_ctx, en);
+    ipx_ctx_processing_set(_ctx, en);
+    ipx_ctx_processing_set(_parser_ctx, en);
 }

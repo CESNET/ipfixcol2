@@ -40,6 +40,7 @@
  */
 
 #include <stdlib.h>
+#include <stdbool.h>
 #include <inttypes.h>
 #include <pthread.h>
 #include <errno.h>
@@ -53,6 +54,7 @@
 #include "fpipe.h"
 #include "ring.h"
 #include "message_ipfix.h"
+#include "configurator/cpipe.h"
 
 /** Identification of this component (for log) */
 const char *comp_str = "Context";
@@ -92,6 +94,8 @@ struct ipx_ctx {
     enum ipx_ctx_state state;
     /** Thread identification (valid only if state == #IPX_CS_RUNNING)                           */
     pthread_t thread_id;
+    /** Enable data processing by the plugin (enabled by default)                                */
+    bool en_processing;
 
     struct {
         /**
@@ -178,6 +182,7 @@ ipx_ctx_create(const char *name, const struct ipx_ctx_callbacks *callbacks)
     ctx->permissions = 0;    // No permissions
     ctx->plugin_cbs = callbacks;
     ctx->state = IPX_CS_NEW;
+    ctx->en_processing = true;
 
     ctx->cfg_system.vlevel = ipx_verb_level_get();
     ctx->cfg_system.rec_size = IPX_MSG_IPFIX_BASE_REC_SIZE;
@@ -386,6 +391,25 @@ ipx_ctx_ext_defs(ipx_ctx_t *ctx, struct ipx_ctx_ext **arr, size_t *arr_size)
 
     *arr = ctx->cfg_extension.items;
     *arr_size = ctx->cfg_extension.items_cnt;
+}
+
+void
+ipx_ctx_processing_set(ipx_ctx_t *ctx, bool en)
+{
+    __atomic_store_n(&ctx->en_processing, en, __ATOMIC_RELAXED);
+}
+
+/**
+ * @brief Get data processing status
+ *
+ * @see ipx_ctx_processing_set()
+ * @param[in] ctx Plugin context
+ * @return true/false
+ */
+static bool
+ipx_ctx_processing_get(const ipx_ctx_t *ctx)
+{
+    return __atomic_load_n(&ctx->en_processing, __ATOMIC_RELAXED);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -759,6 +783,44 @@ ipx_ctx_init(ipx_ctx_t *ctx, const char *params)
 }
 
 /**
+ * @brief Common handle function for the getter and process callbacks
+ *
+ * If the plugin function fails, it will send a request to stop the collector as fast as possible
+ * and disabled data processing of the instance.
+ * If the plugin function reports end-of-stream/file, it will send "slow" termination request
+ * (i.e. remaining data further in the pipeline will be processed) and disable data processing
+ * of the instance.
+ *
+ * @param[in] ctx Plugin context
+ * @param[in] rc  Return code from the function
+ */
+static void
+thread_handle_rc(struct ipx_ctx *ctx, int rc)
+{
+    switch (rc) {
+    case IPX_OK:
+        break;
+    case IPX_ERR_EOF:
+        // No more data -> stop the collector
+        IPX_CTX_DEBUG(ctx, "The instance has signalized end-of-file/stream.", '\0');
+        ipx_ctx_processing_set(ctx, false);
+        ipx_cpipe_send_term(ctx, IPX_CPIPE_TYPE_TERM_SLOW);
+        break;
+    case IPX_ERR_DENIED:
+        // Fatal error -> stop the collector as fast as possible
+        IPX_CTX_ERROR(ctx, "ipx_plugin_get()/ipx_plugin_process() failed! The collector cannot "
+            "work properly anymore!", '\0');
+        ipx_ctx_processing_set(ctx, false);
+        ipx_cpipe_send_term(ctx, IPX_CPIPE_TYPE_TERM_FAST);
+        break;
+    default:
+        IPX_CTX_ERROR(ctx, "ipx_plugin_get()/ipx_plugin_process() returned unexpected return "
+            "code (%d)! Ignoring.", rc);
+        break;
+    }
+}
+
+/**
  * \brief Try to receive a request from the feedback pipe and process it
  *
  * \param[in] ctx Instance context
@@ -836,7 +898,6 @@ thread_input(void *arg)
     IPX_CTX_DEBUG(ctx, "Instance thread of the input plugin '%s' has started!", plugin_name);
 
     bool terminate = false;
-
     while (!terminate) {
         int rc = thread_input_process_pipe(ctx);
         if (rc == IPX_ERR_EOF) {
@@ -845,8 +906,14 @@ thread_input(void *arg)
             continue;
         }
 
+        if (!ipx_ctx_processing_get(ctx)) {
+            // Processing is disabled -> wait for message from the feedback pipe
+            continue;
+        }
+
         // Try to get a new IPFIX message
-        ctx->plugin_cbs->get(ctx, ctx->cfg_plugin.private); // TODO: check return value
+        rc = ctx->plugin_cbs->get(ctx, ctx->cfg_plugin.private);
+        thread_handle_rc(ctx, rc);
     }
 
     IPX_CTX_DEBUG(ctx, "Instance thread of the input plugin '%s' has been terminated!",
@@ -876,8 +943,6 @@ thread_intermediate(void *arg)
     enum ipx_msg_type msg_type;
 
     bool terminate = false;
-    bool process_en = true; // enable message processing
-
     while (!terminate) {
         // Get a new message for the buffer
         msg_ptr = ipx_ring_pop(ctx->pipeline.src);
@@ -892,28 +957,34 @@ thread_intermediate(void *arg)
                 // Drop the message, we are still waiting for another termination request
                 IPX_CTX_DEBUG(ctx, "Termination message dropped. Waiting for %u remaining input "
                     "plugin(s) to terminate.", ctx->cfg_system.term_msg_cnt);
-                ipx_msg_termiante_destroy(terminate_msg);
+                ipx_msg_terminate_destroy(terminate_msg);
                 continue;
             }
 
-            // It's time to stop processing
-            process_en = false;
             if (type == IPX_MSG_TERMINATE_INSTANCE) {
                 terminate = true;
             }
         }
 
-        if ((process_en && (msg_type & ctx->cfg_system.msg_mask_selected) != 0)
-                || ctx->type == IPX_PT_OUTPUT_MGR) { // Always pass all messages to the output manager
-            // Process the message
-            ctx->plugin_cbs->process(ctx, ctx->cfg_plugin.private, msg_ptr); // TODO:check return value
+        if (!ipx_ctx_processing_get(ctx)
+                && (msg_type == IPX_MSG_IPFIX || msg_type == IPX_MSG_SESSION)) {
+            // Data processing is disabled -> drop IPFIX and Session messages
+            ipx_msg_destroy(msg_ptr);
+            continue;
+        }
+
+        bool msg_for_plugin = (msg_type & ctx->cfg_system.msg_mask_selected) != 0;
+        if ((ipx_ctx_processing_get(ctx) || ctx->type == IPX_PT_OUTPUT_MGR) && msg_for_plugin) {
+            // Pass data to the plugin
+            int rc = ctx->plugin_cbs->process(ctx, ctx->cfg_plugin.private, msg_ptr);
+            thread_handle_rc(ctx, rc);
             processed = true;
         }
 
+        // The message hasn't been processed by the plugin
         if (!processed && terminate != true) {
             /* Not processed by the instance, pass the message.
-             * Note: Termination message is passed after intermediate instance destructor!
-             */
+             * Note: Termination message is passed after intermediate instance destructor! */
             assert(ctx->type != IPX_PT_OUTPUT_MGR);
             ipx_ring_push(ctx->pipeline.dst, msg_ptr);
         }
@@ -953,26 +1024,22 @@ thread_output(void *arg)
     IPX_CTX_DEBUG(ctx, "Instance thread of the output plugin '%s' has started!", plugin_name);
 
     bool terminate = false;
-    bool process_en = true; // enable message processing
-
     while (!terminate) {
         // Get a new message for the buffer
         ipx_msg_t *msg_ptr = ipx_ring_pop(ctx->pipeline.src);
         enum ipx_msg_type msg_type = ipx_msg_get_type(msg_ptr);
+        bool msg_for_plugin = (msg_type & ctx->cfg_system.msg_mask_selected) != 0;
 
-        if (process_en && (msg_type & ctx->cfg_system.msg_mask_selected) != 0) {
-            // Process the message
-            ctx->plugin_cbs->process(ctx, ctx->cfg_plugin.private, msg_ptr); // TODO:check return value
+        if (ipx_ctx_processing_get(ctx) && msg_for_plugin) {
+            // Process the message by the plugin
+            int rc = ctx->plugin_cbs->process(ctx, ctx->cfg_plugin.private, msg_ptr);
+            thread_handle_rc(ctx, rc);
         }
 
         if (msg_type == IPX_MSG_TERMINATE) {
             ipx_msg_terminate_t *terminate_msg = ipx_msg_base2terminate(msg_ptr);
             enum ipx_msg_terminate_type type = ipx_msg_terminate_get_type(terminate_msg);
-
-            if (type == IPX_MSG_TERMINATE_PROCESSING) {
-                // We received a request to stop passing message to the instance
-                process_en = false;
-            } else {
+            if (type == IPX_MSG_TERMINATE_INSTANCE) {
                 // We received a request to terminate the instance
                 terminate = true;
             }

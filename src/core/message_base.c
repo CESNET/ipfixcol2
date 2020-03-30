@@ -65,7 +65,7 @@ ipx_msg_destroy(ipx_msg_t *msg)
         ipx_msg_garbage_destroy(ipx_msg_base2garbage(msg));
         break;
     case IPX_MSG_TERMINATE:
-        ipx_msg_termiante_destroy(ipx_msg_base2terminate(msg));
+        ipx_msg_terminate_destroy(ipx_msg_base2terminate(msg));
         break;
     }
 }

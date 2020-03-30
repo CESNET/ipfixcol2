@@ -16,9 +16,6 @@
 
 #include "controller_file.hpp"
 
-/** Component identification (for log) */
-static const char *comp_str = "Configurator";
-
 /** Types of XML configuration nodes   */
 enum file_xml_nodes {
     // List of plugin instances
@@ -187,7 +184,7 @@ ipx_controller_file::parse_file(const std::string &path)
 
     fds_xml_ctx_t *ctx = fds_xml_parse_mem(parser.get(), fcontent.get(), true);
     if (!ctx) {
-        std::string err_msg = std::string(fds_xml_last_err(parser.get());
+        std::string err_msg = std::string(fds_xml_last_err(parser.get()));
         throw ipx_controller::error("Failed to parse configuration: " + err_msg);
     }
 

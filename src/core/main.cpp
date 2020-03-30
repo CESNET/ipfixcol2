@@ -50,7 +50,6 @@
 #include <ipfixcol2.h>
 #include <iostream>
 #include <fstream>
-#include "configurator/config_file.hpp"
 #include "configurator/configurator.hpp"
 #include "configurator/controller_file.hpp"
 

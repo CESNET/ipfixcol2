@@ -129,6 +129,8 @@ private:
     std::vector<std::unique_ptr<ipx_instance_intermediate> > m_running_inter;
     /** Vector of running instances of output plugins                                          */
     std::vector<std::unique_ptr<ipx_instance_output> > m_running_outputs;
+    /** Number of sent termination messages */
+    size_t m_term_sent = 0;
 
     // Internal functions
     void
