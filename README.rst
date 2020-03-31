@@ -29,7 +29,7 @@ No problem, pick any combination of plugins.
 Available plugins
 -----------------
 
-**Input plugins** - receive IPFIX data. Each can be configured to to listen on a specific
+**Input plugins** - receive IPFIX data. Each can be configured to listen on a specific
 network interface and a port. Multiple instances of these plugins can run concurrently.
 
 - `UDP <src/plugins/input/udp>`_ - receives NetFlow v5/v9 and IPFIX over UDP
