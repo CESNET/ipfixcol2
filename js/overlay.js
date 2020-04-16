@@ -2,7 +2,7 @@
 // - Zredukovat opakování kódu
 // - Přidat nové pluginy
 // - rezdělit schémata do souborů
-// - Plugin UniRec (timeout) přidat našeptávač možných hodnot
+// -! Plugin UniRec (timeout) přidat našeptávač možných hodnot
 // - trochu vylepšit styl výpisu
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
@@ -13,6 +13,7 @@
 // +? Předělat hlavní výpis modulů ve sloupcích
 //      - zda je to vůbec potřeba, jestli nestačí jenom název, edit, delete
 //
+// + overlay - zavření na Esc
 // + XML výpis při editaci modulů nerespektuje nastavení odsaszení
 // + opravit pole pro zadávání číselných hodnot (formulář nerespektuje nastavené meze)
 // + oprava validace IP adres
@@ -204,7 +205,7 @@ class Overlay extends React.Component {
         );
         tabIndex.counter += 1;
         btnCancel = (
-            <Button variant="outlined" color="primary" onClick={this.props.onCancel} tabIndex={0}>
+            <Button variant="outlined" color="primary" onClick={this.handleCancel.bind(this)} tabIndex={0}>
                 Cancel
             </Button>
         );
@@ -223,10 +224,10 @@ class Overlay extends React.Component {
         return (
             <Dialog
                 disableBackdropClick
-                disableEscapeKeyDown
                 open={true}
                 fullWidth={true}
                 maxWidth={"md"}
+                onEscapeKeyDown={this.handleCancel.bind(this)}
             >
                 <DialogTitle>
                     {titleText}
