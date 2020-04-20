@@ -1,0 +1,108 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "LNF storage",
+    "description": "The plugin converts and store IPFIX flow records into NfDump compatible files.|https://github.com/CESNET/ipfixcol2/tree/master/extra_plugins/output/lnfstore",
+    "type": "object",
+    "properties": {
+        "name": {
+            "title": "Name",
+            "description": "User identification of the instance. Must be unique within the section.",
+            "type": "string",
+            "default": "LNF storage",
+            "minLength": 1
+        },
+        "plugin": {
+            "title": "Plugin",
+            "description": "Internal identification of a plugin to whom the instance belongs. The identification is assigned by an author of the plugin.",
+            "type": "string",
+            "const": "lnfstore"
+        },
+        "params": {
+            "title": "Parameters",
+            "description": "Configuration parameters of the instance.",
+            "type": "object",
+            "properties": {
+                "storagePath": {
+                    "title": "Storage path",
+                    "description": "The path element specifies the storage directory for data files. Keep on mind that the path must exist in your system. Otherwise, no records are stored. All files will be stored based on the configuration using the following template: <storagePath>/YYYY/MM/DD/lnf.<suffix> where YYYY/MM/DD means year/month/day and <suffix> represents a UTC timestamp in format YYMMDDhhmmss.",
+                    "type": "string",
+                    "minLength": 1
+                },
+                "compress": {
+                    "title": "Compress",
+                    "description": "Enable/disable LZO compression for files. [values: yes/no, default: no]",
+                    "type": "string",
+                    "default": "no",
+                    "enum": ["yes", "no"]
+                },
+                "identificatorField": {
+                    "title": "Identificator field",
+                    "description": "Specifies an identification string, which is put into statistic records to describe the source. [default: <empty>]",
+                    "type": "string",
+                    "default": "",
+                    "minLength": 1
+                },
+                "dumpInterval": {
+                    "title": "Dump interval",
+                    "description": "Configuration of output files rotation.",
+                    "type": "object",
+                    "properties": {
+                        "timeWindow": {
+                            "title": "Time window",
+                            "description": "Specifies time interval in seconds to rotate files i.e. close the current file and create a new one. [default: 300]",
+                            "type": "integer",
+                            "default": 300,
+                            "minimum": 0
+                        },
+                        "align": {
+                            "title": "Align",
+                            "description": "Align file rotation with next N minute interval. For example, if enabled and window size is 5 minutes long, files will be created at 0, 5, 10, etc. [values: yes/no, default: yes]",
+                            "type": "string",
+                            "default": "yes",
+                            "enum": ["yes", "no"]
+                        }
+                    },
+                    "required": ["timeWindow", "align"]
+                },
+                "index": {
+                    "title": "Index",
+                    "description": "Configuration of IP address indexes. Index files are independent and exists besides \"lnf.*\" files as \"bfi.*\" files with matching identification.",
+                    "type": "object",
+                    "properties": {
+                        "enable": {
+                            "title": "Enable",
+                            "description": "Enable/disable Bloom Filter indexes. [values: yes/no, default: no]",
+                            "type": "string",
+                            "default": "no",
+                            "enum": ["yes", "no"]
+                        },
+                        "autosize": {
+                            "title": "Autosize",
+                            "description": "Enable/disable automatic resize of index files based on the number of unique IP addresses in the last dump interval. [values: yes/no, default: yes]",
+                            "type": "string",
+                            "default": "yes",
+                            "enum": ["yes", "no"]
+                        },
+                        "estimatedItemCount": {
+                            "title": "Estimated item count",
+                            "description": "Expected number of unique IP addresses in dump interval. If autosize is enabled this value is continuously recalculated to suit current utilization. The value affects the size of index files i.e. higher value, larger files. [default: 100000]",
+                            "type": "integer",
+                            "default": 100000,
+                            "minimum": 0
+                        },
+                        "falsePositiveProbability": {
+                            "title": "False positive probability",
+                            "description": "False positive probability of the index. The probability that presence test of an IP address indicates that the IP address is present in a data file, when it actually is not. It does not affect the situation when the IP address is actually in the data file i.e. if the IP is in the file, the result of the test is always correct. The value affects the size of index files i.e. smaller value, larger files. [default: 0.01]",
+                            "type": "number",
+                            "default": 0.01,
+                            "minimum": 0
+                        }
+                    },
+                    "required": ["enable", "autosize"]
+                }
+            },
+            "required": ["storagePath", "compress", "dumpInterval", "index"]
+        }
+    },
+    "required": ["name", "plugin", "params"]
+}

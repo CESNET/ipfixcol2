@@ -1,0 +1,187 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "UniRec plugin",
+    "description": "The plugin converts IPFIX flow records into UniRec format and sends them as UniRec records via a TRAP output interface.|https://github.com/CESNET/ipfixcol2/tree/master/extra_plugins/output/unirec",
+    "type": "object",
+    "properties": {
+        "name": {
+            "title": "Name",
+            "description": "User identification of the instance. Must be unique within the section.",
+            "type": "string",
+            "default": "UniRec plugin",
+            "minLength": 1
+        },
+        "plugin": {
+            "title": "Plugin",
+            "description": "Internal identification of a plugin to whom the instance belongs. The identification is assigned by an author of the plugin.",
+            "type": "string",
+            "const": "unirec"
+        },
+        "params": {
+            "title": "Parameters",
+            "description": "Configuration parameters of the instance.",
+            "type": "object",
+            "properties": {
+                "uniRecFormat": {
+                    "title": "UniRec format",
+                    "description": "Comma separated list of UniRec fields. All fields are mandatory by default, therefore, if a flow record to convert doesn't contain all mandatory fields, it is dropped. However, UniRec fields that start with '?' are optional and if they are not present in the record (e.g. TCP_FLAGS) default value (typically zero) is used. List of all supported UniRec fields is defined in unirec-element.txt file. Example value: \"DST_IP,SRC_IP,BYTES,DST_PORT,?TCP_FLAGS,SRC_PORT,PROTOCOL\".",
+                    "type": "string",
+                    "minLength": 1
+                },
+                "trapIfcCommon": {
+                    "title": "TRAP interface common",
+                    "description": "The following parameters can be used with any type of a TRAP interface. There are parameters of the interface that are normally let default. However, it is possible to override them by user.",
+                    "type": "object",
+                    "properties": {
+                        "timeout": {
+                            "title": "Timeout",
+                            "description": "Time in microseconds that the output interface can block waiting for message to be send. There are also special values: \"WAIT\" (block indefinitely), \"NO_WAIT\" (don't block), \"HALF_WAIT\" (block only if some client is connected). Be very careful, inappropriate configuration can significantly slowdown the collector and lead to loss of data. [default: \"HALF_WAIT\"]",
+                            "type": ["string", "integer"],
+                            "default": "HALF_WAIT",
+                            "oneOf": [
+                                { "type": "string", "enum": ["WAIT", "HALF_WAIT", "NO_WAIT"] },
+                                { "type": "integer", "minimum": 0 }
+                            ]
+                        },
+                        "buffer": {
+                            "title": "Buffer",
+                            "description": "Enable buffering of data and sending in larger bulks (increases throughput) [default: true]",
+                            "type": "boolean",
+                            "default": true,
+                            "enum": [true, false]
+                        },
+                        "autoflush": {
+                            "title": "Automatic flush",
+                            "description": "Automatically flush data even if the output buffer is not full every X microseconds. If the automatic flush is disabled (value 0), data are not send until the buffer is full. [default: 500000]",
+                            "type": "integer",
+                            "default": 500000
+                        }
+                    },
+                    "required": ["timeout", "buffer", "autoflush"]
+                },
+                "trapIfcSpec": {
+                    "title": "TRAP interface specification",
+                    "description": "Specification of interface type and its parameters.",
+                    "type": "object",
+                    "properties": {
+                        "unix": {
+                            "title": "UNIX",
+                            "description": "Communicates through a UNIX socket. The output interface creates a socket and listens, input interface connects to it. There may be more than one input interfaces connected to the output interface, every input interface will get the same data.",
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "title": "Name",
+                                    "description": "Socket name i.e. any string usable as a file name. The name MUST not include colon character.",
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "maxClients": {
+                                    "title": "Max clients",
+                                    "description": "Maximal number of connected clients (input interfaces). [default: 64]",
+                                    "type": "integer",
+                                    "default": 64
+                                }
+                            },
+                            "required": ["name", "maxClients"]
+                        },
+                        "tcp": {
+                            "title": "TCP",
+                            "description": "Communicates through a TCP socket. The output interface listens on a given port, input interface connects to it. There may be more than one input interfaces connected to the output interface, every input interface will get the same data.",
+                            "type": "object",
+                            "properties": {
+                                "port": {
+                                    "title": "Port",
+                                    "description": "Local port number",
+                                    "type": "integer",
+                                    "minimum": 0
+                                },
+                                "maxClients": {
+                                    "title": "Max clients",
+                                    "description": "Maximal number of connected clients (input interfaces). [default: 64]",
+                                    "type": "integer",
+                                    "default": 64
+                                }
+                            },
+                            "required": ["port", "maxClients"]
+                        },
+                        "tcp-tls": {
+                            "title": "TCP-TLS",
+                            "description": "Communicates through a TCP socket after establishing encrypted connection. You have to provide a certificate, a private key and a CA chain file with trusted CAs. Otherwise, same as TCP: The output interface listens on a given port, input interface connects to it. There may be more than one input interfaces connected to the output interface, every input interface will get the same data. Paths to files MUST not include colon character.",
+                            "type": "object",
+                            "properties": {
+                                "port": {
+                                    "title": "Port",
+                                    "description": "Local port number",
+                                    "type": "integer",
+                                    "minimum": 0
+                                },
+                                "maxClients": {
+                                    "title": "Max clients",
+                                    "description": "Maximal number of connected clients (input interfaces). [default: 64]",
+                                    "type": "integer",
+                                    "default": 64
+                                },
+                                "keyFile": {
+                                    "title": "Key file",
+                                    "description": "Path to a file of a private key in PEM format.",
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "certFile": {
+                                    "title": "Certificate file",
+                                    "description": "Path to a file of certificate chain in PEM format.",
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "caFile": {
+                                    "title": "CA file",
+                                    "description": "Path to a file of trusted CA certificates in PEM format.",
+                                    "type": "string",
+                                    "minLength": 1
+                                }
+                            },
+                            "required": ["port", "maxClients", "keyFile", "certFile", "caFile"]
+                        },
+                        "file": {
+                            "title": "File",
+                            "description": "Stores UniRec records into a file. The interface allows to split data into multiple files after a specified time or a size of the file. If both options are enabled at the same time, the data are split primarily by time, and only if a file of one time interval exceeds the size limit, it is further split. The index of size-split file is appended after the time.",
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "title": "Name",
+                                    "description": "Name of the output file. The name MUST not include colon character.",
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "mode": {
+                                    "title": "Mode",
+                                    "description": "Output mode: write/append. If the specified file exists, mode write overwrites it, mode append creates a new file with an integer suffix. [default: write]",
+                                    "type": "string",
+                                    "default": "write",
+                                    "enum": ["write", "append"]
+                                },
+                                "time": {
+                                    "title": "Time",
+                                    "description": "If the parameter is non-zero, the output interface will split captured data to individual files as often, as value of this parameter (in minutes) indicates. The output interface creates unique file name for each file according to current timestamp in format: \"filename.YYYYmmddHHMM\". [default: 0]",
+                                    "type": "integer",
+                                    "default": 0
+                                },
+                                "size": {
+                                    "title": "Size",
+                                    "description": "If the parameter is non-zero, the output interface will split captured data into individual files after a size of a current file (in MB) exceeds given threshold. Numeric suffix is added to the original file name for each file in ascending order starting with 0. [default: 0] ",
+                                    "type": "integer",
+                                    "default": 0
+                                }
+                            },
+                            "required": ["name", "mode", "time", "size"]
+                        }
+                    },
+                    "minProperties": 1,
+                    "maxProperties": 1
+                }
+            },
+            "required": ["uniRecFormat", "trapIfcCommon", "trapIfcSpec"]
+        }
+    },
+    "required": ["name", "plugin", "params"]
+}

@@ -43,40 +43,45 @@ const {
     Tooltip,
     //    TreeItem, - in lab
     //    TreeView, - in lab
-    Typography
+    Typography,
 } = MaterialUI;
 // Obtain the root element
 const rootAppElement = document.getElementById("configurator_app");
 const colors = ["blue", "orange", "red"];
 const columnNames = ["Input plugins", "Intermediate plugins", "Output plugins"];
+
+function loadSchemas(typeSchemaLocations) {
+    var array = [];
+    typeSchemaLocations.files.map((filename) => {
+        fetch(typeSchemaLocations.path + filename) // not supported by Internet Explorer
+            .then((response) => response.json())
+            .then((json) => array.push(json));
+    });
+    return array;
+}
+
 const moduleSchemas = [
-    [jsonSchemaUDP, jsonSchemaTCP],
-    [jsonSchemaAnonymization],
-    [
-        jsonSchemaJSON,
-        jsonSchemaDummy,
-        jsonSchemaLNF,
-        jsonSchemaUniRec,
-        jsonSchemaTimeCheck,
-        jsonSchemaViewer
-    ]
+    loadSchemas(schemaLocations.input),
+    loadSchemas(schemaLocations.intermediate),
+    loadSchemas(schemaLocations.output),
 ];
+
 const defaultConfig = {
     ipfixcol2: {
         inputPlugins: {
-            input: []
+            input: [],
         },
         intermediatePlugins: {
-            intermediate: []
+            intermediate: [],
         },
         outputPlugins: {
-            output: []
-        }
-    }
+            output: [],
+        },
+    },
 };
 const indentationTypes = [
     { name: "Space", character: " " },
-    { name: "Tab", character: "\t" }
+    { name: "Tab", character: "\t" },
 ];
 const indentationSpaces = [1, 2, 3, 4, 5, 6, 7, 8];
 
@@ -100,12 +105,14 @@ class Form extends React.Component {
             snackbarType: null,
             settingsOpen: false,
             indentType: indentationTypes[0],
-            indentNumber: 2
+            indentNumber: 2,
         };
     }
 
     findSchema(module, schemas) {
-        var moduleSchema = schemas.find(schema => module.plugin === schema.properties.plugin.const);
+        var moduleSchema = schemas.find(
+            (schema) => module.plugin === schema.properties.plugin.const
+        );
         if (moduleSchema !== undefined) {
             return moduleSchema;
         }
@@ -114,7 +121,7 @@ class Form extends React.Component {
 
     editCancel() {
         this.setState({
-            overlay: null
+            overlay: null,
         });
         this.openSnackbar("Editing canceled");
         console.log("Editing canceled");
@@ -131,7 +138,7 @@ class Form extends React.Component {
                     XMLIndentType={this.state.indentType}
                     XMLIndentNumber={this.state.indentNumber}
                 />
-            )
+            ),
         });
         console.log("Editing a new module");
     }
@@ -151,7 +158,7 @@ class Form extends React.Component {
                     XMLIndentType={this.state.indentType}
                     XMLIndentNumber={this.state.indentNumber}
                 />
-            )
+            ),
         });
         console.log("Editing an existing module");
     }
@@ -161,7 +168,7 @@ class Form extends React.Component {
         modules[columnIndex] = modules[columnIndex].concat(module);
         this.setState({
             modules: modules,
-            overlay: null
+            overlay: null,
         });
         this.openSnackbar("New module added");
         console.log("New module added");
@@ -172,7 +179,7 @@ class Form extends React.Component {
         modules[columnIndex][index] = module;
         this.setState({
             modules: modules,
-            overlay: null
+            overlay: null,
         });
         this.openSnackbar("Module edited");
         console.log("Module edited");
@@ -182,7 +189,7 @@ class Form extends React.Component {
         var modules = this.state.modules;
         modules[columnIndex].splice(index, 1);
         this.setState({
-            modules: modules
+            modules: modules,
         });
         this.openSnackbar("Module removed");
         console.log("Module removed");
@@ -216,7 +223,7 @@ class Form extends React.Component {
                     label={"Config XML"}
                     multiline
                     InputProps={{
-                        readOnly: true
+                        readOnly: true,
                     }}
                     value={this.createConfigXML()}
                 />
@@ -294,7 +301,7 @@ class Form extends React.Component {
     openSnackbar(text) {
         this.setState({
             snackbarOpen: true,
-            snackbarText: text
+            snackbarText: text,
         });
     }
 
@@ -304,26 +311,26 @@ class Form extends React.Component {
         }
 
         this.setState({
-            snackbarOpen: false
+            snackbarOpen: false,
         });
     }
 
     openSettings() {
         this.setState({
-            settingsOpen: true
+            settingsOpen: true,
         });
     }
 
     closeSettings() {
         this.setState({
-            settingsOpen: false
+            settingsOpen: false,
         });
     }
 
     changeSettings(type, number) {
         this.setState({
             indentType: type,
-            indentNumber: number
+            indentNumber: number,
         });
     }
 
@@ -421,7 +428,7 @@ class Form extends React.Component {
                     <Snackbar
                         anchorOrigin={{
                             vertical: "bottom",
-                            horizontal: "center"
+                            horizontal: "center",
                         }}
                         open={this.state.snackbarOpen}
                         autoHideDuration={5000}
@@ -451,7 +458,7 @@ class FormColumn extends React.Component {
         super(props);
         this.state = {
             anchorEl: null,
-            expanded: true
+            expanded: true,
         };
     }
 
@@ -551,7 +558,7 @@ class Module extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            detailVisible: false
+            detailVisible: false,
         };
     }
 
@@ -631,7 +638,7 @@ class PropsItem extends React.Component {
                     )}
                     <ListItem>
                         <List dense>
-                            {Object.keys(this.props.module).map(propertyName => {
+                            {Object.keys(this.props.module).map((propertyName) => {
                                 return (
                                     <PropsItem
                                         key={propertyName}
@@ -699,7 +706,7 @@ class Settings extends React.Component {
                             onChange={this.handleChangeType.bind(this)}
                             inputProps={{ tabIndex: 1 }}
                         >
-                            {indentationTypes.map(indentType => {
+                            {indentationTypes.map((indentType) => {
                                 return (
                                     <MenuItem key={indentType.name} value={indentType.name}>
                                         {indentType.name}
@@ -722,7 +729,7 @@ class Settings extends React.Component {
                                 min: 1,
                                 max: 8,
                                 step: 1,
-                                tabIndex: 2
+                                tabIndex: 2,
                             }}
                             onChange={this.handleChangeNumber.bind(this)}
                         />

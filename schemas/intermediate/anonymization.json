@@ -1,0 +1,42 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Flow anonymization",
+    "description": "The plugin performs IP address anonymization of all flow records|https://github.com/CESNET/ipfixcol2/tree/master/src/plugins/intermediate/anonymization",
+    "type": "object",
+    "properties": {
+        "name": {
+            "title": "Name",
+            "description": "User identification of the instance. Must be unique within the section.",
+            "type": "string",
+            "default": "Flow anonymization",
+            "minLength": 1
+        },
+        "plugin": {
+            "title": "Plugin",
+            "description": "Internal identification of a plugin to whom the instance belongs. The identification is assigned by an author of the plugin.",
+            "type": "string",
+            "const": "anonymization"
+        },
+        "params": {
+            "title": "Parameters",
+            "description": "Configuration parameters of the instance.",
+            "type": "object",
+            "properties": {
+                "type": {
+                    "title": "Type",
+                    "description": "Type of anonymization method. The string is case insensitive.\nCryptoPAn: Cryptography-based sanitization and prefix-preserving method. The mapping from original IP addresses to anonymized IP addresses is one-to-one and if two original IP addresses share a k-bit prefix, their anonymized mappings will also share a k-bit prefix. Be aware that this cryptography method is very demanding and can limit throughput of the collector.\nTruncation: This method keeps the top part and erases the bottom part of an IP address. Compared to the CryptoPAn method, it is considerably faster, however, mapping from the original to anonymized IP address is many-to-one. For example the IPv4 address \"1.2.3.4\" is mapped to the address \"1.2.0.0\".",
+                    "type": "string",
+                    "enum": ["CryptoPAn", "Truncation"]
+                },
+                "key": {
+                    "title": "Key",
+                    "description": "Optional cryptography key for CryptoPAn anonymization. The length of the string must be exactly 32 bytes. If the key is not specified, a random one is generated during the initialization.",
+                    "type": "string",
+                    "default": ""
+                }
+            },
+            "required": ["type", "key"]
+        }
+    },
+    "required": ["name", "plugin", "params"]
+}

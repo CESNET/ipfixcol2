@@ -1,23 +1,22 @@
 // TODO
+
+// - založit si vlastní repo a rozjet to na GitPages
+
 // - Zredukovat opakování kódu
 // - Přidat nové pluginy
-// - rezdělit schémata do souborů
 // -! Plugin UniRec (timeout) přidat našeptávač možných hodnot
 // - trochu vylepšit styl výpisu
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
 // +- tabindex - tlačítka Cancel a Add/Edit module tabIndex zatím nemají
+//
 // +? musí být možnost zadat více IP adres
 //      - není jasné, zda v případě více IP adres může být jedna z nich prázdná
 //      - změna by kromě větší změny ve schématu znamenala přepsání velké části třídy ArrayProperty
 // +? Předělat hlavní výpis modulů ve sloupcích
 //      - zda je to vůbec potřeba, jestli nestačí jenom název, edit, delete
-//
-// + overlay - zavření na Esc
-// + XML výpis při editaci modulů nerespektuje nastavení odsaszení
-// + opravit pole pro zadávání číselných hodnot (formulář nerespektuje nastavené meze)
-// + oprava validace IP adres
-// + overlay - přidat křížek s funkcí cancel (v případě změny se dotázat, zda to chce uživatel opravdu udělat)
+// + konfigurák s cestami ke schématům
+// + rezdělit schémata do souborů
 
 function moduleCreate(jsonSchema) {
     var newModule = {};

@@ -1,0 +1,68 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "UDP input",
+    "description": "The plugin receives IPFIX messages over UDP transport protocol from one or more exporters and pass them into the collector.|https://github.com/CESNET/ipfixcol2/tree/master/src/plugins/input/udp",
+    "type": "object",
+    "properties": {
+        "name": {
+            "title": "Name",
+            "description": "User identification of the instance. Must be unique within the section.",
+            "type": "string",
+            "default": "UDP input",
+            "minLength": 1
+        },
+        "plugin": {
+            "title": "Plugin",
+            "description": "Internal identification of a plugin to whom the instance belongs. The identification is assigned by an author of the plugin.",
+            "type": "string",
+            "const": "udp"
+        },
+        "params": {
+            "title": "Parameters",
+            "description": "Configuration parameters of the instance.",
+            "type": "object",
+            "properties": {
+                "localPort": {
+                    "title": "Local port",
+                    "description": "Local port on which the plugin listens. [default: 4739]",
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 4739
+                },
+                "localIPAddress": {
+                    "title": "Local IP addresses",
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                        "title": "Local IP address",
+                        "description": "Local IPv4/IPv6 address on which the UDP input plugin listens. If the element is left empty, the plugin binds to all available network interfaces. The element can occur multiple times (one IP address per occurrence) to manually select multiple interfaces. [default: empty]",
+                        "type": "string",
+                        "default": "",
+                        "oneOf": [{ "format": "ipv4" }, { "format": "ipv6" }, { "pattern": "^$" }]
+                    }
+                },
+                "connectionTimeout": {
+                    "title": "Connection timeout",
+                    "description": "Exporter connection timeout in seconds. If no message is received from an exporter for a specified time, the connection is considered closed and all resources (associated with the exporter) are removed, such as flow templates, etc. [default: 600]",
+                    "type": "integer",
+                    "default": 600
+                },
+                "templateLifeTime": {
+                    "title": "Template lifetime",
+                    "description": "(Options) Template lifetime in seconds for all UDP Transport Sessions terminating at this UDP socket. (Options) Templates that are not received again within the configured lifetime become invalid. The lifetime of Templates and Options Templates should be at least three times higher than the same values configured on the corresponding exporter. [default: 1800]",
+                    "type": "integer",
+                    "default": 1800
+                },
+                "optionsTemplateLifeTime": {
+                    "title": "Options template lifetime",
+                    "description": "(Options) Template lifetime in seconds for all UDP Transport Sessions terminating at this UDP socket. (Options) Templates that are not received again within the configured lifetime become invalid. The lifetime of Templates and Options Templates should be at least three times higher than the same values configured on the corresponding exporter. [default: 1800]",
+                    "type": "integer",
+                    "default": 1800
+                }
+            },
+            "required": ["localPort", "localIPAddress"]
+        }
+    },
+    "required": ["name", "plugin", "params"]
+}

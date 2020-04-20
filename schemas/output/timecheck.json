@@ -1,0 +1,44 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Time Check",
+    "description": "The plugin checks that start and end timestamps of each flow record are relatively recent.|https://github.com/CESNET/ipfixcol2/tree/master/src/plugins/output/timecheck",
+    "type": "object",
+    "properties": {
+        "name": {
+            "title": "Name",
+            "description": "User identification of the instance. Must be unique within the section.",
+            "type": "string",
+            "default": "TimeCheck output",
+            "minLength": 1
+        },
+        "plugin": {
+            "title": "Plugin",
+            "description": "Internal identification of a plugin to whom the instance belongs. The identification is assigned by an author of the plugin.",
+            "type": "string",
+            "const": "timecheck"
+        },
+        "params": {
+            "title": "Parameters",
+            "description": "Configuration parameters of the instance.",
+            "type": "object",
+            "properties": {
+                "devPast": {
+                    "title": "Deviation from the past",
+                    "description": "Maximum allowed deviation between the current system time and timestamps from the past in seconds. The value must be greater than active and inactive timeouts of exporters and must also include a possible delay between expiration and processing on the collector. For example, let's say that active timeout and inactive timeout are 5 minutes and 30 seconds, respectively. Value 600 (i.e. 10 minutes) should be always enough for all flow data to be received and processed at the collector. [default: 600]",
+                    "type": "integer",
+                    "default": 600,
+                    "minimum": 0
+                },
+                "devFuture": {
+                    "title": "Deviation from the future",
+                    "description": "Maximum allowed deviation between the current time and timestamps from the future in seconds. The collector should never receive flows with timestamp from the future, therefore, the value should be usually set to 0. [default: 0]",
+                    "type": "integer",
+                    "default": 0,
+                    "minimum": 0
+                }
+            },
+            "required": ["devPast", "devFuture"]
+        }
+    },
+    "required": ["name", "plugin", "params"]
+}

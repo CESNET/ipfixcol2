@@ -1,0 +1,50 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "TCP input",
+    "description": "The plugin receives IPFIX messages over TCP transport protocol from one or more exporters and pass them into the collector.|https://github.com/CESNET/ipfixcol2/tree/master/src/plugins/input/tcp",
+    "type": "object",
+    "properties": {
+        "name": {
+            "title": "Name",
+            "description": "User identification of the instance. Must be unique within the section.",
+            "type": "string",
+            "default": "TCP input",
+            "minLength": 1
+        },
+        "plugin": {
+            "title": "Plugin",
+            "description": "Internal identification of a plugin to whom the instance belongs. The identification is assigned by an author of the plugin.",
+            "type": "string",
+            "const": "tcp"
+        },
+        "params": {
+            "title": "Parameters",
+            "description": "Configuration parameters of the instance.",
+            "type": "object",
+            "properties": {
+                "localPort": {
+                    "title": "Local port",
+                    "description": "Local port on which the plugin listens. [default: 4739]",
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 4739
+                },
+                "localIPAddress": {
+                    "title": "Local IP addresses",
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                        "title": "Local IP address",
+                        "description": "Local IPv4/IPv6 address on which the UDP input plugin listens. If the element is left empty, the plugin binds to all available network interfaces. The element can occur multiple times (one IP address per occurrence) to manually select multiple interfaces. [default: empty]",
+                        "type": "string",
+                        "default": "",
+                        "oneOf": [{ "format": "ipv4" }, { "format": "ipv6" }, { "pattern": "^$" }]
+                    }
+                }
+            },
+            "required": ["localPort", "localIPAddress"]
+        }
+    },
+    "required": ["name", "plugin", "params"]
+}
