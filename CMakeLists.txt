@@ -38,6 +38,8 @@ if (NOT COMPILER_SUPPORT_GNUXX11)
     message(FATAL_ERROR "Compiler does NOT support C++11 with GNU extension")
 endif()
 
+
+
 # ------------------------------------------------------------------------------
 # Set default build type if not specified by user
 set(DEFAULT_BUILD_TYPE "Release")
@@ -75,6 +77,23 @@ if (ENABLE_TESTS AND ENABLE_TESTS_COVERAGE)
     set(CMAKE_C_FLAGS    "${CMAKE_C_FLAGS}   --coverage -fprofile-arcs -ftest-coverage")
     set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} --coverage -fprofile-arcs -ftest-coverage")
 endif()
+
+## -----------------------------------------------------------------------------
+# Find libfds
+find_package(LibFds 0.2.0 REQUIRED)
+
+# Find rst2man
+if (ENABLE_DOC_MANPAGE)
+    find_package(Rst2Man)
+    if (NOT RST2MAN_FOUND)
+        message(FATAL_ERROR "rst2man is not available")
+    endif()
+endif()
+
+# Find pthreads
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+find_package(Threads REQUIRED)
 
 # ------------------------------------------------------------------------------
 # Project components
