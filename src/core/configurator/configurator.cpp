@@ -585,7 +585,7 @@ ipx_configurator::run(ipx_controller *ctrl)
         struct ipx_cpipe_req req;
         if (ipx_cpipe_receive(&req) != IPX_OK) {
             // This is really bad -> we cannot even safely terminate the collector
-            IPX_ERROR(comp_str, "Configuration pipe is broken. Terminating...");
+            IPX_ERROR(comp_str, "Configuration pipe is broken. Terminating...", '\0');
             abort();
         }
 

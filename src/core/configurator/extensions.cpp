@@ -223,7 +223,7 @@ ipx_cfg_extensions::list_extensions()
     }
 
     if (m_extensions.empty()) {
-        IPX_DEBUG(comp_str, "No Data Record extensions!");
+        IPX_DEBUG(comp_str, "No Data Record extensions!", '\0');
         return;
     }
 
