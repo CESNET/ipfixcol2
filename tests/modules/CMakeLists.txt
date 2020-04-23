@@ -1,0 +1,3 @@
+add_subdirectory(input_failure)
+add_subdirectory(intermediate_failure)
+add_subdirectory(output_failure)

@@ -86,6 +86,7 @@ add_subdirectory(pkg)
 if (ENABLE_TESTS)
     enable_testing()
     add_subdirectory(tests/unit)
+    add_subdirectory(tests/modules)
 endif()
 
 # ------------------------------------------------------------------------------
