@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: ['ubuntu:18.04', 'ubuntu:19.04', 'ubuntu:20.04', 'debian:stretch', 'debian:buster', 'debian:bullseye']
+        image: ['ubuntu:18.04', 'ubuntu:20.04', 'debian:stretch', 'debian:buster', 'debian:bullseye']
 
     name: Build DEBs on ${{ matrix.image }}
     container: ${{ matrix.image }}
@@ -24,7 +24,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Define global variables
-      run: echo "::set-output name=zip_file::libfds-${IMAGE//:/}-$GITHUB_SHA.zip"
+      run: echo "::set-output name=zip_file::ipfixcol2-${IMAGE//:/}-$GITHUB_SHA.zip"
       shell: bash
       env:
         IMAGE: ${{ matrix.image }}
@@ -94,7 +94,7 @@ jobs:
     - uses: actions/checkout@v1
     - name: Prepare environment and variables
       run: |
-        echo "::set-output name=zip_file::libfds-${IMAGE//:/}-$GITHUB_SHA.zip"
+        echo "::set-output name=zip_file::ipfixcol2-${IMAGE//:/}-$GITHUB_SHA.zip"
         mkdir -p build/libfds_repo
       env:
         IMAGE: ${{ matrix.image }}
