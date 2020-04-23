@@ -549,7 +549,7 @@ ipx_configurator::termination_send_msg()
         ipx_fpipe_write(input->get_feedback(), ipx_msg_terminate2base(msg));
     }
 
-    IPX_DEBUG(comp_str, "Requests to terminate the pipeline sent! Waiting for instances to "
+    IPX_DEBUG(comp_str, "Request to terminate the pipeline sent! Waiting for instances to "
         "terminate.", '\0');
     m_term_sent = m_running_inputs.size();
 }
