@@ -151,7 +151,11 @@ TLS_PUBLIC_KEYALG              uint16        flowmon:tlsPublicKeyAlg      # tlsP
 TLS_PUBLIC_KEYLENGTH           int32         flowmon:tlsPublicKeyLength   # tlsPublicKeyLength
 TLS_JA_3FINGERPRINT            bytes         flowmon:tlsJa3Fingerprint    # tlsJa3Fingerprint
 
-# --- Cisco Joy exporter ---
-JOY_TLS_RECORD_LENGTHS         int16*        e0id291/e9id12188  # basicList of packet lengths
-JOY_TLS_RECORD_TIMES           uint16*       e0id291/e9id12189  # basicList of packet timestamps
-JOY_TLS_CONTENT_TYPES          uint8*        e0id291/e9id12190  # basicList of packet types
+# --- Per-Packet Information elements ---
+PPI_TLS_REC_LENGTHS            int16*        e0id291/e8057id1010          # basicList of TLS record lengths
+PPI_TLS_REC_TIMES             uint16*        e0id291/e8057id1011          # basicList of TLS record timestamps
+PPI_TLS_CONTENT_TYPES          uint8*        e0id291/e8057id1012          # basicList of TLS record content types
+PPI_PKT_LENGTHS                int16*        e0id291/e8057id1013          # basicList of packet lengths
+PPI_PKT_TIMES                 uint16*        e0id291/e8057id1014          # basicList of packet timestamps
+PPI_PKT_FLAGS                   int8*        e0id291/e8057id1015          # basicList of packet TCP flags
+PPI_PKT_DIRECTIONS              int8*        e0id291/e8057id1016          # basicList of packet directions
