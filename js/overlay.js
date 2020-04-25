@@ -1,8 +1,12 @@
 // TODO
 
+// - přidat validaci počtu modulů ve skupinách
+// - přidat validaci různých názvů modulů ve skupině
+// - zbavit se globálních proměnných - přesunout do souboru config.json
+//      ? jeden soubor s odkazy na schémata a druhý na ostatní data
+// - upravit načítání dat (nyní na globální úrovni) - načítat na úrovni aplikace
+//      ? během načítání zobrazit načítací kolečko
 // - založit si vlastní repo a rozjet to na GitPages
-
-// - config předělat na json
 // - Zredukovat opakování kódu
 // - Přidat nové pluginy
 // -! Plugin UniRec (timeout) přidat našeptávač možných hodnot
@@ -16,8 +20,7 @@
 //      - změna by kromě větší změny ve schématu znamenala přepsání velké části třídy ArrayProperty
 // +? Předělat hlavní výpis modulů ve sloupcích
 //      - zda je to vůbec potřeba, jestli nestačí jenom název, edit, delete
-// + konfigurák s cestami ke schématům
-// + rezdělit schémata do souborů
+// + config předělat na json
 
 function moduleCreate(jsonSchema) {
     var newModule = {};

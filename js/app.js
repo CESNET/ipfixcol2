@@ -50,6 +50,18 @@ const rootAppElement = document.getElementById("configurator_app");
 const colors = ["blue", "orange", "red"];
 const columnNames = ["Input plugins", "Intermediate plugins", "Output plugins"];
 
+var config = {};
+var moduleSchemas = [];
+
+async function loadAppData() {
+    config = await fetch("../config/config.json").then((response) => response.json());
+    moduleSchemas = [
+        loadSchemas(config.schemaLocations.input),
+        loadSchemas(config.schemaLocations.intermediate),
+        loadSchemas(config.schemaLocations.output),
+    ];
+}
+
 function loadSchemas(typeSchemaLocations) {
     var array = [];
     typeSchemaLocations.files.map((filename) => {
@@ -59,12 +71,6 @@ function loadSchemas(typeSchemaLocations) {
     });
     return array;
 }
-
-const moduleSchemas = [
-    loadSchemas(schemaLocations.input),
-    loadSchemas(schemaLocations.intermediate),
-    loadSchemas(schemaLocations.output),
-];
 
 const defaultConfig = {
     ipfixcol2: {
@@ -674,7 +680,7 @@ class Settings extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            indentNumber: this.props.indentNumber
+            indentNumber: this.props.indentNumber,
         };
     }
 
@@ -693,18 +699,18 @@ class Settings extends React.Component {
         if (value < indentationSpaces.min) {
             // value = indentationSpaces.min;
             console.log("settings changed: min space " + value);
-            this.setState({indentNumber: ""});
+            this.setState({ indentNumber: "" });
             return;
         } else if (value > indentationSpaces.max) {
             console.log("settings changed: max space " + value);
             value = indentationSpaces.max;
         }
-        this.setState({indentNumber: value});
+        this.setState({ indentNumber: value });
         this.props.onChange(this.props.indentType, value);
     }
 
     handleOnClose() {
-        this.setState({indentNumber: this.props.indentNumber});
+        this.setState({ indentNumber: this.props.indentNumber });
         this.props.onClose();
     }
 
@@ -775,4 +781,10 @@ class Settings extends React.Component {
 
 // ========================================
 
-ReactDOM.render(<App />, rootAppElement);
+async function startApp() {
+    await loadAppData();
+
+    ReactDOM.render(<App />, rootAppElement);
+}
+
+startApp();
