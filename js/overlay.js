@@ -1,6 +1,8 @@
 // TODO
 
 // - přidat validaci počtu modulů ve skupinách
+// - přidat podporu pro dva volitelné parametry pro všechny pluginy v sekci output
+// -? přejmenovat "module" na "plugin" v celém projektu
 // - zbavit se globálních proměnných - přesunout do souboru config.json
 //      ? jeden soubor s odkazy na schémata a druhý na ostatní data
 // - upravit načítání dat (nyní na globální úrovni) - načítat na úrovni aplikace
