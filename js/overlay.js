@@ -12,7 +12,7 @@
 // - trochu vylepšit styl výpisu
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
-// +- tabindex - tlačítka Cancel a Add/Edit module tabIndex zatím nemají
+// + tabindex - opraveno
 // + přidat validaci unikátních názvů modulů ve skupině
 //
 // +? musí být možnost zadat více IP adres
@@ -198,7 +198,6 @@ class Overlay extends React.Component {
         var buttonText = this.state.isNew ? "Add module" : "Edit module";
         var titleText = buttonText + ": " + this.props.jsonSchema.title;
         var descParts = this.props.jsonSchema.description.split("|");
-        var tabIndex = { counter: 0 };
         var subtitleText;
         var link;
         var properties;
@@ -236,28 +235,23 @@ class Overlay extends React.Component {
                 onChange={this.handleChange.bind(this)}
                 required={true}
                 isRoot={true}
-                tabIndex={tabIndex}
             />
         );
-        tabIndex.counter += 1;
         btnCancel = (
             <Button
                 variant="outlined"
                 color="primary"
                 onClick={this.handleCancel.bind(this)}
-                tabIndex={0}
             >
                 Cancel
             </Button>
         );
-        tabIndex.counter += 1;
         btnSave = (
             <Button
                 variant="contained"
                 color="primary"
                 onClick={this.handleComfirm.bind(this)}
                 disabled={this.state.errors === undefined ? false : true}
-                tabIndex={0}
             >
                 {buttonText}
             </Button>
@@ -278,6 +272,7 @@ class Overlay extends React.Component {
                         className={"overlayIcon"}
                         color={"inherit"}
                         onClick={this.handleCancel.bind(this)}
+                        tabIndex={-1}
                     >
                         <Icon>close</Icon>
                     </IconButton>
@@ -501,7 +496,7 @@ class Properties extends React.Component {
         if (hasError) {
             errorMessage = propsErrors.pop().message;
             errorIcon = (
-                <IconButton>
+                <IconButton tabIndex={-1}>
                     <Tooltip title={errorMessage} arrow>
                         <Icon color={"error"}>error</Icon>
                     </Tooltip>
@@ -510,7 +505,7 @@ class Properties extends React.Component {
         }
         if (this.props.hasOwnProperty("required") && !this.props.required) {
             removeButton = (
-                <IconButton onClick={this.handleRemove.bind(this)}>
+                <IconButton onClick={this.handleRemove.bind(this)} tabIndex={-1}>
                     <Icon>delete</Icon>
                 </IconButton>
             );
@@ -578,7 +573,6 @@ class Properties extends React.Component {
                                     dataPath={dataPath}
                                     onChange={this.handleChange.bind(this)}
                                     onRemove={this.handleRemoveChild.bind(this)}
-                                    tabIndex={this.props.tabIndex}
                                 />
                             </CardContent>
                         );
@@ -597,7 +591,7 @@ class Properties extends React.Component {
                                 <React.Fragment>
                                     {errorIcon}
                                     {removeButton}
-                                    <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
+                                    <IconButton onClick={this.handleDescriptionOpen.bind(this)} tabIndex={-1}>
                                         <Icon>help</Icon>
                                     </IconButton>
                                     {expandButton}
@@ -639,7 +633,6 @@ class Item extends React.Component {
                         dataPath={this.props.dataPath}
                         onChange={this.props.onChange}
                         onRemove={this.props.onRemove}
-                        tabIndex={this.props.tabIndex}
                     />
                 );
             case "integer":
@@ -653,7 +646,6 @@ class Item extends React.Component {
                         dataPath={this.props.dataPath}
                         onChange={this.props.onChange}
                         onRemove={this.props.onRemove}
-                        tabIndex={this.props.tabIndex}
                     />
                 );
             case "object":
@@ -668,7 +660,6 @@ class Item extends React.Component {
                         onChange={this.props.onChange}
                         onRemove={this.props.onRemove}
                         isRoot={false}
-                        tabIndex={this.props.tabIndex}
                     />
                 );
             case "boolean":
@@ -682,7 +673,6 @@ class Item extends React.Component {
                         dataPath={this.props.dataPath}
                         onChange={this.props.onChange}
                         onRemove={this.props.onRemove}
-                        tabIndex={this.props.tabIndex}
                     />
                 );
             case "number":
@@ -696,7 +686,6 @@ class Item extends React.Component {
                         dataPath={this.props.dataPath}
                         onChange={this.props.onChange}
                         onRemove={this.props.onRemove}
-                        tabIndex={this.props.tabIndex}
                     />
                 );
             case "array":
@@ -710,7 +699,6 @@ class Item extends React.Component {
                         dataPath={this.props.dataPath}
                         onChange={this.props.onChange}
                         onRemove={this.props.onRemove}
-                        tabIndex={this.props.tabIndex}
                     />
                 );
             default:
@@ -726,7 +714,6 @@ class Item extends React.Component {
                             dataPath={this.props.dataPath}
                             onChange={this.props.onChange}
                             onRemove={this.props.onRemove}
-                            tabIndex={this.props.tabIndex}
                         />
                     );
                 } else {
@@ -810,7 +797,7 @@ class ArrayProperty extends React.Component {
         if (hasError) {
             errorMessage = propsErrors.pop().message;
             errorIcon = (
-                <IconButton>
+                <IconButton tabIndex={-1}>
                     <Tooltip title={errorMessage} arrow>
                         <Icon color={"error"}>error</Icon>
                     </Tooltip>
@@ -866,7 +853,6 @@ class ArrayProperty extends React.Component {
                                 dataPath={dataPath}
                                 onChange={this.handleChange.bind(this, index)}
                                 onRemove={this.handleRemove.bind(this, index)}
-                                tabIndex={this.props.tabIndex}
                             />
                         </CardContent>
                     );
@@ -926,7 +912,7 @@ class StringProperty extends React.Component {
         var inputStyle;
         var helpIcon = (
             <Grid item>
-                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
+                <IconButton onClick={this.handleDescriptionOpen.bind(this)} tabIndex={-1}>
                     <Icon>help</Icon>
                 </IconButton>
             </Grid>
@@ -946,7 +932,7 @@ class StringProperty extends React.Component {
             var errorMessage = this.props.errors.pop().message;
             errorIcon = (
                 <Grid item>
-                    <IconButton>
+                    <IconButton tabIndex={-1}>
                         <Tooltip title={errorMessage} arrow>
                             <Icon color={"error"}>error</Icon>
                         </Tooltip>
@@ -957,13 +943,12 @@ class StringProperty extends React.Component {
         if (!this.props.required) {
             deleteButton = (
                 <Grid item>
-                    <IconButton onClick={this.handleRemove.bind(this)}>
+                    <IconButton onClick={this.handleRemove.bind(this)} tabIndex={-1}>
                         <Icon>delete</Icon>
                     </IconButton>
                 </Grid>
             );
         }
-        this.props.tabIndex.counter += 1;
         if (this.props.jsonSchema.hasOwnProperty("enum")) {
             inputStyle = (
                 <Grid item>
@@ -972,7 +957,6 @@ class StringProperty extends React.Component {
                         value={value}
                         onChange={onChange}
                         readOnly={readOnly}
-                        inputProps={{ tabIndex: this.props.tabIndex.counter }}
                     >
                         {this.props.jsonSchema.enum.map((enumValue) => {
                             return (
@@ -994,7 +978,6 @@ class StringProperty extends React.Component {
                         value={value}
                         readOnly={readOnly}
                         onChange={onChange}
-                        inputProps={{ tabIndex: this.props.tabIndex.counter }}
                     />
                 </Grid>
             );
@@ -1072,7 +1055,7 @@ class IntegerProperty extends React.Component {
         var inputStyle;
         var helpIcon = (
             <Grid item>
-                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
+                <IconButton onClick={this.handleDescriptionOpen.bind(this)} tabIndex={-1}>
                     <Icon>help</Icon>
                 </IconButton>
             </Grid>
@@ -1098,7 +1081,7 @@ class IntegerProperty extends React.Component {
             var errorMessage = this.props.errors.pop().message;
             errorIcon = (
                 <Grid item>
-                    <IconButton>
+                    <IconButton tabIndex={-1}>
                         <Tooltip title={errorMessage} arrow>
                             <Icon color={"error"}>error</Icon>
                         </Tooltip>
@@ -1109,13 +1092,12 @@ class IntegerProperty extends React.Component {
         if (!this.props.required) {
             deleteButton = (
                 <Grid item>
-                    <IconButton onClick={this.handleRemove.bind(this)}>
+                    <IconButton onClick={this.handleRemove.bind(this)} tabIndex={-1}>
                         <Icon>delete</Icon>
                     </IconButton>
                 </Grid>
             );
         }
-        this.props.tabIndex.counter += 1;
         inputStyle = (
             <Grid item>
                 <Input
@@ -1128,7 +1110,6 @@ class IntegerProperty extends React.Component {
                         min: min,
                         max: max,
                         step: 1,
-                        tabIndex: this.props.tabIndex.counter,
                     }}
                     onChange={onChange}
                 />
@@ -1190,7 +1171,7 @@ class BooleanProperty extends React.Component {
         var inputStyle;
         var helpIcon = (
             <Grid item>
-                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
+                <IconButton onClick={this.handleDescriptionOpen.bind(this)} tabIndex={-1}>
                     <Icon>help</Icon>
                 </IconButton>
             </Grid>
@@ -1209,13 +1190,12 @@ class BooleanProperty extends React.Component {
         if (!this.props.required) {
             deleteButton = (
                 <Grid item>
-                    <IconButton onClick={this.handleRemove.bind(this)}>
+                    <IconButton onClick={this.handleRemove.bind(this)} tabIndex={-1}>
                         <Icon>delete</Icon>
                     </IconButton>
                 </Grid>
             );
         }
-        this.props.tabIndex.counter += 1;
         inputStyle = (
             <React.Fragment>
                 <Grid item>False</Grid>
@@ -1224,7 +1204,6 @@ class BooleanProperty extends React.Component {
                         disabled={readOnly}
                         checked={value}
                         onChange={onChange}
-                        inputProps={{ tabIndex: this.props.tabIndex.counter }}
                     />
                 </Grid>
                 <Grid item>True</Grid>
@@ -1302,7 +1281,7 @@ class NumberProperty extends React.Component {
         var inputStyle;
         var helpIcon = (
             <Grid item>
-                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
+                <IconButton onClick={this.handleDescriptionOpen.bind(this)} tabIndex={-1}>
                     <Icon>help</Icon>
                 </IconButton>
             </Grid>
@@ -1328,7 +1307,7 @@ class NumberProperty extends React.Component {
             var errorMessage = this.props.errors.pop().message;
             errorIcon = (
                 <Grid item>
-                    <IconButton>
+                    <IconButton tabIndex={-1}>
                         <Tooltip title={errorMessage} arrow>
                             <Icon color={"error"}>error</Icon>
                         </Tooltip>
@@ -1339,13 +1318,12 @@ class NumberProperty extends React.Component {
         if (!this.props.required) {
             deleteButton = (
                 <Grid item>
-                    <IconButton onClick={this.handleRemove.bind(this)}>
+                    <IconButton onClick={this.handleRemove.bind(this)} tabIndex={-1}>
                         <Icon>delete</Icon>
                     </IconButton>
                 </Grid>
             );
         }
-        this.props.tabIndex.counter += 1;
         inputStyle = (
             <Grid item>
                 <Input
@@ -1358,7 +1336,6 @@ class NumberProperty extends React.Component {
                         min: min,
                         max: max,
                         step: 0.01,
-                        tabIndex: this.props.tabIndex.counter,
                     }}
                     onChange={onChange}
                 />
@@ -1426,7 +1403,7 @@ class MultipleTypesProperty extends React.Component {
         var inputStyle;
         var helpIcon = (
             <Grid item>
-                <IconButton onClick={this.handleDescriptionOpen.bind(this)}>
+                <IconButton onClick={this.handleDescriptionOpen.bind(this)} tabIndex={-1}>
                     <Icon>help</Icon>
                 </IconButton>
             </Grid>
@@ -1446,7 +1423,7 @@ class MultipleTypesProperty extends React.Component {
             var errorMessage = this.props.errors.pop().message;
             errorIcon = (
                 <Grid item>
-                    <IconButton>
+                    <IconButton tabIndex={-1}>
                         <Tooltip title={errorMessage} arrow>
                             <Icon color={"error"}>error</Icon>
                         </Tooltip>
@@ -1457,13 +1434,12 @@ class MultipleTypesProperty extends React.Component {
         if (!this.props.required) {
             deleteButton = (
                 <Grid item>
-                    <IconButton onClick={this.handleRemove.bind(this)}>
+                    <IconButton onClick={this.handleRemove.bind(this)} tabIndex={-1}>
                         <Icon>delete</Icon>
                     </IconButton>
                 </Grid>
             );
         }
-        this.props.tabIndex.counter += 1;
         inputStyle = (
             <Grid item>
                 <Input
@@ -1473,7 +1449,6 @@ class MultipleTypesProperty extends React.Component {
                     value={value}
                     readOnly={readOnly}
                     onChange={onChange}
-                    inputProps={{ tabIndex: this.props.tabIndex.counter }}
                 />
             </Grid>
         );
@@ -1547,7 +1522,6 @@ class Description extends React.Component {
     options={options}
     value={value}
     onChange={onChange}
-    inputProps={{ tabIndex: this.props.tabIndex }}
     renderInput={params => <TextField {...params} readOnly={readOnly} />}
 />; */
 }
