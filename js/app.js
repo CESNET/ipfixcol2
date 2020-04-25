@@ -83,7 +83,7 @@ const indentationTypes = [
     { name: "Space", character: " " },
     { name: "Tab", character: "\t" },
 ];
-const indentationSpaces = [1, 2, 3, 4, 5, 6, 7, 8];
+const indentationSpaces = { min: 1, max: 8 };
 
 const x2js = new X2JS();
 const ajv = new Ajv({ allErrors: true });
@@ -671,6 +671,13 @@ class PropsItem extends React.Component {
 }
 
 class Settings extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            indentNumber: this.props.indentNumber
+        };
+    }
+
     handleChangeType(event) {
         if (event.target.value === indentationTypes[1].name) {
             this.props.onChange(indentationTypes[1], 1);
@@ -682,7 +689,23 @@ class Settings extends React.Component {
     }
 
     handleChangeNumber(event) {
-        this.props.onChange(this.props.indentType, event.target.value);
+        var value = Number(event.target.value);
+        if (value < indentationSpaces.min) {
+            // value = indentationSpaces.min;
+            console.log("settings changed: min space " + value);
+            this.setState({indentNumber: ""});
+            return;
+        } else if (value > indentationSpaces.max) {
+            console.log("settings changed: max space " + value);
+            value = indentationSpaces.max;
+        }
+        this.setState({indentNumber: value});
+        this.props.onChange(this.props.indentType, value);
+    }
+
+    handleOnClose() {
+        this.setState({indentNumber: this.props.indentNumber});
+        this.props.onClose();
     }
 
     render() {
@@ -692,8 +715,8 @@ class Settings extends React.Component {
                 open={this.props.open}
                 fullWidth={false}
                 maxWidth={"sm"}
-                onEscapeKeyDown={this.props.onClose.bind()}
-                onBackdropClick={this.props.onClose.bind()}
+                onEscapeKeyDown={this.handleOnClose.bind(this)}
+                onBackdropClick={this.handleOnClose.bind(this)}
             >
                 <DialogTitle>{"Settings"}</DialogTitle>
                 <Divider />
@@ -723,11 +746,11 @@ class Settings extends React.Component {
                             className={"select"}
                             type={"number"}
                             name={"numberOfIndentChars"}
-                            value={this.props.indentNumber}
+                            value={this.state.indentNumber}
                             disabled={this.props.indentType === indentationTypes[1]}
                             inputProps={{
-                                min: 1,
-                                max: 8,
+                                min: indentationSpaces.min,
+                                max: indentationSpaces.max,
                                 step: 1,
                                 tabIndex: 2,
                             }}
@@ -739,7 +762,7 @@ class Settings extends React.Component {
                     <Button
                         variant="outlined"
                         color="primary"
-                        onClick={this.props.onClose}
+                        onClick={this.handleOnClose.bind(this)}
                         tabIndex={3}
                     >
                         {"Close"}

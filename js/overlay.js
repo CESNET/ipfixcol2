@@ -2,6 +2,7 @@
 
 // - založit si vlastní repo a rozjet to na GitPages
 
+// - config předělat na json
 // - Zredukovat opakování kódu
 // - Přidat nové pluginy
 // -! Plugin UniRec (timeout) přidat našeptávač možných hodnot
