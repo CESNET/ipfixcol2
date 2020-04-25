@@ -52,6 +52,7 @@ const columnNames = ["Input plugins", "Intermediate plugins", "Output plugins"];
 
 var config = {};
 var moduleSchemas = [];
+var nameValidationSchema;
 
 async function loadAppData() {
     config = await fetch("../config/config.json").then((response) => response.json());
@@ -60,11 +61,14 @@ async function loadAppData() {
         loadSchemas(config.schemaLocations.intermediate),
         loadSchemas(config.schemaLocations.output),
     ];
+    nameValidationSchema = await fetch(
+        config.schemaLocations.special.path + config.schemaLocations.special.nameValidationSchema
+    ).then((response) => response.json());
 }
 
 function loadSchemas(typeSchemaLocations) {
     var array = [];
-    typeSchemaLocations.files.map((filename) => {
+    typeSchemaLocations.pluginSchemas.map((filename) => {
         fetch(typeSchemaLocations.path + filename) // not supported by Internet Explorer
             .then((response) => response.json())
             .then((json) => array.push(json));
@@ -133,12 +137,17 @@ class Form extends React.Component {
         console.log("Editing canceled");
     }
 
+    getSectionModuleNames(columnIndex) {
+        return this.state.modules[columnIndex].map((module) => module.name);
+    }
+
     newModuleOverlay(columnIndex, moduleIndex) {
         this.setState({
             overlay: (
                 <Overlay
                     columnIndex={columnIndex}
                     jsonSchema={moduleSchemas[columnIndex][moduleIndex]}
+                    moduleNames={this.getSectionModuleNames(columnIndex)}
                     onCancel={this.editCancel.bind(this)}
                     onSuccess={this.addModule.bind(this)}
                     XMLIndentType={this.state.indentType}
@@ -152,6 +161,8 @@ class Form extends React.Component {
     editModuleOverlay(columnIndex, index) {
         var module = this.state.modules[columnIndex][index];
         var jsonSchema = this.findSchema(module, moduleSchemas[columnIndex]);
+        var moduleNames = JSON.parse(JSON.stringify(this.getSectionModuleNames(columnIndex)));
+        moduleNames.splice(index, 1);
         this.setState({
             overlay: (
                 <Overlay
@@ -159,6 +170,7 @@ class Form extends React.Component {
                     columnIndex={columnIndex}
                     index={index}
                     jsonSchema={jsonSchema}
+                    moduleNames={moduleNames}
                     onCancel={this.editCancel.bind(this)}
                     onSuccess={this.editModule.bind(this)}
                     XMLIndentType={this.state.indentType}
@@ -247,7 +259,6 @@ class Form extends React.Component {
             /\s*(<inputPlugins>|<\/inputPlugins>|<intermediatePlugins>|<\/intermediatePlugins>|<outputPlugins>|<\/outputPlugins>)\r\n/
         );
         var indentation = this.state.indentType.character.repeat(this.state.indentNumber);
-        console.log(parts);
         return (
             <div className={"XMLPrint"}>
                 {parts.map((part, index) => {
@@ -574,12 +585,10 @@ class Module extends React.Component {
 
     setDetailVisibile() {
         this.setState({ detailVisible: true });
-        console.log("set visible");
     }
 
     setDetailHidden() {
         this.setState({ detailVisible: false });
-        console.log("set hidden");
     }
 
     render() {
@@ -698,11 +707,9 @@ class Settings extends React.Component {
         var value = Number(event.target.value);
         if (value < indentationSpaces.min) {
             // value = indentationSpaces.min;
-            console.log("settings changed: min space " + value);
             this.setState({ indentNumber: "" });
             return;
         } else if (value > indentationSpaces.max) {
-            console.log("settings changed: max space " + value);
             value = indentationSpaces.max;
         }
         this.setState({ indentNumber: value });

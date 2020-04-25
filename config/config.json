@@ -2,22 +2,27 @@
     "schemaLocations": {
         "input": {
             "path": "../schemas/input/",
-            "files": ["udp.json", "tcp.json"]
+            "pluginSchemas": ["udp.json", "tcp.json"]
         },
         "intermediate": {
             "path": "../schemas/intermediate/",
-            "files": ["anonymization.json"]
+            "pluginSchemas": ["anonymization.json"]
         },
         "output": {
             "path": "../schemas/output/",
-            "files": [
+            "pluginSchemas": [
                 "json.json",
                 "dummy.json",
                 "lnfstore.json",
                 "unirec.json",
                 "timecheck.json",
                 "viewer.json"
-            ]
+            ],
+            "schemasExtension": ""
+        },
+        "special": {
+            "path": "../schemas/special/",
+            "nameValidationSchema": "cross-plugin_name_validaton.json"
         }
     }
 }

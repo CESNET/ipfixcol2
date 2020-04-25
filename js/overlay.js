@@ -1,7 +1,6 @@
 // TODO
 
 // - přidat validaci počtu modulů ve skupinách
-// - přidat validaci různých názvů modulů ve skupině
 // - zbavit se globálních proměnných - přesunout do souboru config.json
 //      ? jeden soubor s odkazy na schémata a druhý na ostatní data
 // - upravit načítání dat (nyní na globální úrovni) - načítat na úrovni aplikace
@@ -14,6 +13,7 @@
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
 // +- tabindex - tlačítka Cancel a Add/Edit module tabIndex zatím nemají
+// + přidat validaci unikátních názvů modulů ve skupině
 //
 // +? musí být možnost zadat více IP adres
 //      - není jasné, zda v případě více IP adres může být jedna z nich prázdná
@@ -102,17 +102,34 @@ class Overlay extends React.Component {
                 : moduleCreate(this.props.jsonSchema);
         var valid = ajv.validate(this.props.jsonSchema, module);
         var errors = undefined;
-        console.log("valid: " + valid);
+        // console.log("valid: " + valid);
         if (!valid) {
-            console.log(ajv.errors);
             errors = JSON.parse(JSON.stringify(ajv.errors));
+            // console.log(errors);
         }
+
+        var newModuleNames = JSON.parse(JSON.stringify(this.props.moduleNames));
+        newModuleNames.push(module.name);
+        var nameValid = ajv.validate(nameValidationSchema, { name: newModuleNames });
+        var nameErrors;
+        // console.log("name valid: " + nameValid);
+        if (!nameValid) {
+            nameErrors = JSON.parse(JSON.stringify(ajv.errors));
+            nameErrors[0].message = "plugins MUST have different names";
+            // console.log(nameErrors);
+            if (errors === undefined) {
+                errors = nameErrors;
+            } else {
+                errors.concat(nameErrors);
+            }
+        }
+
         this.state = {
             module: module,
             isNew: this.props.module === undefined,
             errors: errors,
             saveDialogOpen: false,
-            confirmDialodOpen: false
+            confirmDialodOpen: false,
         };
     }
     handleCancel() {
@@ -151,14 +168,30 @@ class Overlay extends React.Component {
     handleChange(changedSubmodule) {
         var valid = ajv.validate(this.props.jsonSchema, changedSubmodule);
         var errors = undefined;
-        console.log("valid: " + valid);
+        // console.log("valid: " + valid);
         if (!valid) {
-            console.log(ajv.errors);
             errors = JSON.parse(JSON.stringify(ajv.errors));
+            // console.log(errors);
+        }
+
+        var newModuleNames = JSON.parse(JSON.stringify(this.props.moduleNames));
+        newModuleNames.push(changedSubmodule.name);
+        var nameValid = ajv.validate(nameValidationSchema, { name: newModuleNames });
+        var nameErrors;
+        // console.log("name valid: " + nameValid);
+        if (!nameValid) {
+            nameErrors = JSON.parse(JSON.stringify(ajv.errors));
+            nameErrors[0].message = "plugins MUST have different names";
+            // console.log(nameErrors);
+            if (errors === undefined) {
+                errors = nameErrors;
+            } else {
+                errors.concat(nameErrors);
+            }
         }
         this.setState({
             module: changedSubmodule,
-            errors: errors
+            errors: errors,
         });
     }
     render() {
@@ -208,7 +241,12 @@ class Overlay extends React.Component {
         );
         tabIndex.counter += 1;
         btnCancel = (
-            <Button variant="outlined" color="primary" onClick={this.handleCancel.bind(this)} tabIndex={0}>
+            <Button
+                variant="outlined"
+                color="primary"
+                onClick={this.handleCancel.bind(this)}
+                tabIndex={0}
+            >
                 Cancel
             </Button>
         );
@@ -343,7 +381,7 @@ class Properties extends React.Component {
         this.state = {
             anchorEl: null,
             expanded: true,
-            descriptionOpen: false
+            descriptionOpen: false,
         };
     }
     handleMenuClick(event) {
@@ -388,12 +426,12 @@ class Properties extends React.Component {
     }
     handleDescriptionOpen() {
         this.setState({
-            descriptionOpen: true
+            descriptionOpen: true,
         });
     }
     handleDescriptionClose() {
         this.setState({
-            descriptionOpen: false
+            descriptionOpen: false,
         });
     }
 
@@ -433,7 +471,7 @@ class Properties extends React.Component {
                         open={Boolean(this.state.anchorEl)}
                         onClose={this.handleMenuClose.bind(this)}
                     >
-                        {Object.keys(this.props.jsonSchema.properties).map(propertyName => {
+                        {Object.keys(this.props.jsonSchema.properties).map((propertyName) => {
                             if (
                                 (!this.props.jsonSchema.hasOwnProperty("required") ||
                                     !this.props.jsonSchema.required.includes(propertyName)) &&
@@ -454,7 +492,7 @@ class Properties extends React.Component {
             );
         }
         if (this.props.errors !== undefined) {
-            propsErrors = Object.values(this.props.errors).filter(error => {
+            propsErrors = Object.values(this.props.errors).filter((error) => {
                 return error.dataPath == this.props.dataPath;
             });
             hasError = propsErrors.length > 0;
@@ -500,7 +538,7 @@ class Properties extends React.Component {
             );
             properties = (
                 <Collapse in={this.state.expanded} timeout="auto">
-                    {Object.keys(this.props.jsonSchema.properties).map(propertyName => {
+                    {Object.keys(this.props.jsonSchema.properties).map((propertyName) => {
                         if (
                             (!this.props.jsonSchema.hasOwnProperty("required") ||
                                 !this.props.jsonSchema.required.includes(propertyName)) &&
@@ -514,7 +552,7 @@ class Properties extends React.Component {
                         var dataPath = this.props.dataPath + "." + propertyName;
                         var errors = undefined;
                         if (this.props.errors !== undefined) {
-                            errors = Object.values(this.props.errors).filter(error => {
+                            errors = Object.values(this.props.errors).filter((error) => {
                                 if (
                                     error.dataPath == dataPath ||
                                     error.dataPath.startsWith(dataPath + ".") ||
@@ -704,7 +742,7 @@ class ArrayProperty extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            expanded: true
+            expanded: true,
         };
     }
 
@@ -760,7 +798,7 @@ class ArrayProperty extends React.Component {
             minItems = this.props.jsonSchema.minItems;
         }
         if (this.props.errors !== undefined) {
-            propsErrors = Object.values(this.props.errors).filter(error => {
+            propsErrors = Object.values(this.props.errors).filter((error) => {
                 if (error.dataPath == this.props.dataPath) {
                     return true;
                 }
@@ -802,7 +840,7 @@ class ArrayProperty extends React.Component {
                     var dataPath = this.props.dataPath + "[" + index + "]";
                     var errors = undefined;
                     if (this.props.errors !== undefined) {
-                        errors = Object.values(this.props.errors).filter(error => {
+                        errors = Object.values(this.props.errors).filter((error) => {
                             if (
                                 error.dataPath == dataPath ||
                                 error.dataPath.startsWith(dataPath + ".") ||
@@ -858,7 +896,7 @@ class StringProperty extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            descriptionOpen: false
+            descriptionOpen: false,
         };
     }
     handleChange(event) {
@@ -869,12 +907,12 @@ class StringProperty extends React.Component {
     }
     handleDescriptionOpen() {
         this.setState({
-            descriptionOpen: true
+            descriptionOpen: true,
         });
     }
     handleDescriptionClose() {
         this.setState({
-            descriptionOpen: false
+            descriptionOpen: false,
         });
     }
     render() {
@@ -936,7 +974,7 @@ class StringProperty extends React.Component {
                         readOnly={readOnly}
                         inputProps={{ tabIndex: this.props.tabIndex.counter }}
                     >
-                        {this.props.jsonSchema.enum.map(enumValue => {
+                        {this.props.jsonSchema.enum.map((enumValue) => {
                             return (
                                 <MenuItem key={enumValue} value={enumValue}>
                                     {enumValue.toString()}
@@ -989,7 +1027,7 @@ class IntegerProperty extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            descriptionOpen: false
+            descriptionOpen: false,
         };
     }
     handleChange(event) {
@@ -1013,12 +1051,12 @@ class IntegerProperty extends React.Component {
     }
     handleDescriptionOpen() {
         this.setState({
-            descriptionOpen: true
+            descriptionOpen: true,
         });
     }
     handleDescriptionClose() {
         this.setState({
-            descriptionOpen: false
+            descriptionOpen: false,
         });
     }
     render() {
@@ -1090,7 +1128,7 @@ class IntegerProperty extends React.Component {
                         min: min,
                         max: max,
                         step: 1,
-                        tabIndex: this.props.tabIndex.counter
+                        tabIndex: this.props.tabIndex.counter,
                     }}
                     onChange={onChange}
                 />
@@ -1124,7 +1162,7 @@ class BooleanProperty extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            descriptionOpen: false
+            descriptionOpen: false,
         };
     }
     handleChange() {
@@ -1135,12 +1173,12 @@ class BooleanProperty extends React.Component {
     }
     handleDescriptionOpen() {
         this.setState({
-            descriptionOpen: true
+            descriptionOpen: true,
         });
     }
     handleDescriptionClose() {
         this.setState({
-            descriptionOpen: false
+            descriptionOpen: false,
         });
     }
     render() {
@@ -1219,7 +1257,7 @@ class NumberProperty extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            descriptionOpen: false
+            descriptionOpen: false,
         };
     }
     handleChange(event) {
@@ -1243,12 +1281,12 @@ class NumberProperty extends React.Component {
     }
     handleDescriptionOpen() {
         this.setState({
-            descriptionOpen: true
+            descriptionOpen: true,
         });
     }
     handleDescriptionClose() {
         this.setState({
-            descriptionOpen: false
+            descriptionOpen: false,
         });
     }
     render() {
@@ -1320,7 +1358,7 @@ class NumberProperty extends React.Component {
                         min: min,
                         max: max,
                         step: 0.01,
-                        tabIndex: this.props.tabIndex.counter
+                        tabIndex: this.props.tabIndex.counter,
                     }}
                     onChange={onChange}
                 />
@@ -1354,7 +1392,7 @@ class MultipleTypesProperty extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            descriptionOpen: false
+            descriptionOpen: false,
         };
     }
     handleChange(event) {
@@ -1369,12 +1407,12 @@ class MultipleTypesProperty extends React.Component {
     }
     handleDescriptionOpen() {
         this.setState({
-            descriptionOpen: true
+            descriptionOpen: true,
         });
     }
     handleDescriptionClose() {
         this.setState({
-            descriptionOpen: false
+            descriptionOpen: false,
         });
     }
     render() {
