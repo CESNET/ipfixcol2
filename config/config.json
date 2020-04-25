@@ -17,12 +17,12 @@
                 "unirec.json",
                 "timecheck.json",
                 "viewer.json"
-            ],
-            "schemasExtension": ""
+            ]
         },
         "special": {
             "path": "../schemas/special/",
-            "nameValidationSchema": "cross-plugin_name_validaton.json"
+            "nameValidationSchema": "cross-plugin_name_validaton.json",
+            "outputExtraParams": "output_extra_params.json"
         }
     }
 }
