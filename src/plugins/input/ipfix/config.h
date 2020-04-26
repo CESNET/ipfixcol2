@@ -48,8 +48,8 @@
 
 /** Configuration of a instance of the IPFIX plugin                                              */
 struct ipfix_config {
-    /** Local port                                                                               */
-    const char *path;
+    /** File pattern                                                                             */
+    char *path;
 };
 
 /**
