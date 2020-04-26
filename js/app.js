@@ -53,6 +53,29 @@ const columnNames = ["Input plugins", "Intermediate plugins", "Output plugins"];
 var config = {};
 var moduleSchemas = [];
 var nameValidationSchema;
+var outputExtraParams;
+
+let merge = (obj1, obj2) => {
+    let target = {};
+    // Merge the object into the target object
+    let merger = (obj) => {
+        for (let prop in obj) {
+            if (obj.hasOwnProperty(prop)) {
+                if (Object.prototype.toString.call(obj[prop]) === "[object Object]") {
+                    // If we're doing a deep merge
+                    // and the property is an object
+                    target[prop] = merge(target[prop], obj[prop]);
+                } else {
+                    // Otherwise, do a regular merge
+                    target[prop] = obj[prop];
+                }
+            }
+        }
+    };
+    merger(obj1);
+    merger(obj2);
+    return target;
+};
 
 async function loadAppData() {
     config = await fetch("../config/config.json").then((response) => response.json());
@@ -63,6 +86,9 @@ async function loadAppData() {
     ];
     nameValidationSchema = await fetch(
         config.schemaLocations.special.path + config.schemaLocations.special.nameValidationSchema
+    ).then((response) => response.json());
+    outputExtraParams = await fetch(
+        config.schemaLocations.special.path + config.schemaLocations.special.outputExtraParams
     ).then((response) => response.json());
 }
 
@@ -141,12 +167,20 @@ class Form extends React.Component {
         return this.state.modules[columnIndex].map((module) => module.name);
     }
 
+    applySchemaExtensions(schema, columnIndex) {
+        if (columnIndex != 2) {
+            return schema;
+        }
+        return merge(schema, outputExtraParams);
+    }
+
     newModuleOverlay(columnIndex, moduleIndex) {
+        var extendedSchema = this.applySchemaExtensions(moduleSchemas[columnIndex][moduleIndex], columnIndex);
         this.setState({
             overlay: (
                 <Overlay
                     columnIndex={columnIndex}
-                    jsonSchema={moduleSchemas[columnIndex][moduleIndex]}
+                    jsonSchema={extendedSchema}
                     moduleNames={this.getSectionModuleNames(columnIndex)}
                     onCancel={this.editCancel.bind(this)}
                     onSuccess={this.addModule.bind(this)}
