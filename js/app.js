@@ -199,7 +199,8 @@ class Form extends React.Component {
 
     editModuleOverlay(columnIndex, index) {
         var module = this.state.modules[columnIndex][index];
-        var jsonSchema = this.findSchema(module, moduleSchemas[columnIndex]);
+        var moduleJsonSchema = this.findSchema(module, moduleSchemas[columnIndex]);
+        var extendedSchema = this.applySchemaExtensions(moduleJsonSchema, columnIndex);
         var moduleNames = JSON.parse(JSON.stringify(this.getSectionModuleNames(columnIndex)));
         moduleNames.splice(index, 1);
         this.setState({
@@ -208,7 +209,7 @@ class Form extends React.Component {
                     module={module}
                     columnIndex={columnIndex}
                     index={index}
-                    jsonSchema={jsonSchema}
+                    jsonSchema={extendedSchema}
                     moduleNames={moduleNames}
                     onCancel={this.editCancel.bind(this)}
                     onSuccess={this.editModule.bind(this)}
