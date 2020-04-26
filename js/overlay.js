@@ -1,7 +1,6 @@
 // TODO
 
 // - přidat validaci počtu modulů ve skupinách
-// - přidat podporu pro dva volitelné parametry pro všechny pluginy v sekci output
 // -? přejmenovat "module" na "plugin" v celém projektu
 // - zbavit se globálních proměnných - přesunout do souboru config.json
 //      ? jeden soubor s odkazy na schémata a druhý na ostatní data
@@ -11,11 +10,12 @@
 // - Zredukovat opakování kódu
 // - Přidat nové pluginy
 // -! Plugin UniRec (timeout) přidat našeptávač možných hodnot
-// - trochu vylepšit styl výpisu
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
 // + tabindex - opraveno
 // + přidat validaci unikátních názvů modulů ve skupině
+// + přidat podporu pro dva volitelné parametry pro všechny pluginy v sekci output
+// + přidat podporu pro parametr verbose pro všechny pluginy
 //
 // +? musí být možnost zadat více IP adres
 //      - není jasné, zda v případě více IP adres může být jedna z nich prázdná
