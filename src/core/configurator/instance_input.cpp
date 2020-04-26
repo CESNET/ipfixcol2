@@ -183,5 +183,11 @@ void
 ipx_instance_input::set_processing(bool en)
 {
     ipx_ctx_processing_set(_ctx, en);
+
+}
+
+void
+ipx_instance_input::set_parser_processing(bool en)
+{
     ipx_ctx_processing_set(_parser_ctx, en);
 }

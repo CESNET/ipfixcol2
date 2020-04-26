@@ -373,8 +373,8 @@ ipx_configurator::termination_handle(const struct ipx_cpipe_req &req, ipx_contro
     // First of all, check if termination process has been completed
     if (req.type == IPX_CPIPE_TYPE_TERM_DONE) {
         if (m_state != STATUS::STOP_SLOW && m_state != STATUS::STOP_FAST) {
-            IPX_ERROR(comp_str, "Got a termination done notification, but the termination process "
-                "is not in progress!", '\0');
+            IPX_ERROR(comp_str, "[internal] Got a termination done notification, but the "
+                "termination process is not in progress!", '\0');
             return false;
         }
 
@@ -473,6 +473,7 @@ ipx_configurator::termination_stop_all()
 {
     for (auto &it : m_running_inputs) {
         it->set_processing(false);
+        it->set_parser_processing(false);
     };
     for (auto &it : m_running_inter) {
         it->set_processing(false);
@@ -508,8 +509,16 @@ ipx_configurator::termination_stop_partly(const ipx_ctx_t *ctx)
         it->set_processing(false);
     }
 
-    if (ctx_info->type == IPX_PT_INPUT || ctx_info == &ipx_plugin_parser_info) {
-        // The termination has been invoked by an input plugin or its message parser
+    if (ctx_info->type == IPX_PT_INPUT) {
+        return;
+    }
+
+    // Stop all NetFlow/IPFIX message parsers
+    for (auto &it : m_running_inputs) {
+        it->set_parser_processing(false);
+    }
+
+    if (ctx_info == &ipx_plugin_parser_info) {
         return;
     }
 
