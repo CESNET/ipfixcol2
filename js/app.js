@@ -50,11 +50,6 @@ const rootAppElement = document.getElementById("configurator_app");
 const colors = ["blue", "orange", "red"];
 const columnNames = ["Input plugins", "Intermediate plugins", "Output plugins"];
 
-var config = {};
-var moduleSchemas = [];
-var nameValidationSchema;
-var outputExtraParams;
-
 let merge = (obj1, obj2) => {
     let target = {};
     // Merge the object into the target object
@@ -77,6 +72,12 @@ let merge = (obj1, obj2) => {
     return target;
 };
 
+var config = {};
+var moduleSchemas = [];
+var nameValidationSchema;
+var outputExtraParams;
+var allPluginsExtraParams;
+
 async function loadAppData() {
     config = await fetch("../config/config.json").then((response) => response.json());
     moduleSchemas = [
@@ -89,6 +90,9 @@ async function loadAppData() {
     ).then((response) => response.json());
     outputExtraParams = await fetch(
         config.schemaLocations.special.path + config.schemaLocations.special.outputExtraParams
+    ).then((response) => response.json());
+    allPluginsExtraParams = await fetch(
+        config.schemaLocations.special.path + config.schemaLocations.special.allPluginsExtraParams
     ).then((response) => response.json());
 }
 
@@ -168,10 +172,11 @@ class Form extends React.Component {
     }
 
     applySchemaExtensions(schema, columnIndex) {
-        if (columnIndex != 2) {
-            return schema;
+        schema = merge(schema, allPluginsExtraParams);
+        if (columnIndex == 2) {
+            schema = merge(schema, outputExtraParams);
         }
-        return merge(schema, outputExtraParams);
+        return schema;
     }
 
     newModuleOverlay(columnIndex, moduleIndex) {
