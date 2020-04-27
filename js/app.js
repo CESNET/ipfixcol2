@@ -79,7 +79,7 @@ var outputExtraParams;
 var allPluginsExtraParams;
 
 async function loadAppData() {
-    config = await fetch("../config/config.json").then((response) => response.json());
+    config = await fetch("./config/config.json").then((response) => response.json());
     moduleSchemas = [
         loadSchemas(config.schemaLocations.input),
         loadSchemas(config.schemaLocations.intermediate),

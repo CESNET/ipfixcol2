@@ -1,5 +1,6 @@
 // TODO
 
+// - zrušit dialog "save", nahradit dialogem "changes will be lost"
 // - přidat validaci počtu modulů ve skupinách
 // -? přejmenovat "module" na "plugin" v celém projektu
 // - zbavit se globálních proměnných - přesunout do souboru config.json
@@ -130,7 +131,6 @@ class Overlay extends React.Component {
             module: module,
             isNew: this.props.module === undefined,
             errors: errors,
-            saveDialogOpen: false,
             confirmDialodOpen: false,
         };
     }
@@ -140,18 +140,8 @@ class Overlay extends React.Component {
             JSON.stringify(this.state.module) == JSON.stringify(this.props.module)
         ) {
             this.props.onCancel();
-        } else if (this.state.errors === undefined) {
-            this.setState({ saveDialogOpen: true });
         } else {
             this.setState({ confirmDialodOpen: true });
-        }
-    }
-    handleSaveDialogClose(saved) {
-        this.setState({ saveDialogOpen: false });
-        if (saved) {
-            this.handleComfirm();
-        } else {
-            this.props.onCancel();
         }
     }
     handleComfirmDialogClose(confirmed) {
@@ -312,33 +302,6 @@ class Overlay extends React.Component {
                     {btnCancel}
                     {btnSave}
                 </DialogActions>
-                <Dialog
-                    className={"settings"}
-                    open={this.state.saveDialogOpen}
-                    fullWidth={false}
-                    maxWidth={"sm"}
-                >
-                    <DialogTitle>{"Save changes?"}</DialogTitle>
-                    <Divider />
-                    <DialogContent dividers>
-                        <Typography>Do you want to save your changes?</Typography>
-                    </DialogContent>
-                    <DialogActions>
-                        <Button
-                            autoFocus
-                            color="primary"
-                            onClick={this.handleSaveDialogClose.bind(this, true)}
-                        >
-                            {"Yes"}
-                        </Button>
-                        <Button
-                            color="primary"
-                            onClick={this.handleSaveDialogClose.bind(this, false)}
-                        >
-                            {"No"}
-                        </Button>
-                    </DialogActions>
-                </Dialog>
                 <Dialog
                     className={"settings"}
                     open={this.state.confirmDialodOpen}
