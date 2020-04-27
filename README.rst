@@ -29,24 +29,25 @@ No problem, pick any combination of plugins.
 Available plugins
 -----------------
 
-**Input plugins** - receive IPFIX data. Each can be configured to to listen on a specific
+**Input plugins** - receive NetFlow/IPFIX data. Each can be configured to listen on a specific
 network interface and a port. Multiple instances of these plugins can run concurrently.
 
-- `UDP <src/plugins/input/udp>`_ - receives NetFlow v5/v9 and IPFIX over UDP
-- `TCP <src/plugins/input/tcp>`_ - receives IPFIX over TCP
+- `UDP <src/plugins/input/udp>`_ - receive NetFlow v5/v9 and IPFIX over UDP
+- `TCP <src/plugins/input/tcp>`_ - receive IPFIX over TCP
+- `IPFIX File <src/plugins/input/ipfix>`_ - read flow data from IPFIX File
 
 **Intermediate plugins** - modify, enrich and filter flow records.
 
-- `anonymization <src/plugins/intermediate/anonymization/>`_ - anonymize IP addresses
+- `Anonymization <src/plugins/intermediate/anonymization/>`_ - anonymize IP addresses
   (in flow records) with Crypto-PAn algorithm
 
 **Output plugins** - store or forward your flows.
 
-- `FDS file <src/plugins/output/fds>`_ - store all flows in FDS file format (efficient long-term storage)
+- `FDS File <src/plugins/output/fds>`_ - store all flows in FDS file format (efficient long-term storage)
 - `JSON <src/plugins/output/json>`_ - convert flow records to JSON and send/store them
 - `Viewer <src/plugins/output/viewer>`_ - convert IPFIX into plain text and print
   it on standard output
-- `IPFIX file <src/plugins/output/ipfix>`_ - store all flows in IPFIX File format
+- `IPFIX File <src/plugins/output/ipfix>`_ - store all flows in IPFIX File format
 - `Time Check <src/plugins/output/timecheck>`_ - flow timestamp check
 - `Dummy <src/plugins/output/dummy>`_ - simple output module example
 - `lnfstore <extra_plugins/output/lnfstore>`_ (*) - store all flows in nfdump compatible

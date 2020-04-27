@@ -162,13 +162,26 @@ public:
     extensions_resolve(ipx_cfg_extensions *ext_mgr) override;
 
     /**
-     * \brief Enable/disable processing of data messages (IPFIX and Transport Session)
+     * \brief Enable/disable processing of data messages by the plugin (IPFIX and Transport Session)
+     *
+     * \warning This doesn't affect NetFlow/IPFIX Message parser, see set_parser_processing()
      * \note By default, data processing is enabled.
      * \see ipx_ctx_processing() for more details
      * \param[in] en Enable/disable processing
      */
     void
     set_processing(bool en) override;
+
+    /**
+     * \brief Enable/disable processing of data messages by the parser (IPFIX and Transport Session)
+     *
+     * \warning This doesn't affect the input plugin, see set_processing()
+     * \note By default, data processing is enabled.
+     * \see ipx_ctx_processing() for more details
+     * \param[in] en Enable/disable processing
+     */
+    void
+    set_parser_processing(bool en);
 };
 
 #endif //IPFIXCOL_INSTANCE_INPUT_HPP
