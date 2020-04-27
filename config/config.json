@@ -23,7 +23,8 @@
             "path": "../schemas/special/",
             "nameValidationSchema": "cross-plugin_name_validaton.json",
             "outputExtraParams": "output_extra_params.json",
-            "allPluginsExtraParams": "all_plugins_extra_params.json"
+            "allPluginsExtraParams": "all_plugins_extra_params.json",
+            "generalStructure": "general_structure.json"
         }
     }
 }
