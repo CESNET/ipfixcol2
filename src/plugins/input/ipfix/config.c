@@ -47,18 +47,25 @@
 /*
  * <params>
  *  <path>...</path>      // required, exactly once
+ *  <bufferSize>...</bufferSize>      // optional
  * </params>
  */
 
+/** Default buffer size */
+#define BSIZE_DEF (1048576U)
+#define BSIZE_MIN  (131072U)
+
 /** XML nodes */
 enum params_xml_nodes {
-    NODE_PATH = 1
+    NODE_PATH = 1,
+    NODE_BSIZE
 };
 
 /** Definition of the \<params\> node  */
 static const struct fds_xml_args args_params[] = {
     FDS_OPTS_ROOT("params"),
     FDS_OPTS_ELEM(NODE_PATH, "path", FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_ELEM(NODE_BSIZE, "bufferSize", FDS_OPTS_T_UINT, FDS_OPTS_P_OPT),
     FDS_OPTS_END
 };
 
@@ -81,6 +88,10 @@ config_parser_root(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct ipfix_config *cfg
             assert(content->type == FDS_OPTS_T_STRING);
             cfg->path = strdup(content->ptr_string);
             break;
+        case NODE_BSIZE:
+            assert(content->type == FDS_OPTS_T_UINT);
+            cfg->bsize = content->val_uint;
+            break;
         default:
             // Internal error
             assert(false);
@@ -89,6 +100,12 @@ config_parser_root(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct ipfix_config *cfg
 
     if (!cfg->path) {
         IPX_CTX_ERROR(ctx, "Memory allocation error (%s:%d)", __FILE__, __LINE__);
+        return IPX_ERR_FORMAT;
+    }
+
+    if (cfg->bsize < BSIZE_MIN) {
+        IPX_CTX_ERROR(ctx, "Buffer size must be at least %u bytes!" , (unsigned int) BSIZE_MIN);
+        return IPX_ERR_FORMAT;
     }
 
     return IPX_OK;
@@ -102,6 +119,7 @@ static void
 config_default_set(struct ipfix_config *cfg)
 {
     cfg->path = NULL;
+    cfg->bsize = BSIZE_DEF;
 }
 
 struct ipfix_config *
