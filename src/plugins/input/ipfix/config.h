@@ -50,6 +50,8 @@
 struct ipfix_config {
     /** File pattern                                                                             */
     char *path;
+    /** Read buffer size                                                                         */
+    uint64_t bsize;
 };
 
 /**

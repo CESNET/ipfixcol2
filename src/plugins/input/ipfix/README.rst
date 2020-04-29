@@ -28,3 +28,7 @@ Parameters
     a filename/directory, tilde character (i.e. "~") instead of the home directory of
     the user, and brace expressions (i.e. "/tmp/{source1,source2}/file.ipfix").
     Directories and non-IPFIX Files that match the file pattern are skipped/ignored.
+
+:``bufferSize``:
+    Optional size of the internal buffer to which the content of the file is partly
+    preloaded. [default: 1048576, min: 131072]
