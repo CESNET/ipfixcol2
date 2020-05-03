@@ -746,7 +746,6 @@ class Settings extends React.Component {
     handleChangeNumber(event) {
         var value = Number(event.target.value);
         if (value < indentationSpaces.min) {
-            // value = indentationSpaces.min;
             this.setState({ indentNumber: "" });
             return;
         } else if (value > indentationSpaces.max) {

@@ -1,7 +1,6 @@
 // TODO
 
 // - dotazovat se při smazání + přidat do settings možnost vypnutí potvrzování
-// - upravit chování při zadávání číselných hodnot - viz. settings
 // - přidat validaci počtu modulů ve skupinách
 // -? přejmenovat "module" na "plugin" v celém projektu
 // - zbavit se globálních proměnných - přesunout do souboru config.json
@@ -15,17 +14,13 @@
 // -! Plugin UniRec (timeout) přidat našeptávač možných hodnot
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
-// + tabindex - opraveno
-// + přidat validaci unikátních názvů modulů ve skupině
-// + přidat podporu pro dva volitelné parametry pro všechny pluginy v sekci output
-// + přidat podporu pro parametr verbose pro všechny pluginy
+// + upravit chování při zadávání číselných hodnot - viz. settings
 //
 // +? musí být možnost zadat více IP adres
 //      - není jasné, zda v případě více IP adres může být jedna z nich prázdná
 //      - změna by kromě větší změny ve schématu znamenala přepsání velké části třídy ArrayProperty
 // +? Předělat hlavní výpis modulů ve sloupcích
 //      - zda je to vůbec potřeba, jestli nestačí jenom název, edit, delete
-// + config předělat na json
 
 function moduleCreate(jsonSchema) {
     var newModule = {};
@@ -232,11 +227,7 @@ class Overlay extends React.Component {
             />
         );
         btnCancel = (
-            <Button
-                variant="outlined"
-                color="primary"
-                onClick={this.handleCancel.bind(this)}
-            >
+            <Button variant="outlined" color="primary" onClick={this.handleCancel.bind(this)}>
                 Cancel
             </Button>
         );
@@ -558,7 +549,10 @@ class Properties extends React.Component {
                                 <React.Fragment>
                                     {errorIcon}
                                     {removeButton}
-                                    <IconButton onClick={this.handleDescriptionOpen.bind(this)} tabIndex={-1}>
+                                    <IconButton
+                                        onClick={this.handleDescriptionOpen.bind(this)}
+                                        tabIndex={-1}
+                                    >
                                         <Icon>help</Icon>
                                     </IconButton>
                                     {expandButton}
@@ -983,18 +977,15 @@ class IntegerProperty extends React.Component {
     handleChange(event) {
         var value = Number(event.target.value);
         if (
-            this.props.jsonSchema.hasOwnProperty("minimum") &&
-            value < this.props.jsonSchema.minimum
-        ) {
-            this.props.onChange(this.props.name, this.props.jsonSchema.minimum);
-        } else if (
             this.props.jsonSchema.hasOwnProperty("maximum") &&
             value > this.props.jsonSchema.maximum
         ) {
-            this.props.onChange(this.props.name, this.props.jsonSchema.maximum);
-        } else {
-            this.props.onChange(this.props.name, value);
+            value = this.props.jsonSchema.maximum;
         }
+        if (event.target.value == "") { // prevents from "" -> 0 conversion
+            value = event.target.value;
+        }
+        this.props.onChange(this.props.name, value);
     }
     handleRemove() {
         this.props.onRemove(this.props.name);
@@ -1167,11 +1158,7 @@ class BooleanProperty extends React.Component {
             <React.Fragment>
                 <Grid item>False</Grid>
                 <Grid item>
-                    <Switch
-                        disabled={readOnly}
-                        checked={value}
-                        onChange={onChange}
-                    />
+                    <Switch disabled={readOnly} checked={value} onChange={onChange} />
                 </Grid>
                 <Grid item>True</Grid>
             </React.Fragment>
@@ -1209,18 +1196,15 @@ class NumberProperty extends React.Component {
     handleChange(event) {
         var value = Number(event.target.value);
         if (
-            this.props.jsonSchema.hasOwnProperty("minimum") &&
-            value < this.props.jsonSchema.minimum
-        ) {
-            this.props.onChange(this.props.name, this.props.jsonSchema.minimum);
-        } else if (
             this.props.jsonSchema.hasOwnProperty("maximum") &&
             value > this.props.jsonSchema.maximum
         ) {
-            this.props.onChange(this.props.name, this.props.jsonSchema.maximum);
-        } else {
-            this.props.onChange(this.props.name, value);
+            value = this.props.jsonSchema.maximum;
         }
+        if (event.target.value == "") { // prevents from "" -> 0 conversion
+            value = event.target.value;
+        }
+        this.props.onChange(this.props.name, value);
     }
     handleRemove() {
         this.props.onRemove(this.props.name);
