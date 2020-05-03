@@ -123,7 +123,7 @@ const indentationTypes = [
     { name: "Space", character: " " },
     { name: "Tab", character: "\t" },
 ];
-const indentationSpaces = { min: 1, max: 8 };
+const indentationSpaces = { min: 0, max: 8 };
 
 const x2js = new X2JS();
 const ajv = new Ajv({ allErrors: true });

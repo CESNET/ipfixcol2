@@ -1,6 +1,7 @@
 // TODO
 
-// - zrušit dialog "save", nahradit dialogem "changes will be lost"
+// - dotazovat se při smazání + přidat do settings možnost vypnutí potvrzování
+// - upravit chování při zadávání číselných hodnot - viz. settings
 // - přidat validaci počtu modulů ve skupinách
 // -? přejmenovat "module" na "plugin" v celém projektu
 // - zbavit se globálních proměnných - přesunout do souboru config.json
@@ -10,6 +11,7 @@
 // - založit si vlastní repo a rozjet to na GitPages
 // - Zredukovat opakování kódu
 // - Přidat nové pluginy
+// (-) pokud bude čas (a všechno ostatní splněno) - nahrání ze souboru
 // -! Plugin UniRec (timeout) přidat našeptávač možných hodnot
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
