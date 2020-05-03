@@ -1,5 +1,6 @@
 // TODO
 
+// - sloučit třídy IntegerProperty a NumberProperty (pouze jeden rozdílný řádek)
 // - dotazovat se při smazání + přidat do settings možnost vypnutí potvrzování
 // - přidat validaci počtu modulů ve skupinách
 // -? přejmenovat "module" na "plugin" v celém projektu
