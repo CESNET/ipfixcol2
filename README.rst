@@ -34,6 +34,7 @@ network interface and a port. Multiple instances of these plugins can run concur
 
 - `UDP <src/plugins/input/udp>`_ - receive NetFlow v5/v9 and IPFIX over UDP
 - `TCP <src/plugins/input/tcp>`_ - receive IPFIX over TCP
+- `FDS File <src/plugins/input/fds>`_ - read flow data from FDS File (efficient long-term storage)
 - `IPFIX File <src/plugins/input/ipfix>`_ - read flow data from IPFIX File
 
 **Intermediate plugins** - modify, enrich and filter flow records.
@@ -44,10 +45,10 @@ network interface and a port. Multiple instances of these plugins can run concur
 **Output plugins** - store or forward your flows.
 
 - `FDS File <src/plugins/output/fds>`_ - store all flows in FDS file format (efficient long-term storage)
+- `IPFIX File <src/plugins/output/ipfix>`_ - store all flows in IPFIX File format
 - `JSON <src/plugins/output/json>`_ - convert flow records to JSON and send/store them
 - `Viewer <src/plugins/output/viewer>`_ - convert IPFIX into plain text and print
   it on standard output
-- `IPFIX File <src/plugins/output/ipfix>`_ - store all flows in IPFIX File format
 - `Time Check <src/plugins/output/timecheck>`_ - flow timestamp check
 - `Dummy <src/plugins/output/dummy>`_ - simple output module example
 - `lnfstore <extra_plugins/output/lnfstore>`_ (*) - store all flows in nfdump compatible
