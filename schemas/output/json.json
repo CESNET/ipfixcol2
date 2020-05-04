@@ -122,7 +122,8 @@
                                     "port": {
                                         "title": "Port",
                                         "description": "Local port number of the server.",
-                                        "type": "integer"
+                                        "type": "integer",
+                                        "minimum": 0
                                     },
                                     "blocking": {
                                         "title": "Blocking",
