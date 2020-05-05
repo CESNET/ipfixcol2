@@ -49,6 +49,8 @@
 struct instance_config {
     /** Sleep time                                       */
     struct timespec sleep_time;
+    /** Enable statistics                                */
+    bool en_stats;
 };
 
 /**

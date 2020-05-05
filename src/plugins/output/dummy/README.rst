@@ -15,6 +15,7 @@ Example configuration
         <plugin>dummy</plugin>
         <params>
             <delay>0</delay>
+            <stats>true</stats>
         </params>
     </output>
 
@@ -23,3 +24,7 @@ Parameters
 
 :``delay``:
     Minimum delay between processing of two consecutive messages in microseconds.
+
+:``stats``:
+    Print basic statistics after termination (flows, bytes, packets).
+    [values: true/false, default: false]
