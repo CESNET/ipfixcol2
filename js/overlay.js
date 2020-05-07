@@ -1,6 +1,5 @@
 // TODO
 
-// - sloučit třídy IntegerProperty a NumberProperty (pouze jeden rozdílný řádek)
 // - dotazovat se při smazání + přidat do settings možnost vypnutí potvrzování
 // - přidat validaci počtu modulů ve skupinách
 // -? přejmenovat "module" na "plugin" v celém projektu
@@ -15,7 +14,7 @@
 // -! Plugin UniRec (timeout) přidat našeptávač možných hodnot
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
-// + upravit chování při zadávání číselných hodnot - viz. settings
+// + sloučit třídy IntegerProperty a NumberProperty (pouze jeden rozdílný řádek)
 //
 // +? musí být možnost zadat více IP adres
 //      - není jasné, zda v případě více IP adres může být jedna z nich prázdná
@@ -599,10 +598,25 @@ class Item extends React.Component {
                 );
             case "integer":
                 return (
-                    <IntegerProperty
+                    <NumberProperty
                         name={this.props.name}
                         module={this.props.module}
                         required={this.props.required}
+                        step={1}
+                        jsonSchema={this.props.jsonSchema}
+                        errors={this.props.errors}
+                        dataPath={this.props.dataPath}
+                        onChange={this.props.onChange}
+                        onRemove={this.props.onRemove}
+                    />
+                );
+            case "number":
+                return (
+                    <NumberProperty
+                        name={this.props.name}
+                        module={this.props.module}
+                        required={this.props.required}
+                        step={0.01}
                         jsonSchema={this.props.jsonSchema}
                         errors={this.props.errors}
                         dataPath={this.props.dataPath}
@@ -627,19 +641,6 @@ class Item extends React.Component {
             case "boolean":
                 return (
                     <BooleanProperty
-                        name={this.props.name}
-                        module={this.props.module}
-                        required={this.props.required}
-                        jsonSchema={this.props.jsonSchema}
-                        errors={this.props.errors}
-                        dataPath={this.props.dataPath}
-                        onChange={this.props.onChange}
-                        onRemove={this.props.onRemove}
-                    />
-                );
-            case "number":
-                return (
-                    <NumberProperty
                         name={this.props.name}
                         module={this.props.module}
                         required={this.props.required}
@@ -968,136 +969,6 @@ class StringProperty extends React.Component {
     }
 }
 
-class IntegerProperty extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            descriptionOpen: false,
-        };
-    }
-    handleChange(event) {
-        var value = Number(event.target.value);
-        if (
-            this.props.jsonSchema.hasOwnProperty("maximum") &&
-            value > this.props.jsonSchema.maximum
-        ) {
-            value = this.props.jsonSchema.maximum;
-        }
-        if (event.target.value == "") { // prevents from "" -> 0 conversion
-            value = event.target.value;
-        }
-        this.props.onChange(this.props.name, value);
-    }
-    handleRemove() {
-        this.props.onRemove(this.props.name);
-    }
-    handleDescriptionOpen() {
-        this.setState({
-            descriptionOpen: true,
-        });
-    }
-    handleDescriptionClose() {
-        this.setState({
-            descriptionOpen: false,
-        });
-    }
-    render() {
-        var value = this.props.module;
-        var readOnly = false;
-        var onChange = this.handleChange.bind(this);
-        var min = null;
-        var max = null;
-        var deleteButton = "";
-        var hasError = this.props.errors !== undefined && this.props.errors.length > 0;
-        var errorIcon = "";
-        var inputCode;
-        var inputStyle;
-        var helpIcon = (
-            <Grid item>
-                <IconButton onClick={this.handleDescriptionOpen.bind(this)} tabIndex={-1}>
-                    <Icon>help</Icon>
-                </IconButton>
-            </Grid>
-        );
-        if (this.props.jsonSchema.hasOwnProperty("default") && value === null) {
-            value = this.props.jsonSchema.default;
-        }
-        if (this.props.jsonSchema.hasOwnProperty("const")) {
-            value = this.props.jsonSchema.const;
-            readOnly = true;
-            onChange = null;
-        }
-        if (this.props.jsonSchema.hasOwnProperty("minimum")) {
-            min = this.props.jsonSchema.minimum;
-        }
-        if (this.props.jsonSchema.hasOwnProperty("maximum")) {
-            max = this.props.jsonSchema.maximum;
-        }
-        if (value === null) {
-            value = "";
-        }
-        if (hasError) {
-            var errorMessage = this.props.errors.pop().message;
-            errorIcon = (
-                <Grid item>
-                    <IconButton tabIndex={-1}>
-                        <Tooltip title={errorMessage} arrow>
-                            <Icon color={"error"}>error</Icon>
-                        </Tooltip>
-                    </IconButton>
-                </Grid>
-            );
-        }
-        if (!this.props.required) {
-            deleteButton = (
-                <Grid item>
-                    <IconButton onClick={this.handleRemove.bind(this)} tabIndex={-1}>
-                        <Icon>delete</Icon>
-                    </IconButton>
-                </Grid>
-            );
-        }
-        inputStyle = (
-            <Grid item>
-                <Input
-                    className={"select"}
-                    type={"number"}
-                    name={this.props.name}
-                    value={value}
-                    readOnly={readOnly}
-                    inputProps={{
-                        min: min,
-                        max: max,
-                        step: 1,
-                    }}
-                    onChange={onChange}
-                />
-            </Grid>
-        );
-        inputCode = (
-            <FormControl error={hasError}>
-                <FormLabel>{this.props.jsonSchema.title}</FormLabel>
-                <Grid component="label" container alignItems="center" spacing={0}>
-                    {inputStyle}
-                    {errorIcon}
-                    {helpIcon}
-                    {deleteButton}
-                </Grid>
-            </FormControl>
-        );
-        return (
-            <div>
-                {inputCode}
-                <Description
-                    open={this.state.descriptionOpen}
-                    content={this.props.jsonSchema.description}
-                    onClose={this.handleDescriptionClose.bind(this)}
-                />
-            </div>
-        );
-    }
-}
-
 class BooleanProperty extends React.Component {
     constructor(props) {
         super(props);
@@ -1202,7 +1073,8 @@ class NumberProperty extends React.Component {
         ) {
             value = this.props.jsonSchema.maximum;
         }
-        if (event.target.value == "") { // prevents from "" -> 0 conversion
+        if (event.target.value == "") {
+            // prevents from "" -> 0 conversion
             value = event.target.value;
         }
         this.props.onChange(this.props.name, value);
@@ -1287,7 +1159,7 @@ class NumberProperty extends React.Component {
                     inputProps={{
                         min: min,
                         max: max,
-                        step: 0.01,
+                        step: this.props.step,
                     }}
                     onChange={onChange}
                 />
