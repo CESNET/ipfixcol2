@@ -144,8 +144,11 @@ class Form extends React.Component {
             snackbarText: "",
             snackbarType: null,
             settingsOpen: false,
+            confirmDialogOpen: false,
+            confirmDialogRemoveFunc: null,
             indentType: indentationTypes[0],
             indentNumber: 2,
+            showConfirmationDialogs: true,
         };
     }
 
@@ -180,7 +183,10 @@ class Form extends React.Component {
     }
 
     newPluginOverlay(columnIndex, pluginIndex) {
-        var extendedSchema = this.applySchemaExtensions(pluginSchemas[columnIndex][pluginIndex], columnIndex);
+        var extendedSchema = this.applySchemaExtensions(
+            pluginSchemas[columnIndex][pluginIndex],
+            columnIndex
+        );
         this.setState({
             overlay: (
                 <Overlay
@@ -215,6 +221,7 @@ class Form extends React.Component {
                     onSuccess={this.editPlugin.bind(this)}
                     XMLIndentType={this.state.indentType}
                     XMLIndentNumber={this.state.indentNumber}
+                    showConfirmationDialogs={this.state.showConfirmationDialogs}
                 />
             ),
         });
@@ -243,6 +250,17 @@ class Form extends React.Component {
         console.log("Plugin edited");
     }
 
+    removePluginConfirm(columnIndex, index) {
+        if (this.state.showConfirmationDialogs) {
+            this.setState({
+                confirmDialogOpen: true,
+                confirmDialogRemoveFunc: this.removePlugin.bind(this, columnIndex, index),
+            });
+        } else {
+            this.removePlugin(columnIndex, index);
+        }
+    }
+
     removePlugin(columnIndex, index) {
         var plugins = this.state.plugins;
         plugins[columnIndex].splice(index, 1);
@@ -251,6 +269,13 @@ class Form extends React.Component {
         });
         this.openSnackbar("Plugin removed");
         console.log("Plugin removed");
+    }
+
+    handleConfirmDialogClose(confirmed) {
+        this.setState({ confirmDialogOpen: false });
+        if (confirmed) {
+            this.state.confirmDialogRemoveFunc();
+        }
     }
 
     createConfigXML() {
@@ -384,10 +409,11 @@ class Form extends React.Component {
         });
     }
 
-    changeSettings(type, number) {
+    changeSettings(type, number, showConfirmationDialogs) {
         this.setState({
             indentType: type,
             indentNumber: number,
+            showConfirmationDialogs: showConfirmationDialogs,
         });
     }
 
@@ -440,9 +466,38 @@ class Form extends React.Component {
                     open={this.state.settingsOpen}
                     indentType={this.state.indentType}
                     indentNumber={this.state.indentNumber}
+                    showConfirmationDialogs={this.state.showConfirmationDialogs}
                     onChange={this.changeSettings.bind(this)}
                     onClose={this.closeSettings.bind(this)}
                 />
+                <Dialog
+                    className={"settings"}
+                    open={this.state.confirmDialogOpen}
+                    fullWidth={false}
+                    maxWidth={"sm"}
+                >
+                    <DialogTitle>{"Are you sure?"}</DialogTitle>
+                    <Divider />
+                    <DialogContent dividers>
+                        <Typography>Plugin and its settings will be lost.</Typography>
+                        <Typography>Do you want to proceed?</Typography>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button
+                            autoFocus
+                            color="primary"
+                            onClick={this.handleConfirmDialogClose.bind(this, false)}
+                        >
+                            {"Cancel"}
+                        </Button>
+                        <Button
+                            color="primary"
+                            onClick={this.handleConfirmDialogClose.bind(this, true)}
+                        >
+                            {"Continue"}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
                 <div className="form">
                     {this.state.overlay}
                     <div className="mainLayer">
@@ -455,7 +510,7 @@ class Form extends React.Component {
                             pluginsAvailable={pluginSchemas[0]}
                             addPlugin={this.newPluginOverlay.bind(this)}
                             editPlugin={this.editPluginOverlay.bind(this)}
-                            removePlugin={this.removePlugin.bind(this)}
+                            removePlugin={this.removePluginConfirm.bind(this)}
                         />
                         <FormColumn
                             key={columnNames[1]}
@@ -466,7 +521,7 @@ class Form extends React.Component {
                             pluginsAvailable={pluginSchemas[1]}
                             addPlugin={this.newPluginOverlay.bind(this)}
                             editPlugin={this.editPluginOverlay.bind(this)}
-                            removePlugin={this.removePlugin.bind(this)}
+                            removePlugin={this.removePluginConfirm.bind(this)}
                         />
                         <FormColumn
                             key={columnNames[2]}
@@ -477,11 +532,10 @@ class Form extends React.Component {
                             pluginsAvailable={pluginSchemas[2]}
                             addPlugin={this.newPluginOverlay.bind(this)}
                             editPlugin={this.editPluginOverlay.bind(this)}
-                            removePlugin={this.removePlugin.bind(this)}
+                            removePlugin={this.removePluginConfirm.bind(this)}
                         />
                     </div>
                     {this.printColoredXML()}
-                    {/* {this.renderXML()} */}
                     <Snackbar
                         anchorOrigin={{
                             vertical: "bottom",
@@ -730,16 +784,21 @@ class Settings extends React.Component {
         super(props);
         this.state = {
             indentNumber: this.props.indentNumber,
+            confirmDialodOpen: false,
         };
     }
 
     handleChangeType(event) {
         if (event.target.value === indentationTypes[1].name) {
-            this.props.onChange(indentationTypes[1], 1);
+            this.props.onChange(indentationTypes[1], 1, this.props.showConfirmationDialogs);
         } else if (this.props.indentType === indentationTypes[1]) {
-            this.props.onChange(indentationTypes[0], 2);
+            this.props.onChange(indentationTypes[0], 2, this.props.showConfirmationDialogs);
         } else {
-            this.props.onChange(indentationTypes[0], this.props.indentNumber);
+            this.props.onChange(
+                indentationTypes[0],
+                this.props.indentNumber,
+                this.props.showConfirmationDialogs
+            );
         }
     }
 
@@ -752,7 +811,15 @@ class Settings extends React.Component {
             value = indentationSpaces.max;
         }
         this.setState({ indentNumber: value });
-        this.props.onChange(this.props.indentType, value);
+        this.props.onChange(this.props.indentType, value, this.props.showConfirmationDialogs);
+    }
+
+    handleChangeShowConfirmationDialogs() {
+        this.props.onChange(
+            this.props.indentType,
+            this.props.indentNumber,
+            !this.props.showConfirmationDialogs
+        );
     }
 
     handleOnClose() {
@@ -765,50 +832,67 @@ class Settings extends React.Component {
             <Dialog
                 className={"settings"}
                 open={this.props.open}
-                fullWidth={false}
-                maxWidth={"sm"}
+                fullWidth={true}
+                maxWidth={"xs"}
                 onEscapeKeyDown={this.handleOnClose.bind(this)}
                 onBackdropClick={this.handleOnClose.bind(this)}
             >
                 <DialogTitle>{"Settings"}</DialogTitle>
                 <Divider />
                 <DialogContent dividers>
-                    <FormControl>
-                        <FormLabel>{"Indentation character"}</FormLabel>
-                        <Select
-                            className={"select"}
-                            value={this.props.indentType.name}
-                            onChange={this.handleChangeType.bind(this)}
-                            inputProps={{ tabIndex: 1 }}
-                        >
-                            {indentationTypes.map((indentType) => {
-                                return (
-                                    <MenuItem key={indentType.name} value={indentType.name}>
-                                        {indentType.name}
-                                    </MenuItem>
-                                );
-                            })}
-                        </Select>
-                    </FormControl>
-                    <FormControl>
-                        <FormLabel>
-                            {"Number of " + this.props.indentType.name.toLowerCase() + "s"}
-                        </FormLabel>
-                        <Input
-                            className={"select"}
-                            type={"number"}
-                            name={"numberOfIndentChars"}
-                            value={this.state.indentNumber}
-                            disabled={this.props.indentType === indentationTypes[1]}
-                            inputProps={{
-                                min: indentationSpaces.min,
-                                max: indentationSpaces.max,
-                                step: 1,
-                                tabIndex: 2,
-                            }}
-                            onChange={this.handleChangeNumber.bind(this)}
-                        />
-                    </FormControl>
+                    <Grid container direction="column" spacing={2}>
+                        <FormControl fullWidth>
+                            <FormLabel>{"Indentation character"}</FormLabel>
+                            <Select
+                                className={"select"}
+                                value={this.props.indentType.name}
+                                onChange={this.handleChangeType.bind(this)}
+                                inputProps={{ tabIndex: 1 }}
+                            >
+                                {indentationTypes.map((indentType) => {
+                                    return (
+                                        <MenuItem key={indentType.name} value={indentType.name}>
+                                            {indentType.name}
+                                        </MenuItem>
+                                    );
+                                })}
+                            </Select>
+                        </FormControl>
+                        <FormControl>
+                            <FormLabel>
+                                {"Number of " + this.props.indentType.name.toLowerCase() + "s"}
+                            </FormLabel>
+                            <Input
+                                className={"select"}
+                                type={"number"}
+                                name={"numberOfIndentChars"}
+                                value={this.state.indentNumber}
+                                disabled={this.props.indentType === indentationTypes[1]}
+                                inputProps={{
+                                    min: indentationSpaces.min,
+                                    max: indentationSpaces.max,
+                                    step: 1,
+                                    tabIndex: 2,
+                                }}
+                                onChange={this.handleChangeNumber.bind(this)}
+                            />
+                        </FormControl>
+                        <FormControl>
+                            <FormLabel>Show confirmation dialogs</FormLabel>
+                            <Grid component="label" container alignItems="center" spacing={0}>
+                                <Grid item>False</Grid>
+                                <Grid item>
+                                    <Switch
+                                        checked={this.props.showConfirmationDialogs}
+                                        onChange={this.handleChangeShowConfirmationDialogs.bind(
+                                            this
+                                        )}
+                                    />
+                                </Grid>
+                                <Grid item>True</Grid>
+                            </Grid>
+                        </FormControl>
+                    </Grid>
                 </DialogContent>
                 <DialogActions>
                     <Button

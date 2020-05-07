@@ -1,6 +1,5 @@
 // TODO
 
-// - dotazovat se při smazání + přidat do settings možnost vypnutí potvrzování
 // - přidat validaci počtu modulů ve skupinách
 // - zbavit se globálních proměnných - přesunout do souboru config.json
 //      ? jeden soubor s odkazy na schémata a druhý na ostatní data
@@ -14,6 +13,7 @@
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
 // + sloučit třídy IntegerProperty a NumberProperty (pouze jeden rozdílný řádek)
+// + dotazovat se při smazání + přidat do settings možnost vypnutí potvrzování
 // + přejmenovat "module" na "plugin" v celém projektu
 //
 // +? musí být možnost zadat více IP adres
@@ -133,21 +133,22 @@ class Overlay extends React.Component {
     }
     handleCancel() {
         if (
-            !this.state.isNew &&
-            JSON.stringify(this.state.plugin) == JSON.stringify(this.props.plugin)
+            !this.props.showConfirmationDialogs ||
+            (!this.state.isNew &&
+                JSON.stringify(this.state.plugin) == JSON.stringify(this.props.plugin))
         ) {
             this.props.onCancel();
         } else {
             this.setState({ confirmDialodOpen: true });
         }
     }
-    handleComfirmDialogClose(confirmed) {
+    handleConfirmDialogClose(confirmed) {
         this.setState({ confirmDialodOpen: false });
         if (confirmed) {
             this.props.onCancel();
         }
     }
-    handleComfirm() {
+    handleConfirm() {
         if (this.state.isNew) {
             this.props.onSuccess(this.props.columnIndex, this.state.plugin);
         } else {
@@ -235,7 +236,7 @@ class Overlay extends React.Component {
             <Button
                 variant="contained"
                 color="primary"
-                onClick={this.handleComfirm.bind(this)}
+                onClick={this.handleConfirm.bind(this)}
                 disabled={this.state.errors === undefined ? false : true}
             >
                 {buttonText}
@@ -311,13 +312,13 @@ class Overlay extends React.Component {
                         <Button
                             autoFocus
                             color="primary"
-                            onClick={this.handleComfirmDialogClose.bind(this, false)}
+                            onClick={this.handleConfirmDialogClose.bind(this, false)}
                         >
                             {"Cancel"}
                         </Button>
                         <Button
                             color="primary"
-                            onClick={this.handleComfirmDialogClose.bind(this, true)}
+                            onClick={this.handleConfirmDialogClose.bind(this, true)}
                         >
                             {"Continue"}
                         </Button>
