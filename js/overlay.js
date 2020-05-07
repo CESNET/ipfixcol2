@@ -2,7 +2,6 @@
 
 // - dotazovat se při smazání + přidat do settings možnost vypnutí potvrzování
 // - přidat validaci počtu modulů ve skupinách
-// -? přejmenovat "module" na "plugin" v celém projektu
 // - zbavit se globálních proměnných - přesunout do souboru config.json
 //      ? jeden soubor s odkazy na schémata a druhý na ostatní data
 // - upravit načítání dat (nyní na globální úrovni) - načítat na úrovni aplikace
@@ -15,6 +14,7 @@
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
 // + sloučit třídy IntegerProperty a NumberProperty (pouze jeden rozdílný řádek)
+// + přejmenovat "module" na "plugin" v celém projektu
 //
 // +? musí být možnost zadat více IP adres
 //      - není jasné, zda v případě více IP adres může být jedna z nich prázdná
@@ -22,33 +22,33 @@
 // +? Předělat hlavní výpis modulů ve sloupcích
 //      - zda je to vůbec potřeba, jestli nestačí jenom název, edit, delete
 
-function moduleCreate(jsonSchema) {
-    var newModule = {};
+function pluginCreate(jsonSchema) {
+    var newPlugin = {};
     for (var i in jsonSchema.required) {
-        moduleSetProperty(
-            newModule,
+        pluginSetProperty(
+            newPlugin,
             jsonSchema.required[i],
             jsonSchema.properties[jsonSchema.required[i]]
         );
     }
-    return newModule;
+    return newPlugin;
 }
 
-function moduleSetProperty(module, propertyName, jsonSchema) {
+function pluginSetProperty(plugin, propertyName, jsonSchema) {
     if (jsonSchema.hasOwnProperty("const")) {
-        module[propertyName] = jsonSchema.const;
+        plugin[propertyName] = jsonSchema.const;
         return;
     }
     if (jsonSchema.hasOwnProperty("default")) {
-        module[propertyName] = jsonSchema.default;
+        plugin[propertyName] = jsonSchema.default;
         return;
     }
     if (jsonSchema.type === "object") {
-        module[propertyName] = {};
+        plugin[propertyName] = {};
         if (jsonSchema.hasOwnProperty("required")) {
             for (var i in jsonSchema.required) {
-                moduleSetProperty(
-                    module[propertyName],
+                pluginSetProperty(
+                    plugin[propertyName],
                     jsonSchema.required[i],
                     jsonSchema.properties[jsonSchema.required[i]]
                 );
@@ -58,18 +58,18 @@ function moduleSetProperty(module, propertyName, jsonSchema) {
     }
     if (jsonSchema.type === "array") {
         var newArray = [];
-        moduleArrayAddItem(newArray, jsonSchema.items);
-        module[propertyName] = newArray;
+        pluginArrayAddItem(newArray, jsonSchema.items);
+        plugin[propertyName] = newArray;
         return;
     }
     if (jsonSchema.type === "boolean") {
-        module[propertyName] = false;
+        plugin[propertyName] = false;
         return;
     }
-    module[propertyName] = null;
+    plugin[propertyName] = null;
 }
 
-function moduleArrayAddItem(array, jsonSchema) {
+function pluginArrayAddItem(array, jsonSchema) {
     var item = null;
     if (jsonSchema.hasOwnProperty("const")) {
         item = jsonSchema.const;
@@ -79,7 +79,7 @@ function moduleArrayAddItem(array, jsonSchema) {
         item = {};
         if (jsonSchema.hasOwnProperty("required")) {
             for (var i in jsonSchema.required) {
-                moduleSetProperty(
+                pluginSetProperty(
                     item,
                     jsonSchema.required[i],
                     jsonSchema.properties[jsonSchema.required[i]]
@@ -88,7 +88,7 @@ function moduleArrayAddItem(array, jsonSchema) {
         }
     } else if (jsonSchema.type === "array") {
         item = [];
-        moduleArrayAddItem(item, jsonSchema.items);
+        pluginArrayAddItem(item, jsonSchema.items);
     }
     array.push(item);
 }
@@ -96,11 +96,11 @@ function moduleArrayAddItem(array, jsonSchema) {
 class Overlay extends React.Component {
     constructor(props) {
         super(props);
-        var module =
-            this.props.module !== undefined
-                ? this.props.module
-                : moduleCreate(this.props.jsonSchema);
-        var valid = ajv.validate(this.props.jsonSchema, module);
+        var plugin =
+            this.props.plugin !== undefined
+                ? this.props.plugin
+                : pluginCreate(this.props.jsonSchema);
+        var valid = ajv.validate(this.props.jsonSchema, plugin);
         var errors = undefined;
         // console.log("valid: " + valid);
         if (!valid) {
@@ -108,9 +108,9 @@ class Overlay extends React.Component {
             // console.log(errors);
         }
 
-        var newModuleNames = JSON.parse(JSON.stringify(this.props.moduleNames));
-        newModuleNames.push(module.name);
-        var nameValid = ajv.validate(nameValidationSchema, { name: newModuleNames });
+        var newPluginNames = JSON.parse(JSON.stringify(this.props.pluginNames));
+        newPluginNames.push(plugin.name);
+        var nameValid = ajv.validate(nameValidationSchema, { name: newPluginNames });
         var nameErrors;
         // console.log("name valid: " + nameValid);
         if (!nameValid) {
@@ -125,8 +125,8 @@ class Overlay extends React.Component {
         }
 
         this.state = {
-            module: module,
-            isNew: this.props.module === undefined,
+            plugin: plugin,
+            isNew: this.props.plugin === undefined,
             errors: errors,
             confirmDialodOpen: false,
         };
@@ -134,7 +134,7 @@ class Overlay extends React.Component {
     handleCancel() {
         if (
             !this.state.isNew &&
-            JSON.stringify(this.state.module) == JSON.stringify(this.props.module)
+            JSON.stringify(this.state.plugin) == JSON.stringify(this.props.plugin)
         ) {
             this.props.onCancel();
         } else {
@@ -149,13 +149,13 @@ class Overlay extends React.Component {
     }
     handleComfirm() {
         if (this.state.isNew) {
-            this.props.onSuccess(this.props.columnIndex, this.state.module);
+            this.props.onSuccess(this.props.columnIndex, this.state.plugin);
         } else {
-            this.props.onSuccess(this.props.columnIndex, this.props.index, this.state.module);
+            this.props.onSuccess(this.props.columnIndex, this.props.index, this.state.plugin);
         }
     }
-    handleChange(changedSubmodule) {
-        var valid = ajv.validate(this.props.jsonSchema, changedSubmodule);
+    handleChange(changedSubplugin) {
+        var valid = ajv.validate(this.props.jsonSchema, changedSubplugin);
         var errors = undefined;
         // console.log("valid: " + valid);
         if (!valid) {
@@ -163,9 +163,9 @@ class Overlay extends React.Component {
             // console.log(errors);
         }
 
-        var newModuleNames = JSON.parse(JSON.stringify(this.props.moduleNames));
-        newModuleNames.push(changedSubmodule.name);
-        var nameValid = ajv.validate(nameValidationSchema, { name: newModuleNames });
+        var newPluginNames = JSON.parse(JSON.stringify(this.props.pluginNames));
+        newPluginNames.push(changedSubplugin.name);
+        var nameValid = ajv.validate(nameValidationSchema, { name: newPluginNames });
         var nameErrors;
         // console.log("name valid: " + nameValid);
         if (!nameValid) {
@@ -179,12 +179,12 @@ class Overlay extends React.Component {
             }
         }
         this.setState({
-            module: changedSubmodule,
+            plugin: changedSubplugin,
             errors: errors,
         });
     }
     render() {
-        var buttonText = this.state.isNew ? "Add module" : "Edit module";
+        var buttonText = this.state.isNew ? "Add plugin" : "Edit plugin";
         var titleText = buttonText + ": " + this.props.jsonSchema.title;
         var descParts = this.props.jsonSchema.description.split("|");
         var subtitleText;
@@ -217,7 +217,7 @@ class Overlay extends React.Component {
         }
         properties = (
             <Properties
-                module={this.state.module}
+                plugin={this.state.plugin}
                 jsonSchema={this.props.jsonSchema}
                 errors={this.state.errors}
                 dataPath={""}
@@ -276,11 +276,11 @@ class Overlay extends React.Component {
                                     component={"label"}
                                     color={"textSecondary"}
                                 >
-                                    Module XML
+                                    Plugin XML
                                 </Typography>
                                 <Typography id={"XMLPrint"} component={"pre"}>
                                     {formatXml(
-                                        x2js.json2xml_str(this.state.module),
+                                        x2js.json2xml_str(this.state.plugin),
                                         this.props.XMLIndentType.character,
                                         this.props.XMLIndentNumber
                                     )}
@@ -343,33 +343,33 @@ class Properties extends React.Component {
     handleMenuClose() {
         this.setState({ anchorEl: null });
     }
-    callOnChange(changedModule) {
+    callOnChange(changedPlugin) {
         if (this.props.isRoot) {
-            this.props.onChange(changedModule);
+            this.props.onChange(changedPlugin);
             return;
         }
-        this.props.onChange(this.props.name, changedModule);
+        this.props.onChange(this.props.name, changedPlugin);
     }
     handleMenuSelect(selectedPropertyName) {
-        var changedModule = JSON.parse(JSON.stringify(this.props.module));
-        moduleSetProperty(
-            changedModule,
+        var changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
+        pluginSetProperty(
+            changedPlugin,
             selectedPropertyName,
             this.props.jsonSchema.properties[selectedPropertyName]
         );
         this.handleMenuClose();
-        this.callOnChange(changedModule);
+        this.callOnChange(changedPlugin);
         this.setState({ expanded: true });
     }
-    handleChange(propertyName, changedSubmodule) {
-        var changedModule = JSON.parse(JSON.stringify(this.props.module));
-        changedModule[propertyName] = changedSubmodule;
-        this.callOnChange(changedModule);
+    handleChange(propertyName, changedSubplugin) {
+        var changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
+        changedPlugin[propertyName] = changedSubplugin;
+        this.callOnChange(changedPlugin);
     }
     handleRemoveChild(propertyName) {
-        var changedModule = JSON.parse(JSON.stringify(this.props.module));
-        delete changedModule[propertyName];
-        this.callOnChange(changedModule);
+        var changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
+        delete changedPlugin[propertyName];
+        this.callOnChange(changedPlugin);
     }
     handleRemove() {
         this.props.onRemove(this.props.name);
@@ -403,7 +403,7 @@ class Properties extends React.Component {
             (!this.props.jsonSchema.hasOwnProperty("required") ||
                 Object.keys(this.props.jsonSchema.properties).length >
                     this.props.jsonSchema.required.length) &&
-            Object.keys(this.props.module).length !=
+            Object.keys(this.props.plugin).length !=
                 Object.keys(this.props.jsonSchema.properties).length
         ) {
             optionalMenu = (
@@ -428,7 +428,7 @@ class Properties extends React.Component {
                             if (
                                 (!this.props.jsonSchema.hasOwnProperty("required") ||
                                     !this.props.jsonSchema.required.includes(propertyName)) &&
-                                !this.props.module.hasOwnProperty(propertyName)
+                                !this.props.plugin.hasOwnProperty(propertyName)
                             ) {
                                 return (
                                     <MenuItem
@@ -469,8 +469,8 @@ class Properties extends React.Component {
             );
         }
         if (
-            Object.keys(this.props.module).length !== 0 &&
-            this.props.module.constructor === Object
+            Object.keys(this.props.plugin).length !== 0 &&
+            this.props.plugin.constructor === Object
         ) {
             expandButton = (
                 <IconButton
@@ -495,7 +495,7 @@ class Properties extends React.Component {
                         if (
                             (!this.props.jsonSchema.hasOwnProperty("required") ||
                                 !this.props.jsonSchema.required.includes(propertyName)) &&
-                            !this.props.module.hasOwnProperty(propertyName)
+                            !this.props.plugin.hasOwnProperty(propertyName)
                         ) {
                             return;
                         }
@@ -524,7 +524,7 @@ class Properties extends React.Component {
                                 <Item
                                     name={propertyName}
                                     type={this.props.jsonSchema.properties[propertyName].type}
-                                    module={this.props.module[propertyName]}
+                                    plugin={this.props.plugin[propertyName]}
                                     required={isOptional}
                                     jsonSchema={this.props.jsonSchema.properties[propertyName]}
                                     errors={errors}
@@ -587,7 +587,7 @@ class Item extends React.Component {
                 return (
                     <StringProperty
                         name={this.props.name}
-                        module={this.props.module}
+                        plugin={this.props.plugin}
                         required={this.props.required}
                         jsonSchema={this.props.jsonSchema}
                         errors={this.props.errors}
@@ -600,7 +600,7 @@ class Item extends React.Component {
                 return (
                     <NumberProperty
                         name={this.props.name}
-                        module={this.props.module}
+                        plugin={this.props.plugin}
                         required={this.props.required}
                         step={1}
                         jsonSchema={this.props.jsonSchema}
@@ -614,7 +614,7 @@ class Item extends React.Component {
                 return (
                     <NumberProperty
                         name={this.props.name}
-                        module={this.props.module}
+                        plugin={this.props.plugin}
                         required={this.props.required}
                         step={0.01}
                         jsonSchema={this.props.jsonSchema}
@@ -628,7 +628,7 @@ class Item extends React.Component {
                 return (
                     <Properties
                         name={this.props.name}
-                        module={this.props.module}
+                        plugin={this.props.plugin}
                         required={this.props.required}
                         jsonSchema={this.props.jsonSchema}
                         errors={this.props.errors}
@@ -642,7 +642,7 @@ class Item extends React.Component {
                 return (
                     <BooleanProperty
                         name={this.props.name}
-                        module={this.props.module}
+                        plugin={this.props.plugin}
                         required={this.props.required}
                         jsonSchema={this.props.jsonSchema}
                         errors={this.props.errors}
@@ -655,7 +655,7 @@ class Item extends React.Component {
                 return (
                     <ArrayProperty
                         name={this.props.name}
-                        module={this.props.module}
+                        plugin={this.props.plugin}
                         required={this.props.required}
                         jsonSchema={this.props.jsonSchema}
                         errors={this.props.errors}
@@ -670,7 +670,7 @@ class Item extends React.Component {
                     return (
                         <MultipleTypesProperty
                             name={this.props.name}
-                            module={this.props.module}
+                            plugin={this.props.plugin}
                             required={this.props.required}
                             jsonSchema={this.props.jsonSchema}
                             errors={this.props.errors}
@@ -696,24 +696,24 @@ class ArrayProperty extends React.Component {
         };
     }
 
-    handleChange(index, _, changedSubmodule) {
-        var changedModule = JSON.parse(JSON.stringify(this.props.module));
-        changedModule[index] = changedSubmodule;
-        this.props.onChange(this.props.name, changedModule);
+    handleChange(index, _, changedSubplugin) {
+        var changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
+        changedPlugin[index] = changedSubplugin;
+        this.props.onChange(this.props.name, changedPlugin);
     }
     handleRemove(index) {
-        if (this.props.module.length > 1) {
-            var changedModule = JSON.parse(JSON.stringify(this.props.module));
-            changedModule.splice(index, 1);
-            this.props.onChange(this.props.name, changedModule);
+        if (this.props.plugin.length > 1) {
+            var changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
+            changedPlugin.splice(index, 1);
+            this.props.onChange(this.props.name, changedPlugin);
         } else {
             this.props.onRemove(this.props.name);
         }
     }
     handleAdd() {
-        var changedModule = JSON.parse(JSON.stringify(this.props.module));
-        moduleArrayAddItem(changedModule, this.props.jsonSchema.items);
-        this.props.onChange(this.props.name, changedModule);
+        var changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
+        pluginArrayAddItem(changedPlugin, this.props.jsonSchema.items);
+        this.props.onChange(this.props.name, changedPlugin);
         this.setState({ expanded: true });
     }
     handleExpandClick() {
@@ -732,11 +732,11 @@ class ArrayProperty extends React.Component {
         var childErrorsNum = 0;
         var errorMessage = "";
         var minItems = 0;
-        var numOfItems = this.props.module.length;
+        var numOfItems = this.props.plugin.length;
         if (
             !this.props.jsonSchema.hasOwnProperty("maxItems") ||
             (this.props.jsonSchema.hasOwnProperty("maxItems") &&
-                this.props.jsonSchema.maxItems > this.props.module.length)
+                this.props.jsonSchema.maxItems > this.props.plugin.length)
         ) {
             button = (
                 <Button variant="outlined" color="primary" onClick={this.handleAdd.bind(this)}>
@@ -786,7 +786,7 @@ class ArrayProperty extends React.Component {
         );
         items = (
             <Collapse in={this.state.expanded} timeout="auto">
-                {this.props.module.map((item, index) => {
+                {this.props.plugin.map((item, index) => {
                     var dataPath = this.props.dataPath + "[" + index + "]";
                     var errors = undefined;
                     if (this.props.errors !== undefined) {
@@ -809,7 +809,7 @@ class ArrayProperty extends React.Component {
                             <Item
                                 name={this.props.name + "[" + index + "]"}
                                 type={this.props.jsonSchema.items.type}
-                                module={item}
+                                plugin={item}
                                 required={minItems >= numOfItems && this.props.required}
                                 jsonSchema={this.props.jsonSchema.items}
                                 errors={errors}
@@ -865,7 +865,7 @@ class StringProperty extends React.Component {
         });
     }
     render() {
-        var value = this.props.module;
+        var value = this.props.plugin;
         var readOnly = false;
         var onChange = this.handleChange.bind(this);
         var deleteButton = "";
@@ -977,7 +977,7 @@ class BooleanProperty extends React.Component {
         };
     }
     handleChange() {
-        this.props.onChange(this.props.name, !this.props.module);
+        this.props.onChange(this.props.name, !this.props.plugin);
     }
     handleRemove() {
         this.props.onRemove(this.props.name);
@@ -993,7 +993,7 @@ class BooleanProperty extends React.Component {
         });
     }
     render() {
-        var value = this.props.module;
+        var value = this.props.plugin;
         var readOnly = false;
         var onChange = this.handleChange.bind(this);
         var deleteButton = "";
@@ -1093,7 +1093,7 @@ class NumberProperty extends React.Component {
         });
     }
     render() {
-        var value = this.props.module;
+        var value = this.props.plugin;
         var readOnly = false;
         var onChange = this.handleChange.bind(this);
         var min = null;
@@ -1217,7 +1217,7 @@ class MultipleTypesProperty extends React.Component {
         });
     }
     render() {
-        var value = this.props.module;
+        var value = this.props.plugin;
         var readOnly = false;
         var onChange = this.handleChange.bind(this);
         var deleteButton = "";

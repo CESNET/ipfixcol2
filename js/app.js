@@ -73,14 +73,14 @@ let merge = (obj1, obj2) => {
 };
 
 var config = {};
-var moduleSchemas = [];
+var pluginSchemas = [];
 var nameValidationSchema;
 var outputExtraParams;
 var allPluginsExtraParams;
 
 async function loadAppData() {
     config = await fetch("./config/config.json").then((response) => response.json());
-    moduleSchemas = [
+    pluginSchemas = [
         loadSchemas(config.schemaLocations.input),
         loadSchemas(config.schemaLocations.intermediate),
         loadSchemas(config.schemaLocations.output),
@@ -138,7 +138,7 @@ class Form extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            modules: [[], [], []],
+            plugins: [[], [], []],
             overlay: null,
             snackbarOpen: false,
             snackbarText: "",
@@ -149,12 +149,12 @@ class Form extends React.Component {
         };
     }
 
-    findSchema(module, schemas) {
-        var moduleSchema = schemas.find(
-            (schema) => module.plugin === schema.properties.plugin.const
+    findSchema(plugin, schemas) {
+        var pluginSchema = schemas.find(
+            (schema) => plugin.plugin === schema.properties.plugin.const
         );
-        if (moduleSchema !== undefined) {
-            return moduleSchema;
+        if (pluginSchema !== undefined) {
+            return pluginSchema;
         }
         console.log("Schema not found!");
     }
@@ -167,8 +167,8 @@ class Form extends React.Component {
         console.log("Editing canceled");
     }
 
-    getSectionModuleNames(columnIndex) {
-        return this.state.modules[columnIndex].map((module) => module.name);
+    getSectionPluginNames(columnIndex) {
+        return this.state.plugins[columnIndex].map((plugin) => plugin.name);
     }
 
     applySchemaExtensions(schema, columnIndex) {
@@ -179,96 +179,96 @@ class Form extends React.Component {
         return schema;
     }
 
-    newModuleOverlay(columnIndex, moduleIndex) {
-        var extendedSchema = this.applySchemaExtensions(moduleSchemas[columnIndex][moduleIndex], columnIndex);
+    newPluginOverlay(columnIndex, pluginIndex) {
+        var extendedSchema = this.applySchemaExtensions(pluginSchemas[columnIndex][pluginIndex], columnIndex);
         this.setState({
             overlay: (
                 <Overlay
                     columnIndex={columnIndex}
                     jsonSchema={extendedSchema}
-                    moduleNames={this.getSectionModuleNames(columnIndex)}
+                    pluginNames={this.getSectionPluginNames(columnIndex)}
                     onCancel={this.editCancel.bind(this)}
-                    onSuccess={this.addModule.bind(this)}
+                    onSuccess={this.addPlugin.bind(this)}
                     XMLIndentType={this.state.indentType}
                     XMLIndentNumber={this.state.indentNumber}
                 />
             ),
         });
-        console.log("Editing a new module");
+        console.log("Editing a new plugin");
     }
 
-    editModuleOverlay(columnIndex, index) {
-        var module = this.state.modules[columnIndex][index];
-        var moduleJsonSchema = this.findSchema(module, moduleSchemas[columnIndex]);
-        var extendedSchema = this.applySchemaExtensions(moduleJsonSchema, columnIndex);
-        var moduleNames = JSON.parse(JSON.stringify(this.getSectionModuleNames(columnIndex)));
-        moduleNames.splice(index, 1);
+    editPluginOverlay(columnIndex, index) {
+        var plugin = this.state.plugins[columnIndex][index];
+        var pluginJsonSchema = this.findSchema(plugin, pluginSchemas[columnIndex]);
+        var extendedSchema = this.applySchemaExtensions(pluginJsonSchema, columnIndex);
+        var pluginNames = JSON.parse(JSON.stringify(this.getSectionPluginNames(columnIndex)));
+        pluginNames.splice(index, 1);
         this.setState({
             overlay: (
                 <Overlay
-                    module={module}
+                    plugin={plugin}
                     columnIndex={columnIndex}
                     index={index}
                     jsonSchema={extendedSchema}
-                    moduleNames={moduleNames}
+                    pluginNames={pluginNames}
                     onCancel={this.editCancel.bind(this)}
-                    onSuccess={this.editModule.bind(this)}
+                    onSuccess={this.editPlugin.bind(this)}
                     XMLIndentType={this.state.indentType}
                     XMLIndentNumber={this.state.indentNumber}
                 />
             ),
         });
-        console.log("Editing an existing module");
+        console.log("Editing an existing plugin");
     }
 
-    addModule(columnIndex, module) {
-        var modules = this.state.modules;
-        modules[columnIndex] = modules[columnIndex].concat(module);
+    addPlugin(columnIndex, plugin) {
+        var plugins = this.state.plugins;
+        plugins[columnIndex] = plugins[columnIndex].concat(plugin);
         this.setState({
-            modules: modules,
+            plugins: plugins,
             overlay: null,
         });
-        this.openSnackbar("New module added");
-        console.log("New module added");
+        this.openSnackbar("New plugin added");
+        console.log("New plugin added");
     }
 
-    editModule(columnIndex, index, module) {
-        var modules = this.state.modules;
-        modules[columnIndex][index] = module;
+    editPlugin(columnIndex, index, plugin) {
+        var plugins = this.state.plugins;
+        plugins[columnIndex][index] = plugin;
         this.setState({
-            modules: modules,
+            plugins: plugins,
             overlay: null,
         });
-        this.openSnackbar("Module edited");
-        console.log("Module edited");
+        this.openSnackbar("Plugin edited");
+        console.log("Plugin edited");
     }
 
-    removeModule(columnIndex, index) {
-        var modules = this.state.modules;
-        modules[columnIndex].splice(index, 1);
+    removePlugin(columnIndex, index) {
+        var plugins = this.state.plugins;
+        plugins[columnIndex].splice(index, 1);
         this.setState({
-            modules: modules,
+            plugins: plugins,
         });
-        this.openSnackbar("Module removed");
-        console.log("Module removed");
+        this.openSnackbar("Plugin removed");
+        console.log("Plugin removed");
     }
 
     createConfigXML() {
         var config = JSON.parse(JSON.stringify(defaultConfig));
-        if (this.state.modules[0].length === 0) {
+        if (this.state.plugins[0].length === 0) {
             delete config.ipfixcol2.inputPlugins;
         } else {
-            config.ipfixcol2.inputPlugins.input = this.state.modules[0];
+            config.ipfixcol2.inputPlugins.input = this.state.plugins[0];
         }
-        if (this.state.modules[1].length === 0) {
+        if (this.state.plugins[1].length === 0) {
             delete config.ipfixcol2.intermediatePlugins;
         } else {
-            config.ipfixcol2.intermediatePlugins.intermediate = this.state.modules[1];
+            config.ipfixcol2.intermediatePlugins.intermediate = this.state.plugins[1];
         }
-        if (this.state.modules[2].length === 0) {
+        if (this.state.plugins[2].length === 0) {
             delete config.ipfixcol2.outputPlugins;
         } else {
-            config.ipfixcol2.outputPlugins.output = this.state.modules[2];
+            config.ipfixcol2.outputPlugins.output = this.state.plugins[2];
         }
         var xml = x2js.json2xml_str(config);
         return formatXml(xml, this.state.indentType.character, this.state.indentNumber);
@@ -449,35 +449,35 @@ class Form extends React.Component {
                         <FormColumn
                             key={columnNames[0]}
                             columnIndex={0}
-                            modules={this.state.modules[0]}
+                            plugins={this.state.plugins[0]}
                             color={colors[0]}
                             name={columnNames[0]}
-                            modulesAvailable={moduleSchemas[0]}
-                            addModule={this.newModuleOverlay.bind(this)}
-                            editModule={this.editModuleOverlay.bind(this)}
-                            removeModule={this.removeModule.bind(this)}
+                            pluginsAvailable={pluginSchemas[0]}
+                            addPlugin={this.newPluginOverlay.bind(this)}
+                            editPlugin={this.editPluginOverlay.bind(this)}
+                            removePlugin={this.removePlugin.bind(this)}
                         />
                         <FormColumn
                             key={columnNames[1]}
                             columnIndex={1}
-                            modules={this.state.modules[1]}
+                            plugins={this.state.plugins[1]}
                             color={colors[1]}
                             name={columnNames[1]}
-                            modulesAvailable={moduleSchemas[1]}
-                            addModule={this.newModuleOverlay.bind(this)}
-                            editModule={this.editModuleOverlay.bind(this)}
-                            removeModule={this.removeModule.bind(this)}
+                            pluginsAvailable={pluginSchemas[1]}
+                            addPlugin={this.newPluginOverlay.bind(this)}
+                            editPlugin={this.editPluginOverlay.bind(this)}
+                            removePlugin={this.removePlugin.bind(this)}
                         />
                         <FormColumn
                             key={columnNames[2]}
                             columnIndex={2}
-                            modules={this.state.modules[2]}
+                            plugins={this.state.plugins[2]}
                             color={colors[2]}
                             name={columnNames[2]}
-                            modulesAvailable={moduleSchemas[2]}
-                            addModule={this.newModuleOverlay.bind(this)}
-                            editModule={this.editModuleOverlay.bind(this)}
-                            removeModule={this.removeModule.bind(this)}
+                            pluginsAvailable={pluginSchemas[2]}
+                            addPlugin={this.newPluginOverlay.bind(this)}
+                            editPlugin={this.editPluginOverlay.bind(this)}
+                            removePlugin={this.removePlugin.bind(this)}
                         />
                     </div>
                     {this.printColoredXML()}
@@ -519,17 +519,17 @@ class FormColumn extends React.Component {
         };
     }
 
-    addModule(moduleIndex) {
+    addPlugin(pluginIndex) {
         this.setState({ anchorEl: null });
-        this.props.addModule(this.props.columnIndex, moduleIndex);
+        this.props.addPlugin(this.props.columnIndex, pluginIndex);
     }
 
-    removeModule(index) {
-        this.props.removeModule(this.props.columnIndex, index);
+    removePlugin(index) {
+        this.props.removePlugin(this.props.columnIndex, index);
     }
 
-    editModule(index) {
-        this.props.editModule(this.props.columnIndex, index);
+    editPlugin(index) {
+        this.props.editPlugin(this.props.columnIndex, index);
     }
 
     handleMenuClick(event) {
@@ -540,18 +540,18 @@ class FormColumn extends React.Component {
     }
 
     render() {
-        var modules = "";
-        if (this.props.modules.length > 0) {
-            modules = (
+        var plugins = "";
+        if (this.props.plugins.length > 0) {
+            plugins = (
                 <CardContent>
-                    {this.props.modules.map((module, index) => {
+                    {this.props.plugins.map((plugin, index) => {
                         return (
-                            <Module
+                            <Plugin
                                 key={index}
                                 index={index}
-                                module={module}
-                                onRemove={this.removeModule.bind(this)}
-                                onEdit={this.editModule.bind(this)}
+                                plugin={plugin}
+                                onRemove={this.removePlugin.bind(this)}
+                                onEdit={this.editPlugin.bind(this)}
                             />
                         );
                     })}
@@ -567,7 +567,7 @@ class FormColumn extends React.Component {
                     aria-haspopup="true"
                     onClick={this.handleMenuClick.bind(this)}
                 >
-                    Add module
+                    Add plugin
                 </Button>
                 <Menu
                     id="simple-menu"
@@ -576,13 +576,13 @@ class FormColumn extends React.Component {
                     open={Boolean(this.state.anchorEl)}
                     onClose={this.handleMenuClose.bind(this)}
                 >
-                    {this.props.modulesAvailable.map((moduleAvailable, index) => {
+                    {this.props.pluginsAvailable.map((pluginAvailable, index) => {
                         return (
-                            <ModuleAvailable
+                            <PluginAvailable
                                 key={index}
-                                moduleIndex={index}
-                                module={moduleAvailable}
-                                onAdd={this.addModule.bind(this)}
+                                pluginIndex={index}
+                                plugin={pluginAvailable}
+                                onAdd={this.addPlugin.bind(this)}
                             />
                         );
                     })}
@@ -593,7 +593,7 @@ class FormColumn extends React.Component {
             <Card className={"column " + this.props.color}>
                 <CardHeader className={"title"} title={this.props.name} />
                 <Divider />
-                {modules}
+                {plugins}
                 <Divider />
                 <CardActions disableSpacing>{addMenu}</CardActions>
             </Card>
@@ -601,17 +601,17 @@ class FormColumn extends React.Component {
     }
 }
 
-class ModuleAvailable extends React.Component {
+class PluginAvailable extends React.Component {
     handleAdd() {
-        this.props.onAdd(this.props.moduleIndex);
+        this.props.onAdd(this.props.pluginIndex);
     }
 
     render() {
-        return <MenuItem onClick={this.handleAdd.bind(this)}>{this.props.module.title}</MenuItem>;
+        return <MenuItem onClick={this.handleAdd.bind(this)}>{this.props.plugin.title}</MenuItem>;
     }
 }
 
-class Module extends React.Component {
+class Plugin extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
@@ -639,7 +639,7 @@ class Module extends React.Component {
                     aria-controls="panel1c-content"
                     id="panel1c-header"
                 >
-                    <Typography className={"title"}>{this.props.module.name}</Typography>
+                    <Typography className={"title"}>{this.props.plugin.name}</Typography>
                     <FormControlLabel
                         onClick={this.handleEdit.bind(this)}
                         control={
@@ -659,7 +659,7 @@ class Module extends React.Component {
                     />
                 </ExpansionPanelSummary>
                 <ExpansionPanelDetails>
-                    <PropsItem module={this.props.module} />
+                    <PropsItem plugin={this.props.plugin} />
                 </ExpansionPanelDetails>
             </ExpansionPanel>
         );
@@ -668,17 +668,17 @@ class Module extends React.Component {
 
 class PropsItem extends React.Component {
     render() {
-        if (Array.isArray(this.props.module)) {
+        if (Array.isArray(this.props.plugin)) {
             return (
                 <React.Fragment>
-                    {this.props.module.map((item, index) => {
-                        return <PropsItem key={index} name={this.props.name} module={item} />;
+                    {this.props.plugin.map((item, index) => {
+                        return <PropsItem key={index} name={this.props.name} plugin={item} />;
                     })}
                 </React.Fragment>
             );
         }
-        if (typeof this.props.module === "object") {
-            return Object.keys(this.props.module).length == 0 ? (
+        if (typeof this.props.plugin === "object") {
+            return Object.keys(this.props.plugin).length == 0 ? (
                 <ListItem button>
                     <ListItemText primary={this.props.name} secondary={"No parameters"} />
                 </ListItem>
@@ -693,12 +693,12 @@ class PropsItem extends React.Component {
                     )}
                     <ListItem>
                         <List dense>
-                            {Object.keys(this.props.module).map((propertyName) => {
+                            {Object.keys(this.props.plugin).map((propertyName) => {
                                 return (
                                     <PropsItem
                                         key={propertyName}
                                         name={propertyName}
-                                        module={this.props.module[propertyName]}
+                                        plugin={this.props.plugin[propertyName]}
                                     />
                                 );
                             })}
@@ -707,19 +707,19 @@ class PropsItem extends React.Component {
                 </React.Fragment>
             );
         }
-        if (typeof this.props.module === "boolean") {
+        if (typeof this.props.plugin === "boolean") {
             return (
                 <ListItem button>
                     <ListItemText
                         primary={this.props.name}
-                        secondary={this.props.module.toString()}
+                        secondary={this.props.plugin.toString()}
                     />
                 </ListItem>
             );
         }
         return (
             <ListItem button>
-                <ListItemText primary={this.props.name} secondary={this.props.module} />
+                <ListItemText primary={this.props.name} secondary={this.props.plugin} />
             </ListItem>
         );
     }
