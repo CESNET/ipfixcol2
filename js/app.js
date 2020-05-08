@@ -808,8 +808,8 @@ class Settings extends React.Component {
 
     handleChangeNumber(event) {
         var value = Number(event.target.value);
-        if (value < indentationSpaces.min) {
-            this.setState({ indentNumber: "" });
+        if (value < indentationSpaces.min || value.toString() != event.target.value) {
+            this.setState({ indentNumber: event.target.value });
             return;
         } else if (value > indentationSpaces.max) {
             value = indentationSpaces.max;
@@ -851,7 +851,6 @@ class Settings extends React.Component {
                                 className={"select"}
                                 value={this.props.indentType.name}
                                 onChange={this.handleChangeType.bind(this)}
-                                inputProps={{ tabIndex: 1 }}
                             >
                                 {indentationTypes.map((indentType) => {
                                     return (
@@ -876,7 +875,6 @@ class Settings extends React.Component {
                                     min: indentationSpaces.min,
                                     max: indentationSpaces.max,
                                     step: 1,
-                                    tabIndex: 2,
                                 }}
                                 onChange={this.handleChangeNumber.bind(this)}
                             />

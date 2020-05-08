@@ -204,6 +204,9 @@ p + p {
   font-weight: 400;
 }
 
+.settings label + .MuiInput-formControl {
+  margin-top: 8px;
+}
 .settings .MuiFormControl-root + .MuiFormControl-root {
   padding-top: 1.5rem;
 }
