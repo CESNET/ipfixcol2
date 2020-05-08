@@ -154,38 +154,69 @@ p + p {
 
 .MuiCardContent-root {
     padding: 12px;
+
+    & + .MuiCardContent-root {
+        padding-top: 0;
+    }
+    &:last-child {
+        padding-bottom: 4px;
+    }
 }
 
-.MuiCardContent-root:last-child {
-    padding-bottom: 20px;
-}
+.form {
+    .MuiCardContent-root {
+        padding: 8px;
 
-.MuiCollapse-container {
-    .MuiExpansionPanelDetails-root {
-        padding: 0 8px 20px 0;
-        li {
-            .MuiButtonBase-root {
-                padding: 0 8px;
-                cursor: default;
-            }
-            .MuiListItemText-root {
-                display: grid;
-                grid-template-columns: auto auto;
-                span, p {
-                    display: block;
-                }
-                p {
-                    text-align: right;
-                }
-            }
-            padding: 0;
+        & + .MuiCardContent-root {
+            padding-top: 0;
         }
-        ul {
-            width: 100%;
-            padding: 0;
-            padding-left: 8px;
-            ul {
-                padding-left: 16px;
+    }
+
+    .plugin .MuiCard-root {
+        .MuiCardHeader-root {
+            padding: 8px 16px;
+    
+            .MuiCardHeader-title {
+                font-size: 1.2em;
+            }
+    
+            .MuiCardHeader-action {
+                margin-top: 0;
+                .MuiButtonBase-root {
+                    padding: 6px;
+                }
+            }
+        }
+    
+        .MuiCollapse-container {
+            .MuiCardContent-root {
+                padding: 0 8px 8px 0;
+                li {
+                    .MuiButtonBase-root {
+                        padding: 0 8px;
+                        cursor: default;
+                    }
+                    .MuiListItemText-root {
+                        display: grid;
+                        grid-template-columns: auto auto;
+                        span,
+                        p {
+                            display: block;
+                        }
+                        p {
+                            text-align: right;
+                        }
+                    }
+                    padding: 0;
+                }
+                ul {
+                    width: 100%;
+                    padding: 0;
+                    padding-left: 8px;
+                    ul {
+                        padding-left: 16px;
+                    }
+                }
             }
         }
     }

@@ -596,21 +596,18 @@ class FormColumn extends React.Component {
     render() {
         var plugins = "";
         if (this.props.plugins.length > 0) {
-            plugins = (
-                <CardContent>
-                    {this.props.plugins.map((plugin, index) => {
-                        return (
-                            <Plugin
-                                key={index}
-                                index={index}
-                                plugin={plugin}
-                                onRemove={this.removePlugin.bind(this)}
-                                onEdit={this.editPlugin.bind(this)}
-                            />
-                        );
-                    })}
-                </CardContent>
-            );
+            plugins = this.props.plugins.map((plugin, index) => {
+                return (
+                    <CardContent key={index} className="plugin">
+                        <Plugin
+                            index={index}
+                            plugin={plugin}
+                            onRemove={this.removePlugin.bind(this)}
+                            onEdit={this.editPlugin.bind(this)}
+                        />
+                    </CardContent>
+                );
+            });
         }
         var addMenu = (
             <React.Fragment>
@@ -665,11 +662,67 @@ class PluginAvailable extends React.Component {
     }
 }
 
+// class Plugin extends React.Component {
+//     constructor(props) {
+//         super(props);
+//         this.state = {
+//             detailVisible: false,
+//         };
+//     }
+
+//     handleEdit() {
+//         this.props.onEdit(this.props.index);
+//     }
+
+//     setDetailVisibile() {
+//         this.setState({ detailVisible: true });
+//     }
+
+//     setDetailHidden() {
+//         this.setState({ detailVisible: false });
+//     }
+
+//     render() {
+//         return (
+//             <ExpansionPanel>
+//                 <ExpansionPanelSummary
+//                     expandIcon={<Icon>expand_more</Icon>}
+//                     aria-controls="panel1c-content"
+//                     id="panel1c-header"
+//                 >
+//                     <Typography className={"title"}>{this.props.plugin.name}</Typography>
+//                     <FormControlLabel
+//                         onClick={this.handleEdit.bind(this)}
+//                         control={
+//                             <IconButton aria-label="edit">
+//                                 <Icon>edit</Icon>
+//                             </IconButton>
+//                         }
+//                         label={""}
+//                     />
+//                     <FormControlLabel
+//                         onClick={this.props.onRemove}
+//                         control={
+//                             <IconButton aria-label="delete">
+//                                 <Icon>delete</Icon>
+//                             </IconButton>
+//                         }
+//                     />
+//                 </ExpansionPanelSummary>
+//                 <ExpansionPanelDetails>
+//                     <PropsItem plugin={this.props.plugin} />
+//                 </ExpansionPanelDetails>
+//             </ExpansionPanel>
+//         );
+//     }
+// }
+
 class Plugin extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
             detailVisible: false,
+            expanded: false,
         };
     }
 
@@ -677,45 +730,51 @@ class Plugin extends React.Component {
         this.props.onEdit(this.props.index);
     }
 
-    setDetailVisibile() {
-        this.setState({ detailVisible: true });
-    }
-
-    setDetailHidden() {
-        this.setState({ detailVisible: false });
+    handleExpandClick() {
+        this.setState({ expanded: !this.state.expanded });
     }
 
     render() {
         return (
-            <ExpansionPanel>
-                <ExpansionPanelSummary
-                    expandIcon={<Icon>expand_more</Icon>}
-                    aria-controls="panel1c-content"
-                    id="panel1c-header"
-                >
-                    <Typography className={"title"}>{this.props.plugin.name}</Typography>
-                    <FormControlLabel
-                        onClick={this.handleEdit.bind(this)}
-                        control={
-                            <IconButton aria-label="edit">
+            <Card>
+                <CardHeader
+                    action={
+                        <React.Fragment>
+                            <IconButton
+                                aria-label="edit"
+                                onClick={this.handleEdit.bind(this)}
+                            >
                                 <Icon>edit</Icon>
                             </IconButton>
-                        }
-                        label={""}
-                    />
-                    <FormControlLabel
-                        onClick={this.props.onRemove}
-                        control={
-                            <IconButton aria-label="delete">
+                            <IconButton
+                                aria-label="delete"
+                                onClick={this.props.onRemove}
+                            >
                                 <Icon>delete</Icon>
                             </IconButton>
-                        }
-                    />
-                </ExpansionPanelSummary>
-                <ExpansionPanelDetails>
-                    <PropsItem plugin={this.props.plugin} />
-                </ExpansionPanelDetails>
-            </ExpansionPanel>
+                            <IconButton
+                                onClick={this.handleExpandClick.bind(this)}
+                                aria-expanded={this.state.expanded}
+                                aria-label="show more"
+                            >
+                                <Icon
+                                    className={
+                                        "expandable" + (this.state.expanded ? " expanded" : "")
+                                    }
+                                >
+                                    expand_more
+                                </Icon>
+                            </IconButton>
+                        </React.Fragment>
+                    }
+                    title={this.props.plugin.name}
+                />
+                <Collapse in={this.state.expanded} timeout="auto">
+                    <CardContent>
+                        <PropsItem plugin={this.props.plugin} />
+                    </CardContent>
+                </Collapse>
+            </Card>
         );
     }
 }

@@ -128,37 +128,58 @@ p + p {
 .MuiCardContent-root {
   padding: 12px;
 }
-
+.MuiCardContent-root + .MuiCardContent-root {
+  padding-top: 0;
+}
 .MuiCardContent-root:last-child {
-  padding-bottom: 20px;
+  padding-bottom: 4px;
 }
 
-.MuiCollapse-container .MuiExpansionPanelDetails-root {
-  padding: 0 8px 20px 0;
+.form .MuiCardContent-root {
+  padding: 8px;
 }
-.MuiCollapse-container .MuiExpansionPanelDetails-root li {
+.form .MuiCardContent-root + .MuiCardContent-root {
+  padding-top: 0;
+}
+.form .plugin .MuiCard-root .MuiCardHeader-root {
+  padding: 8px 16px;
+}
+.form .plugin .MuiCard-root .MuiCardHeader-root .MuiCardHeader-title {
+  font-size: 1.2em;
+}
+.form .plugin .MuiCard-root .MuiCardHeader-root .MuiCardHeader-action {
+  margin-top: 0;
+}
+.form .plugin .MuiCard-root .MuiCardHeader-root .MuiCardHeader-action .MuiButtonBase-root {
+  padding: 6px;
+}
+.form .plugin .MuiCard-root .MuiCollapse-container .MuiCardContent-root {
+  padding: 0 8px 8px 0;
+}
+.form .plugin .MuiCard-root .MuiCollapse-container .MuiCardContent-root li {
   padding: 0;
 }
-.MuiCollapse-container .MuiExpansionPanelDetails-root li .MuiButtonBase-root {
+.form .plugin .MuiCard-root .MuiCollapse-container .MuiCardContent-root li .MuiButtonBase-root {
   padding: 0 8px;
   cursor: default;
 }
-.MuiCollapse-container .MuiExpansionPanelDetails-root li .MuiListItemText-root {
+.form .plugin .MuiCard-root .MuiCollapse-container .MuiCardContent-root li .MuiListItemText-root {
   display: grid;
   grid-template-columns: auto auto;
 }
-.MuiCollapse-container .MuiExpansionPanelDetails-root li .MuiListItemText-root span, .MuiCollapse-container .MuiExpansionPanelDetails-root li .MuiListItemText-root p {
+.form .plugin .MuiCard-root .MuiCollapse-container .MuiCardContent-root li .MuiListItemText-root span,
+.form .plugin .MuiCard-root .MuiCollapse-container .MuiCardContent-root li .MuiListItemText-root p {
   display: block;
 }
-.MuiCollapse-container .MuiExpansionPanelDetails-root li .MuiListItemText-root p {
+.form .plugin .MuiCard-root .MuiCollapse-container .MuiCardContent-root li .MuiListItemText-root p {
   text-align: right;
 }
-.MuiCollapse-container .MuiExpansionPanelDetails-root ul {
+.form .plugin .MuiCard-root .MuiCollapse-container .MuiCardContent-root ul {
   width: 100%;
   padding: 0;
   padding-left: 8px;
 }
-.MuiCollapse-container .MuiExpansionPanelDetails-root ul ul {
+.form .plugin .MuiCard-root .MuiCollapse-container .MuiCardContent-root ul ul {
   padding-left: 16px;
 }
 
