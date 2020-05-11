@@ -197,6 +197,7 @@ class Form extends React.Component {
                     onSuccess={this.addPlugin.bind(this)}
                     XMLIndentType={this.state.indentType}
                     XMLIndentNumber={this.state.indentNumber}
+                    showConfirmationDialogs={this.state.showConfirmationDialogs}
                 />
             ),
         });
