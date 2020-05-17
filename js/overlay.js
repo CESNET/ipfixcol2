@@ -1,5 +1,6 @@
 // TODO
 
+// - na velkých monitorech zobrazit hlavní stránku do dvou sloupců
 // - přidat validaci počtu modulů ve skupinách
 // - zbavit se globálních proměnných - přesunout do souboru config.json
 //      ? jeden soubor s odkazy na schémata a druhý na ostatní data
@@ -297,7 +298,6 @@ class Overlay extends React.Component {
                     {btnSave}
                 </DialogActions>
                 <Dialog
-                    className={"settings"}
                     open={this.state.confirmDialodOpen}
                     fullWidth={false}
                     maxWidth={"sm"}

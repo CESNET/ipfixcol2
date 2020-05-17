@@ -472,7 +472,6 @@ class Form extends React.Component {
                     onClose={this.closeSettings.bind(this)}
                 />
                 <Dialog
-                    className={"settings"}
                     open={this.state.confirmDialogOpen}
                     fullWidth={false}
                     maxWidth={"sm"}
