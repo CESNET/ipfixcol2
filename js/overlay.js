@@ -1,6 +1,5 @@
 // TODO
 
-// - na velkých monitorech zobrazit hlavní stránku do dvou sloupců
 // - přidat validaci počtu modulů ve skupinách
 // - zbavit se globálních proměnných - přesunout do souboru config.json
 //      ? jeden soubor s odkazy na schémata a druhý na ostatní data
@@ -13,9 +12,7 @@
 // -! Plugin UniRec (timeout) přidat našeptávač možných hodnot
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
-// + sloučit třídy IntegerProperty a NumberProperty (pouze jeden rozdílný řádek)
-// + dotazovat se při smazání + přidat do settings možnost vypnutí potvrzování
-// + přejmenovat "module" na "plugin" v celém projektu
+// + na velkých monitorech zobrazit hlavní stránku do dvou sloupců
 //
 // +? musí být možnost zadat více IP adres
 //      - není jasné, zda v případě více IP adres může být jedna z nich prázdná

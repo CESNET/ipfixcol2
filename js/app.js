@@ -471,11 +471,7 @@ class Form extends React.Component {
                     onChange={this.changeSettings.bind(this)}
                     onClose={this.closeSettings.bind(this)}
                 />
-                <Dialog
-                    open={this.state.confirmDialogOpen}
-                    fullWidth={false}
-                    maxWidth={"sm"}
-                >
+                <Dialog open={this.state.confirmDialogOpen} fullWidth={false} maxWidth={"sm"}>
                     <DialogTitle>{"Are you sure?"}</DialogTitle>
                     <Divider />
                     <DialogContent dividers>
@@ -500,42 +496,44 @@ class Form extends React.Component {
                 </Dialog>
                 <div className="form">
                     {this.state.overlay}
-                    <div className="mainLayer">
-                        <FormColumn
-                            key={columnNames[0]}
-                            columnIndex={0}
-                            plugins={this.state.plugins[0]}
-                            color={colors[0]}
-                            name={columnNames[0]}
-                            pluginsAvailable={pluginSchemas[0]}
-                            addPlugin={this.newPluginOverlay.bind(this)}
-                            editPlugin={this.editPluginOverlay.bind(this)}
-                            removePlugin={this.removePluginConfirm.bind(this)}
-                        />
-                        <FormColumn
-                            key={columnNames[1]}
-                            columnIndex={1}
-                            plugins={this.state.plugins[1]}
-                            color={colors[1]}
-                            name={columnNames[1]}
-                            pluginsAvailable={pluginSchemas[1]}
-                            addPlugin={this.newPluginOverlay.bind(this)}
-                            editPlugin={this.editPluginOverlay.bind(this)}
-                            removePlugin={this.removePluginConfirm.bind(this)}
-                        />
-                        <FormColumn
-                            key={columnNames[2]}
-                            columnIndex={2}
-                            plugins={this.state.plugins[2]}
-                            color={colors[2]}
-                            name={columnNames[2]}
-                            pluginsAvailable={pluginSchemas[2]}
-                            addPlugin={this.newPluginOverlay.bind(this)}
-                            editPlugin={this.editPluginOverlay.bind(this)}
-                            removePlugin={this.removePluginConfirm.bind(this)}
-                        />
+                    <div className="sideBySide">
+                        <div className="mainLayer">
+                            <FormColumn
+                                key={columnNames[0]}
+                                columnIndex={0}
+                                plugins={this.state.plugins[0]}
+                                color={colors[0]}
+                                name={columnNames[0]}
+                                pluginsAvailable={pluginSchemas[0]}
+                                addPlugin={this.newPluginOverlay.bind(this)}
+                                editPlugin={this.editPluginOverlay.bind(this)}
+                                removePlugin={this.removePluginConfirm.bind(this)}
+                            />
+                            <FormColumn
+                                key={columnNames[1]}
+                                columnIndex={1}
+                                plugins={this.state.plugins[1]}
+                                color={colors[1]}
+                                name={columnNames[1]}
+                                pluginsAvailable={pluginSchemas[1]}
+                                addPlugin={this.newPluginOverlay.bind(this)}
+                                editPlugin={this.editPluginOverlay.bind(this)}
+                                removePlugin={this.removePluginConfirm.bind(this)}
+                            />
+                            <FormColumn
+                                key={columnNames[2]}
+                                columnIndex={2}
+                                plugins={this.state.plugins[2]}
+                                color={colors[2]}
+                                name={columnNames[2]}
+                                pluginsAvailable={pluginSchemas[2]}
+                                addPlugin={this.newPluginOverlay.bind(this)}
+                                editPlugin={this.editPluginOverlay.bind(this)}
+                                removePlugin={this.removePluginConfirm.bind(this)}
+                            />
+                        </div>
+                        {this.printColoredXML()}
                     </div>
-                    {this.printColoredXML()}
                     <Snackbar
                         anchorOrigin={{
                             vertical: "bottom",
@@ -685,16 +683,10 @@ class Plugin extends React.Component {
                 <CardHeader
                     action={
                         <React.Fragment>
-                            <IconButton
-                                aria-label="edit"
-                                onClick={this.handleEdit.bind(this)}
-                            >
+                            <IconButton aria-label="edit" onClick={this.handleEdit.bind(this)}>
                                 <Icon>edit</Icon>
                             </IconButton>
-                            <IconButton
-                                aria-label="delete"
-                                onClick={this.props.onRemove}
-                            >
+                            <IconButton aria-label="delete" onClick={this.props.onRemove}>
                                 <Icon>delete</Icon>
                             </IconButton>
                             <IconButton

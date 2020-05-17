@@ -135,6 +135,13 @@ p + p {
   padding-bottom: 4px;
 }
 
+.form {
+  max-width: 1280px;
+  margin: 10px auto 0;
+}
+.form .MuiCard-root:last-child {
+  margin-bottom: 10px;
+}
 .form .MuiCardContent-root {
   padding: 8px;
 }
@@ -184,7 +191,7 @@ p + p {
 }
 
 .XMLPrint {
-  margin: auto 10px;
+  margin: 10px;
 }
 .XMLPrint pre {
   border-radius: 4px;
@@ -219,6 +226,17 @@ p + p {
 }
 .MuiButtonBase-root.overlayIcon + .MuiButtonBase-root.overlayIcon {
   right: 8px;
+}
+
+@media screen and (min-width: 840px) {
+  .form .sideBySide {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    align-items: start;
+  }
+  .form .sideBySide .mainLayer {
+    margin-bottom: 0;
+  }
 }
 
 /*# sourceMappingURL=main.css.map */
