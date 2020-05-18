@@ -1,5 +1,10 @@
 // TODO
 
+// - opravit chybu v nastavení
+//      - postup pro reprodukci chyby:
+//          - v nastavení nastavit typ odsazení na mezery a počet mezer jiný než 2
+//          - změnit typ odsazení na tabulátor a pak zpět na mezery
+//          - počet mezer se vyresetuje na výchozí 2, ale zobrazený počet je shodný s nastavením v 1. kroku
 // - přidat validaci počtu modulů ve skupinách
 // - zbavit se globálních proměnných - přesunout do souboru config.json
 //      ? jeden soubor s odkazy na schémata a druhý na ostatní data
@@ -294,11 +299,7 @@ class Overlay extends React.Component {
                     {btnCancel}
                     {btnSave}
                 </DialogActions>
-                <Dialog
-                    open={this.state.confirmDialodOpen}
-                    fullWidth={false}
-                    maxWidth={"sm"}
-                >
+                <Dialog open={this.state.confirmDialodOpen} fullWidth={false} maxWidth={"sm"}>
                     <DialogTitle>{"Are you sure?"}</DialogTitle>
                     <Divider />
                     <DialogContent dividers>

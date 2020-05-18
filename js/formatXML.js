@@ -22,32 +22,33 @@
 
 
 function formatXml(xml, indentChar, indentNumber) {
-    var formatted = '';
+    var formatted = "";
     var reg = /(>)(<)(\/*)/g;
-    xml = xml.replace(reg, '$1\r\n$2$3');
+    xml = xml.toString().replace(reg, "$1\r\n$2$3");
     var pad = 0;
-    jQuery.each(xml.split('\r\n'), function(index, node) {
+    var nodes = xml.split("\r\n");
+    for (var n in nodes) {
+        var node = nodes[n];
         var indent = 0;
         if (node.match( /.+<\/\w[^>]*>$/ )) {
             indent = 0;
         } else if (node.match( /^<\/\w/ )) {
-            if (pad != 0) {
+            if (pad !== 0) {
                 pad -= 1;
             }
-        } else if (node.match( /^<\w([^>]*[^\/])?>.*$/ )) {
+        } else if (node.match( /^<\w[^>]*[^\/]>.*$/ )) {
             indent = 1;
         } else {
             indent = 0;
         }
 
-        var padding = '';
+        var padding = "";
         for (var i = 0; i < pad; i++) {
             padding += indentChar.repeat(indentNumber);
         }
 
-        formatted += padding + node + '\r\n';
+        formatted += padding + node + "\r\n";
         pad += indent;
-    });
-
+    }
     return formatted;
 }
