@@ -1,11 +1,11 @@
 // TODO
 
+// - zabránit stažení souboru při chybné konfiguraci
 // - opravit chybu v nastavení
 //      - postup pro reprodukci chyby:
 //          - v nastavení nastavit typ odsazení na mezery a počet mezer jiný než 2
 //          - změnit typ odsazení na tabulátor a pak zpět na mezery
 //          - počet mezer se vyresetuje na výchozí 2, ale zobrazený počet je shodný s nastavením v 1. kroku
-// - přidat validaci počtu modulů ve skupinách
 // - zbavit se globálních proměnných - přesunout do souboru config.json
 //      ? jeden soubor s odkazy na schémata a druhý na ostatní data
 // - upravit načítání dat (nyní na globální úrovni) - načítat na úrovni aplikace
@@ -17,7 +17,7 @@
 // -! Plugin UniRec (timeout) přidat našeptávač možných hodnot
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
-// + na velkých monitorech zobrazit hlavní stránku do dvou sloupců
+// + přidat validaci počtu modulů ve skupinách
 //
 // +? musí být možnost zadat více IP adres
 //      - není jasné, zda v případě více IP adres může být jedna z nich prázdná
@@ -105,10 +105,8 @@ class Overlay extends React.Component {
                 : pluginCreate(this.props.jsonSchema);
         var valid = ajv.validate(this.props.jsonSchema, plugin);
         var errors = undefined;
-        // console.log("valid: " + valid);
         if (!valid) {
             errors = JSON.parse(JSON.stringify(ajv.errors));
-            // console.log(errors);
         }
 
         var newPluginNames = JSON.parse(JSON.stringify(this.props.pluginNames));
@@ -397,7 +395,6 @@ class Properties extends React.Component {
         var hasError = false;
         var propsErrors;
         var childErrorsNum = 0;
-        var errorMessage = "";
         if (
             (!this.props.jsonSchema.hasOwnProperty("required") ||
                 Object.keys(this.props.jsonSchema.properties).length >
@@ -451,7 +448,7 @@ class Properties extends React.Component {
             childErrorsNum = this.props.errors.length - propsErrors.length;
         }
         if (hasError) {
-            errorMessage = propsErrors.pop().message;
+            var errorMessage = propsErrors.pop().message;
             errorIcon = (
                 <IconButton tabIndex={-1}>
                     <Tooltip title={errorMessage} arrow>
@@ -514,7 +511,7 @@ class Properties extends React.Component {
                                 }
                                 return false;
                             });
-                            if (errors === []) {
+                            if (errors.length == 0) {
                                 errors = undefined;
                             }
                         }

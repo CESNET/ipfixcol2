@@ -58,10 +58,6 @@ body {
   margin: 10px;
   margin-bottom: auto;
 }
-.column button,
-.column button:hover {
-  background: white;
-}
 
 .blue {
   background: linear-gradient(135deg, #6599ff 0%, #3266cc 100%);
@@ -142,11 +138,25 @@ p + p {
 .form .MuiCard-root:last-child {
   margin-bottom: 10px;
 }
+.form .MuiCardHeader-action {
+  margin-top: 0;
+  margin-right: 0;
+}
+.form .MuiCardHeader-action .MuiIconButton-root {
+  background: white;
+}
+.form .MuiCardHeader-action .MuiButtonBase-root {
+  padding: 6px;
+}
 .form .MuiCardContent-root {
   padding: 8px;
 }
 .form .MuiCardContent-root + .MuiCardContent-root {
   padding-top: 0;
+}
+.form .MuiButton-root,
+.form .MuiButton-root:hover {
+  background: white;
 }
 .form .plugin .MuiCard-root .MuiCardHeader-root {
   padding: 8px 16px;

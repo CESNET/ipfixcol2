@@ -67,14 +67,6 @@ body {
     width: calc(33% - 20px);
     margin: 10px;
     margin-bottom: auto;
-    // .title span{
-    //     color: white;
-    //     font-weight: 500;
-    // }
-    button,
-    button:hover {
-        background: white;
-    }
 }
 
 // Color settings
@@ -172,12 +164,28 @@ p + p {
         }
     }
 
+    .MuiCardHeader-action {
+        margin-top: 0;
+        margin-right: 0;
+        .MuiIconButton-root {
+            background: white;
+        }
+        .MuiButtonBase-root {
+            padding: 6px;
+        }
+    }
+
     .MuiCardContent-root {
         padding: 8px;
 
         & + .MuiCardContent-root {
             padding-top: 0;
         }
+    }
+
+    .MuiButton-root,
+    .MuiButton-root:hover {
+        background: white;
     }
 
     .plugin .MuiCard-root {

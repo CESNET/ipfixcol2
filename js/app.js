@@ -49,6 +49,11 @@ const {
 const rootAppElement = document.getElementById("configurator_app");
 const colors = ["blue", "orange", "red"];
 const columnNames = ["Input plugins", "Intermediate plugins", "Output plugins"];
+const columnDataPaths = [
+    ".ipfixcol2.inputPlugins.input",
+    ".ipfixcol2.intermediatePlugins.intermediate",
+    ".ipfixcol2.outputPlugins.output",
+];
 
 let merge = (obj1, obj2) => {
     let target = {};
@@ -77,6 +82,7 @@ var pluginSchemas = [];
 var nameValidationSchema;
 var outputExtraParams;
 var allPluginsExtraParams;
+var generalStructure;
 
 async function loadAppData() {
     config = await fetch("./config/config.json").then((response) => response.json());
@@ -93,6 +99,9 @@ async function loadAppData() {
     ).then((response) => response.json());
     allPluginsExtraParams = await fetch(
         config.schemaLocations.special.path + config.schemaLocations.special.allPluginsExtraParams
+    ).then((response) => response.json());
+    generalStructure = await fetch(
+        config.schemaLocations.special.path + config.schemaLocations.special.generalStructure
     ).then((response) => response.json());
 }
 
@@ -137,6 +146,8 @@ class App extends React.Component {
 class Form extends React.Component {
     constructor(props) {
         super(props);
+        var configObj = JSON.parse(JSON.stringify(defaultConfig));
+        var { valid, errors } = this.validateConfig(configObj);
         this.state = {
             plugins: [[], [], []],
             overlay: null,
@@ -149,6 +160,9 @@ class Form extends React.Component {
             indentType: indentationTypes[0],
             indentNumber: 2,
             showConfirmationDialogs: true,
+            valid: valid,
+            errors: errors,
+            configObj: configObj,
         };
     }
 
@@ -238,6 +252,7 @@ class Form extends React.Component {
         });
         this.openSnackbar("New plugin added");
         console.log("New plugin added");
+        this.updateConfigObj();
     }
 
     editPlugin(columnIndex, index, plugin) {
@@ -249,6 +264,7 @@ class Form extends React.Component {
         });
         this.openSnackbar("Plugin edited");
         console.log("Plugin edited");
+        this.updateConfigObj();
     }
 
     removePluginConfirm(columnIndex, index) {
@@ -270,6 +286,7 @@ class Form extends React.Component {
         });
         this.openSnackbar("Plugin removed");
         console.log("Plugin removed");
+        this.updateConfigObj();
     }
 
     handleConfirmDialogClose(confirmed) {
@@ -279,41 +296,61 @@ class Form extends React.Component {
         }
     }
 
+    createConfigObj() {
+        var configObj = JSON.parse(JSON.stringify(defaultConfig));
+        configObj.ipfixcol2.inputPlugins.input = this.state.plugins[0];
+        configObj.ipfixcol2.intermediatePlugins.intermediate = this.state.plugins[1];
+        configObj.ipfixcol2.outputPlugins.output = this.state.plugins[2];
+        return configObj;
+    }
+
+    validateConfig(configObj) {
+        configObj = JSON.parse(JSON.stringify(configObj));
+        this.removeEmptyConfigIntermediatePluginType(configObj);
+        var valid = ajv.validate(generalStructure, configObj);
+        var errors = undefined;
+        if (!valid) {
+            errors = JSON.parse(JSON.stringify(ajv.errors));
+        }
+        console.log("configObj valid: " + valid);
+        console.log(errors);
+        return {
+            valid: valid,
+            errors: errors,
+        };
+    }
+
+    updateConfigObj() {
+        var configObj = this.createConfigObj();
+        var { valid, errors } = this.validateConfig(configObj);
+        this.setState({
+            configObj: configObj,
+            valid: valid,
+            errors: errors,
+        });
+    }
+
     createConfigXML() {
-        var config = JSON.parse(JSON.stringify(defaultConfig));
-        if (this.state.plugins[0].length === 0) {
-            delete config.ipfixcol2.inputPlugins;
-        } else {
-            config.ipfixcol2.inputPlugins.input = this.state.plugins[0];
-        }
-        if (this.state.plugins[1].length === 0) {
-            delete config.ipfixcol2.intermediatePlugins;
-        } else {
-            config.ipfixcol2.intermediatePlugins.intermediate = this.state.plugins[1];
-        }
-        if (this.state.plugins[2].length === 0) {
-            delete config.ipfixcol2.outputPlugins;
-        } else {
-            config.ipfixcol2.outputPlugins.output = this.state.plugins[2];
-        }
-        var xml = x2js.json2xml_str(config);
+        var configObj = JSON.parse(JSON.stringify(this.state.configObj));
+        this.removeEmptyConfigPluginTypes(configObj);
+        var xml = x2js.json2xml_str(configObj);
         return formatXml(xml, this.state.indentType.character, this.state.indentNumber);
     }
 
-    renderXML() {
-        return (
-            <FormControl fullWidth>
-                <TextField
-                    label={"Config XML"}
-                    multiline
-                    InputProps={{
-                        readOnly: true,
-                    }}
-                    value={this.createConfigXML()}
-                />
-                <FormHelperText>Read only</FormHelperText>
-            </FormControl>
-        );
+    removeEmptyConfigIntermediatePluginType(configObj) {
+        if (configObj.ipfixcol2.intermediatePlugins.intermediate.length == 0) {
+            delete configObj.ipfixcol2.intermediatePlugins;
+        }
+    }
+
+    removeEmptyConfigPluginTypes(configObj) {
+        if (configObj.ipfixcol2.inputPlugins.input.length == 0) {
+            delete configObj.ipfixcol2.inputPlugins.input;
+        }
+        this.removeEmptyConfigIntermediatePluginType(configObj);
+        if (configObj.ipfixcol2.outputPlugins.output.length == 0) {
+            delete configObj.ipfixcol2.outputPlugins.output;
+        }
     }
 
     printColoredXML() {
@@ -433,6 +470,36 @@ class Form extends React.Component {
     }
 
     render() {
+        var mainLayer = (
+            <div className="mainLayer">
+                {[0, 1, 2].map((i) => {
+                    var columnErrors = undefined;
+                    if (this.state.errors !== undefined) {
+                        columnErrors = Object.values(this.state.errors).filter((error) => {
+                            if (error.dataPath == columnDataPaths[i]) {
+                                return true;
+                            }
+                            return false;
+                        });
+                    }
+                    console.log(columnErrors);
+                    return (
+                        <FormColumn
+                            key={columnNames[i]}
+                            columnIndex={i}
+                            plugins={this.state.plugins[i]}
+                            errors={columnErrors}
+                            color={colors[i]}
+                            name={columnNames[i]}
+                            pluginsAvailable={pluginSchemas[i]}
+                            addPlugin={this.newPluginOverlay.bind(this)}
+                            editPlugin={this.editPluginOverlay.bind(this)}
+                            removePlugin={this.removePluginConfirm.bind(this)}
+                        />
+                    );
+                })}
+            </div>
+        );
         return (
             <React.Fragment>
                 <AppBar position="sticky">
@@ -497,41 +564,7 @@ class Form extends React.Component {
                 <div className="form">
                     {this.state.overlay}
                     <div className="sideBySide">
-                        <div className="mainLayer">
-                            <FormColumn
-                                key={columnNames[0]}
-                                columnIndex={0}
-                                plugins={this.state.plugins[0]}
-                                color={colors[0]}
-                                name={columnNames[0]}
-                                pluginsAvailable={pluginSchemas[0]}
-                                addPlugin={this.newPluginOverlay.bind(this)}
-                                editPlugin={this.editPluginOverlay.bind(this)}
-                                removePlugin={this.removePluginConfirm.bind(this)}
-                            />
-                            <FormColumn
-                                key={columnNames[1]}
-                                columnIndex={1}
-                                plugins={this.state.plugins[1]}
-                                color={colors[1]}
-                                name={columnNames[1]}
-                                pluginsAvailable={pluginSchemas[1]}
-                                addPlugin={this.newPluginOverlay.bind(this)}
-                                editPlugin={this.editPluginOverlay.bind(this)}
-                                removePlugin={this.removePluginConfirm.bind(this)}
-                            />
-                            <FormColumn
-                                key={columnNames[2]}
-                                columnIndex={2}
-                                plugins={this.state.plugins[2]}
-                                color={colors[2]}
-                                name={columnNames[2]}
-                                pluginsAvailable={pluginSchemas[2]}
-                                addPlugin={this.newPluginOverlay.bind(this)}
-                                editPlugin={this.editPluginOverlay.bind(this)}
-                                removePlugin={this.removePluginConfirm.bind(this)}
-                            />
-                        </div>
+                        {mainLayer}
                         {this.printColoredXML()}
                     </div>
                     <Snackbar
@@ -593,6 +626,17 @@ class FormColumn extends React.Component {
 
     render() {
         var plugins = "";
+        var errorIcon = "";
+        if (this.props.errors.length > 0) {
+            var errorMessage = this.props.errors.pop().message;
+            errorIcon = (
+                <IconButton tabIndex={-1}>
+                    <Tooltip title={errorMessage} arrow>
+                        <Icon color={"error"}>error</Icon>
+                    </Tooltip>
+                </IconButton>
+            );
+        }
         if (this.props.plugins.length > 0) {
             plugins = this.props.plugins.map((plugin, index) => {
                 return (
@@ -640,7 +684,11 @@ class FormColumn extends React.Component {
         );
         return (
             <Card className={"column " + this.props.color}>
-                <CardHeader className={"title"} title={this.props.name} />
+                <CardHeader
+                    className={"title"}
+                    title={this.props.name}
+                    action={errorIcon}
+                />
                 <Divider />
                 {plugins}
                 <Divider />
