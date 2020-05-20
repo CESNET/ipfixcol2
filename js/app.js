@@ -831,8 +831,10 @@ class Settings extends React.Component {
     handleChangeType(event) {
         if (event.target.value === indentationTypes[1].name) {
             this.props.onChange(indentationTypes[1], 1, this.props.showConfirmationDialogs);
+            this.setState({ indentNumber: 1 });
         } else if (this.props.indentType === indentationTypes[1]) {
             this.props.onChange(indentationTypes[0], 2, this.props.showConfirmationDialogs);
+            this.setState({ indentNumber: 2 });
         } else {
             this.props.onChange(
                 indentationTypes[0],

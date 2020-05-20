@@ -1,11 +1,6 @@
 // TODO
 
 // - zabránit stažení souboru při chybné konfiguraci
-// - opravit chybu v nastavení
-//      - postup pro reprodukci chyby:
-//          - v nastavení nastavit typ odsazení na mezery a počet mezer jiný než 2
-//          - změnit typ odsazení na tabulátor a pak zpět na mezery
-//          - počet mezer se vyresetuje na výchozí 2, ale zobrazený počet je shodný s nastavením v 1. kroku
 // - zbavit se globálních proměnných - přesunout do souboru config.json
 //      ? jeden soubor s odkazy na schémata a druhý na ostatní data
 // - upravit načítání dat (nyní na globální úrovni) - načítat na úrovni aplikace
@@ -19,6 +14,11 @@
 //
 // + přidat validaci počtu modulů ve skupinách
 // + opraveno "mizení" ikonky s errorem
+// + opravit chybu v nastavení
+//      - postup pro reprodukci chyby:
+//          - v nastavení nastavit typ odsazení na mezery a počet mezer jiný než 2
+//          - změnit typ odsazení na tabulátor a pak zpět na mezery
+//          - počet mezer se vyresetuje na výchozí 2, ale zobrazený počet je shodný s nastavením v 1. kroku
 //
 // +? musí být možnost zadat více IP adres
 //      - není jasné, zda v případě více IP adres může být jedna z nich prázdná
