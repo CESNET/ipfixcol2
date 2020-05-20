@@ -18,6 +18,7 @@
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
 // + přidat validaci počtu modulů ve skupinách
+// + opraveno "mizení" ikonky s errorem
 //
 // +? musí být možnost zadat více IP adres
 //      - není jasné, zda v případě více IP adres může být jedna z nich prázdná
@@ -104,7 +105,7 @@ class Overlay extends React.Component {
                 ? this.props.plugin
                 : pluginCreate(this.props.jsonSchema);
         var valid = ajv.validate(this.props.jsonSchema, plugin);
-        var errors = undefined;
+        var errors = [];
         if (!valid) {
             errors = JSON.parse(JSON.stringify(ajv.errors));
         }
@@ -113,16 +114,10 @@ class Overlay extends React.Component {
         newPluginNames.push(plugin.name);
         var nameValid = ajv.validate(nameValidationSchema, { name: newPluginNames });
         var nameErrors;
-        // console.log("name valid: " + nameValid);
         if (!nameValid) {
             nameErrors = JSON.parse(JSON.stringify(ajv.errors));
             nameErrors[0].message = "plugins MUST have different names";
-            // console.log(nameErrors);
-            if (errors === undefined) {
-                errors = nameErrors;
-            } else {
-                errors.concat(nameErrors);
-            }
+            errors.concat(nameErrors);
         }
 
         this.state = {
@@ -158,27 +153,19 @@ class Overlay extends React.Component {
     }
     handleChange(changedSubplugin) {
         var valid = ajv.validate(this.props.jsonSchema, changedSubplugin);
-        var errors = undefined;
-        // console.log("valid: " + valid);
+        var errors = [];
         if (!valid) {
             errors = JSON.parse(JSON.stringify(ajv.errors));
-            // console.log(errors);
         }
 
         var newPluginNames = JSON.parse(JSON.stringify(this.props.pluginNames));
         newPluginNames.push(changedSubplugin.name);
         var nameValid = ajv.validate(nameValidationSchema, { name: newPluginNames });
         var nameErrors;
-        // console.log("name valid: " + nameValid);
         if (!nameValid) {
             nameErrors = JSON.parse(JSON.stringify(ajv.errors));
             nameErrors[0].message = "plugins MUST have different names";
-            // console.log(nameErrors);
-            if (errors === undefined) {
-                errors = nameErrors;
-            } else {
-                errors.concat(nameErrors);
-            }
+            errors.concat(nameErrors);
         }
         this.setState({
             plugin: changedSubplugin,
@@ -440,7 +427,7 @@ class Properties extends React.Component {
                 </React.Fragment>
             );
         }
-        if (this.props.errors !== undefined) {
+        if (this.props.errors.length > 0) {
             propsErrors = Object.values(this.props.errors).filter((error) => {
                 return error.dataPath == this.props.dataPath;
             });
@@ -448,7 +435,7 @@ class Properties extends React.Component {
             childErrorsNum = this.props.errors.length - propsErrors.length;
         }
         if (hasError) {
-            var errorMessage = propsErrors.pop().message;
+            var errorMessage = this.props.errors[this.props.errors.length - 1].message;
             errorIcon = (
                 <IconButton tabIndex={-1}>
                     <Tooltip title={errorMessage} arrow>
@@ -726,7 +713,6 @@ class ArrayProperty extends React.Component {
         var hasError = false;
         var propsErrors;
         var childErrorsNum = 0;
-        var errorMessage = "";
         var minItems = 0;
         var numOfItems = this.props.plugin.length;
         if (
@@ -743,7 +729,7 @@ class ArrayProperty extends React.Component {
         if (this.props.jsonSchema.hasOwnProperty("minItems")) {
             minItems = this.props.jsonSchema.minItems;
         }
-        if (this.props.errors !== undefined) {
+        if (this.props.errors.length > 0) {
             propsErrors = Object.values(this.props.errors).filter((error) => {
                 if (error.dataPath == this.props.dataPath) {
                     return true;
@@ -754,7 +740,7 @@ class ArrayProperty extends React.Component {
             childErrorsNum = this.props.errors.length - propsErrors.length;
         }
         if (hasError) {
-            errorMessage = propsErrors.pop().message;
+            var errorMessage = this.props.errors[this.props.errors.length - 1].message;
             errorIcon = (
                 <IconButton tabIndex={-1}>
                     <Tooltip title={errorMessage} arrow>
@@ -888,7 +874,7 @@ class StringProperty extends React.Component {
             value = "";
         }
         if (hasError) {
-            var errorMessage = this.props.errors.pop().message;
+            var errorMessage = this.props.errors[this.props.errors.length - 1].message;
             errorIcon = (
                 <Grid item>
                     <IconButton tabIndex={-1}>
@@ -1124,7 +1110,7 @@ class NumberProperty extends React.Component {
             value = "";
         }
         if (hasError) {
-            var errorMessage = this.props.errors.pop().message;
+            var errorMessage = this.props.errors[this.props.errors.length - 1].message;
             errorIcon = (
                 <Grid item>
                     <IconButton tabIndex={-1}>
@@ -1240,7 +1226,7 @@ class MultipleTypesProperty extends React.Component {
             value = "";
         }
         if (hasError) {
-            var errorMessage = this.props.errors.pop().message;
+            var errorMessage = this.props.errors[this.props.errors.length - 1].message;
             errorIcon = (
                 <Grid item>
                     <IconButton tabIndex={-1}>

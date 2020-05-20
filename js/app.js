@@ -628,7 +628,7 @@ class FormColumn extends React.Component {
         var plugins = "";
         var errorIcon = "";
         if (this.props.errors.length > 0) {
-            var errorMessage = this.props.errors.pop().message;
+            var errorMessage = this.props.errors[this.props.errors.length - 1].message;
             errorIcon = (
                 <IconButton tabIndex={-1}>
                     <Tooltip title={errorMessage} arrow>
@@ -684,11 +684,7 @@ class FormColumn extends React.Component {
         );
         return (
             <Card className={"column " + this.props.color}>
-                <CardHeader
-                    className={"title"}
-                    title={this.props.name}
-                    action={errorIcon}
-                />
+                <CardHeader className={"title"} title={this.props.name} action={errorIcon} />
                 <Divider />
                 {plugins}
                 <Divider />
