@@ -225,7 +225,7 @@ class Overlay extends React.Component {
                 variant="contained"
                 color="primary"
                 onClick={this.handleConfirm.bind(this)}
-                disabled={this.state.errors === undefined ? false : true}
+                disabled={this.state.errors == 0 ? false : true}
             >
                 {buttonText}
             </Button>
@@ -767,8 +767,8 @@ class ArrayProperty extends React.Component {
             <Collapse in={this.state.expanded} timeout="auto">
                 {this.props.plugin.map((item, index) => {
                     var dataPath = this.props.dataPath + "[" + index + "]";
-                    var errors = undefined;
-                    if (this.props.errors !== undefined) {
+                    var errors = [];
+                    if (this.props.errors.length > 0) {
                         errors = Object.values(this.props.errors).filter((error) => {
                             if (
                                 error.dataPath == dataPath ||
@@ -779,9 +779,6 @@ class ArrayProperty extends React.Component {
                             }
                             return false;
                         });
-                        if (errors === []) {
-                            errors = undefined;
-                        }
                     }
                     return (
                         <CardContent key={index}>
