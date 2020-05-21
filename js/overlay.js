@@ -486,8 +486,8 @@ class Properties extends React.Component {
                             this.props.jsonSchema.hasOwnProperty("required") &&
                             this.props.jsonSchema.required.includes(propertyName);
                         var dataPath = this.props.dataPath + "." + propertyName;
-                        var errors = undefined;
-                        if (this.props.errors !== undefined) {
+                        var errors = [];
+                        if (this.props.errors.length > 0) {
                             errors = Object.values(this.props.errors).filter((error) => {
                                 if (
                                     error.dataPath == dataPath ||
@@ -498,9 +498,6 @@ class Properties extends React.Component {
                                 }
                                 return false;
                             });
-                            if (errors.length == 0) {
-                                errors = undefined;
-                            }
                         }
                         return (
                             <CardContent key={propertyName}>
