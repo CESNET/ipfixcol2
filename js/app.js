@@ -55,6 +55,37 @@ const columnDataPaths = [
     ".ipfixcol2.outputPlugins.output",
 ];
 
+const cookieExpirationDays = 365;
+
+function setCookie(cookieName, value) {
+    var d = new Date();
+    d.setTime(d.getTime() + cookieExpirationDays * 24 * 60 * 60 * 1000);
+    var expires = "expires=" + d.toUTCString();
+    document.cookie = cookieName + "=" + value + ";" + expires + ";path=/";
+}
+
+function getCookie(cookieName) {
+    var name = cookieName + "=";
+    var parts = document.cookie.split(";");
+    for (var i in parts) {
+        var part = parts[i].trim();
+        console.log(part);
+        if (part.indexOf(name) == 0) {
+            return part.substring(name.length, part.length);
+        }
+    }
+    return "";
+}
+
+function loadCookie(cookieName) {
+    var value = getCookie(cookieName);
+    console.log(value);
+    if (value == "") {
+        value = undefined;
+    }
+    return value;
+}
+
 let merge = (obj1, obj2) => {
     let target = {};
     // Merge the object into the target object
@@ -134,6 +165,12 @@ const indentationTypes = [
 ];
 const indentationSpaces = { min: 0, max: 8 };
 
+const defaultSettings = {
+    indentType: indentationTypes[0],
+    indentNumber: 2,
+    showConfirmationDialogs: true,
+};
+
 const x2js = new X2JS();
 const ajv = new Ajv({ allErrors: true });
 
@@ -148,6 +185,27 @@ class Form extends React.Component {
         super(props);
         var configObj = JSON.parse(JSON.stringify(defaultConfig));
         var { valid, errors } = this.validateConfig(configObj);
+        var cookieSettings = {
+            indentType: loadCookie("indentType"),
+            indentNumber: loadCookie("indentNumber"),
+            showConfirmationDialogs: loadCookie("showConfirmationDialogs"),
+        };
+        if (
+            cookieSettings.indentType !== undefined &&
+            cookieSettings.indentNumber !== undefined &&
+            cookieSettings.showConfirmationDialogs !== undefined
+        ) {
+            if (cookieSettings.indentType == "Space") {
+                cookieSettings.indentType = indentationTypes[0];
+            } else {
+                cookieSettings.indentType = indentationTypes[1];
+            }
+            cookieSettings.indentNumber = Number(cookieSettings.indentNumber);
+            cookieSettings.showConfirmationDialogs =
+                cookieSettings.showConfirmationDialogs === "true";
+        } else {
+            cookieSettings = JSON.parse(JSON.stringify(defaultSettings));
+        }
         this.state = {
             plugins: [[], [], []],
             overlay: null,
@@ -157,9 +215,9 @@ class Form extends React.Component {
             settingsOpen: false,
             confirmDialogOpen: false,
             confirmDialogRemoveFunc: null,
-            indentType: indentationTypes[0],
-            indentNumber: 2,
-            showConfirmationDialogs: true,
+            indentType: cookieSettings.indentType,
+            indentNumber: cookieSettings.indentNumber,
+            showConfirmationDialogs: cookieSettings.showConfirmationDialogs,
             valid: valid,
             errors: errors,
             configObj: configObj,
@@ -448,11 +506,15 @@ class Form extends React.Component {
     }
 
     changeSettings(type, number, showConfirmationDialogs) {
-        this.setState({
+        var cookieSettings = {
             indentType: type,
             indentNumber: number,
             showConfirmationDialogs: showConfirmationDialogs,
-        });
+        };
+        setCookie("indentType", type.name);
+        setCookie("indentNumber", number.toString());
+        setCookie("showConfirmationDialogs", showConfirmationDialogs.toString());
+        this.setState(cookieSettings);
     }
 
     download() {

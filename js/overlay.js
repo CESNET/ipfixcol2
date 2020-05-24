@@ -12,19 +12,7 @@
 // -! Plugin UniRec (timeout) přidat našeptávač možných hodnot
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
-// + přidat validaci počtu modulů ve skupinách
-// + opraveno "mizení" ikonky s errorem
-// + opravit chybu v nastavení
-//      - postup pro reprodukci chyby:
-//          - v nastavení nastavit typ odsazení na mezery a počet mezer jiný než 2
-//          - změnit typ odsazení na tabulátor a pak zpět na mezery
-//          - počet mezer se vyresetuje na výchozí 2, ale zobrazený počet je shodný s nastavením v 1. kroku
-//
-// +? musí být možnost zadat více IP adres
-//      - není jasné, zda v případě více IP adres může být jedna z nich prázdná
-//      - změna by kromě větší změny ve schématu znamenala přepsání velké části třídy ArrayProperty
-// +? Předělat hlavní výpis modulů ve sloupcích
-//      - zda je to vůbec potřeba, jestli nestačí jenom název, edit, delete
+// + nastavení se ukládá pomocí cookies
 
 function pluginCreate(jsonSchema) {
     var newPlugin = {};
