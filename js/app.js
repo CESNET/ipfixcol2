@@ -1,62 +1,3 @@
-const {
-    Allert,
-    AppBar,
-    //    Autocomplete, - in lab
-    Badge,
-    Button,
-    Card,
-    CardContent,
-    CardActions,
-    CardHeader,
-    Collapse,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Divider,
-    ExpansionPanel,
-    ExpansionPanelSummary,
-    ExpansionPanelDetails,
-    FormControl,
-    FormControlLabel,
-    FormGroup,
-    FormHelperText,
-    FormLabel,
-    Grid,
-    Icon,
-    IconButton,
-    Input,
-    InputAdornment,
-    InputLabel,
-    List,
-    ListItem,
-    ListItemText,
-    Menu,
-    MenuItem,
-    Select,
-    Snackbar,
-    SvgIcon,
-    Switch,
-    TextareaAutosize,
-    TextField,
-    Toolbar,
-    Tooltip,
-    //    TreeItem, - in lab
-    //    TreeView, - in lab
-    Typography,
-} = MaterialUI;
-// Obtain the root element
-const rootAppElement = document.getElementById("configurator_app");
-const colors = ["blue", "orange", "red"];
-const columnNames = ["Input plugins", "Intermediate plugins", "Output plugins"];
-const columnDataPaths = [
-    ".ipfixcol2.inputPlugins.input",
-    ".ipfixcol2.intermediatePlugins.intermediate",
-    ".ipfixcol2.outputPlugins.output",
-];
-
-const cookieExpirationDays = 365;
-
 function setCookie(cookieName, value) {
     var d = new Date();
     d.setTime(d.getTime() + cookieExpirationDays * 24 * 60 * 60 * 1000);
@@ -69,7 +10,6 @@ function getCookie(cookieName) {
     var parts = document.cookie.split(";");
     for (var i in parts) {
         var part = parts[i].trim();
-        console.log(part);
         if (part.indexOf(name) == 0) {
             return part.substring(name.length, part.length);
         }
@@ -79,7 +19,6 @@ function getCookie(cookieName) {
 
 function loadCookie(cookieName) {
     var value = getCookie(cookieName);
-    console.log(value);
     if (value == "") {
         value = undefined;
     }
@@ -145,34 +84,6 @@ function loadSchemas(typeSchemaLocations) {
     });
     return array;
 }
-
-const defaultConfig = {
-    ipfixcol2: {
-        inputPlugins: {
-            input: [],
-        },
-        intermediatePlugins: {
-            intermediate: [],
-        },
-        outputPlugins: {
-            output: [],
-        },
-    },
-};
-const indentationTypes = [
-    { name: "Space", character: " " },
-    { name: "Tab", character: "\t" },
-];
-const indentationSpaces = { min: 0, max: 8 };
-
-const defaultSettings = {
-    indentType: indentationTypes[0],
-    indentNumber: 2,
-    showConfirmationDialogs: true,
-};
-
-const x2js = new X2JS();
-const ajv = new Ajv({ allErrors: true });
 
 class App extends React.Component {
     render() {
@@ -371,7 +282,6 @@ class Form extends React.Component {
             errors = JSON.parse(JSON.stringify(ajv.errors));
         }
         console.log("configObj valid: " + valid);
-        console.log(errors);
         return {
             valid: valid,
             errors: errors,
@@ -544,7 +454,6 @@ class Form extends React.Component {
                             return false;
                         });
                     }
-                    console.log(columnErrors);
                     return (
                         <FormColumn
                             key={columnNames[i]}
@@ -1012,6 +921,9 @@ class Settings extends React.Component {
 }
 
 // ========================================
+
+// Obtain the root element
+const rootAppElement = document.getElementById("configurator_app");
 
 async function startApp() {
     await loadAppData();

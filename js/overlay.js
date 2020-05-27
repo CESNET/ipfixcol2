@@ -1,8 +1,7 @@
 // TODO
 
 // - zabránit stažení souboru při chybné konfiguraci
-// - zbavit se globálních proměnných - přesunout do souboru config.json
-//      ? jeden soubor s odkazy na schémata a druhý na ostatní data
+// - zbavit se globálních proměnných - ln 50-55 v app.js
 // - upravit načítání dat (nyní na globální úrovni) - načítat na úrovni aplikace
 //      ? během načítání zobrazit načítací kolečko
 // - založit si vlastní repo a rozjet to na GitPages
@@ -13,6 +12,7 @@
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
 // + nastavení se ukládá pomocí cookies
+// + přesunout konstanty do souboru constants.json
 
 function pluginCreate(jsonSchema) {
     var newPlugin = {};
@@ -1302,14 +1302,4 @@ class Description extends React.Component {
             </Dialog>
         );
     }
-}
-
-{
-    /* <Autocomplete
-    freeSolo
-    options={options}
-    value={value}
-    onChange={onChange}
-    renderInput={params => <TextField {...params} readOnly={readOnly} />}
-/>; */
 }
