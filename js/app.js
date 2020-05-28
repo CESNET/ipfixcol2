@@ -445,7 +445,7 @@ class Form extends React.Component {
         var mainLayer = (
             <div className="mainLayer">
                 {[0, 1, 2].map((i) => {
-                    var columnErrors = undefined;
+                    var columnErrors = [];
                     if (this.state.errors !== undefined) {
                         columnErrors = Object.values(this.state.errors).filter((error) => {
                             if (error.dataPath == columnDataPaths[i]) {
