@@ -1,5 +1,7 @@
 // TODO
 
+// - podívat se na nutnost oznamovat používání cookies
+// - XML print upravit barvy pozadí 
 // - zabránit stažení souboru při chybné konfiguraci
 // - zbavit se globálních proměnných - ln 50-55 v app.js
 // - upravit načítání dat (nyní na globální úrovni) - načítat na úrovni aplikace
