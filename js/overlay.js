@@ -13,6 +13,8 @@
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
 // + XML print upravit barvy pozadí
+// + úprava barev formulářových prvků
+// + oprava chyby při kontrole názvů pluginů
 
 function pluginCreate(jsonSchema) {
     var newPlugin = {};
@@ -105,7 +107,7 @@ class Overlay extends React.Component {
         if (!nameValid) {
             nameErrors = JSON.parse(JSON.stringify(ajv.errors));
             nameErrors[0].message = "plugins MUST have different names";
-            errors.concat(nameErrors);
+            errors = errors.concat(nameErrors);
         }
 
         this.state = {
@@ -153,7 +155,7 @@ class Overlay extends React.Component {
         if (!nameValid) {
             nameErrors = JSON.parse(JSON.stringify(ajv.errors));
             nameErrors[0].message = "plugins MUST have different names";
-            errors.concat(nameErrors);
+            errors = errors.concat(nameErrors);
         }
         this.setState({
             plugin: changedSubplugin,
@@ -219,83 +221,85 @@ class Overlay extends React.Component {
             </Button>
         );
         return (
-            <Dialog
-                disableBackdropClick
-                open={true}
-                fullWidth={true}
-                maxWidth={"md"}
-                onEscapeKeyDown={this.handleCancel.bind(this)}
-            >
-                <DialogTitle>
-                    {titleText}
-                    <div className={"overlaySubtitle"}>{subtitleText}</div>
-                    {link}
-                    <IconButton
-                        className={"overlayIcon"}
-                        color={"inherit"}
-                        onClick={this.handleCancel.bind(this)}
-                        tabIndex={-1}
-                    >
-                        <Icon>close</Icon>
-                    </IconButton>
-                </DialogTitle>
-                <Divider />
-                <DialogContent dividers>
-                    <Grid container spacing={2}>
-                        <Grid item md={6} sm={12} xs={12}>
-                            {properties}
-                        </Grid>
-                        <Grid item md={6} sm={12} xs={12}>
-                            <FormControl fullWidth>
-                                <Typography
-                                    id={"XMLPrint-title"}
-                                    variant={"subtitle1"}
-                                    component={"label"}
-                                    color={"textSecondary"}
-                                >
-                                    Plugin XML
-                                </Typography>
-                                <Typography id={"XMLPrint"} component={"pre"}>
-                                    {formatXml(
-                                        x2js.json2xml_str(this.state.plugin),
-                                        this.props.XMLIndentType.character,
-                                        this.props.XMLIndentNumber
-                                    )}
-                                </Typography>
-                                <Divider />
-                                <FormHelperText>Read only</FormHelperText>
-                            </FormControl>
-                        </Grid>
-                    </Grid>
-                </DialogContent>
-                <DialogActions>
-                    {btnCancel}
-                    {btnSave}
-                </DialogActions>
-                <Dialog open={this.state.confirmDialodOpen} fullWidth={false} maxWidth={"sm"}>
-                    <DialogTitle>{"Are you sure?"}</DialogTitle>
+            <ThemeProvider theme={mainTheme}>
+                <Dialog
+                    disableBackdropClick
+                    open={true}
+                    fullWidth={true}
+                    maxWidth={"md"}
+                    onEscapeKeyDown={this.handleCancel.bind(this)}
+                >
+                    <DialogTitle>
+                        {titleText}
+                        <div className={"overlaySubtitle"}>{subtitleText}</div>
+                        {link}
+                        <IconButton
+                            className={"overlayIcon"}
+                            color={"inherit"}
+                            onClick={this.handleCancel.bind(this)}
+                            tabIndex={-1}
+                        >
+                            <Icon>close</Icon>
+                        </IconButton>
+                    </DialogTitle>
                     <Divider />
                     <DialogContent dividers>
-                        <Typography>All your changes will be lost.</Typography>
-                        <Typography>Do you want to proceed?</Typography>
+                        <Grid container spacing={2}>
+                            <Grid item md={6} sm={12} xs={12}>
+                                {properties}
+                            </Grid>
+                            <Grid item md={6} sm={12} xs={12}>
+                                <FormControl fullWidth>
+                                    <Typography
+                                        id={"XMLPrint-title"}
+                                        variant={"subtitle1"}
+                                        component={"label"}
+                                        color={"textSecondary"}
+                                    >
+                                        Plugin XML
+                                    </Typography>
+                                    <Typography id={"XMLPrint"} component={"pre"}>
+                                        {formatXml(
+                                            x2js.json2xml_str(this.state.plugin),
+                                            this.props.XMLIndentType.character,
+                                            this.props.XMLIndentNumber
+                                        )}
+                                    </Typography>
+                                    <Divider />
+                                    <FormHelperText>Read only</FormHelperText>
+                                </FormControl>
+                            </Grid>
+                        </Grid>
                     </DialogContent>
                     <DialogActions>
-                        <Button
-                            autoFocus
-                            color="primary"
-                            onClick={this.handleConfirmDialogClose.bind(this, false)}
-                        >
-                            {"Cancel"}
-                        </Button>
-                        <Button
-                            color="primary"
-                            onClick={this.handleConfirmDialogClose.bind(this, true)}
-                        >
-                            {"Continue"}
-                        </Button>
+                        {btnCancel}
+                        {btnSave}
                     </DialogActions>
+                    <Dialog open={this.state.confirmDialodOpen} fullWidth={false} maxWidth={"sm"}>
+                        <DialogTitle>{"Are you sure?"}</DialogTitle>
+                        <Divider />
+                        <DialogContent dividers>
+                            <Typography>All your changes will be lost.</Typography>
+                            <Typography>Do you want to proceed?</Typography>
+                        </DialogContent>
+                        <DialogActions>
+                            <Button
+                                autoFocus
+                                color="primary"
+                                onClick={this.handleConfirmDialogClose.bind(this, false)}
+                            >
+                                {"Cancel"}
+                            </Button>
+                            <Button
+                                color="primary"
+                                onClick={this.handleConfirmDialogClose.bind(this, true)}
+                            >
+                                {"Continue"}
+                            </Button>
+                        </DialogActions>
+                    </Dialog>
                 </Dialog>
-            </Dialog>
+            </ThemeProvider>
         );
     }
 }

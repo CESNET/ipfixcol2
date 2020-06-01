@@ -45,6 +45,8 @@ const {
     //    TreeItem, - in lab
     //    TreeView, - in lab
     Typography,
+    createMuiTheme,
+    ThemeProvider,
 } = MaterialUI;
 
 // x2js convertor
@@ -85,3 +87,19 @@ const defaultSettings = {
     indentNumber: 2,
     showConfirmationDialogs: true,
 };
+
+const mainTheme = createMuiTheme({
+    palette: {
+        primary: {
+            main: "#1e88e5",
+        },
+    },
+});
+
+const grayTheme = createMuiTheme({
+    palette: {
+        primary: {
+            main: "#424242",
+        },
+    },
+});
