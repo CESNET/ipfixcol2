@@ -655,7 +655,7 @@ class FormColumn extends React.Component {
         );
         return (
             <Card className={"column " + this.props.color}>
-                <CardHeader className={"title"} title={this.props.name} action={errorIcon} />
+                <CardHeader title={this.props.name} action={errorIcon} />
                 <Divider />
                 {plugins}
                 <Divider />
@@ -898,6 +898,7 @@ class Settings extends React.Component {
                                         onChange={this.handleChangeShowConfirmationDialogs.bind(
                                             this
                                         )}
+                                        color={"primary"}
                                     />
                                 </Grid>
                                 <Grid item>True</Grid>

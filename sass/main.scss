@@ -1,6 +1,14 @@
 $default_shadow: 5px 5px 5px rgba(0, 0, 0, 0.24);
 $default_line_height: 40px;
 $default_border_radius: 20px;
+$blue_dark: #1e88e5;
+$blue_light: #64b5f6;
+$orange_dark: #ff8f00;
+$orange_light: #ffca28;
+$red_dark: #e64a19;
+$red_light: #ff7043;
+$xml_print_bg: #eceff1;
+
 %default_column_elem_settings {
     margin: 20px;
     box-shadow: $default_shadow;
@@ -69,30 +77,6 @@ body {
     margin-bottom: auto;
 }
 
-// Color settings
-
-.blue {
-    background: linear-gradient(135deg, #6599ff 0%, #3266cc 100%);
-    // border: 4px solid rgba(63, 81, 181, 1);
-    // hr {
-    //     border: 0.5px solid rgba(63, 81, 181, 0.5);
-    // }
-}
-// background: #f1f9ff
-// background: #91cfff
-
-.orange {
-    background: linear-gradient(135deg, #fe9900 0%, #ff7c00 100%);
-}
-// background: #fff4c1
-// background: #ffe25f
-
-.red {
-    background: linear-gradient(135deg, #ff5e34 0%, #f63c01 100%);
-}
-// background: #ffe1cb
-// background: #ffb078
-
 textarea,
 pre {
     // margin: 10px;
@@ -158,6 +142,22 @@ p + p {
 .form {
     max-width: 1280px;
     margin: 10px auto 0;
+
+    .blue {
+        background-color: $blue_dark;
+        //background: linear-gradient(135deg, #6599ff 0%, #3266cc 100%);
+    }
+    
+    .orange {
+        background-color: $orange_dark;
+        //background: linear-gradient(135deg, #fe9900 0%, #ff7c00 100%);
+    }
+    
+    .red {
+        background-color: $red_dark;
+        //background: linear-gradient(135deg, #ff5e34 0%, #f63c01 100%);
+    }
+
     .MuiCard-root {
         &:last-child {
             margin-bottom: 10px;
@@ -191,11 +191,11 @@ p + p {
     .plugin .MuiCard-root {
         .MuiCardHeader-root {
             padding: 8px 16px;
-    
+
             .MuiCardHeader-title {
                 font-size: 1.2em;
             }
-    
+
             .MuiCardHeader-action {
                 margin-top: 0;
                 .MuiButtonBase-root {
@@ -203,7 +203,7 @@ p + p {
                 }
             }
         }
-    
+
         .MuiCollapse-container {
             .MuiCardContent-root {
                 padding: 0 8px 8px 0;
@@ -234,26 +234,29 @@ p + p {
                     }
                 }
             }
-        }        
+        }
     }
 }
 
 .XMLPrint {
     margin: 10px;
+    padding: 16px;
+    background-color: $xml_print_bg;
+    border-radius: 4px;
     pre {
         border-radius: 4px;
     }
     .input {
-        background: #91cfff;
-        // background: #6599ff;
+        background: $blue_light;
+        // background: #91cfff;
     }
     .intermediate {
-        background: #ffe25f;
-        // background: #fe9900;
+        background: $orange_light;
+        // background: #ffe25f;
     }
     .output {
-        background: #ffb078;
-        // background: #ff5e34;
+        background: $red_light;
+        // background: #ffb078;
     }
 }
 

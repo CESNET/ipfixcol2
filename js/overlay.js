@@ -1,7 +1,6 @@
 // TODO
 
 // - podívat se na nutnost oznamovat používání cookies
-// - XML print upravit barvy pozadí 
 // - zabránit stažení souboru při chybné konfiguraci
 // - zbavit se globálních proměnných - ln 50-55 v app.js
 // - upravit načítání dat (nyní na globální úrovni) - načítat na úrovni aplikace
@@ -13,8 +12,7 @@
 // -! Plugin UniRec (timeout) přidat našeptávač možných hodnot
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 //
-// + nastavení se ukládá pomocí cookies
-// + přesunout konstanty do souboru constants.json
+// + XML print upravit barvy pozadí
 
 function pluginCreate(jsonSchema) {
     var newPlugin = {};
@@ -996,7 +994,12 @@ class BooleanProperty extends React.Component {
             <React.Fragment>
                 <Grid item>False</Grid>
                 <Grid item>
-                    <Switch disabled={readOnly} checked={value} onChange={onChange} />
+                    <Switch
+                        disabled={readOnly}
+                        checked={value}
+                        onChange={onChange}
+                        color={"primary"}
+                    />
                 </Grid>
                 <Grid item>True</Grid>
             </React.Fragment>

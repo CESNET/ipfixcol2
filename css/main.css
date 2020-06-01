@@ -59,18 +59,6 @@ body {
   margin-bottom: auto;
 }
 
-.blue {
-  background: linear-gradient(135deg, #6599ff 0%, #3266cc 100%);
-}
-
-.orange {
-  background: linear-gradient(135deg, #fe9900 0%, #ff7c00 100%);
-}
-
-.red {
-  background: linear-gradient(135deg, #ff5e34 0%, #f63c01 100%);
-}
-
 textarea,
 pre {
   width: 100%;
@@ -134,6 +122,15 @@ p + p {
 .form {
   max-width: 1280px;
   margin: 10px auto 0;
+}
+.form .blue {
+  background-color: #1e88e5;
+}
+.form .orange {
+  background-color: #ff8f00;
+}
+.form .red {
+  background-color: #e64a19;
 }
 .form .MuiCard-root:last-child {
   margin-bottom: 10px;
@@ -202,18 +199,21 @@ p + p {
 
 .XMLPrint {
   margin: 10px;
+  padding: 16px;
+  background-color: #eceff1;
+  border-radius: 4px;
 }
 .XMLPrint pre {
   border-radius: 4px;
 }
 .XMLPrint .input {
-  background: #91cfff;
+  background: #64b5f6;
 }
 .XMLPrint .intermediate {
-  background: #ffe25f;
+  background: #ffca28;
 }
 .XMLPrint .output {
-  background: #ffb078;
+  background: #ff7043;
 }
 
 .overlaySubtitle {
