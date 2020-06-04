@@ -15,6 +15,7 @@
 // + XML print upravit barvy pozadí
 // + úprava barev formulářových prvků
 // + oprava chyby při kontrole názvů pluginů
+// + overlay: vnořeným kartám (generovaným třídami Properties a ArrayProperty) byly pro lepší orientaci zvýrazněny hrany
 
 function pluginCreate(jsonSchema) {
     var newPlugin = {};
@@ -514,7 +515,7 @@ class Properties extends React.Component {
             <CardContent>{"No available parameters"}</CardContent>
         ) : (
             <React.Fragment>
-                <Card>
+                <Card variant={"outlined"}>
                     {name !== "" || removeButton !== "" ? (
                         <CardHeader
                             action={
@@ -791,7 +792,7 @@ class ArrayProperty extends React.Component {
             </Collapse>
         );
         return (
-            <Card>
+            <Card variant={"outlined"}>
                 <CardHeader
                     action={
                         <div>

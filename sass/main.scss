@@ -285,6 +285,10 @@ p + p {
     }
 }
 
+.MuiDialog-container .MuiPaper-outlined {
+    border: 2px solid rgba(0, 0, 0, 0.12);
+}
+
 @media screen and (min-width: 840px) {
     .form .sideBySide {
         display: grid;
