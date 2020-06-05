@@ -564,7 +564,7 @@ translate_array_uint(translator_t *trans, const struct translator_rec *rec,
    while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
        uint64_t value;
        void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
-       if (fds_get_uint_be(list_it.field.data, list_it.field.size, &value) != FDS_OK || field_ptr == NULL) {
+       if (field_ptr == NULL || fds_get_uint_be(list_it.field.data, list_it.field.size, &value) != FDS_OK) {
            ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
            return 1; // Conversion failed
        }
@@ -595,7 +595,7 @@ translate_array_int(translator_t *trans, const struct translator_rec *rec,
    while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
        int64_t value;
        void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
-       if (fds_get_int_be(list_it.field.data, list_it.field.size, &value) != FDS_OK || field_ptr == NULL) {
+       if (field_ptr == NULL || fds_get_int_be(list_it.field.data, list_it.field.size, &value) != FDS_OK) {
            ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
            return 1; // Conversion failed
        }
@@ -625,7 +625,7 @@ translate_array_bool(translator_t *trans, const struct translator_rec *rec,
    while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
       bool value;
       void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
-      if (fds_get_bool(list_it.field.data, list_it.field.size, &value) != FDS_OK || field_ptr == NULL) {
+      if (field_ptr == NULL || fds_get_bool(list_it.field.data, list_it.field.size, &value) != FDS_OK) {
          ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
          return 1; // Conversion failed
       }
@@ -655,7 +655,7 @@ translate_array_float(translator_t *trans, const struct translator_rec *rec,
    while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
       double value;
       void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
-      if (fds_get_float_be(list_it.field.data, list_it.field.size, &value) != FDS_OK || field_ptr == NULL) {
+      if (field_ptr == NULL || fds_get_float_be(list_it.field.data, list_it.field.size, &value) != FDS_OK) {
          ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
          return 1; // Conversion failed
       }
@@ -685,7 +685,7 @@ translate_array_ip(translator_t *trans, const struct translator_rec *rec,
    while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
       void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
 
-      if (translator_store_ip(list_it.field.data, list_it.field.size, field_ptr)) {
+      if (field_ptr == NULL || translator_store_ip(list_it.field.data, list_it.field.size, field_ptr)) {
          ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
          return 1;
       }
@@ -713,6 +713,11 @@ translate_array_mac(translator_t *trans, const struct translator_rec *rec,
       }
 
       ur_time_t *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
+      if (field_ptr == NULL) {
+         ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
+         return 1;
+      }
+
       memcpy(field_ptr, list_it.field.data, 6U);
    }
 
@@ -735,8 +740,7 @@ translate_array_time(translator_t *trans, const struct translator_rec *rec,
    fds_blist_iter_init(&list_it, field, NULL);
    while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
       ur_time_t *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
-
-      if (translator_store_time(type_ipx, list_it.field.data, list_it.field.size, field_ptr)) {
+      if (field_ptr == NULL || translator_store_time(type_ipx, list_it.field.data, list_it.field.size, field_ptr)) {
          ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
          return 1;
       }
