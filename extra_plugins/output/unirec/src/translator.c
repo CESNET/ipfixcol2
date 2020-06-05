@@ -1437,6 +1437,7 @@ translator_table_fill_internal(translator_t *trans, const struct map_rec *map_re
         trans_rec->ipfix.id    = 10; // iana:ingressInterface
         trans_rec->ipfix.type  = FDS_ET_UNSIGNED_32;
         trans_rec->ipfix.sem   = FDS_ES_IDENTIFIER;
+        trans_rec->ipfix.next  = NULL;
         trans_rec->func        = translate_internal_dbf;
         IPX_CTX_DEBUG(trans->ctx, "Added conversion from internal 'dir_bit_field' to UniRec '%s'",
             map_rec->unirec.name);
