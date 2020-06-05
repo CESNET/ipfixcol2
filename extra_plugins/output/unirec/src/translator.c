@@ -712,7 +712,7 @@ translate_array_mac(translator_t *trans, const struct translator_rec *rec,
          return 1;
       }
 
-      ur_time_t *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
+      ur_time_t *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
       memcpy(field_ptr, list_it.field.data, 6U);
    }
 
@@ -734,8 +734,7 @@ translate_array_time(translator_t *trans, const struct translator_rec *rec,
 
    fds_blist_iter_init(&list_it, field, NULL);
    while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
-      // Get the value
-      ur_time_t *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
+      ur_time_t *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
 
       if (translator_store_time(type_ipx, list_it.field.data, list_it.field.size, field_ptr)) {
          ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
