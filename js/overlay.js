@@ -1,6 +1,5 @@
 // TODO
 
-// - podívat se na nutnost oznamovat používání cookies
 // - zabránit stažení souboru při chybné konfiguraci
 // - zbavit se globálních proměnných - ln 50-55 v app.js
 // - upravit načítání dat (nyní na globální úrovni) - načítat na úrovni aplikace
@@ -11,11 +10,6 @@
 // (-) pokud bude čas (a všechno ostatní splněno) - nahrání ze souboru
 // -! Plugin UniRec (timeout) přidat našeptávač možných hodnot
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
-//
-// + XML print upravit barvy pozadí
-// + úprava barev formulářových prvků
-// + oprava chyby při kontrole názvů pluginů
-// + overlay: vnořeným kartám (generovaným třídami Properties a ArrayProperty) byly pro lepší orientaci zvýrazněny hrany
 
 function pluginCreate(jsonSchema) {
     var newPlugin = {};

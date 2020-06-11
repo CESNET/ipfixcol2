@@ -573,7 +573,6 @@ class FormColumn extends React.Component {
         super(props);
         this.state = {
             anchorEl: null,
-            expanded: true,
         };
     }
 
