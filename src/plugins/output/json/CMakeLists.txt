@@ -1,3 +1,10 @@
+# Musl support: Check if our pthread library has NP
+set(CMAKE_REQUIRED_LIBRARIES "-pthread")
+check_symbol_exists(pthread_rwlockattr_setkind_np "pthread.h" HAVE_PTHREAD_RWLOCKATTR_SETKIND_NP)
+if (HAVE_PTHREAD_RWLOCKATTR_SETKIND_NP)
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHAVE_PTHREAD_RWLOCKATTR_SETKIND_NP")
+endif()
+
 # Create a linkable module
 add_library(json-output MODULE
     src/json.cpp
