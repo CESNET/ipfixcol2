@@ -35,6 +35,13 @@ TIME_FIRST                     time          e0id150,e0id152,e0id154,e0id156 # T
 TIME_LAST                      time          e0id151,e0id153,e0id155,e0id157 # Time of the last packet of a flow
 DIR_BIT_FIELD                  uint8         _internal_dbf_   # Bit field used for determining incoming/outgoing flow (1 => Incoming, 0 => Outgoing)
 LINK_BIT_FIELD                 uint64        _internal_lbf_   # Bit field of links on which was flow seen
+SRC_MAC                        macaddr       e0id56
+DST_MAC                        macaddr       e0id80
+
+# --- Additional biflow fields ---
+BYTES_REV                      uint64        e29305id1
+PACKETS_REV                    uint32        e29305id2
+TCP_FLAGS_REV                  uint8         e29305id6
 
 # --- DNS specific fields ---
 DNS_ANSWERS                    uint16        e8057id0         # DNS answers
@@ -156,6 +163,6 @@ PPI_TLS_REC_LENGTHS            int16*        e0id291/e8057id1010          # basi
 PPI_TLS_REC_TIMES             uint16*        e0id291/e8057id1011          # basicList of TLS record timestamps
 PPI_TLS_CONTENT_TYPES          uint8*        e0id291/e8057id1012          # basicList of TLS record content types
 PPI_PKT_LENGTHS                int16*        e0id291/e8057id1013          # basicList of packet lengths
-PPI_PKT_TIMES                 uint16*        e0id291/e8057id1014          # basicList of packet timestamps
+PPI_PKT_TIMES                   time*        e0id291/e8057id1014          # basicList of packet timestamps
 PPI_PKT_FLAGS                   int8*        e0id291/e8057id1015          # basicList of packet TCP flags
 PPI_PKT_DIRECTIONS              int8*        e0id291/e8057id1016          # basicList of packet directions
