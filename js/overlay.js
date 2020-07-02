@@ -469,7 +469,7 @@ class Properties extends React.Component {
                         ) {
                             return;
                         }
-                        var isOptional =
+                        var isRequired =
                             this.props.jsonSchema.hasOwnProperty("required") &&
                             this.props.jsonSchema.required.includes(propertyName);
                         var dataPath = this.props.dataPath + "." + propertyName;
@@ -492,7 +492,7 @@ class Properties extends React.Component {
                                     name={propertyName}
                                     type={this.props.jsonSchema.properties[propertyName].type}
                                     plugin={this.props.plugin[propertyName]}
-                                    required={isOptional}
+                                    required={isRequired}
                                     jsonSchema={this.props.jsonSchema.properties[propertyName]}
                                     errors={errors}
                                     dataPath={dataPath}

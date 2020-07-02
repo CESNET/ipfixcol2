@@ -150,7 +150,6 @@ class Form extends React.Component {
             overlay: null,
         });
         this.openSnackbar("Editing canceled");
-        console.log("Editing canceled");
     }
 
     getSectionPluginNames(columnIndex) {
@@ -184,7 +183,6 @@ class Form extends React.Component {
                 />
             ),
         });
-        console.log("Editing a new plugin");
     }
 
     editPluginOverlay(columnIndex, index) {
@@ -209,7 +207,6 @@ class Form extends React.Component {
                 />
             ),
         });
-        console.log("Editing an existing plugin");
     }
 
     addPlugin(columnIndex, plugin) {
@@ -220,7 +217,6 @@ class Form extends React.Component {
             overlay: null,
         });
         this.openSnackbar("New plugin added");
-        console.log("New plugin added");
         this.updateConfigObj();
     }
 
@@ -232,7 +228,6 @@ class Form extends React.Component {
             overlay: null,
         });
         this.openSnackbar("Plugin edited");
-        console.log("Plugin edited");
         this.updateConfigObj();
     }
 
@@ -254,7 +249,6 @@ class Form extends React.Component {
             plugins: plugins,
         });
         this.openSnackbar("Plugin removed");
-        console.log("Plugin removed");
         this.updateConfigObj();
     }
 
@@ -448,7 +442,7 @@ class Form extends React.Component {
                     var columnErrors = [];
                     if (this.state.errors !== undefined) {
                         columnErrors = Object.values(this.state.errors).filter((error) => {
-                            if (error.dataPath == columnDataPaths[i]) {
+                            if (error.dataPath == [i]) {
                                 return true;
                             }
                             return false;
