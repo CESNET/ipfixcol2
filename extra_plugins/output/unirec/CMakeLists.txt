@@ -7,7 +7,7 @@ set(UNIREC_DESCRIPTION
 )
 
 set(UNIREC_VERSION_MAJOR 2)
-set(UNIREC_VERSION_MINOR 0)
+set(UNIREC_VERSION_MINOR 2)
 set(UNIREC_VERSION_PATCH 0)
 set(UNIREC_VERSION
     ${UNIREC_VERSION_MAJOR}.${UNIREC_VERSION_MINOR}.${UNIREC_VERSION_PATCH})
@@ -19,9 +19,9 @@ include(CheckCXXCompilerFlag)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMakeModules")
 
 # Find IPFIXcol and libnf
-find_package(IPFIXcol2 2.0.0 REQUIRED)
-find_package(LibTrap REQUIRED)
-find_package(Unirec REQUIRED)
+find_package(IPFIXcol2 2.1.0 REQUIRED)  # support for basicList is required
+find_package(LibTrap 1.13.1 REQUIRED)
+find_package(LibUnirec 2.8.0 REQUIRED)
 
 # Set default build type if not specified by user
 if (NOT CMAKE_BUILD_TYPE)
@@ -49,7 +49,7 @@ configure_file(
 include_directories(
     "${IPFIXCOL2_INCLUDE_DIRS}"  # IPFIXcol2 header files
     "${LIBTRAP_INCLUDE_DIRS}"    # libtrap header files
-    "${UNIREC_INCLUDE_DIRS}"     # unirec header files
+    "${LIBUNIREC_INCLUDE_DIRS}"  # unirec header files
 )
 
 # Create a linkable module
@@ -67,7 +67,7 @@ add_library(unirec-output MODULE
 
 target_link_libraries(unirec-output
     ${LIBTRAP_LIBRARIES}               # libtrap
-    ${UNIREC_LIBRARIES}                # unirec
+    ${LIBUNIREC_LIBRARIES}             # unirec
     m                                  # standard math library
 )
 
