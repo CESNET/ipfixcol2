@@ -2,10 +2,11 @@
  * \file translator.c
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \author Tomas Cejka <cejkat@cesnet.cz>
+ * \author Jiri Havranek <havranek@cesnet.cz>
  * \brief Conversion of IPFIX to UniRec format (source file)
  */
 
-/* Copyright (C) 2015 - 2017 CESNET, z.s.p.o.
+/* Copyright (C) 2015 - 2020 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -172,8 +173,9 @@ struct translator_s {
         *((dst_type *) (dst_ptr)) = (dst_type) (src_val);                                  \
     }
 
-int
-translator_store_uint(ur_field_type_t ur_type, void *field_ptr, uint64_t value, const enum fds_iemgr_element_semantic ipx_sem)
+static inline int
+translator_store_uint(ur_field_type_t ur_type, void *field_ptr, uint64_t value,
+    const enum fds_iemgr_element_semantic ipx_sem)
 {
     switch (ur_type) {
     case UR_TYPE_UINT64:
@@ -264,8 +266,9 @@ translate_uint(translator_t *trans, const struct translator_rec *rec,
         *((dst_type *) (dst_ptr)) = (dst_type) (src_val);           \
     }
 
-int
-translator_store_int(ur_field_type_t ur_type, void *field_ptr, int64_t value, const enum fds_iemgr_element_semantic ipx_sem)
+static inline int
+translator_store_int(ur_field_type_t ur_type, void *field_ptr, int64_t value,
+    const enum fds_iemgr_element_semantic ipx_sem)
 {
     switch (ur_type) {
     case UR_TYPE_INT64:
@@ -352,7 +355,7 @@ translator_string_trim(translator_t *trans, const struct translator_rec *rec,
     return 0;
 }
 
-int
+static inline int
 translator_store_bool(int ur_size, void *field_ptr, bool value)
 {
     const uint8_t res = value ? 1U : 0U;
@@ -400,7 +403,7 @@ translate_bool(translator_t *trans, const struct translator_rec *rec,
     return 0;
 }
 
-int
+static inline int
 translator_store_float(ur_field_type_t ur_type, void *field_ptr, double value)
 {
     switch (ur_type) {
@@ -447,8 +450,8 @@ translate_float(translator_t *trans, const struct translator_rec *rec,
     return 0;
 }
 
-int
-translator_store_ip(uint8_t *ip_bytes, uint16_t data_size, void *field_ptr)
+static inline int
+translator_store_ip(const uint8_t *ip_bytes, uint16_t data_size, void *field_ptr)
 {
     switch (data_size) {
     case 4: // IPv4
@@ -501,8 +504,9 @@ translate_mac(translator_t *trans, const struct translator_rec *rec,
     return 0;
 }
 
-int
-translator_store_time(const enum fds_iemgr_element_type type_ipx, const uint8_t *time_bytes, uint16_t time_size, ur_time_t *field_ptr)
+static inline int
+translator_store_time(const enum fds_iemgr_element_type type_ipx, const uint8_t *time_bytes,
+    uint16_t time_size, ur_time_t *field_ptr)
 {
     if (type_ipx == FDS_ET_DATE_TIME_MILLISECONDS || type_ipx == FDS_ET_DATE_TIME_SECONDS) {
         // Low precision timestamp
@@ -555,24 +559,24 @@ static int
 translate_array_uint(translator_t *trans, const struct translator_rec *rec,
     const struct fds_drec_field *field)
 {
-   ur_field_id_t ur_id = rec->unirec.id;
-   const enum fds_iemgr_element_semantic ipx_sem = rec->ipfix.next->sem;
-   struct fds_blist_iter list_it;
-   int rc;
+    ur_field_id_t ur_id = rec->unirec.id;
+    const enum fds_iemgr_element_semantic ipx_sem = rec->ipfix.next->sem;
+    struct fds_blist_iter list_it;
+    int rc;
 
-   fds_blist_iter_init(&list_it, field, NULL);
-   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
-       uint64_t value;
-       void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
-       if (field_ptr == NULL || fds_get_uint_be(list_it.field.data, list_it.field.size, &value) != FDS_OK) {
-           ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
-           return 1; // Conversion failed
-       }
+    fds_blist_iter_init(&list_it, (struct fds_drec_field *) field, NULL);
+    while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
+        uint64_t value;
+        void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
+        if (field_ptr == NULL || fds_get_uint_be(list_it.field.data, list_it.field.size, &value) != FDS_OK) {
+            ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
+            return 1; // Conversion failed
+        }
 
-       if (translator_store_uint(ur_array_get_elem_type(ur_id), field_ptr, value, ipx_sem)) {
-           ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
-           return 1;
-       }
+        if (translator_store_uint(ur_array_get_elem_type(ur_id), field_ptr, value, ipx_sem)) {
+            ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
+            return 1;
+        }
     }
 
     return 0;
@@ -586,24 +590,24 @@ static int
 translate_array_int(translator_t *trans, const struct translator_rec *rec,
     const struct fds_drec_field *field)
 {
-   ur_field_id_t ur_id = rec->unirec.id;
-   const enum fds_iemgr_element_semantic ipx_sem = rec->ipfix.next->sem;
-   struct fds_blist_iter list_it;
-   int rc;
+    ur_field_id_t ur_id = rec->unirec.id;
+    const enum fds_iemgr_element_semantic ipx_sem = rec->ipfix.next->sem;
+    struct fds_blist_iter list_it;
+    int rc;
 
-   fds_blist_iter_init(&list_it, field, NULL);
-   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
-       int64_t value;
-       void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
-       if (field_ptr == NULL || fds_get_int_be(list_it.field.data, list_it.field.size, &value) != FDS_OK) {
-           ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
-           return 1; // Conversion failed
-       }
+    fds_blist_iter_init(&list_it, (struct fds_drec_field *) field, NULL);
+    while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
+        int64_t value;
+        void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
+        if (field_ptr == NULL || fds_get_int_be(list_it.field.data, list_it.field.size, &value) != FDS_OK) {
+            ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
+            return 1; // Conversion failed
+        }
 
-       if (translator_store_int(ur_array_get_elem_type(ur_id), field_ptr, value, ipx_sem)) {
-          ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
-          return 1;
-       }
+        if (translator_store_int(ur_array_get_elem_type(ur_id), field_ptr, value, ipx_sem)) {
+            ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
+            return 1;
+        }
     }
 
     return 0;
@@ -617,24 +621,24 @@ static int
 translate_array_bool(translator_t *trans, const struct translator_rec *rec,
     const struct fds_drec_field *field)
 {
-   ur_field_id_t ur_id = rec->unirec.id;
-   struct fds_blist_iter list_it;
-   int rc;
+    ur_field_id_t ur_id = rec->unirec.id;
+    struct fds_blist_iter list_it;
+    int rc;
 
-   fds_blist_iter_init(&list_it, field, NULL);
-   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
-      bool value;
-      void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
-      if (field_ptr == NULL || fds_get_bool(list_it.field.data, list_it.field.size, &value) != FDS_OK) {
-         ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
-         return 1; // Conversion failed
-      }
+    fds_blist_iter_init(&list_it, (struct fds_drec_field *) field, NULL);
+    while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
+        bool value;
+        void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
+        if (field_ptr == NULL || fds_get_bool(list_it.field.data, list_it.field.size, &value) != FDS_OK) {
+            ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
+            return 1; // Conversion failed
+        }
 
-      if (translator_store_bool(ur_array_get_elem_size(ur_id), field_ptr, value)) {
-         ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
-         return 1;
-      }
-   }
+        if (translator_store_bool(ur_array_get_elem_size(ur_id), field_ptr, value)) {
+            ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
+            return 1;
+        }
+    }
 
     return 0;
 }
@@ -647,24 +651,24 @@ static int
 translate_array_float(translator_t *trans, const struct translator_rec *rec,
     const struct fds_drec_field *field)
 {
-   ur_field_id_t ur_id = rec->unirec.id;
-   struct fds_blist_iter list_it;
-   int rc;
+    ur_field_id_t ur_id = rec->unirec.id;
+    struct fds_blist_iter list_it;
+    int rc;
 
-   fds_blist_iter_init(&list_it, field, NULL);
-   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
-      double value;
-      void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
-      if (field_ptr == NULL || fds_get_float_be(list_it.field.data, list_it.field.size, &value) != FDS_OK) {
-         ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
-         return 1; // Conversion failed
-      }
+    fds_blist_iter_init(&list_it, (struct fds_drec_field *) field, NULL);
+    while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
+        double value;
+        void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
+        if (field_ptr == NULL || fds_get_float_be(list_it.field.data, list_it.field.size, &value) != FDS_OK) {
+            ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
+            return 1; // Conversion failed
+        }
 
-      if (translator_store_float(ur_array_get_elem_type(ur_id), field_ptr, value)) {
-         ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
-         return 1;
-      }
-   }
+        if (translator_store_float(ur_array_get_elem_type(ur_id), field_ptr, value)) {
+            ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
+            return 1;
+        }
+    }
 
     return 0;
 }
@@ -677,21 +681,21 @@ static int
 translate_array_ip(translator_t *trans, const struct translator_rec *rec,
     const struct fds_drec_field *field)
 {
-   ur_field_id_t ur_id = rec->unirec.id;
-   struct fds_blist_iter list_it;
-   int rc;
+    ur_field_id_t ur_id = rec->unirec.id;
+    struct fds_blist_iter list_it;
+    int rc;
 
-   fds_blist_iter_init(&list_it, field, NULL);
-   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
-      void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
+    fds_blist_iter_init(&list_it, (struct fds_drec_field *) field, NULL);
+    while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
+        void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
 
-      if (field_ptr == NULL || translator_store_ip(list_it.field.data, list_it.field.size, field_ptr)) {
-         ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
-         return 1;
-      }
-   }
+        if (field_ptr == NULL || translator_store_ip(list_it.field.data, list_it.field.size, field_ptr)) {
+            ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
+            return 1;
+        }
+    }
 
-   return 0;
+    return 0;
 }
 
 /**
@@ -702,26 +706,26 @@ static int
 translate_array_mac(translator_t *trans, const struct translator_rec *rec,
     const struct fds_drec_field *field)
 {
-   ur_field_id_t ur_id = rec->unirec.id;
-   struct fds_blist_iter list_it;
-   int rc;
+    ur_field_id_t ur_id = rec->unirec.id;
+    struct fds_blist_iter list_it;
+    int rc;
 
-   fds_blist_iter_init(&list_it, field, NULL);
-   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
-      if (list_it.field.size != 6U) {
-         return 1;
-      }
+    fds_blist_iter_init(&list_it, (struct fds_drec_field *) field, NULL);
+    while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
+        if (list_it.field.size != 6U) {
+            return 1;
+        }
 
-      ur_time_t *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
-      if (field_ptr == NULL) {
-         ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
-         return 1;
-      }
+        void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
+        if (field_ptr == NULL) {
+            ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
+            return 1;
+        }
 
-      memcpy(field_ptr, list_it.field.data, 6U);
-   }
+       memcpy(field_ptr, list_it.field.data, 6U);
+    }
 
-   return 0;
+    return 0;
 }
 
 /**
@@ -732,19 +736,19 @@ static int
 translate_array_time(translator_t *trans, const struct translator_rec *rec,
     const struct fds_drec_field *field)
 {
-   ur_field_id_t ur_id = rec->unirec.id;
-   const enum fds_iemgr_element_type type_ipx = rec->ipfix.next->type;
-   struct fds_blist_iter list_it;
-   int rc;
+    ur_field_id_t ur_id = rec->unirec.id;
+    const enum fds_iemgr_element_type type_ipx = rec->ipfix.next->type;
+    struct fds_blist_iter list_it;
+    int rc;
 
-   fds_blist_iter_init(&list_it, field, NULL);
-   while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
-      ur_time_t *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
-      if (field_ptr == NULL || translator_store_time(type_ipx, list_it.field.data, list_it.field.size, field_ptr)) {
-         ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
-         return 1;
-      }
-   }
+    fds_blist_iter_init(&list_it, (struct fds_drec_field *) field, NULL);
+    while ((rc = fds_blist_iter_next(&list_it)) == FDS_OK) {
+        void *field_ptr = ur_array_append_get_ptr(trans->record.ur_tmplt, trans->record.data, ur_id);
+        if (field_ptr == NULL || translator_store_time(type_ipx, list_it.field.data, list_it.field.size, field_ptr)) {
+            ur_array_clear(trans->record.ur_tmplt, trans->record.data, ur_id);
+            return 1;
+        }
+    }
 
     return 0;
 }
@@ -910,10 +914,10 @@ translator_get_numeric_func(ipx_ctx_t *ctx, const struct map_rec *rec, bool is_a
     enum fds_iemgr_element_type type_ipx = rec->ipfix.def->data_type;
 
     if (is_array) {
-       if (rec->ipfix.next == NULL || rec->ipfix.next->next != NULL) {
-          return NULL;
-       }
-       type_ipx = rec->ipfix.next->def->data_type;
+        if (rec->ipfix.next == NULL || rec->ipfix.next->next != NULL) {
+            return NULL;
+        }
+        type_ipx = rec->ipfix.next->def->data_type;
     }
 
     uint16_t size_ur = translator_size_ur_int(type_ur);
@@ -975,10 +979,10 @@ translator_get_float_func(ipx_ctx_t *ctx, const struct map_rec *rec, bool is_arr
     enum fds_iemgr_element_type type_ipx = rec->ipfix.def->data_type;
 
     if (is_array) {
-       if (rec->ipfix.next == NULL || rec->ipfix.next->next != NULL) {
-          return NULL;
-       }
-       type_ipx = rec->ipfix.next->def->data_type;
+        if (rec->ipfix.next == NULL || rec->ipfix.next->next != NULL) {
+            return NULL;
+        }
+        type_ipx = rec->ipfix.next->def->data_type;
     }
 
     uint16_t size_ur = translator_size_ur_int(type_ur);
@@ -1347,17 +1351,17 @@ translator_table_fill_rec(translator_t *trans, const struct map_rec *map_rec,
     const struct map_ipfix_s *ipfix = &map_rec->ipfix;
     struct tr_ipfix_s *tr_ipfix = &trans_rec->ipfix;
     while (ipfix) {
-       tr_ipfix->pen   = ipfix->en;
-       tr_ipfix->id    = ipfix->id;
-       tr_ipfix->type  = ipfix->def->data_type;
-       tr_ipfix->sem   = ipfix->def->data_semantic;
-       if (ipfix->next) {
-         tr_ipfix->next = malloc(sizeof(struct tr_ipfix_s));
-         tr_ipfix = tr_ipfix->next;
-       } else {
-         tr_ipfix->next = NULL;
-       }
-       ipfix = ipfix->next;
+        tr_ipfix->pen   = ipfix->en;
+        tr_ipfix->id    = ipfix->id;
+        tr_ipfix->type  = ipfix->def->data_type;
+        tr_ipfix->sem   = ipfix->def->data_semantic;
+        if (ipfix->next) {
+            tr_ipfix->next = malloc(sizeof(struct tr_ipfix_s));
+            tr_ipfix = tr_ipfix->next;
+        } else {
+            tr_ipfix->next = NULL;
+        }
+        ipfix = ipfix->next;
     }
 
     IPX_CTX_DEBUG(trans->ctx, "Added conversion from IPFIX IE '%s:%s' to UniRec '%s'",
@@ -1451,6 +1455,21 @@ translator_table_fill_internal(translator_t *trans, const struct map_rec *map_re
     return IPX_ERR_DENIED;
 }
 
+static inline void
+translator_table_free_recs(struct translator_rec *recs, size_t recs_cnt)
+{
+    for (size_t i = 0; i < recs_cnt; ++i) {
+        struct tr_ipfix_s *ipfix = recs[i].ipfix.next;
+        while (ipfix) {
+            struct tr_ipfix_s *tmp = ipfix->next;
+            free(ipfix);
+            ipfix = tmp;
+        }
+    }
+
+    free(recs);
+}
+
 /**
  * \brief Initialize a conversion table
  *
@@ -1525,7 +1544,7 @@ translator_init_table(translator_t *trans, const map_t *map, const ur_template_t
     }
 
     if (ret_val != IPX_OK) { // Failed
-        free(table);
+        translator_table_free_recs(table, rec_cnt);
         return ret_val;
     }
 
@@ -1549,15 +1568,7 @@ translator_init_table(translator_t *trans, const map_t *map, const ur_template_t
 static void
 translator_destroy_table(translator_t *trans)
 {
-    for (size_t i = 0; i < trans->table.size; ++i) {
-        struct tr_ipfix_s *ipfix = trans->table.recs[i].ipfix.next;
-        while (ipfix) {
-           struct tr_ipfix_s *tmp = ipfix->next;
-           free(ipfix);
-           ipfix = tmp;
-        }
-    }
-    free(trans->table.recs);
+    translator_table_free_recs(trans->table.recs, trans->table.size);
 }
 
 /**
@@ -1699,7 +1710,7 @@ translator_translate(translator_t *trans, struct fds_drec *ipfix_rec, uint16_t f
         return NULL;
     }
 
-    // Check if conversion filled are required fields
+    // Check if conversion filled all required fields
     size_t idx;
     for (idx = 0; idx < trans->progress.size && trans->progress.req_fields[idx] == 0; ++idx);
     if (idx < trans->progress.size) {
