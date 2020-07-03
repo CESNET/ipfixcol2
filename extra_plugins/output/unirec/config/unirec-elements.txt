@@ -44,93 +44,61 @@ PACKETS_REV                    uint32        e29305id2
 TCP_FLAGS_REV                  uint8         e29305id6
 
 # --- DNS specific fields ---
-DNS_ID                         uint16        e39499id110      # DNS transaction id
-DNS_FLAGS                      uint16        e39499id111      # DNS header flags
-DNS_CNT_QUESTIONS              uint16        e39499id112      # DNS questions
-DNS_CNT_ANSWERS                uint16        e39499id113      # DNS answers
-DNS_CNT_AUTHS                  uint16        e39499id114      # DNS auth. records
-DNS_CNT_ADDIT                  uint16        e39499id115      # DNS additional records
-DNS_Q_NAME                     string        e39499id121      # DNS query name
-DNS_Q_TYPE                     uint16        e39499id122      # DNS query type
-DNS_Q_CLASS                    uint16        e39499id123      # DNS query class
-DNS_RR_NAME                    string        e39499id116      # DNS RR name
-DNS_RR_TYPE                    uint16        e39499id117      # DNS RR type
-DNS_RR_CLASS                   uint16        e39499id118      # DNS RR class
-DNS_RR_TTL                     uint32        e39499id119      # DNS RR ttl
-DNS_RR_RDATA                   bytes         e39499id120      # DNS RR rdata
-DNS_RR_RLENGTH                 uint16        e39499id124      # DNS RR rlenght
+DNS_ID                         uint16        flowmon:dnsId             # DNS transaction id
+DNS_FLAGS                      uint16        flowmon:dnsFlagsCodes     # DNS header flags
+DNS_CNT_QUESTIONS              uint16        flowmon:dnsQuestionCount  # DNS questions
+DNS_CNT_ANSWERS                uint16        flowmon:dnsAnswrecCount   # DNS answers
+DNS_CNT_AUTHS                  uint16        flowmon:dnsAuthrecCount   # DNS auth. records
+DNS_CNT_ADDIT                  uint16        flowmon:dnsAddtrecCount   # DNS additional records
+DNS_Q_NAME                     string        flowmon:dnsQname          # DNS query name
+DNS_Q_TYPE                     uint16        flowmon:dnsQtype          # DNS query type
+DNS_Q_CLASS                    uint16        flowmon:dnsQclass         # DNS query class
+DNS_RR_NAME                    string        flowmon:dnsCrrName        # DNS RR name
+DNS_RR_TYPE                    uint16        flowmon:dnsCrrType        # DNS RR type
+DNS_RR_CLASS                   uint16        flowmon:dnsCrrClass       # DNS RR class
+DNS_RR_TTL                     uint32        flowmon:dnsCrrTtl         # DNS RR ttl
+DNS_RR_RDATA                   bytes         flowmon:dnsCrrRdata       # DNS RR rdata
+DNS_RR_RLENGTH                 uint16        flowmon:dnsCrrRdataLen    # DNS RR rlenght
 # Note: Old fields DNS_RCODE, DNS_PSIDE and DNS_DO are not available anymore...
 
-# --- SMTP specific fields ---
-#SMTP_FLAGS                     uint8         e8057id200       # SMTP flags
-SMTP_COMMAND_FLAGS             uint32        e8057id810       # SMTP command flags
-SMTP_MAIL_CMD_COUNT            uint32        e8057id811       # SMTP MAIL command count
-SMTP_RCPT_CMD_COUNT            uint32        e8057id812       # SMTP RCPT command count
-SMTP_FIRST_SENDER              string        e8057id813       # SMTP first sender
-SMTP_FIRST_RECIPIENT           string        e8057id814       # SMTP first recipient
-SMTP_STAT_CODE_FLAGS           uint32        e8057id815       # SMTP status code flags
-SMTP_2XX_STAT_CODE_COUNT       uint32        e8057id816       # SMTP 2XX status code count
-SMTP_3XX_STAT_CODE_COUNT       uint32        e8057id817       # SMTP 3XX status code count
-SMTP_4XX_STAT_CODE_COUNT       uint32        e8057id818       # SMTP 4XX status code count
-SMTP_5XX_STAT_CODE_COUNT       uint32        e8057id819       # SMTP 5XX status code count
-SMTP_DOMAIN                    string        e8057id820       # SMTP domain
-
 # --- SIP specific fields ---
-SIP_MSG_TYPE                   uint16        e8057id100       # SIP message type
-SIP_STATUS_CODE                uint16        e8057id101       # SIP status code
-SIP_CALL_ID                    string        e8057id102       # SIP call id
-SIP_CALLING_PARTY              string        e8057id103       # SIP from
-SIP_CALLED_PARTY               string        e8057id104       # SIP to
-SIP_VIA                        string        e8057id105       # SIP VIA
-SIP_USER_AGENT                 string        e8057id106       # SIP user agent
-SIP_REQUEST_URI                string        e8057id107       # SIP request uri
-SIP_CSEQ                       string        e8057id108       # SIP CSeq
+VOIP_PACKET_TYPE               uint8         flowmon:voipPacketType
+SIP_CALL_ID                    string        flowmon:sipCallId
+SIP_CALLING_PARTY              string        flowmon:sipCallingParty
+SIP_CALLED_PARTY               string        flowmon:sipCalledParty
+SIP_VIA                        string        flowmon:sipVia
+SIP_INVITE_RINGING_TIME        uint64        flowmon:sipInviteRingingTime
+SIP_OK_TIME                    uint64        flowmon:sipOkTime
+SIP_BYE_TIME                   uint64        flowmon:sipByeTime
+SIP_RTP_IP4                    ipaddr        flowmon:sipRtpIp4
+SIP_RTP_IP6                    ipaddr        flowmon:sipRtpIp6
+SIP_RTP_AUDIO                  uint16        flowmon:sipRtpAudio
+SIP_RTP_VIDEO                  uint16        flowmon:sipRtpVideo
+SIP_STATS                      bytes         flowmon:sipStats
+RTP_CODEC                      uint8         flowmon:rtpCodec
+RTP_JITTER                     uint32        flowmon:rtpJitter
+RTCP_LOST                      uint32        flowmon:rtcpLost
+RTCP_PACKETS                   uint64        flowmon:rtcpPackets
+RTCP_OCTETS                    uint64        flowmon:rtcpOctets
+RTCP_SOURCE_COUNT              uint8         flowmon:rtcpSourceCount
 
-# --- HTTP elements --- (Flowmon HTTP plugin in MUNI PEN, and CESNET sdm-http(s) plugin in CESNET PEN)
-HTTP_REQUEST_METHOD_ID         uint32        e16982id500,e8057id800               # HTTP request method id
-HTTP_REQUEST_HOST              string        e16982id501,e8057id801,e8057id808    # HTTP(S) request host
-HTTP_REQUEST_URL               string        e16982id502,e8057id802               # HTTP request url
-HTTP_REQUEST_AGENT_ID          uint32        e16982id503                          # HTTP request agent id
-HTTP_REQUEST_AGENT             string        e16982id504,e8057id804               # HTTP request agent
-HTTP_REQUEST_REFERER           string        e16982id505,e8057id803               # HTTP referer
-HTTP_RESPONSE_STATUS_CODE      uint32        e16982id506,e8057id805               # HTTP response status code
-HTTP_RESPONSE_CONTENT_TYPE     string        e16982id507,e8057id806               # HTTP response content type
-HTTP_REQUEST_RANGE             bytes         e8057id821                           # HTTP range
-HTTP_RESPONSE_TIME             uint64        e8057id807,e8057id809                # HTTP(S) application response time
-
-# --- Flowmon (former Invea) specific fields
-INVEA_VOIP_PACKET_TYPE         uint8         e39499id32       # VOIP packet type
-INVEA_SIP_CALL_ID              string        e39499id33       # SIP call ID
-INVEA_SIP_CALLING_PARTY        string        e39499id34       # SIP calling party
-INVEA_SIP_CALLED_PARTY         string        e39499id35       # SIP called party
-INVEA_SIP_VIA                  string        e39499id36       # SIP VIA
-INVEA_SIP_INVITE_RINGING_TIME  time          e39499id37       # SIP INVITE ringing time
-INVEA_SIP_OK_TIME              time          e39499id38       # SIP OK time
-INVEA_SIP_BYE_TIME             time          e39499id39       # SIP BYE time
-INVEA_SIP_RTP_IP4              ipaddr        e39499id40       # SIP RTP IPv4
-INVEA_SIP_RTP_IP6              ipaddr        e39499id41       # SIP RTP IPv6
-INVEA_SIP_RTP_AUDIO            uint16        e39499id42       # SIP RTP audio
-INVEA_SIP_RTP_VIDEO            uint16        e39499id43       # SIP RTP video
-INVEA_SIP_STATS                uint64        e39499id44       # SIP stats
-INVEA_RTP_CODEC                uint8         e39499id45       # RTP codec
-INVEA_RTP_JITTER               uint32        e39499id46       # RTP jitter
-INVEA_RTCP_LOST                uint32        e39499id47       # RTCP lost
-INVEA_RTCP_PACKETS             uint64        e39499id48       # RTCP packets
-INVEA_RTCP_OCTETS              uint64        e39499id49       # RTCP octets
-INVEA_RTCP_SOURCE_COUNT        uint8         e39499id50       # RTCP source count
-INVEA_SIP_USER_AGENT           string        e39499id51       # SIP User Agent
-INVEA_SIP_REQUEST_URI          string        e39499id52       # SIP Request-URI
-
-# --- Heartbeat detection fields ---
-HB_TYPE                        uint8         e8057id700       # TLS content type
-HB_DIR                         uint8         e8057id701       # Heartbeat request/response byte
-HB_SIZE_MSG                    uint16 	     e8057id702       # Heartbeat message size
-HB_SIZE_PAYLOAD                uint16 	     e8057id703       # Heartbeat payload size
+# --- HTTP elements ---
+HTTP_REQUEST_HOST              string        flowmon:httpHost
+HTTP_REQUEST_URL               string        flowmon:httpUrl
+HTTP_REQUEST_REFERER           string        flowmon:httpReferer
+HTTP_METHOD_MASK               uint16        flowmon:httpMethodMask
+HTTP_RESPONSE_CONTENT_TYPE     string        flowmon:httpContentType
+HTTP_RESPONSE_STATUS_CODE      uint16        flowmon:httpStatusCode
+HTTP_UA_OS                     uint16        flowmon:httpUaOs
+HTTP_UA_OS_MAJ                 uint16        flowmon:httpUaOsMaj
+HTTP_UA_OS_MIN                 uint16        flowmon:httpUaOsMin
+HTTP_UA_OS_BLD                 uint16        flowmon:httpUaOsBld
+HTTP_UA_APP                    uint16        flowmon:httpUaApp
+HTTP_UA_APP_MAJ                uint16        flowmon:httpUaAppMaj
+HTTP_UA_APP_MIN                uint16        flowmon:httpUaAppMin
+HTTP_UA_APP_BLD                uint16        flowmon:httpUaAppBld
 
 # --- Other fields ---
-#FLOWDIR_SYN                    uint8         e8057id299       # Packet with SYN flag only flag
-VENOM                          uint8         e8057id1001      # Venom rootkit detection
-IPV6_TUN_TYPE                  uint8         e16982id405      # IPv6 tunnel type
 APP_ID                         bytes         e0id95           # Application ID from libprotoident / NBAR2 / Flowmon's NBAR plugin
 
 # --- Flowmon TLS fields
