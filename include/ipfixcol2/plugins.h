@@ -136,6 +136,21 @@ typedef struct ipx_ctx_ext ipx_ctx_ext_t;
 #define IPX_PT_OUTPUT 3U
 
 /**
+ * \def IPX_PF_DEEPBIND
+ * \brief Use deep bind when resolving symbols of a plugin (and additional depending libraries)
+ *
+ * Some plugins might depend on an external library which redefines one or more common symbols
+ * (e.g. thrd_create) used by the collector (or other plugins). Since common version of these
+ * symbols is resolved before any plugin is loaded, these redefined symbols are ignored.
+ * Therefore, the plugin (or third party libraries) might not be able to correctly work.
+ *
+ * This flag instructs the collector to use RTLD_DEEPBIND (see manual page of dlopen) which
+ * solves this issue. However, it might not be supported by non-glibc implementations
+ * (as it is a GNU extension) and might break some other functions. Use only if really required!
+ */
+#define IPX_PF_DEEPBIND 1U
+
+/**
  * \brief Identification of a plugin
  *
  * This structure MUST be defined as global non-static variable called "ipx_plugin_info". In other
@@ -149,7 +164,7 @@ struct ipx_plugin_info {
     const char *dsc;
     /** Plugin type (one of #IPX_PT_INPUT, #IPX_PT_INTERMEDIATE, #IPX_PT_OUTPUT)              */
     uint16_t type;
-    /** Configuration flags (reserved for future use)                                         */
+    /** Configuration flags (zero or more IPX_PF_* values might be ORed here)                 */
     uint16_t flags;
     /** Plugin version string (like "1.2.3")                                                  */
     const char *version;

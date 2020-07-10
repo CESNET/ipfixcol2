@@ -2,6 +2,9 @@ if (POLICY CMP0063)
     cmake_policy(SET CMP0063 NEW)
 endif()
 
+include(CheckSymbolExists)
+check_symbol_exists("RTLD_DEEPBIND" "dlfcn.h" HAVE_RTLD_DEEPBIND)
+
 # Configure a header file to pass some CMake variables
 configure_file(
     "${PROJECT_SOURCE_DIR}/src/build_config.h.in"

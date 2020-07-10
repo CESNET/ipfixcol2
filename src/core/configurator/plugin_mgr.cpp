@@ -207,7 +207,7 @@ ipx_plugin_mgr::cache_add_file(const char *path)
     dlerror();
 
     // Try to load the plugin (and unload it automatically)
-    const int flags = RTLD_LAZY | RTLD_LOCAL | RTLD_DEEPBIND;
+    const int flags = RTLD_LAZY | RTLD_LOCAL;
     auto delete_fn = [](void *handle) {dlclose(handle);};
     std::unique_ptr<void, std::function<void(void*)>> handle(dlopen(path, flags), delete_fn);
     if (!handle) {
@@ -308,7 +308,7 @@ ipx_plugin_mgr::plugin_list()
         dlerror();
 
         const char *path = cache_entry.path.c_str();
-        const int flags = RTLD_LAZY | RTLD_LOCAL | RTLD_DEEPBIND;
+        const int flags = RTLD_LAZY | RTLD_LOCAL;
         auto delete_fn = [](void *handle) {dlclose(handle);};
 
         std::unique_ptr<void, std::function<void(void*)>> handle(dlopen(path, flags), delete_fn);
@@ -346,6 +346,15 @@ ipx_plugin_mgr::plugin_list()
             IPX_WARNING(comp_str, "Failed to check the minimal required version of the collector "
                 "of a plugin in the file '%s': %s", path, ex.what());
             continue;
+        }
+
+        if (info->flags & IPX_PF_DEEPBIND) {
+#ifdef HAVE_RTLD_DEEPBIND
+            plugin_entry.msg_notes.emplace_back("Deep bind (RTLD_DEEPBIND) required");
+#else
+            plugin_entry.msg_warning.emplace_back(
+                "Deep bind (RTLD_DEEPBIND) required but not supported by C library");
+#endif
         }
 
         if (!version_ok) {
@@ -503,18 +512,44 @@ ipx_plugin_mgr::version_check(const std::string &min_version)
  * \param[in] path        Path to the plugin to load
  * \param[in] auto_unload Automatically unload the plugin on destroy (can be changed later)
  */
-ipx_plugin_mgr::plugin::plugin(const std::string &path,  bool auto_unload)
+ipx_plugin_mgr::plugin::plugin(const std::string &path, bool auto_unload)
     : unload(auto_unload)
 {
+    auto delete_fn = [](void *handle) {dlclose(handle);};
+    std::unique_ptr<void, std::function<void(void*)>> handle_wrap(nullptr, delete_fn);
+
+    const struct ipx_plugin_info *info;
+    int load_flags = RTLD_NOW | RTLD_LOCAL;
+
     // Initialize default parameters
     ref_cnt = 0;
     std::memset(&cbs, 0, sizeof(cbs));
 
-    // Load the plugin
-    auto delete_fn = [](void *handle) {dlclose(handle);};
-    int flags = RTLD_NOW | RTLD_LOCAL | RTLD_DEEPBIND;
-    dlerror(); // Clear all errors first
-    std::unique_ptr<void, std::function<void(void*)>> handle_wrap(dlopen(path.c_str(), flags), delete_fn);
+    // Determine whether or not to use deep bind
+    dlerror();
+    handle_wrap.reset(dlopen(path.c_str(), RTLD_LAZY | RTLD_LOCAL));
+    if (!handle_wrap) {
+        // Failed to open the file
+        std::string err_msg = "Failed to load a plugin from '" + path + "': " + dlerror();
+        throw ipx_plugin_mgr::error(err_msg);
+    }
+
+    *(void **)(&info) = symbol_get(handle_wrap.get(), "ipx_plugin_info", false);
+    if (info->flags & IPX_PF_DEEPBIND) {
+#ifdef HAVE_RTLD_DEEPBIND
+        IPX_DEBUG(comp_str, "Loading plugin from '%s' using RTLD_DEEPBIND flag!", path.c_str());
+        load_flags |= RTLD_DEEPBIND;
+#else
+        std::string err_msg = "Deep bind (RTLD_DEEPBIND) required but not supported by C library";
+        throw ipx_plugin_mgr::error("Failed to load a plugin from '" + path + "': " + err_msg);
+#endif
+    }
+
+    // Close the plugin and reload it
+    handle_wrap.reset();
+
+    dlerror();
+    handle_wrap.reset(dlopen(path.c_str(), load_flags));
     if (!handle_wrap) {
         // Failed to open the file
         std::string err_msg = "Failed to load a plugin from '" + path + "': " + dlerror();
