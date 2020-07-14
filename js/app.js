@@ -442,7 +442,7 @@ class Form extends React.Component {
                     var columnErrors = [];
                     if (this.state.errors !== undefined) {
                         columnErrors = Object.values(this.state.errors).filter((error) => {
-                            if (error.dataPath == [i]) {
+                            if (error.dataPath == columnDataPaths[i]) {
                                 return true;
                             }
                             return false;
