@@ -157,6 +157,7 @@ class Form extends React.Component {
             settingsOpen: false,
             confirmDialogOpen: false,
             confirmDialogRemoveFunc: null,
+            downloadDialogOpen: false,
             indentType: cookieSettings.indentType,
             indentNumber: cookieSettings.indentNumber,
             showConfirmationDialogs: cookieSettings.showConfirmationDialogs,
@@ -454,6 +455,22 @@ class Form extends React.Component {
         this.setState(cookieSettings);
     }
 
+    handleDownloadDialogClose() {
+        this.setState({
+            downloadDialogOpen: false
+        });
+    }
+
+    requestDownload() {
+        if (this.state.valid || !this.state.showConfirmationDialogs) {
+            this.download();
+            return;
+        }
+        this.setState({
+            downloadDialogOpen: true
+        });
+    }
+
     download() {
         let element = document.createElement("a");
         element.style.display = "none";
@@ -466,6 +483,7 @@ class Form extends React.Component {
         document.body.appendChild(element);
         element.click();
         document.body.removeChild(element);
+        this.handleDownloadDialogClose();
     }
 
     render() {
@@ -518,7 +536,7 @@ class Form extends React.Component {
                                 </IconButton>
                             </Tooltip>
                             <Tooltip title={"Download file"} arrow placement={"bottom"}>
-                                <IconButton color="inherit" onClick={this.download.bind(this)}>
+                                <IconButton color="inherit" onClick={this.requestDownload.bind(this)}>
                                     <Icon>get_app</Icon>
                                 </IconButton>
                             </Tooltip>
@@ -557,6 +575,29 @@ class Form extends React.Component {
                                 onClick={this.handleConfirmDialogClose.bind(this, true)}
                             >
                                 {"Continue"}
+                            </Button>
+                        </DialogActions>
+                    </Dialog>
+                    <Dialog open={this.state.downloadDialogOpen} fullWidth={false} maxWidth={"sm"}>
+                        <DialogTitle>{"The configuration is not valid."}</DialogTitle>
+                        <Divider />
+                        <DialogContent dividers>
+                            <Typography>The configuration is not valid.</Typography>
+                            <Typography>Do you want to download it anyway?</Typography>
+                        </DialogContent>
+                        <DialogActions>
+                            <Button
+                                autoFocus
+                                color="primary"
+                                onClick={this.handleDownloadDialogClose.bind(this, false)}
+                            >
+                                {"Cancel"}
+                            </Button>
+                            <Button
+                                color="primary"
+                                onClick={this.download.bind(this, true)}
+                            >
+                                {"Download"}
                             </Button>
                         </DialogActions>
                     </Dialog>

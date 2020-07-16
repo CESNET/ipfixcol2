@@ -1,5 +1,4 @@
 // TODO
-// - zabránit stažení souboru při chybné konfiguraci
 // - Zredukovat opakování kódu
 
 function pluginCreate(jsonSchema) {
