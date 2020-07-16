@@ -1,8 +1,6 @@
 // TODO
-
 // - zabránit stažení souboru při chybné konfiguraci
 // - Zredukovat opakování kódu
-// - Přidat nové pluginy
 
 function pluginCreate(jsonSchema) {
     let newPlugin = {};
@@ -1267,7 +1265,12 @@ class Description extends React.Component {
     }
     render() {
         let descContent;
-        let contentParts = this.props.content.split("\n");
+        let contentParts;
+        if (this.props.content === undefined) {
+            contentParts = ["No description."];
+        } else {
+            contentParts = this.props.content.split("\n");
+        }
         descContent = (
             <DialogContent dividers>
                 {contentParts.map((part, index) => {

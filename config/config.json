@@ -11,11 +11,13 @@
         "output": {
             "path": "./schemas/output/",
             "pluginSchemas": [
-                "json.json",
                 "dummy.json",
+                "fds.json",
+                "ipfix.json",
+                "json.json",
                 "lnfstore.json",
-                "unirec.json",
                 "timecheck.json",
+                "unirec.json",
                 "viewer.json"
             ]
         },

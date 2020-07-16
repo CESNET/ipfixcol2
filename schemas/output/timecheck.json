@@ -1,6 +1,6 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "Time Check",
+    "title": "TimeCheck output",
     "description": "The plugin checks that start and end timestamps of each flow record are relatively recent.|https://github.com/CESNET/ipfixcol2/tree/master/src/plugins/output/timecheck",
     "type": "object",
     "properties": {
