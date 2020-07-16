@@ -27,6 +27,7 @@
                     "description": "Local port on which the plugin listens. [default: 4739]",
                     "type": "integer",
                     "minimum": 0,
+                    "maximum": 65535,
                     "default": 4739
                 },
                 "localIPAddress": {
@@ -46,19 +47,22 @@
                     "title": "Connection timeout",
                     "description": "Exporter connection timeout in seconds. If no message is received from an exporter for a specified time, the connection is considered closed and all resources (associated with the exporter) are removed, such as flow templates, etc. [default: 600]",
                     "type": "integer",
-                    "default": 600
+                    "default": 600,
+                    "minimum": 0
                 },
                 "templateLifeTime": {
                     "title": "Template lifetime",
                     "description": "(Options) Template lifetime in seconds for all UDP Transport Sessions terminating at this UDP socket. (Options) Templates that are not received again within the configured lifetime become invalid. The lifetime of Templates and Options Templates should be at least three times higher than the same values configured on the corresponding exporter. [default: 1800]",
                     "type": "integer",
-                    "default": 1800
+                    "default": 1800,
+                    "minimum": 0
                 },
                 "optionsTemplateLifeTime": {
                     "title": "Options template lifetime",
                     "description": "(Options) Template lifetime in seconds for all UDP Transport Sessions terminating at this UDP socket. (Options) Templates that are not received again within the configured lifetime become invalid. The lifetime of Templates and Options Templates should be at least three times higher than the same values configured on the corresponding exporter. [default: 1800]",
                     "type": "integer",
-                    "default": 1800
+                    "default": 1800,
+                    "minimum": 0
                 }
             },
             "required": ["localPort", "localIPAddress"]

@@ -123,7 +123,8 @@
                                         "title": "Port",
                                         "description": "Local port number of the server.",
                                         "type": "integer",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "maximum": 65535
                                     },
                                     "blocking": {
                                         "title": "Blocking",
@@ -160,7 +161,8 @@
                                         "title": "Port",
                                         "description": "Remote port number",
                                         "type": "integer",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "maximum": 65535
                                     },
                                     "protocol": {
                                         "title": "Protocol",

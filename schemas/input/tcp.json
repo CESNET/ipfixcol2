@@ -27,6 +27,7 @@
                     "description": "Local port on which the plugin listens. [default: 4739]",
                     "type": "integer",
                     "minimum": 0,
+                    "maximum": 65535,
                     "default": 4739
                 },
                 "localIPAddress": {

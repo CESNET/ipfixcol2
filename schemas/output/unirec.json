@@ -54,6 +54,7 @@
                             "title": "Automatic flush",
                             "description": "Automatically flush data even if the output buffer is not full every X microseconds. If the automatic flush is disabled (value 0), data are not send until the buffer is full. [default: 500000]",
                             "type": "integer",
+                            "minimum": 0,
                             "default": 500000
                         }
                     },
@@ -79,6 +80,7 @@
                                     "title": "Max clients",
                                     "description": "Maximal number of connected clients (input interfaces). [default: 64]",
                                     "type": "integer",
+                                    "minimum": 0,
                                     "default": 64
                                 }
                             },
@@ -93,12 +95,14 @@
                                     "title": "Port",
                                     "description": "Local port number",
                                     "type": "integer",
-                                    "minimum": 0
+                                    "minimum": 0,
+                                    "maximum": 65535
                                 },
                                 "maxClients": {
                                     "title": "Max clients",
                                     "description": "Maximal number of connected clients (input interfaces). [default: 64]",
                                     "type": "integer",
+                                    "minimum": 0,
                                     "default": 64
                                 }
                             },
@@ -113,12 +117,14 @@
                                     "title": "Port",
                                     "description": "Local port number",
                                     "type": "integer",
-                                    "minimum": 0
+                                    "minimum": 0,
+                                    "maximum": 65535
                                 },
                                 "maxClients": {
                                     "title": "Max clients",
                                     "description": "Maximal number of connected clients (input interfaces). [default: 64]",
                                     "type": "integer",
+                                    "minimum": 0,
                                     "default": 64
                                 },
                                 "keyFile": {
@@ -164,12 +170,14 @@
                                     "title": "Time",
                                     "description": "If the parameter is non-zero, the output interface will split captured data to individual files as often, as value of this parameter (in minutes) indicates. The output interface creates unique file name for each file according to current timestamp in format: \"filename.YYYYmmddHHMM\". [default: 0]",
                                     "type": "integer",
+                                    "minimum": 0,
                                     "default": 0
                                 },
                                 "size": {
                                     "title": "Size",
                                     "description": "If the parameter is non-zero, the output interface will split captured data into individual files after a size of a current file (in MB) exceeds given threshold. Numeric suffix is added to the original file name for each file in ascending order starting with 0. [default: 0] ",
                                     "type": "integer",
+                                    "minimum": 0,
                                     "default": 0
                                 }
                             },
