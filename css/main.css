@@ -60,12 +60,6 @@ body {
   margin-bottom: auto;
 }
 
-textarea,
-pre {
-  width: 100%;
-  min-width: 400px;
-}
-
 #XMLPrint-title {
   line-height: 1em;
   margin-bottom: 14px;

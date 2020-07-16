@@ -1,15 +1,15 @@
 function setCookie(cookieName, value) {
-    var d = new Date();
-    d.setTime(d.getTime() + cookieExpirationDays * 24 * 60 * 60 * 1000);
-    var expires = "expires=" + d.toUTCString();
+    let d = new Date();
+    d.setTime(d.getTime() + COOKIE_EXPIRATION_DAYS * 24 * 60 * 60 * 1000);
+    let expires = "expires=" + d.toUTCString();
     document.cookie = cookieName + "=" + value + ";" + expires + ";path=/";
 }
 
 function getCookie(cookieName) {
-    var name = cookieName + "=";
-    var parts = document.cookie.split(";");
-    for (var i in parts) {
-        var part = parts[i].trim();
+    let name = cookieName + "=";
+    let parts = document.cookie.split(";");
+    for (let i in parts) {
+        let part = parts[i].trim();
         if (part.indexOf(name) == 0) {
             return part.substring(name.length, part.length);
         }
@@ -18,14 +18,14 @@ function getCookie(cookieName) {
 }
 
 function loadCookie(cookieName) {
-    var value = getCookie(cookieName);
+    let value = getCookie(cookieName);
     if (value == "") {
         value = undefined;
     }
     return value;
 }
 
-let merge = (obj1, obj2) => {
+function merge(obj1, obj2) {
     let target = {};
     // Merge the object into the target object
     let merger = (obj) => {
@@ -94,7 +94,7 @@ class App extends React.Component {
     }
 
     async loadSchemas(typeSchemaLocations) {
-        var array = [];
+        let array = [];
         typeSchemaLocations.pluginSchemas.map((filename) => {
             fetch(typeSchemaLocations.path + filename) // not supported by Internet Explorer
                 .then((response) => response.json())
@@ -104,7 +104,7 @@ class App extends React.Component {
     }
 
     render() {
-        var form =
+        let form =
             this.state.config !== undefined &&
             this.state.pluginSchemas !== undefined &&
             this.state.specialSchemas !== undefined ? (
@@ -114,7 +114,7 @@ class App extends React.Component {
                     specialSchemas={this.state.specialSchemas}
                 />
             ) : (
-                <ThemeProvider theme={mainTheme}>
+                <ThemeProvider theme={MAIN_THEME}>
                     <LinearProgress />
                 </ThemeProvider>
             );
@@ -125,9 +125,9 @@ class App extends React.Component {
 class Form extends React.Component {
     constructor(props) {
         super(props);
-        var configObj = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
-        var { valid, errors } = this.validateConfig(configObj);
-        var cookieSettings = {
+        let configObj = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+        let { valid, errors } = this.validateConfig(configObj);
+        let cookieSettings = {
             indentType: loadCookie("indentType"),
             indentNumber: loadCookie("indentNumber"),
             showConfirmationDialogs: loadCookie("showConfirmationDialogs"),
@@ -138,15 +138,15 @@ class Form extends React.Component {
             cookieSettings.showConfirmationDialogs !== undefined
         ) {
             if (cookieSettings.indentType == "Space") {
-                cookieSettings.indentType = indentationTypes[0];
+                cookieSettings.indentType = INDENTATION_TYPES[0];
             } else {
-                cookieSettings.indentType = indentationTypes[1];
+                cookieSettings.indentType = INDENTATION_TYPES[1];
             }
             cookieSettings.indentNumber = Number(cookieSettings.indentNumber);
             cookieSettings.showConfirmationDialogs =
                 cookieSettings.showConfirmationDialogs === "true";
         } else {
-            cookieSettings = JSON.parse(JSON.stringify(defaultSettings));
+            cookieSettings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
         }
         this.state = {
             plugins: [[], [], []],
@@ -167,7 +167,7 @@ class Form extends React.Component {
     }
 
     findSchema(plugin, schemas) {
-        var pluginSchema = schemas.find(
+        let pluginSchema = schemas.find(
             (schema) => plugin.plugin === schema.properties.plugin.const
         );
         if (pluginSchema !== undefined) {
@@ -196,7 +196,7 @@ class Form extends React.Component {
     }
 
     newPluginOverlay(columnIndex, pluginIndex) {
-        var extendedSchema = this.applySchemaExtensions(
+        let extendedSchema = this.applySchemaExtensions(
             this.props.pluginSchemas[columnIndex][pluginIndex],
             columnIndex
         );
@@ -218,10 +218,10 @@ class Form extends React.Component {
     }
 
     editPluginOverlay(columnIndex, index) {
-        var plugin = this.state.plugins[columnIndex][index];
-        var pluginJsonSchema = this.findSchema(plugin, this.props.pluginSchemas[columnIndex]);
-        var extendedSchema = this.applySchemaExtensions(pluginJsonSchema, columnIndex);
-        var pluginNames = JSON.parse(JSON.stringify(this.getSectionPluginNames(columnIndex)));
+        let plugin = this.state.plugins[columnIndex][index];
+        let pluginJsonSchema = this.findSchema(plugin, this.props.pluginSchemas[columnIndex]);
+        let extendedSchema = this.applySchemaExtensions(pluginJsonSchema, columnIndex);
+        let pluginNames = JSON.parse(JSON.stringify(this.getSectionPluginNames(columnIndex)));
         pluginNames.splice(index, 1);
         this.setState({
             overlay: (
@@ -243,7 +243,7 @@ class Form extends React.Component {
     }
 
     addPlugin(columnIndex, plugin) {
-        var plugins = this.state.plugins;
+        let plugins = this.state.plugins;
         plugins[columnIndex] = plugins[columnIndex].concat(plugin);
         this.setState({
             plugins: plugins,
@@ -254,7 +254,7 @@ class Form extends React.Component {
     }
 
     editPlugin(columnIndex, index, plugin) {
-        var plugins = this.state.plugins;
+        let plugins = this.state.plugins;
         plugins[columnIndex][index] = plugin;
         this.setState({
             plugins: plugins,
@@ -276,7 +276,7 @@ class Form extends React.Component {
     }
 
     removePlugin(columnIndex, index) {
-        var plugins = this.state.plugins;
+        let plugins = this.state.plugins;
         plugins[columnIndex].splice(index, 1);
         this.setState({
             plugins: plugins,
@@ -293,7 +293,7 @@ class Form extends React.Component {
     }
 
     createConfigObj() {
-        var configObj = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+        let configObj = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
         configObj.ipfixcol2.inputPlugins.input = this.state.plugins[0];
         configObj.ipfixcol2.intermediatePlugins.intermediate = this.state.plugins[1];
         configObj.ipfixcol2.outputPlugins.output = this.state.plugins[2];
@@ -303,10 +303,10 @@ class Form extends React.Component {
     validateConfig(configObj) {
         configObj = JSON.parse(JSON.stringify(configObj));
         this.removeEmptyConfigIntermediatePluginType(configObj);
-        var valid = ajv.validate(this.props.specialSchemas.generalStructure, configObj);
-        var errors = undefined;
+        let valid = AJV.validate(this.props.specialSchemas.generalStructure, configObj);
+        let errors = undefined;
         if (!valid) {
-            errors = JSON.parse(JSON.stringify(ajv.errors));
+            errors = JSON.parse(JSON.stringify(AJV.errors));
         }
         console.log("configObj valid: " + valid);
         return {
@@ -316,8 +316,8 @@ class Form extends React.Component {
     }
 
     updateConfigObj() {
-        var configObj = this.createConfigObj();
-        var { valid, errors } = this.validateConfig(configObj);
+        let configObj = this.createConfigObj();
+        let { valid, errors } = this.validateConfig(configObj);
         this.setState({
             configObj: configObj,
             valid: valid,
@@ -326,9 +326,9 @@ class Form extends React.Component {
     }
 
     createConfigXML() {
-        var configObj = JSON.parse(JSON.stringify(this.state.configObj));
+        let configObj = JSON.parse(JSON.stringify(this.state.configObj));
         this.removeEmptyConfigPluginTypes(configObj);
-        var xml = x2js.json2xml_str(configObj);
+        let xml = X2JS.json2xml_str(configObj);
         return formatXml(xml, this.state.indentType.character, this.state.indentNumber);
     }
 
@@ -349,14 +349,14 @@ class Form extends React.Component {
     }
 
     printColoredXML() {
-        var input = false;
-        var intermediate = false;
-        var output = false;
-        var formatedXML = this.createConfigXML();
-        var parts = formatedXML.split(
+        let input = false;
+        let intermediate = false;
+        let output = false;
+        let formatedXML = this.createConfigXML();
+        let parts = formatedXML.split(
             /\s*(<inputPlugins>|<\/inputPlugins>|<intermediatePlugins>|<\/intermediatePlugins>|<outputPlugins>|<\/outputPlugins>)\r\n/
         );
-        var indentation = this.state.indentType.character.repeat(this.state.indentNumber);
+        let indentation = this.state.indentType.character.repeat(this.state.indentNumber);
         return (
             <div className={"XMLPrint"}>
                 {parts.map((part, index) => {
@@ -443,7 +443,7 @@ class Form extends React.Component {
     }
 
     changeSettings(type, number, showConfirmationDialogs) {
-        var cookieSettings = {
+        let cookieSettings = {
             indentType: type,
             indentNumber: number,
             showConfirmationDialogs: showConfirmationDialogs,
@@ -455,7 +455,7 @@ class Form extends React.Component {
     }
 
     download() {
-        var element = document.createElement("a");
+        let element = document.createElement("a");
         element.style.display = "none";
         element.setAttribute(
             "href",
@@ -469,26 +469,26 @@ class Form extends React.Component {
     }
 
     render() {
-        var mainLayer = (
+        let mainLayer = (
             <div className="mainLayer">
                 {[0, 1, 2].map((i) => {
-                    var columnErrors = [];
+                    let columnErrors = [];
                     if (this.state.errors !== undefined) {
                         columnErrors = Object.values(this.state.errors).filter((error) => {
-                            if (error.dataPath == columnDataPaths[i]) {
+                            if (error.dataPath == COLUMN_DATA_PATH[i]) {
                                 return true;
                             }
                             return false;
                         });
                     }
                     return (
-                        <FormColumn
-                            key={columnNames[i]}
+                        <PluginTypeCard
+                            key={COLUMN_NAMES[i]}
                             columnIndex={i}
                             plugins={this.state.plugins[i]}
                             errors={columnErrors}
-                            color={colors[i]}
-                            name={columnNames[i]}
+                            color={COLORS[i]}
+                            name={COLUMN_NAMES[i]}
                             pluginsAvailable={this.props.pluginSchemas[i]}
                             addPlugin={this.newPluginOverlay.bind(this)}
                             editPlugin={this.editPluginOverlay.bind(this)}
@@ -500,7 +500,7 @@ class Form extends React.Component {
         );
         return (
             <React.Fragment>
-                <ThemeProvider theme={mainTheme}>
+                <ThemeProvider theme={MAIN_THEME}>
                     <AppBar position="sticky">
                         <Toolbar variant="dense">
                             <Typography variant="h6" color="inherit" className="title">
@@ -595,7 +595,7 @@ class Form extends React.Component {
     }
 }
 
-class FormColumn extends React.Component {
+class PluginTypeCard extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
@@ -624,10 +624,10 @@ class FormColumn extends React.Component {
     }
 
     render() {
-        var plugins = "";
-        var errorIcon = "";
+        let plugins = "";
+        let errorIcon = "";
         if (this.props.errors.length > 0) {
-            var errorMessage = this.props.errors[this.props.errors.length - 1].message;
+            let errorMessage = this.props.errors[this.props.errors.length - 1].message;
             errorIcon = (
                 <IconButton tabIndex={-1}>
                     <Tooltip title={errorMessage} arrow>
@@ -650,9 +650,9 @@ class FormColumn extends React.Component {
                 );
             });
         }
-        var addMenu = (
+        let addMenu = (
             <React.Fragment>
-                <ThemeProvider theme={grayTheme}>
+                <ThemeProvider theme={GRAY_THEME}>
                     <Button
                         variant="outlined"
                         color="primary"
@@ -832,15 +832,15 @@ class Settings extends React.Component {
     }
 
     handleChangeType(event) {
-        if (event.target.value === indentationTypes[1].name) {
-            this.props.onChange(indentationTypes[1], 1, this.props.showConfirmationDialogs);
+        if (event.target.value === INDENTATION_TYPES[1].name) {
+            this.props.onChange(INDENTATION_TYPES[1], 1, this.props.showConfirmationDialogs);
             this.setState({ indentNumber: 1 });
-        } else if (this.props.indentType === indentationTypes[1]) {
-            this.props.onChange(indentationTypes[0], 2, this.props.showConfirmationDialogs);
+        } else if (this.props.indentType === INDENTATION_TYPES[1]) {
+            this.props.onChange(INDENTATION_TYPES[0], 2, this.props.showConfirmationDialogs);
             this.setState({ indentNumber: 2 });
         } else {
             this.props.onChange(
-                indentationTypes[0],
+                INDENTATION_TYPES[0],
                 this.props.indentNumber,
                 this.props.showConfirmationDialogs
             );
@@ -848,12 +848,12 @@ class Settings extends React.Component {
     }
 
     handleChangeNumber(event) {
-        var value = Number(event.target.value);
-        if (value < indentationSpaces.min || value.toString() != event.target.value) {
+        let value = Number(event.target.value);
+        if (value < INDENTATION_SPACES.min || value.toString() != event.target.value) {
             this.setState({ indentNumber: event.target.value });
             return;
-        } else if (value > indentationSpaces.max) {
-            value = indentationSpaces.max;
+        } else if (value > INDENTATION_SPACES.max) {
+            value = INDENTATION_SPACES.max;
         }
         this.setState({ indentNumber: value });
         this.props.onChange(this.props.indentType, value, this.props.showConfirmationDialogs);
@@ -893,7 +893,7 @@ class Settings extends React.Component {
                                 value={this.props.indentType.name}
                                 onChange={this.handleChangeType.bind(this)}
                             >
-                                {indentationTypes.map((indentType) => {
+                                {INDENTATION_TYPES.map((indentType) => {
                                     return (
                                         <MenuItem key={indentType.name} value={indentType.name}>
                                             {indentType.name}
@@ -911,10 +911,10 @@ class Settings extends React.Component {
                                 type={"number"}
                                 name={"numberOfIndentChars"}
                                 value={this.state.indentNumber}
-                                disabled={this.props.indentType === indentationTypes[1]}
+                                disabled={this.props.indentType === INDENTATION_TYPES[1]}
                                 inputProps={{
-                                    min: indentationSpaces.min,
-                                    max: indentationSpaces.max,
+                                    min: INDENTATION_SPACES.min,
+                                    max: INDENTATION_SPACES.max,
                                     step: 1,
                                 }}
                                 onChange={this.handleChangeNumber.bind(this)}

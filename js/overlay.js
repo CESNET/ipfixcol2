@@ -3,11 +3,10 @@
 // - zabránit stažení souboru při chybné konfiguraci
 // - Zredukovat opakování kódu
 // - Přidat nové pluginy
-// ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 
 function pluginCreate(jsonSchema) {
-    var newPlugin = {};
-    for (var i in jsonSchema.required) {
+    let newPlugin = {};
+    for (let i in jsonSchema.required) {
         pluginSetProperty(
             newPlugin,
             jsonSchema.required[i],
@@ -29,7 +28,7 @@ function pluginSetProperty(plugin, propertyName, jsonSchema) {
     if (jsonSchema.type === "object") {
         plugin[propertyName] = {};
         if (jsonSchema.hasOwnProperty("required")) {
-            for (var i in jsonSchema.required) {
+            for (let i in jsonSchema.required) {
                 pluginSetProperty(
                     plugin[propertyName],
                     jsonSchema.required[i],
@@ -40,7 +39,7 @@ function pluginSetProperty(plugin, propertyName, jsonSchema) {
         return;
     }
     if (jsonSchema.type === "array") {
-        var newArray = [];
+        let newArray = [];
         pluginArrayAddItem(newArray, jsonSchema.items);
         plugin[propertyName] = newArray;
         return;
@@ -53,7 +52,7 @@ function pluginSetProperty(plugin, propertyName, jsonSchema) {
 }
 
 function pluginArrayAddItem(array, jsonSchema) {
-    var item = null;
+    let item = null;
     if (jsonSchema.hasOwnProperty("const")) {
         item = jsonSchema.const;
     } else if (jsonSchema.hasOwnProperty("default")) {
@@ -61,7 +60,7 @@ function pluginArrayAddItem(array, jsonSchema) {
     } else if (jsonSchema.type === "object") {
         item = {};
         if (jsonSchema.hasOwnProperty("required")) {
-            for (var i in jsonSchema.required) {
+            for (let i in jsonSchema.required) {
                 pluginSetProperty(
                     item,
                     jsonSchema.required[i],
@@ -79,22 +78,22 @@ function pluginArrayAddItem(array, jsonSchema) {
 class Overlay extends React.Component {
     constructor(props) {
         super(props);
-        var plugin =
+        let plugin =
             this.props.plugin !== undefined
                 ? this.props.plugin
                 : pluginCreate(this.props.jsonSchema);
-        var valid = ajv.validate(this.props.jsonSchema, plugin);
-        var errors = [];
+        let valid = AJV.validate(this.props.jsonSchema, plugin);
+        let errors = [];
         if (!valid) {
-            errors = JSON.parse(JSON.stringify(ajv.errors));
+            errors = JSON.parse(JSON.stringify(AJV.errors));
         }
 
-        var newPluginNames = JSON.parse(JSON.stringify(this.props.pluginNames));
+        let newPluginNames = JSON.parse(JSON.stringify(this.props.pluginNames));
         newPluginNames.push(plugin.name);
-        var nameValid = ajv.validate(this.props.nameValidationSchema, { name: newPluginNames });
-        var nameErrors;
+        let nameValid = AJV.validate(this.props.nameValidationSchema, { name: newPluginNames });
+        let nameErrors;
         if (!nameValid) {
-            nameErrors = JSON.parse(JSON.stringify(ajv.errors));
+            nameErrors = JSON.parse(JSON.stringify(AJV.errors));
             nameErrors[0].message = "plugins MUST have different names";
             errors = errors.concat(nameErrors);
         }
@@ -131,18 +130,18 @@ class Overlay extends React.Component {
         }
     }
     handleChange(changedSubplugin) {
-        var valid = ajv.validate(this.props.jsonSchema, changedSubplugin);
-        var errors = [];
+        let valid = AJV.validate(this.props.jsonSchema, changedSubplugin);
+        let errors = [];
         if (!valid) {
-            errors = JSON.parse(JSON.stringify(ajv.errors));
+            errors = JSON.parse(JSON.stringify(AJV.errors));
         }
 
-        var newPluginNames = JSON.parse(JSON.stringify(this.props.pluginNames));
+        let newPluginNames = JSON.parse(JSON.stringify(this.props.pluginNames));
         newPluginNames.push(changedSubplugin.name);
-        var nameValid = ajv.validate(this.props.nameValidationSchema, { name: newPluginNames });
-        var nameErrors;
+        let nameValid = AJV.validate(this.props.nameValidationSchema, { name: newPluginNames });
+        let nameErrors;
         if (!nameValid) {
-            nameErrors = JSON.parse(JSON.stringify(ajv.errors));
+            nameErrors = JSON.parse(JSON.stringify(AJV.errors));
             nameErrors[0].message = "plugins MUST have different names";
             errors = errors.concat(nameErrors);
         }
@@ -152,14 +151,14 @@ class Overlay extends React.Component {
         });
     }
     render() {
-        var buttonText = this.state.isNew ? "Add plugin" : "Edit plugin";
-        var titleText = buttonText + ": " + this.props.jsonSchema.title;
-        var descParts = this.props.jsonSchema.description.split("|");
-        var subtitleText;
-        var link;
-        var properties;
-        var btnCancel;
-        var btnSave;
+        let buttonText = this.state.isNew ? "Add plugin" : "Edit plugin";
+        let titleText = buttonText + ": " + this.props.jsonSchema.title;
+        let descParts = this.props.jsonSchema.description.split("|");
+        let subtitleText;
+        let link;
+        let properties;
+        let btnCancel;
+        let btnSave;
         if (descParts.length === 1 || descParts.length > 2) {
             subtitleText = this.props.jsonSchema.description;
         } else {
@@ -210,7 +209,7 @@ class Overlay extends React.Component {
             </Button>
         );
         return (
-            <ThemeProvider theme={mainTheme}>
+            <ThemeProvider theme={MAIN_THEME}>
                 <Dialog
                     disableBackdropClick
                     open={true}
@@ -249,7 +248,7 @@ class Overlay extends React.Component {
                                     </Typography>
                                     <Typography id={"XMLPrint"} component={"pre"}>
                                         {formatXml(
-                                            x2js.json2xml_str(this.state.plugin),
+                                            X2JS.json2xml_str(this.state.plugin),
                                             this.props.XMLIndentType.character,
                                             this.props.XMLIndentNumber
                                         )}
@@ -316,7 +315,7 @@ class Properties extends React.Component {
         this.props.onChange(this.props.name, changedPlugin);
     }
     handleMenuSelect(selectedPropertyName) {
-        var changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
+        let changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
         pluginSetProperty(
             changedPlugin,
             selectedPropertyName,
@@ -327,12 +326,12 @@ class Properties extends React.Component {
         this.setState({ expanded: true });
     }
     handleChange(propertyName, changedSubplugin) {
-        var changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
+        let changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
         changedPlugin[propertyName] = changedSubplugin;
         this.callOnChange(changedPlugin);
     }
     handleRemoveChild(propertyName) {
-        var changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
+        let changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
         delete changedPlugin[propertyName];
         this.callOnChange(changedPlugin);
     }
@@ -354,15 +353,15 @@ class Properties extends React.Component {
     }
 
     render() {
-        var name = this.props.isRoot ? "" : this.props.jsonSchema.title;
-        var optionalMenu = "";
-        var errorIcon = "";
-        var removeButton = "";
-        var expandButton = "";
-        var properties = "";
-        var hasError = false;
-        var propsErrors;
-        var childErrorsNum = 0;
+        let name = this.props.isRoot ? "" : this.props.jsonSchema.title;
+        let optionalMenu = "";
+        let errorIcon = "";
+        let removeButton = "";
+        let expandButton = "";
+        let properties = "";
+        let hasError = false;
+        let propsErrors;
+        let childErrorsNum = 0;
         if (
             (!this.props.jsonSchema.hasOwnProperty("required") ||
                 Object.keys(this.props.jsonSchema.properties).length >
@@ -416,7 +415,7 @@ class Properties extends React.Component {
             childErrorsNum = this.props.errors.length - propsErrors.length;
         }
         if (hasError) {
-            var errorMessage = this.props.errors[this.props.errors.length - 1].message;
+            let errorMessage = this.props.errors[this.props.errors.length - 1].message;
             errorIcon = (
                 <IconButton tabIndex={-1}>
                     <Tooltip title={errorMessage} arrow>
@@ -463,11 +462,11 @@ class Properties extends React.Component {
                         ) {
                             return;
                         }
-                        var isRequired =
+                        let isRequired =
                             this.props.jsonSchema.hasOwnProperty("required") &&
                             this.props.jsonSchema.required.includes(propertyName);
-                        var dataPath = this.props.dataPath + "." + propertyName;
-                        var errors = [];
+                        let dataPath = this.props.dataPath + "." + propertyName;
+                        let errors = [];
                         if (this.props.errors.length > 0) {
                             errors = Object.values(this.props.errors).filter((error) => {
                                 if (
@@ -658,13 +657,13 @@ class ArrayProperty extends React.Component {
     }
 
     handleChange(index, _, changedSubplugin) {
-        var changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
+        let changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
         changedPlugin[index] = changedSubplugin;
         this.props.onChange(this.props.name, changedPlugin);
     }
     handleRemove(index) {
         if (this.props.plugin.length > 1) {
-            var changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
+            let changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
             changedPlugin.splice(index, 1);
             this.props.onChange(this.props.name, changedPlugin);
         } else {
@@ -672,7 +671,7 @@ class ArrayProperty extends React.Component {
         }
     }
     handleAdd() {
-        var changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
+        let changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
         pluginArrayAddItem(changedPlugin, this.props.jsonSchema.items);
         this.props.onChange(this.props.name, changedPlugin);
         this.setState({ expanded: true });
@@ -682,17 +681,17 @@ class ArrayProperty extends React.Component {
     }
 
     render() {
-        var name = this.props.jsonSchema.title;
-        var buttonText = "Add item";
-        var button = "";
-        var errorIcon = "";
-        var expandButton = "";
-        var items = "";
-        var hasError = false;
-        var propsErrors;
-        var childErrorsNum = 0;
-        var minItems = 0;
-        var numOfItems = this.props.plugin.length;
+        let name = this.props.jsonSchema.title;
+        let buttonText = "Add item";
+        let button = "";
+        let errorIcon = "";
+        let expandButton = "";
+        let items = "";
+        let hasError = false;
+        let propsErrors;
+        let childErrorsNum = 0;
+        let minItems = 0;
+        let numOfItems = this.props.plugin.length;
         if (
             !this.props.jsonSchema.hasOwnProperty("maxItems") ||
             (this.props.jsonSchema.hasOwnProperty("maxItems") &&
@@ -718,7 +717,7 @@ class ArrayProperty extends React.Component {
             childErrorsNum = this.props.errors.length - propsErrors.length;
         }
         if (hasError) {
-            var errorMessage = this.props.errors[this.props.errors.length - 1].message;
+            let errorMessage = this.props.errors[this.props.errors.length - 1].message;
             errorIcon = (
                 <IconButton tabIndex={-1}>
                     <Tooltip title={errorMessage} arrow>
@@ -747,8 +746,8 @@ class ArrayProperty extends React.Component {
         items = (
             <Collapse in={this.state.expanded} timeout="auto">
                 {this.props.plugin.map((item, index) => {
-                    var dataPath = this.props.dataPath + "[" + index + "]";
-                    var errors = [];
+                    let dataPath = this.props.dataPath + "[" + index + "]";
+                    let errors = [];
                     if (this.props.errors.length > 0) {
                         errors = Object.values(this.props.errors).filter((error) => {
                             if (
@@ -822,15 +821,15 @@ class StringProperty extends React.Component {
         });
     }
     render() {
-        var value = this.props.plugin;
-        var readOnly = false;
-        var onChange = this.handleChange.bind(this);
-        var deleteButton = "";
-        var hasError = this.props.errors !== undefined && this.props.errors.length > 0;
-        var errorIcon = "";
-        var inputCode;
-        var inputStyle;
-        var helpIcon = (
+        let value = this.props.plugin;
+        let readOnly = false;
+        let onChange = this.handleChange.bind(this);
+        let deleteButton = "";
+        let hasError = this.props.errors !== undefined && this.props.errors.length > 0;
+        let errorIcon = "";
+        let inputCode;
+        let inputStyle;
+        let helpIcon = (
             <Grid item>
                 <IconButton onClick={this.handleDescriptionOpen.bind(this)} tabIndex={-1}>
                     <Icon>help</Icon>
@@ -849,7 +848,7 @@ class StringProperty extends React.Component {
             value = "";
         }
         if (hasError) {
-            var errorMessage = this.props.errors[this.props.errors.length - 1].message;
+            let errorMessage = this.props.errors[this.props.errors.length - 1].message;
             errorIcon = (
                 <Grid item>
                     <IconButton tabIndex={-1}>
@@ -950,13 +949,13 @@ class BooleanProperty extends React.Component {
         });
     }
     render() {
-        var value = this.props.plugin;
-        var readOnly = false;
-        var onChange = this.handleChange.bind(this);
-        var deleteButton = "";
-        var inputCode;
-        var inputStyle;
-        var helpIcon = (
+        let value = this.props.plugin;
+        let readOnly = false;
+        let onChange = this.handleChange.bind(this);
+        let deleteButton = "";
+        let inputCode;
+        let inputStyle;
+        let helpIcon = (
             <Grid item>
                 <IconButton onClick={this.handleDescriptionOpen.bind(this)} tabIndex={-1}>
                     <Icon>help</Icon>
@@ -1028,7 +1027,7 @@ class NumberProperty extends React.Component {
         };
     }
     handleChange(event) {
-        var value = Number(event.target.value);
+        let value = Number(event.target.value);
         if (
             this.props.jsonSchema.hasOwnProperty("maximum") &&
             value > this.props.jsonSchema.maximum
@@ -1055,17 +1054,17 @@ class NumberProperty extends React.Component {
         });
     }
     render() {
-        var value = this.props.plugin;
-        var readOnly = false;
-        var onChange = this.handleChange.bind(this);
-        var min = null;
-        var max = null;
-        var deleteButton = "";
-        var hasError = this.props.errors !== undefined && this.props.errors.length > 0;
-        var errorIcon = "";
-        var inputCode;
-        var inputStyle;
-        var helpIcon = (
+        let value = this.props.plugin;
+        let readOnly = false;
+        let onChange = this.handleChange.bind(this);
+        let min = null;
+        let max = null;
+        let deleteButton = "";
+        let hasError = this.props.errors !== undefined && this.props.errors.length > 0;
+        let errorIcon = "";
+        let inputCode;
+        let inputStyle;
+        let helpIcon = (
             <Grid item>
                 <IconButton onClick={this.handleDescriptionOpen.bind(this)} tabIndex={-1}>
                     <Icon>help</Icon>
@@ -1090,7 +1089,7 @@ class NumberProperty extends React.Component {
             value = "";
         }
         if (hasError) {
-            var errorMessage = this.props.errors[this.props.errors.length - 1].message;
+            let errorMessage = this.props.errors[this.props.errors.length - 1].message;
             errorIcon = (
                 <Grid item>
                     <IconButton tabIndex={-1}>
@@ -1159,7 +1158,7 @@ class MultipleTypesProperty extends React.Component {
         };
     }
     handleChange(event) {
-        var value = Number(event.target.value);
+        let value = Number(event.target.value);
         if (isNaN(value) || event.target.value === "") {
             value = event.target.value;
         }
@@ -1179,15 +1178,15 @@ class MultipleTypesProperty extends React.Component {
         });
     }
     render() {
-        var value = this.props.plugin;
-        var readOnly = false;
-        var onChange = this.handleChange.bind(this);
-        var deleteButton = "";
-        var hasError = this.props.errors !== undefined && this.props.errors.length > 0;
-        var errorIcon = "";
-        var inputCode;
-        var inputStyle;
-        var helpIcon = (
+        let value = this.props.plugin;
+        let readOnly = false;
+        let onChange = this.handleChange.bind(this);
+        let deleteButton = "";
+        let hasError = this.props.errors !== undefined && this.props.errors.length > 0;
+        let errorIcon = "";
+        let inputCode;
+        let inputStyle;
+        let helpIcon = (
             <Grid item>
                 <IconButton onClick={this.handleDescriptionOpen.bind(this)} tabIndex={-1}>
                     <Icon>help</Icon>
@@ -1206,7 +1205,7 @@ class MultipleTypesProperty extends React.Component {
             value = "";
         }
         if (hasError) {
-            var errorMessage = this.props.errors[this.props.errors.length - 1].message;
+            let errorMessage = this.props.errors[this.props.errors.length - 1].message;
             errorIcon = (
                 <Grid item>
                     <IconButton tabIndex={-1}>
@@ -1267,8 +1266,8 @@ class Description extends React.Component {
         this.props.onClose();
     }
     render() {
-        var descContent;
-        var contentParts = this.props.content.split("\n");
+        let descContent;
+        let contentParts = this.props.content.split("\n");
         descContent = (
             <DialogContent dividers>
                 {contentParts.map((part, index) => {

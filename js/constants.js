@@ -2,7 +2,6 @@
 const {
     Allert,
     AppBar,
-    //    Autocomplete, - in lab
     Badge,
     Button,
     Card,
@@ -43,27 +42,25 @@ const {
     TextField,
     Toolbar,
     Tooltip,
-    //    TreeItem, - in lab
-    //    TreeView, - in lab
     Typography,
     createMuiTheme,
     ThemeProvider,
 } = MaterialUI;
 
 // x2js convertor
-const x2js = new X2JS();
+const X2JS = new X2JS();
 
 // Ajv - JSON schema validator
-const ajv = new Ajv({ allErrors: true });
+const AJV = new Ajv({ allErrors: true });
 
-const colors = ["blue", "orange", "red"];
-const columnDataPaths = [
+const COLORS = ["blue", "orange", "red"];
+const COLUMN_DATA_PATH = [
     ".ipfixcol2.inputPlugins.input",
     ".ipfixcol2.intermediatePlugins.intermediate",
     ".ipfixcol2.outputPlugins.output",
 ];
-const columnNames = ["Input plugins", "Intermediate plugins", "Output plugins"];
-const cookieExpirationDays = 365;
+const COLUMN_NAMES = ["Input plugins", "Intermediate plugins", "Output plugins"];
+const COOKIE_EXPIRATION_DAYS = 365;
 const DEFAULT_CONFIG = {
     ipfixcol2: {
         inputPlugins: {
@@ -77,27 +74,25 @@ const DEFAULT_CONFIG = {
         },
     },
 };
-const indentationTypes = [
+const INDENTATION_TYPES = [
     { name: "Space", character: " " },
     { name: "Tab", character: "\t" },
 ];
-const indentationSpaces = { min: 0, max: 8 };
-
-const defaultSettings = {
-    indentType: indentationTypes[0],
+const INDENTATION_SPACES = { min: 0, max: 8 };
+const DEFAULT_SETTINGS = {
+    indentType: INDENTATION_TYPES[0],
     indentNumber: 2,
     showConfirmationDialogs: true,
 };
 
-const mainTheme = createMuiTheme({
+const MAIN_THEME = createMuiTheme({
     palette: {
         primary: {
             main: "#1e88e5",
         },
     },
 });
-
-const grayTheme = createMuiTheme({
+const GRAY_THEME = createMuiTheme({
     palette: {
         primary: {
             main: "#424242",
