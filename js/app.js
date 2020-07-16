@@ -47,54 +47,85 @@ let merge = (obj1, obj2) => {
     return target;
 };
 
-var config = {};
-var pluginSchemas = [];
-var nameValidationSchema;
-var outputExtraParams;
-var allPluginsExtraParams;
-var generalStructure;
-
-async function loadAppData() {
-    config = await fetch("./config/config.json").then((response) => response.json());
-    pluginSchemas = [
-        loadSchemas(config.schemaLocations.input),
-        loadSchemas(config.schemaLocations.intermediate),
-        loadSchemas(config.schemaLocations.output),
-    ];
-    nameValidationSchema = await fetch(
-        config.schemaLocations.special.path + config.schemaLocations.special.nameValidationSchema
-    ).then((response) => response.json());
-    outputExtraParams = await fetch(
-        config.schemaLocations.special.path + config.schemaLocations.special.outputExtraParams
-    ).then((response) => response.json());
-    allPluginsExtraParams = await fetch(
-        config.schemaLocations.special.path + config.schemaLocations.special.allPluginsExtraParams
-    ).then((response) => response.json());
-    generalStructure = await fetch(
-        config.schemaLocations.special.path + config.schemaLocations.special.generalStructure
-    ).then((response) => response.json());
-}
-
-function loadSchemas(typeSchemaLocations) {
-    var array = [];
-    typeSchemaLocations.pluginSchemas.map((filename) => {
-        fetch(typeSchemaLocations.path + filename) // not supported by Internet Explorer
-            .then((response) => response.json())
-            .then((json) => array.push(json));
-    });
-    return array;
-}
-
 class App extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            config: undefined,
+            pluginSchemas: undefined,
+            specialSchemas: undefined,
+        };
+        this.loadAppData();
+    }
+
+    async loadAppData() {
+        let config = await fetch("./config/config.json").then((response) => response.json());
+        let pluginSchemas = [
+            await this.loadSchemas(config.schemaLocations.input),
+            await this.loadSchemas(config.schemaLocations.intermediate),
+            await this.loadSchemas(config.schemaLocations.output),
+        ];
+        let specialSchemas = {
+            nameValidation: undefined,
+            outputExtraParams: undefined,
+            allPluginsExtraParams: undefined,
+            generalStructure: undefined,
+        };
+        specialSchemas.nameValidation = await fetch(
+            config.schemaLocations.special.path +
+                config.schemaLocations.special.nameValidationSchema
+        ).then((response) => response.json());
+        specialSchemas.outputExtraParams = await fetch(
+            config.schemaLocations.special.path + config.schemaLocations.special.outputExtraParams
+        ).then((response) => response.json());
+        specialSchemas.allPluginsExtraParams = await fetch(
+            config.schemaLocations.special.path +
+                config.schemaLocations.special.allPluginsExtraParams
+        ).then((response) => response.json());
+        specialSchemas.generalStructure = await fetch(
+            config.schemaLocations.special.path + config.schemaLocations.special.generalStructure
+        ).then((response) => response.json());
+        this.setState({
+            config: config,
+            pluginSchemas: pluginSchemas,
+            specialSchemas: specialSchemas,
+        });
+        // return { config: config, pluginSchemas: pluginSchemas, specialSchemas: specialSchemas };
+    }
+
+    async loadSchemas(typeSchemaLocations) {
+        var array = [];
+        typeSchemaLocations.pluginSchemas.map((filename) => {
+            fetch(typeSchemaLocations.path + filename) // not supported by Internet Explorer
+                .then((response) => response.json())
+                .then((json) => array.push(json));
+        });
+        return array;
+    }
+
     render() {
-        return <Form />;
+        var form =
+            this.state.config !== undefined &&
+            this.state.pluginSchemas !== undefined &&
+            this.state.specialSchemas !== undefined ? (
+                <Form
+                    config={this.state.config}
+                    pluginSchemas={this.state.pluginSchemas}
+                    specialSchemas={this.state.specialSchemas}
+                />
+            ) : (
+                <ThemeProvider theme={mainTheme}>
+                    <LinearProgress />
+                </ThemeProvider>
+            );
+        return form;
     }
 }
 
 class Form extends React.Component {
     constructor(props) {
         super(props);
-        var configObj = JSON.parse(JSON.stringify(defaultConfig));
+        var configObj = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
         var { valid, errors } = this.validateConfig(configObj);
         var cookieSettings = {
             indentType: loadCookie("indentType"),
@@ -157,16 +188,16 @@ class Form extends React.Component {
     }
 
     applySchemaExtensions(schema, columnIndex) {
-        schema = merge(schema, allPluginsExtraParams);
+        schema = merge(schema, this.props.specialSchemas.allPluginsExtraParams);
         if (columnIndex == 2) {
-            schema = merge(schema, outputExtraParams);
+            schema = merge(schema, this.props.specialSchemas.outputExtraParams);
         }
         return schema;
     }
 
     newPluginOverlay(columnIndex, pluginIndex) {
         var extendedSchema = this.applySchemaExtensions(
-            pluginSchemas[columnIndex][pluginIndex],
+            this.props.pluginSchemas[columnIndex][pluginIndex],
             columnIndex
         );
         this.setState({
@@ -174,6 +205,7 @@ class Form extends React.Component {
                 <Overlay
                     columnIndex={columnIndex}
                     jsonSchema={extendedSchema}
+                    nameValidationSchema={this.props.specialSchemas.nameValidation}
                     pluginNames={this.getSectionPluginNames(columnIndex)}
                     onCancel={this.editCancel.bind(this)}
                     onSuccess={this.addPlugin.bind(this)}
@@ -187,7 +219,7 @@ class Form extends React.Component {
 
     editPluginOverlay(columnIndex, index) {
         var plugin = this.state.plugins[columnIndex][index];
-        var pluginJsonSchema = this.findSchema(plugin, pluginSchemas[columnIndex]);
+        var pluginJsonSchema = this.findSchema(plugin, this.props.pluginSchemas[columnIndex]);
         var extendedSchema = this.applySchemaExtensions(pluginJsonSchema, columnIndex);
         var pluginNames = JSON.parse(JSON.stringify(this.getSectionPluginNames(columnIndex)));
         pluginNames.splice(index, 1);
@@ -198,6 +230,7 @@ class Form extends React.Component {
                     columnIndex={columnIndex}
                     index={index}
                     jsonSchema={extendedSchema}
+                    nameValidationSchema={this.props.specialSchemas.nameValidation}
                     pluginNames={pluginNames}
                     onCancel={this.editCancel.bind(this)}
                     onSuccess={this.editPlugin.bind(this)}
@@ -260,7 +293,7 @@ class Form extends React.Component {
     }
 
     createConfigObj() {
-        var configObj = JSON.parse(JSON.stringify(defaultConfig));
+        var configObj = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
         configObj.ipfixcol2.inputPlugins.input = this.state.plugins[0];
         configObj.ipfixcol2.intermediatePlugins.intermediate = this.state.plugins[1];
         configObj.ipfixcol2.outputPlugins.output = this.state.plugins[2];
@@ -270,7 +303,7 @@ class Form extends React.Component {
     validateConfig(configObj) {
         configObj = JSON.parse(JSON.stringify(configObj));
         this.removeEmptyConfigIntermediatePluginType(configObj);
-        var valid = ajv.validate(generalStructure, configObj);
+        var valid = ajv.validate(this.props.specialSchemas.generalStructure, configObj);
         var errors = undefined;
         if (!valid) {
             errors = JSON.parse(JSON.stringify(ajv.errors));
@@ -456,7 +489,7 @@ class Form extends React.Component {
                             errors={columnErrors}
                             color={colors[i]}
                             name={columnNames[i]}
-                            pluginsAvailable={pluginSchemas[i]}
+                            pluginsAvailable={this.props.pluginSchemas[i]}
                             addPlugin={this.newPluginOverlay.bind(this)}
                             editPlugin={this.editPluginOverlay.bind(this)}
                             removePlugin={this.removePluginConfirm.bind(this)}
@@ -926,8 +959,6 @@ class Settings extends React.Component {
 const rootAppElement = document.getElementById("configurator_app");
 
 async function startApp() {
-    await loadAppData();
-
     ReactDOM.render(<App />, rootAppElement);
 }
 

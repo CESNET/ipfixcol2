@@ -29,6 +29,7 @@ const {
     Input,
     InputAdornment,
     InputLabel,
+    LinearProgress,
     List,
     ListItem,
     ListItemText,
@@ -63,7 +64,7 @@ const columnDataPaths = [
 ];
 const columnNames = ["Input plugins", "Intermediate plugins", "Output plugins"];
 const cookieExpirationDays = 365;
-const defaultConfig = {
+const DEFAULT_CONFIG = {
     ipfixcol2: {
         inputPlugins: {
             input: [],

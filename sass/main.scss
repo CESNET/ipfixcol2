@@ -45,6 +45,7 @@ body {
     align-content: center;
     align-items: center;
     width: 100%;
+    min-width: 600px;
     background: white;
 }
 
@@ -137,6 +138,10 @@ p + p {
     &:last-child {
         padding-bottom: 4px;
     }
+}
+
+.MuiDialog-root {
+    min-width: 600px;
 }
 
 .form {

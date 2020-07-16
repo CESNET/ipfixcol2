@@ -1,14 +1,8 @@
 // TODO
 
 // - zabránit stažení souboru při chybné konfiguraci
-// - zbavit se globálních proměnných - ln 50-55 v app.js
-// - upravit načítání dat (nyní na globální úrovni) - načítat na úrovni aplikace
-//      ? během načítání zobrazit načítací kolečko
-// - založit si vlastní repo a rozjet to na GitPages
 // - Zredukovat opakování kódu
 // - Přidat nové pluginy
-// (-) pokud bude čas (a všechno ostatní splněno) - nahrání ze souboru
-// -! Plugin UniRec (timeout) přidat našeptávač možných hodnot
 // ? overlay - menší padding nebo zajistit, aby se ikony za vstupními poli nezalamovaly na nový řádek
 
 function pluginCreate(jsonSchema) {
@@ -97,7 +91,7 @@ class Overlay extends React.Component {
 
         var newPluginNames = JSON.parse(JSON.stringify(this.props.pluginNames));
         newPluginNames.push(plugin.name);
-        var nameValid = ajv.validate(nameValidationSchema, { name: newPluginNames });
+        var nameValid = ajv.validate(this.props.nameValidationSchema, { name: newPluginNames });
         var nameErrors;
         if (!nameValid) {
             nameErrors = JSON.parse(JSON.stringify(ajv.errors));
@@ -145,7 +139,7 @@ class Overlay extends React.Component {
 
         var newPluginNames = JSON.parse(JSON.stringify(this.props.pluginNames));
         newPluginNames.push(changedSubplugin.name);
-        var nameValid = ajv.validate(nameValidationSchema, { name: newPluginNames });
+        var nameValid = ajv.validate(this.props.nameValidationSchema, { name: newPluginNames });
         var nameErrors;
         if (!nameValid) {
             nameErrors = JSON.parse(JSON.stringify(ajv.errors));
