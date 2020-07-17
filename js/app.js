@@ -1,3 +1,4 @@
+
 function setCookie(cookieName, value) {
     let d = new Date();
     d.setTime(d.getTime() + COOKIE_EXPIRATION_DAYS * 24 * 60 * 60 * 1000);
@@ -90,7 +91,6 @@ class App extends React.Component {
             pluginSchemas: pluginSchemas,
             specialSchemas: specialSchemas,
         });
-        // return { config: config, pluginSchemas: pluginSchemas, specialSchemas: specialSchemas };
     }
 
     async loadSchemas(typeSchemaLocations) {
