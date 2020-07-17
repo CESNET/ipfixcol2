@@ -1044,6 +1044,10 @@ class Settings extends React.Component {
         };
     }
 
+    /**
+     * Handles the change of the indentation type
+     * @param {*} event 
+     */
     handleChangeType(event) {
         if (event.target.value === INDENTATION_TYPES[1].name) {
             this.props.onChange(INDENTATION_TYPES[1], 1, this.props.showConfirmationDialogs);
@@ -1060,6 +1064,10 @@ class Settings extends React.Component {
         }
     }
 
+    /**
+     * Handles the change of the number of indentation characters
+     * @param {*} event 
+     */
     handleChangeNumber(event) {
         let value = Number(event.target.value);
         if (value < INDENTATION_SPACES.min || value.toString() != event.target.value) {
@@ -1072,6 +1080,9 @@ class Settings extends React.Component {
         this.props.onChange(this.props.indentType, value, this.props.showConfirmationDialogs);
     }
 
+    /**
+     * Handles the change of the showConfirmationDialogs switch
+     */
     handleChangeShowConfirmationDialogs() {
         this.props.onChange(
             this.props.indentType,
@@ -1080,6 +1091,9 @@ class Settings extends React.Component {
         );
     }
 
+    /**
+     * Closes the settings
+     */
     handleOnClose() {
         this.setState({ indentNumber: this.props.indentNumber });
         this.props.onClose();
