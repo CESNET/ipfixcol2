@@ -69,6 +69,9 @@ function pluginArrayAddItem(array, jsonSchema) {
     array.push(item);
 }
 
+/**
+ * Component representing an overlay used to add or edit plugin properties
+ */
 class Overlay extends React.Component {
     constructor(props) {
         super(props);
@@ -99,6 +102,10 @@ class Overlay extends React.Component {
             confirmDialodOpen: false,
         };
     }
+
+    /**
+     * Opens cancellation dialog if conditions are met or cancel an adding/editing process
+     */
     handleCancel() {
         if (
             !this.props.showConfirmationDialogs ||
@@ -110,12 +117,21 @@ class Overlay extends React.Component {
             this.setState({ confirmDialodOpen: true });
         }
     }
+
+    /**
+     * Closes cancellation dialog and cancel an adding/editing process if selected
+     * @param {boolean} confirmed 
+     */
     handleConfirmDialogClose(confirmed) {
         this.setState({ confirmDialodOpen: false });
         if (confirmed) {
             this.props.onCancel();
         }
     }
+
+    /**
+     * Adds/edits plugin and closes the overlay
+     */
     handleConfirm() {
         if (this.state.isNew) {
             this.props.onSuccess(this.props.sectionIndex, this.state.plugin);
@@ -123,6 +139,11 @@ class Overlay extends React.Component {
             this.props.onSuccess(this.props.sectionIndex, this.props.index, this.state.plugin);
         }
     }
+
+    /**
+     * Handles plugin property change
+     * @param {object} changedSubplugin 
+     */
     handleChange(changedSubplugin) {
         let valid = AJV.validate(this.props.jsonSchema, changedSubplugin);
         let errors = [];
@@ -286,6 +307,9 @@ class Overlay extends React.Component {
     }
 }
 
+/**
+ * Component representing an object property of the plugin
+ */
 class Properties extends React.Component {
     constructor(props) {
         super(props);
@@ -295,12 +319,26 @@ class Properties extends React.Component {
             descriptionOpen: false,
         };
     }
+
+    /**
+     * Opens menu to add an optional property
+     * @param {*} event 
+     */
     handleMenuClick(event) {
         this.setState({ anchorEl: event.currentTarget });
     }
+
+    /**
+     * Closes menu to add an optional property
+     */
     handleMenuClose() {
         this.setState({ anchorEl: null });
     }
+
+    /**
+     * Selects correct method to call on change
+     * @param {*} changedPlugin 
+     */
     callOnChange(changedPlugin) {
         if (this.props.isRoot) {
             this.props.onChange(changedPlugin);
@@ -308,6 +346,11 @@ class Properties extends React.Component {
         }
         this.props.onChange(this.props.name, changedPlugin);
     }
+
+    /**
+     * Handles selecting an optional property to add
+     * @param {string} selectedPropertyName 
+     */
     handleMenuSelect(selectedPropertyName) {
         let changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
         pluginSetProperty(
@@ -319,27 +362,54 @@ class Properties extends React.Component {
         this.callOnChange(changedPlugin);
         this.setState({ expanded: true });
     }
+
+    /**
+     * Handles a change of the plugin configuration
+     * @param {string} propertyName 
+     * @param {object} changedSubplugin 
+     */
     handleChange(propertyName, changedSubplugin) {
         let changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
         changedPlugin[propertyName] = changedSubplugin;
         this.callOnChange(changedPlugin);
     }
+
+    /**
+     * Handles removing child property
+     * @param {string} propertyName 
+     */
     handleRemoveChild(propertyName) {
         let changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
         delete changedPlugin[propertyName];
         this.callOnChange(changedPlugin);
     }
+
+    /**
+     * Handles removing of the property this component is representing
+     */
     handleRemove() {
         this.props.onRemove(this.props.name);
     }
+
+    /**
+     * Handles expanding
+     */
     handleExpandClick() {
         this.setState({ expanded: !this.state.expanded });
     }
+
+    /**
+     * Opens description
+     */
     handleDescriptionOpen() {
         this.setState({
             descriptionOpen: true,
         });
     }
+
+    /**
+     * Closes description
+     */
     handleDescriptionClose() {
         this.setState({
             descriptionOpen: false,
@@ -534,6 +604,9 @@ class Properties extends React.Component {
     }
 }
 
+/**
+ * Component used to select correct component to render a plugin property
+ */
 class Item extends React.Component {
     render() {
         switch (this.props.type) {
@@ -642,6 +715,9 @@ class Item extends React.Component {
     }
 }
 
+/**
+ * Component representing an array property of the plugin
+ */
 class ArrayProperty extends React.Component {
     constructor(props) {
         super(props);
@@ -650,11 +726,22 @@ class ArrayProperty extends React.Component {
         };
     }
 
+    /**
+     * Handles a change of the plugin configuration
+     * @param {number} index 
+     * @param {*} _ - unused parameter
+     * @param {object} changedSubplugin 
+     */
     handleChange(index, _, changedSubplugin) {
         let changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
         changedPlugin[index] = changedSubplugin;
         this.props.onChange(this.props.name, changedPlugin);
     }
+
+    /**
+     * Handles removing one of its items - remove an item or the whole array if it is the last item
+     * @param {*} index 
+     */
     handleRemove(index) {
         if (this.props.plugin.length > 1) {
             let changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
@@ -664,12 +751,20 @@ class ArrayProperty extends React.Component {
             this.props.onRemove(this.props.name);
         }
     }
+
+    /**
+     * Handles adding of the new item
+     */
     handleAdd() {
         let changedPlugin = JSON.parse(JSON.stringify(this.props.plugin));
         pluginArrayAddItem(changedPlugin, this.props.jsonSchema.items);
         this.props.onChange(this.props.name, changedPlugin);
         this.setState({ expanded: true });
     }
+
+    /**
+     * Handles expanding
+     */
     handleExpandClick() {
         this.setState({ expanded: !this.state.expanded });
     }
@@ -791,6 +886,9 @@ class ArrayProperty extends React.Component {
     }
 }
 
+/**
+ * Component representing a string property of the plugin
+ */
 class StringProperty extends React.Component {
     constructor(props) {
         super(props);
@@ -919,6 +1017,9 @@ class StringProperty extends React.Component {
     }
 }
 
+/**
+ * Component representing a boolean property of the plugin
+ */
 class BooleanProperty extends React.Component {
     constructor(props) {
         super(props);
@@ -1013,6 +1114,9 @@ class BooleanProperty extends React.Component {
     }
 }
 
+/**
+ * Component representing a number property of the plugin
+ */
 class NumberProperty extends React.Component {
     constructor(props) {
         super(props);
@@ -1144,6 +1248,9 @@ class NumberProperty extends React.Component {
     }
 }
 
+/**
+ * Component representing a property of the plugin with multiple types
+ */
 class MultipleTypesProperty extends React.Component {
     constructor(props) {
         super(props);
@@ -1255,6 +1362,9 @@ class MultipleTypesProperty extends React.Component {
     }
 }
 
+/**
+ * Component representing a description of a plugin property
+ */
 class Description extends React.Component {
     handleClose() {
         this.props.onClose();
