@@ -43,6 +43,7 @@
 #include <set>
 
 #include <libfds.h>
+#include <stdexcept>
 #include <inttypes.h>
 #include <arpa/inet.h>
 
