@@ -896,22 +896,40 @@ class StringProperty extends React.Component {
             descriptionOpen: false,
         };
     }
+
+    /**
+     * Handles a value change
+     * @param {*} event 
+     */
     handleChange(event) {
         this.props.onChange(this.props.name, event.target.value);
     }
+
+    /**
+     * Handles removing of the property this component is representing
+     */
     handleRemove() {
         this.props.onRemove(this.props.name);
     }
+
+    /**
+     * Opens description
+     */
     handleDescriptionOpen() {
         this.setState({
             descriptionOpen: true,
         });
     }
+
+    /**
+     * Closes description
+     */
     handleDescriptionClose() {
         this.setState({
             descriptionOpen: false,
         });
     }
+
     render() {
         let value = this.props.plugin;
         let readOnly = false;
@@ -1027,22 +1045,39 @@ class BooleanProperty extends React.Component {
             descriptionOpen: false,
         };
     }
+
+    /**
+     * Handles a value change
+     */
     handleChange() {
         this.props.onChange(this.props.name, !this.props.plugin);
     }
+
+    /**
+     * Handles removing of the property this component is representing
+     */
     handleRemove() {
         this.props.onRemove(this.props.name);
     }
+
+    /**
+     * Opens description
+     */
     handleDescriptionOpen() {
         this.setState({
             descriptionOpen: true,
         });
     }
+
+    /**
+     * Closes description
+     */
     handleDescriptionClose() {
         this.setState({
             descriptionOpen: false,
         });
     }
+
     render() {
         let value = this.props.plugin;
         let readOnly = false;
@@ -1124,6 +1159,11 @@ class NumberProperty extends React.Component {
             descriptionOpen: false,
         };
     }
+
+    /**
+     * Handles a value change
+     * @param {*} event 
+     */
     handleChange(event) {
         let value = Number(event.target.value);
         if (
@@ -1138,19 +1178,32 @@ class NumberProperty extends React.Component {
         }
         this.props.onChange(this.props.name, value);
     }
+
+    /**
+     * Handles removing of the property this component is representing
+     */
     handleRemove() {
         this.props.onRemove(this.props.name);
     }
+
+    /**
+     * Opens description
+     */
     handleDescriptionOpen() {
         this.setState({
             descriptionOpen: true,
         });
     }
+
+    /**
+     * Closes description
+     */
     handleDescriptionClose() {
         this.setState({
             descriptionOpen: false,
         });
     }
+
     render() {
         let value = this.props.plugin;
         let readOnly = false;
@@ -1258,6 +1311,11 @@ class MultipleTypesProperty extends React.Component {
             descriptionOpen: false,
         };
     }
+
+    /**
+     * Handles a value change
+     * @param {*} event 
+     */
     handleChange(event) {
         let value = Number(event.target.value);
         if (isNaN(value) || event.target.value === "") {
@@ -1265,19 +1323,32 @@ class MultipleTypesProperty extends React.Component {
         }
         this.props.onChange(this.props.name, value);
     }
+
+    /**
+     * Handles removing of the property this component is representing
+     */
     handleRemove() {
         this.props.onRemove(this.props.name);
     }
+
+    /**
+     * Opens description
+     */
     handleDescriptionOpen() {
         this.setState({
             descriptionOpen: true,
         });
     }
+
+    /**
+     * Closes description
+     */
     handleDescriptionClose() {
         this.setState({
             descriptionOpen: false,
         });
     }
+
     render() {
         let value = this.props.plugin;
         let readOnly = false;
@@ -1366,9 +1437,13 @@ class MultipleTypesProperty extends React.Component {
  * Component representing a description of a plugin property
  */
 class Description extends React.Component {
+    /**
+     * Closes description
+     */
     handleClose() {
         this.props.onClose();
     }
+    
     render() {
         let descContent;
         let contentParts;
