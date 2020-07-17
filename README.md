@@ -6,7 +6,13 @@ License: MIT
 
 # Setup
 
-You do not need to install any dependencies. To run the app open `index.html` file in your browser.
+You do not need to install any dependencies.  
+To run the app, create a local server and access `index.html` file in a browser.
+Otherwise, the browser may block the download of scripts due to security reasons.
+
+E.g. use *Live server* extension for Visual Studio Code.  
+Set the folder with `index.html` file as your working directory, start *Live server* and then go to `http://localhost:5500/`.
+
 
 > **Note**: Internet Explorer is not supported.
 
