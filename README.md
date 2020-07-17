@@ -160,6 +160,3 @@ And than we add the filename to the `/config/config.json` file.
     }
 }
 ```
-
-# Production version
-To create a production version of the app, change React and MaterialUI scripts inside `index.html` file from `development.js` to `production.min.js`.
