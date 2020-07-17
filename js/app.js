@@ -391,7 +391,6 @@ class Form extends React.Component {
         if (!valid) {
             errors = JSON.parse(JSON.stringify(AJV.errors));
         }
-        console.log("configObj valid: " + valid);
         return {
             valid: valid,
             errors: errors,
@@ -622,7 +621,7 @@ class Form extends React.Component {
                     let columnErrors = [];
                     if (this.state.errors !== undefined) {
                         columnErrors = Object.values(this.state.errors).filter((error) => {
-                            if (error.dataPath == COLUMN_DATA_PATH[i]) {
+                            if (error.dataPath == SECTION_DATA_PATH[i]) {
                                 return true;
                             }
                             return false;

@@ -1,3 +1,8 @@
+
+/**
+ * Creates a new plugin configuration object with default values
+ * @param {object} jsonSchema 
+ */
 function pluginCreate(jsonSchema) {
     let newPlugin = {};
     for (let i in jsonSchema.required) {
@@ -10,6 +15,12 @@ function pluginCreate(jsonSchema) {
     return newPlugin;
 }
 
+/**
+ * Sets property of the plugin configuration object
+ * @param {object} plugin 
+ * @param {string} propertyName 
+ * @param {object} jsonSchema 
+ */
 function pluginSetProperty(plugin, propertyName, jsonSchema) {
     if (jsonSchema.hasOwnProperty("const")) {
         plugin[propertyName] = jsonSchema.const;
@@ -45,6 +56,11 @@ function pluginSetProperty(plugin, propertyName, jsonSchema) {
     plugin[propertyName] = null;
 }
 
+/**
+ * Adds an item to the array of properties
+ * @param {any[]} array 
+ * @param {object} jsonSchema 
+ */
 function pluginArrayAddItem(array, jsonSchema) {
     let item = null;
     if (jsonSchema.hasOwnProperty("const")) {
@@ -1443,7 +1459,7 @@ class Description extends React.Component {
     handleClose() {
         this.props.onClose();
     }
-    
+
     render() {
         let descContent;
         let contentParts;

@@ -1,3 +1,4 @@
+
 // import from MaterialUI
 const {
     Allert,
@@ -54,7 +55,7 @@ const X2JS = new X2JS();
 const AJV = new Ajv({ allErrors: true });
 
 const COLORS = ["blue", "orange", "red"];
-const COLUMN_DATA_PATH = [
+const SECTION_DATA_PATH = [
     ".ipfixcol2.inputPlugins.input",
     ".ipfixcol2.intermediatePlugins.intermediate",
     ".ipfixcol2.outputPlugins.output",
