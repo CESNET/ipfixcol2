@@ -118,9 +118,9 @@ class Overlay extends React.Component {
     }
     handleConfirm() {
         if (this.state.isNew) {
-            this.props.onSuccess(this.props.columnIndex, this.state.plugin);
+            this.props.onSuccess(this.props.sectionIndex, this.state.plugin);
         } else {
-            this.props.onSuccess(this.props.columnIndex, this.props.index, this.state.plugin);
+            this.props.onSuccess(this.props.sectionIndex, this.props.index, this.state.plugin);
         }
     }
     handleChange(changedSubplugin) {

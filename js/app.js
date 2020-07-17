@@ -1,4 +1,10 @@
 
+/**
+ * Saves cookie into browser
+ * 
+ * @param {string} cookieName 
+ * @param {*} value 
+ */
 function setCookie(cookieName, value) {
     let d = new Date();
     d.setTime(d.getTime() + COOKIE_EXPIRATION_DAYS * 24 * 60 * 60 * 1000);
@@ -6,6 +12,11 @@ function setCookie(cookieName, value) {
     document.cookie = cookieName + "=" + value + ";" + expires + ";path=/";
 }
 
+/**
+ * Gets cookie from browser
+ * 
+ * @param {string} cookieName 
+ */
 function getCookie(cookieName) {
     let name = cookieName + "=";
     let parts = document.cookie.split(";");
@@ -15,17 +26,15 @@ function getCookie(cookieName) {
             return part.substring(name.length, part.length);
         }
     }
-    return "";
+    return undefined;
 }
 
-function loadCookie(cookieName) {
-    let value = getCookie(cookieName);
-    if (value == "") {
-        value = undefined;
-    }
-    return value;
-}
-
+/**
+ * Merges two objects
+ * 
+ * @param {object} obj1 
+ * @param {object} obj2 
+ */
 function merge(obj1, obj2) {
     let target = {};
     // Merge the object into the target object
@@ -48,6 +57,10 @@ function merge(obj1, obj2) {
     return target;
 };
 
+
+/**
+ * Component representing apps entry point.
+ */
 class App extends React.Component {
     constructor(props) {
         super(props);
@@ -59,6 +72,9 @@ class App extends React.Component {
         this.loadAppData();
     }
 
+    /**
+     * Downloads apps data
+     */
     async loadAppData() {
         let config = await fetch("./config/config.json").then((response) => response.json());
         let pluginSchemas = [
@@ -93,6 +109,10 @@ class App extends React.Component {
         });
     }
 
+    /**
+     * Downloads schemas from the location provided.
+     * @param {object} typeSchemaLocations 
+     */
     async loadSchemas(typeSchemaLocations) {
         let array = [];
         typeSchemaLocations.pluginSchemas.map((filename) => {
@@ -122,15 +142,18 @@ class App extends React.Component {
     }
 }
 
+/**
+ * Component representing main app page.
+ */
 class Form extends React.Component {
     constructor(props) {
         super(props);
         let configObj = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
         let { valid, errors } = this.validateConfig(configObj);
         let cookieSettings = {
-            indentType: loadCookie("indentType"),
-            indentNumber: loadCookie("indentNumber"),
-            showConfirmationDialogs: loadCookie("showConfirmationDialogs"),
+            indentType: getCookie("indentType"),
+            indentNumber: getCookie("indentNumber"),
+            showConfirmationDialogs: getCookie("showConfirmationDialogs"),
         };
         if (
             cookieSettings.indentType !== undefined &&
@@ -167,6 +190,11 @@ class Form extends React.Component {
         };
     }
 
+    /**
+     * Finds correct schema for the plugin.
+     * @param {object} plugin 
+     * @param {object[]} schemas 
+     */
     findSchema(plugin, schemas) {
         let pluginSchema = schemas.find(
             (schema) => plugin.plugin === schema.properties.plugin.const
@@ -177,6 +205,9 @@ class Form extends React.Component {
         console.log("Schema not found!");
     }
 
+    /**
+     * Shows snackbar
+     */
     editCancel() {
         this.setState({
             overlay: null,
@@ -184,30 +215,44 @@ class Form extends React.Component {
         this.openSnackbar("Editing canceled");
     }
 
-    getSectionPluginNames(columnIndex) {
-        return this.state.plugins[columnIndex].map((plugin) => plugin.name);
+    /**
+     * Gets an array of names of all the section plugins
+     * @param {number} sectionIndex 
+     */
+    getSectionPluginNames(sectionIndex) {
+        return this.state.plugins[sectionIndex].map((plugin) => plugin.name);
     }
 
-    applySchemaExtensions(schema, columnIndex) {
+    /**
+     * Extends schema by extra parameters
+     * @param {object} schema 
+     * @param {number} sectionIndex 
+     */
+    applySchemaExtensions(schema, sectionIndex) {
         schema = merge(schema, this.props.specialSchemas.allPluginsExtraParams);
-        if (columnIndex == 2) {
+        if (sectionIndex == 2) {
             schema = merge(schema, this.props.specialSchemas.outputExtraParams);
         }
         return schema;
     }
 
-    newPluginOverlay(columnIndex, pluginIndex) {
+    /**
+     * Opens an Overlay to add a new plugin
+     * @param {number} sectionIndex 
+     * @param {number} pluginIndex 
+     */
+    newPluginOverlay(sectionIndex, pluginIndex) {
         let extendedSchema = this.applySchemaExtensions(
-            this.props.pluginSchemas[columnIndex][pluginIndex],
-            columnIndex
+            this.props.pluginSchemas[sectionIndex][pluginIndex],
+            sectionIndex
         );
         this.setState({
             overlay: (
                 <Overlay
-                    columnIndex={columnIndex}
+                    sectionIndex={sectionIndex}
                     jsonSchema={extendedSchema}
                     nameValidationSchema={this.props.specialSchemas.nameValidation}
-                    pluginNames={this.getSectionPluginNames(columnIndex)}
+                    pluginNames={this.getSectionPluginNames(sectionIndex)}
                     onCancel={this.editCancel.bind(this)}
                     onSuccess={this.addPlugin.bind(this)}
                     XMLIndentType={this.state.indentType}
@@ -218,17 +263,22 @@ class Form extends React.Component {
         });
     }
 
-    editPluginOverlay(columnIndex, index) {
-        let plugin = this.state.plugins[columnIndex][index];
-        let pluginJsonSchema = this.findSchema(plugin, this.props.pluginSchemas[columnIndex]);
-        let extendedSchema = this.applySchemaExtensions(pluginJsonSchema, columnIndex);
-        let pluginNames = JSON.parse(JSON.stringify(this.getSectionPluginNames(columnIndex)));
+    /**
+     * Opens an Overlay to edit an existing plugin
+     * @param {number} sectionIndex 
+     * @param {number} index 
+     */
+    editPluginOverlay(sectionIndex, index) {
+        let plugin = this.state.plugins[sectionIndex][index];
+        let pluginJsonSchema = this.findSchema(plugin, this.props.pluginSchemas[sectionIndex]);
+        let extendedSchema = this.applySchemaExtensions(pluginJsonSchema, sectionIndex);
+        let pluginNames = JSON.parse(JSON.stringify(this.getSectionPluginNames(sectionIndex)));
         pluginNames.splice(index, 1);
         this.setState({
             overlay: (
                 <Overlay
                     plugin={plugin}
-                    columnIndex={columnIndex}
+                    sectionIndex={sectionIndex}
                     index={index}
                     jsonSchema={extendedSchema}
                     nameValidationSchema={this.props.specialSchemas.nameValidation}
@@ -243,9 +293,14 @@ class Form extends React.Component {
         });
     }
 
-    addPlugin(columnIndex, plugin) {
+    /**
+     * Adds a new plugin to the section
+     * @param {number} sectionIndex 
+     * @param {object} plugin 
+     */
+    addPlugin(sectionIndex, plugin) {
         let plugins = this.state.plugins;
-        plugins[columnIndex] = plugins[columnIndex].concat(plugin);
+        plugins[sectionIndex] = plugins[sectionIndex].concat(plugin);
         this.setState({
             plugins: plugins,
             overlay: null,
@@ -254,9 +309,15 @@ class Form extends React.Component {
         this.updateConfigObj();
     }
 
-    editPlugin(columnIndex, index, plugin) {
+    /**
+     * Edits an existing plugin
+     * @param {number} sectionIndex 
+     * @param {number} index 
+     * @param {object} plugin 
+     */
+    editPlugin(sectionIndex, index, plugin) {
         let plugins = this.state.plugins;
-        plugins[columnIndex][index] = plugin;
+        plugins[sectionIndex][index] = plugin;
         this.setState({
             plugins: plugins,
             overlay: null,
@@ -265,20 +326,30 @@ class Form extends React.Component {
         this.updateConfigObj();
     }
 
-    removePluginConfirm(columnIndex, index) {
+    /**
+     * Shows remove plugin confirm dialog
+     * @param {number} sectionIndex 
+     * @param {number} index 
+     */
+    removePluginConfirm(sectionIndex, index) {
         if (this.state.showConfirmationDialogs) {
             this.setState({
                 confirmDialogOpen: true,
-                confirmDialogRemoveFunc: this.removePlugin.bind(this, columnIndex, index),
+                confirmDialogRemoveFunc: this.removePlugin.bind(this, sectionIndex, index),
             });
         } else {
-            this.removePlugin(columnIndex, index);
+            this.removePlugin(sectionIndex, index);
         }
     }
 
-    removePlugin(columnIndex, index) {
+    /**
+     * Removes a plugin
+     * @param {number} sectionIndex 
+     * @param {number} index 
+     */
+    removePlugin(sectionIndex, index) {
         let plugins = this.state.plugins;
-        plugins[columnIndex].splice(index, 1);
+        plugins[sectionIndex].splice(index, 1);
         this.setState({
             plugins: plugins,
         });
@@ -286,6 +357,10 @@ class Form extends React.Component {
         this.updateConfigObj();
     }
 
+    /**
+     * Closes remove plugin confirm dialog
+     * @param {boolean} confirmed 
+     */
     handleConfirmDialogClose(confirmed) {
         this.setState({ confirmDialogOpen: false });
         if (confirmed) {
@@ -293,6 +368,9 @@ class Form extends React.Component {
         }
     }
 
+    /**
+     * Creates an object with all the plugins configuration
+     */
     createConfigObj() {
         let configObj = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
         configObj.ipfixcol2.inputPlugins.input = this.state.plugins[0];
@@ -301,6 +379,10 @@ class Form extends React.Component {
         return configObj;
     }
 
+    /**
+     * Validates a general structure of the configuration object
+     * @param {object} configObj 
+     */
     validateConfig(configObj) {
         configObj = JSON.parse(JSON.stringify(configObj));
         this.removeEmptyConfigIntermediatePluginType(configObj);
@@ -316,6 +398,9 @@ class Form extends React.Component {
         };
     }
 
+    /**
+     * Updates configuration object, its valid status and list of errors
+     */
     updateConfigObj() {
         let configObj = this.createConfigObj();
         let { valid, errors } = this.validateConfig(configObj);
@@ -326,6 +411,9 @@ class Form extends React.Component {
         });
     }
 
+    /**
+     * Creates XML string from the configuration object
+     */
     createConfigXML() {
         let configObj = JSON.parse(JSON.stringify(this.state.configObj));
         this.removeEmptyConfigPluginTypes(configObj);
@@ -333,12 +421,20 @@ class Form extends React.Component {
         return formatXml(xml, this.state.indentType.character, this.state.indentNumber);
     }
 
+    /**
+     * Removes an empty intermediate plugin category from the configuration file
+     * @param {object} configObj 
+     */
     removeEmptyConfigIntermediatePluginType(configObj) {
         if (configObj.ipfixcol2.intermediatePlugins.intermediate.length == 0) {
             delete configObj.ipfixcol2.intermediatePlugins;
         }
     }
 
+    /**
+     * Removes empty parts from the configuration file
+     * @param {object} configObj 
+     */
     removeEmptyConfigPluginTypes(configObj) {
         if (configObj.ipfixcol2.inputPlugins.input.length == 0) {
             delete configObj.ipfixcol2.inputPlugins.input;
@@ -349,6 +445,9 @@ class Form extends React.Component {
         }
     }
 
+    /**
+     * Returns colored XML print
+     */
     printColoredXML() {
         let input = false;
         let intermediate = false;
@@ -414,6 +513,10 @@ class Form extends React.Component {
         );
     }
 
+    /**
+     * Shows a snackbar with the text
+     * @param {string} text 
+     */
     openSnackbar(text) {
         this.setState({
             snackbarOpen: true,
@@ -421,6 +524,11 @@ class Form extends React.Component {
         });
     }
 
+    /**
+     * Closes a snackbar
+     * @param {*} event 
+     * @param {*} reason 
+     */
     closeSnackbar(event, reason) {
         if (reason === "clickaway") {
             return;
@@ -431,18 +539,30 @@ class Form extends React.Component {
         });
     }
 
+    /**
+     * Opens settings
+     */
     openSettings() {
         this.setState({
             settingsOpen: true,
         });
     }
 
+    /**
+     * Closes Settings
+     */
     closeSettings() {
         this.setState({
             settingsOpen: false,
         });
     }
 
+    /**
+     * Saves settings
+     * @param {object} type 
+     * @param {number} number 
+     * @param {boolean} showConfirmationDialogs 
+     */
     changeSettings(type, number, showConfirmationDialogs) {
         let cookieSettings = {
             indentType: type,
@@ -455,12 +575,18 @@ class Form extends React.Component {
         this.setState(cookieSettings);
     }
 
+    /**
+     * Closes a download dialog
+     */
     handleDownloadDialogClose() {
         this.setState({
             downloadDialogOpen: false
         });
     }
 
+    /**
+     * Shows a download dialog if conditions are met
+     */
     requestDownload() {
         if (this.state.valid || !this.state.showConfirmationDialogs) {
             this.download();
@@ -471,6 +597,9 @@ class Form extends React.Component {
         });
     }
 
+    /**
+     * Creates config.xml file and start downloading
+     */
     download() {
         let element = document.createElement("a");
         element.style.display = "none";
@@ -502,7 +631,7 @@ class Form extends React.Component {
                     return (
                         <PluginTypeCard
                             key={COLUMN_NAMES[i]}
-                            columnIndex={i}
+                            sectionIndex={i}
                             plugins={this.state.plugins[i]}
                             errors={columnErrors}
                             color={COLORS[i]}
@@ -636,6 +765,9 @@ class Form extends React.Component {
     }
 }
 
+/**
+ * Component representing a card with plugins of the same category
+ */
 class PluginTypeCard extends React.Component {
     constructor(props) {
         super(props);
@@ -644,22 +776,41 @@ class PluginTypeCard extends React.Component {
         };
     }
 
+    /**
+     * Adds a new plugin
+     * @param {number} pluginIndex 
+     */
     addPlugin(pluginIndex) {
         this.setState({ anchorEl: null });
-        this.props.addPlugin(this.props.columnIndex, pluginIndex);
+        this.props.addPlugin(this.props.sectionIndex, pluginIndex);
     }
 
+    /**
+     * Removes an existing plugin
+     * @param {number} index 
+     */
     removePlugin(index) {
-        this.props.removePlugin(this.props.columnIndex, index);
+        this.props.removePlugin(this.props.sectionIndex, index);
     }
 
+    /**
+     * Edits an existing plugin
+     * @param {number} index 
+     */
     editPlugin(index) {
-        this.props.editPlugin(this.props.columnIndex, index);
+        this.props.editPlugin(this.props.sectionIndex, index);
     }
 
+    /**
+     * Handles a menu opening on add plugin button click
+     * @param {*} event 
+     */
     handleMenuClick(event) {
         this.setState({ anchorEl: event.currentTarget });
     }
+    /**
+     * Handles a menu closing
+     */
     handleMenuClose() {
         this.setState({ anchorEl: null });
     }
@@ -738,7 +889,13 @@ class PluginTypeCard extends React.Component {
     }
 }
 
+/**
+ * Component representing the menu item in menu opened on add plugin button click
+ */
 class PluginAvailable extends React.Component {
+    /**
+     * Handles a click action
+     */
     handleAdd() {
         this.props.onAdd(this.props.pluginIndex);
     }
@@ -748,6 +905,9 @@ class PluginAvailable extends React.Component {
     }
 }
 
+/**
+ * Component representing a plugin inside PluginTypeCard component
+ */
 class Plugin extends React.Component {
     constructor(props) {
         super(props);
@@ -757,10 +917,16 @@ class Plugin extends React.Component {
         };
     }
 
+    /**
+     * Handles plugin edit
+     */
     handleEdit() {
         this.props.onEdit(this.props.index);
     }
 
+    /**
+     * Handles expand click
+     */
     handleExpandClick() {
         this.setState({ expanded: !this.state.expanded });
     }
@@ -804,6 +970,9 @@ class Plugin extends React.Component {
     }
 }
 
+/**
+ * Component representing a parameter print inside Plugin component
+ */
 class PropsItem extends React.Component {
     render() {
         if (Array.isArray(this.props.plugin)) {
@@ -863,6 +1032,9 @@ class PropsItem extends React.Component {
     }
 }
 
+/**
+ * Component representing an overlay with settings
+ */
 class Settings extends React.Component {
     constructor(props) {
         super(props);
@@ -999,8 +1171,12 @@ class Settings extends React.Component {
 // Obtain the root element
 const rootAppElement = document.getElementById("configurator_app");
 
-async function startApp() {
+/**
+ * Function starting the app
+ */
+function startApp() {
     ReactDOM.render(<App />, rootAppElement);
 }
 
+//App start call
 startApp();
