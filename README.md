@@ -1,3 +1,9 @@
+# IPFIXcol2 configurator
+This web app helps to create a configuration file for IPFIXcol2.
+
+Author: Martin Madzia  
+License: MIT
+
 # Setup
 
 You do not need to install any dependencies. To run the app open `index.html` file in your browser.
