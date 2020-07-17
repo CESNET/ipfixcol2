@@ -1,6 +1,3 @@
-// TODO
-// - Zredukovat opakování kódu
-
 function pluginCreate(jsonSchema) {
     let newPlugin = {};
     for (let i in jsonSchema.required) {
