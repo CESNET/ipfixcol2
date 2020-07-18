@@ -65,7 +65,6 @@ class App extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            config: undefined,
             pluginSchemas: undefined,
             specialSchemas: undefined,
         };
@@ -103,7 +102,6 @@ class App extends React.Component {
             config.schemaLocations.special.path + config.schemaLocations.special.generalStructure
         ).then((response) => response.json());
         this.setState({
-            config: config,
             pluginSchemas: pluginSchemas,
             specialSchemas: specialSchemas,
         });
@@ -125,11 +123,9 @@ class App extends React.Component {
 
     render() {
         let form =
-            this.state.config !== undefined &&
             this.state.pluginSchemas !== undefined &&
             this.state.specialSchemas !== undefined ? (
                 <Form
-                    config={this.state.config}
                     pluginSchemas={this.state.pluginSchemas}
                     specialSchemas={this.state.specialSchemas}
                 />
