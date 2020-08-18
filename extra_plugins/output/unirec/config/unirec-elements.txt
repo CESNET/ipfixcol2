@@ -70,6 +70,15 @@ SIP_USER_AGENT                 string        e8057id106       # SIP user agent
 SIP_REQUEST_URI                string        e8057id107       # SIP request uri
 SIP_CSEQ                       string        e8057id108       # SIP CSeq
 
+# --- Service discovery protocols (SSDP, DNS-SD) ---
+SSDP_LOCATION_PORT             uint16        e8057id900                   # service port
+SSDP_SERVER                    string        e8057id901                   # server info
+SSDP_USER_AGENT                string        e8057id902                   # list of user agents (semicolon-separated)
+SSDP_NT                        string        e8057id903                   # list of advertised service URNs (semicolon-separated)
+SSDP_ST                        string        e8057id904                   # list of queried service URNs (semicolon-separated)
+DNSSD_QUERIES                  string        e8057id905                   # list of queries for services (format: [service_instance_name;][...])
+DNSSD_RESPONSES                string        e8057id906                   # list of advertised services (format: [service_instance_name;service_port;service_target;hinfo;txt;][...])
+
 # --- HTTP elements --- (Flowmon HTTP plugin in MUNI PEN, and CESNET sdm-http(s) plugin in CESNET PEN)
 HTTP_REQUEST_METHOD_ID         uint32        e16982id500,e8057id800               # HTTP request method id
 HTTP_REQUEST_HOST              string        e16982id501,e8057id801,e8057id808    # HTTP(S) request host
