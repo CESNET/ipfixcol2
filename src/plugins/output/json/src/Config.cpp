@@ -2,10 +2,10 @@
  * \file src/plugins/output/json/src/Config.cpp
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief Configuration of JSON output plugin (source file)
- * \date 2018
+ * \date 2018-2020
  */
 
-/* Copyright (C) 2018 CESNET, z.s.p.o.
+/* Copyright (C) 2018-2020 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,12 +39,15 @@
  *
  */
 
+#include <cstdio>
 #include <memory>
 #include <set>
+#include <sstream>
 
 #include <libfds.h>
 #include <inttypes.h>
 #include <arpa/inet.h>
+#include <librdkafka/rdkafka.h>
 
 #include "Config.hpp"
 
@@ -68,6 +71,7 @@ enum params_xml_nodes {
     OUTPUT_SEND,       /**< Send over network               */
     OUTPUT_SERVER,     /**< Provide as server               */
     OUTPUT_FILE,       /**< Store to file                   */
+    OUTPUT_KAFKA,      /**< Store to Kafka                  */
     // Standard output
     PRINT_NAME,        /**< Printer name                    */
     // Send output
@@ -86,7 +90,18 @@ enum params_xml_nodes {
     FILE_PREFIX,       /**< File prefix                     */
     FILE_WINDOW,       /**< Window interval                 */
     FILE_ALIGN,        /**< Window alignment                */
-    FILE_COMPRESS      /**< Compression                     */
+    FILE_COMPRESS,     /**< Compression                     */
+    // Kafka output
+    KAFKA_NAME,        /**< Name of the output              */
+    KAFKA_BROKERS,     /**< List of brokers                 */
+    KAFKA_TOPIC,       /**< Topic                           */
+    KAFKA_PARTION,     /**< Producer partition              */
+    KAFKA_BVERSION,    /**< Broker fallback version         */
+    KAFKA_BLOCKING,    /**< Block when queue is full        */
+    KAFKA_PERF_TUN,    /**< Add performance tuning options  */
+    KAFKA_PROPERTY,    /**< Additional librdkafka property  */
+    KAFKA_PROP_KEY,    /**< Property key                    */
+    KAFKA_PROP_VALUE,  /**< Property value                  */
 };
 
 /** Definition of the \<print\> node  */
@@ -124,12 +139,33 @@ static const struct fds_xml_args args_file[] = {
     FDS_OPTS_END
 };
 
+/** Definition of the \<property\> of \<kafka\> node  */
+static const struct fds_xml_args args_kafka_prop[] = {
+    FDS_OPTS_ELEM(KAFKA_PROP_KEY,  "key",   FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_ELEM(KAFKA_PROP_VALUE,"value", FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_END
+};
+
+/** Definition of the \<kafka\> node  */
+static const struct fds_xml_args args_kafka[] = {
+    FDS_OPTS_ELEM(KAFKA_NAME,       "name",          FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_ELEM(KAFKA_BROKERS,    "brokers",       FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_ELEM(KAFKA_TOPIC,      "topic",         FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_ELEM(KAFKA_PARTION,    "partition",     FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(KAFKA_BVERSION,   "brokerVersion", FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(KAFKA_BLOCKING,   "blocking",      FDS_OPTS_T_BOOL,   FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(KAFKA_PERF_TUN,   "performanceTuning", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
+    FDS_OPTS_NESTED(KAFKA_PROPERTY, "property", args_kafka_prop, FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
+    FDS_OPTS_END
+};
+
 /** Definition of the \<outputs\> node  */
 static const struct fds_xml_args args_outputs[] = {
     FDS_OPTS_NESTED(OUTPUT_PRINT,  "print",  args_print,  FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
     FDS_OPTS_NESTED(OUTPUT_SERVER, "server", args_server, FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
     FDS_OPTS_NESTED(OUTPUT_SEND,   "send",   args_send,   FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
     FDS_OPTS_NESTED(OUTPUT_FILE,   "file",   args_file,   FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
+    FDS_OPTS_NESTED(OUTPUT_KAFKA,  "kafka",  args_kafka,  FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
     FDS_OPTS_END
 };
 
@@ -403,6 +439,127 @@ Config::parse_file(fds_xml_ctx_t *file)
 }
 
 /**
+ * \brief Parser "kafka property" parameter
+ *
+ * \param[in,out] kafka    Configuration of Kafka instance (properties will be filled here)
+ * \param[in]     property XML context
+ * \throw invalid_argument or runtime_error
+ */
+void
+Config::parse_kafka_property(struct cfg_kafka &kafka, fds_xml_ctx_t *property)
+{
+    std::string key, value;
+
+    const struct fds_xml_cont *content;
+    while (fds_xml_next(property, &content) != FDS_EOC) {
+        switch (content->id) {
+        case KAFKA_PROP_KEY:
+            assert(content->type == FDS_OPTS_T_STRING);
+            key = content->ptr_string;
+            break;
+        case KAFKA_PROP_VALUE:
+            assert(content->type == FDS_OPTS_T_STRING);
+            value = content->ptr_string;
+            break;
+        default:
+            throw std::invalid_argument("Unexpected element within <property>!");
+        }
+    }
+
+    if (key.empty()) {
+        throw std::invalid_argument("Property key of a <kafka> output cannot be empty!");
+    }
+
+    kafka.properties.emplace(key, value);
+}
+
+/**
+ * \brief Parse "kafka" output parameters
+ *
+ * Successfully parsed output is added to the vector of outputs
+ * \param[in] kafka Parsed XML context
+ * \throw invalid_argument or runtime_error
+ */
+void
+Config::parse_kafka(fds_xml_ctx_t *kafka)
+{
+    // Prepare default values
+    struct cfg_kafka output;
+    output.partition = RD_KAFKA_PARTITION_UA;
+    output.blocking = false;
+    output.perf_tuning = true;
+
+    // For partition parser
+    int32_t value;
+    char aux;
+
+    const struct fds_xml_cont *content;
+    while (fds_xml_next(kafka, &content) != FDS_EOC) {
+        switch (content->id) {
+        case KAFKA_NAME:
+            assert(content->type == FDS_OPTS_T_STRING);
+            output.name = content->ptr_string;
+            break;
+        case KAFKA_BROKERS:
+            assert(content->type == FDS_OPTS_T_STRING);
+            output.brokers = content->ptr_string;
+            break;
+        case KAFKA_TOPIC:
+            assert(content->type == FDS_OPTS_T_STRING);
+            output.topic = content->ptr_string;
+            break;
+        case KAFKA_PARTION:
+            assert(content->type == FDS_OPTS_T_STRING);
+            if (strcasecmp(content->ptr_string, "unassigned") == 0) {
+                output.partition = RD_KAFKA_PARTITION_UA;
+                break;
+            }
+
+            if (sscanf(content->ptr_string, "%" SCNi32 "%c", &value, &aux) != 1 || value < 0) {
+                throw std::invalid_argument("Invalid partition number of a <kafka> output!");
+            }
+            output.partition = value;
+            break;
+        case KAFKA_BVERSION:
+            assert(content->type == FDS_OPTS_T_STRING);
+            output.broker_fallback = content->ptr_string;
+            break;
+        case KAFKA_BLOCKING:
+            assert(content->type == FDS_OPTS_T_BOOL);
+            output.blocking = content->val_bool;
+            break;
+        case KAFKA_PERF_TUN:
+            assert(content->type == FDS_OPTS_T_BOOL);
+            output.perf_tuning = content->val_bool;
+            break;
+        case KAFKA_PROPERTY:
+            assert(content->type == FDS_OPTS_T_CONTEXT);
+            parse_kafka_property(output, content->ptr_ctx);
+            break;
+        default:
+            throw std::invalid_argument("Unexpected element within <kafka>!");
+        }
+    }
+
+    // Check validity
+    if (output.brokers.empty()) {
+        throw std::invalid_argument("List of <kafka> brokers must be specified!");
+    }
+    if (output.topic.empty()) {
+        throw std::invalid_argument("Topic of <kafka> output must be specified!");
+    }
+    if (!output.broker_fallback.empty()) {
+        // Try to check if version string is valid version (at least expect major + minor version)
+        int version[4];
+        if (parse_version(output.broker_fallback, version) != IPX_OK) {
+            throw std::invalid_argument("Broker version of a <kafka> output is not invalid!");
+        }
+    }
+
+    outputs.kafkas.push_back(output);
+}
+
+/**
  * \brief Parse list of outputs
  * \param[in] outputs Parsed XML context
  * \throw invalid_argument or runtime_error
@@ -425,6 +582,9 @@ Config::parse_outputs(fds_xml_ctx_t *outputs)
             break;
         case OUTPUT_SERVER:
             parse_server(content->ptr_ctx);
+            break;
+        case OUTPUT_KAFKA:
+            parse_kafka(content->ptr_ctx);
             break;
         default:
             throw std::invalid_argument("Unexpected element within <outputs>!");
@@ -522,6 +682,7 @@ Config::default_set()
     outputs.files.clear();
     outputs.servers.clear();
     outputs.sends.clear();
+    outputs.kafkas.clear();
 }
 
 /**
@@ -536,6 +697,7 @@ Config::check_validity()
     output_cnt += outputs.servers.size();
     output_cnt += outputs.sends.size();
     output_cnt += outputs.files.size();
+    output_cnt += outputs.kafkas.size();
     if (output_cnt == 0) {
         throw std::invalid_argument("At least one output must be defined!");
     }
@@ -563,6 +725,9 @@ Config::check_validity()
     }
     for (const auto &file : outputs.files) {
         check_and_add(file.name);
+    }
+    for (const auto &kafka : outputs.kafkas) {
+        check_and_add(kafka.name);
     }
 }
 
@@ -598,4 +763,35 @@ Config::Config(const char *params)
 Config::~Config()
 {
     // Nothing to do
+}
+
+int
+parse_version(const std::string &str, int version[4])
+{
+    static const int FIELDS_MIN = 2;
+    static const int FIELDS_MAX = 4;
+
+    // Parse the required version
+    std::istringstream parser(str);
+    for (int i = 0; i < FIELDS_MAX; ++i) {
+        version[i] = 0;
+    }
+
+    int idx;
+    for (idx = 0; idx < FIELDS_MAX && !parser.eof(); idx++) {
+        if (idx != 0 && parser.get() != '.') {
+            return IPX_ERR_FORMAT;
+        }
+
+        parser >> version[idx];
+        if (parser.fail() || version[idx] < 0) {
+            return IPX_ERR_FORMAT;
+        }
+    }
+
+    if (!parser.eof() || idx < FIELDS_MIN) {
+        return IPX_ERR_FORMAT;
+    }
+
+    return IPX_OK;
 }

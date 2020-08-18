@@ -50,7 +50,8 @@ Printer::Printer(const struct cfg_print &cfg, ipx_ctx_t *ctx) : Output(cfg.name,
 int
 Printer::process(const char *str, size_t len)
 {
-    (void) len;
-    std::cout << str;
+    // The string is not NULL terminated
+    const std::string temp = {str, len};
+    printf("%s", temp.c_str());
     return IPX_OK;
 }

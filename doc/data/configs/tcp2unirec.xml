@@ -1,5 +1,5 @@
 <!--
-  Receive flow data over TCP, convert them into UniRec format and send via 
+  Receive flow data over TCP, convert them into UniRec format and send via
   TCP TRAP communication interface (port 8000).
 -->
 <ipfixcol2>
@@ -23,6 +23,7 @@
       <params>
         <!-- UniRec template -->
         <uniRecFormat>TIME_FIRST,TIME_LAST,SRC_IP,DST_IP,PROTOCOL,?SRC_PORT,?DST_PORT,?TCP_FLAGS,PACKETS,BYTES</uniRecFormat>
+        <splitBiflow>true</splitBiflow>
         <!-- TRAP interface configuration -->
         <trapIfcCommon>
           <timeout>HALF_WAIT</timeout>

@@ -68,7 +68,7 @@ enum MAP_FLAGS {
 
 /** IPFIX-to-UniRec mapping record                    */
 struct map_rec {
-    struct {
+    struct map_ipfix_s {
         /**
          * \brief Data source
          * \note If the field is not ::MAP_SRC_IPFIX, parameters en, id and def are NOT defined!
@@ -81,6 +81,8 @@ struct map_rec {
         uint16_t id;
         /** Definition of the IE (MUST not be NULL)   */
         const struct fds_iemgr_elem *def;
+        /** Points to an element of list, NULL if field is not list. */
+        struct map_ipfix_s *next;
     } ipfix; /**< IPFIX specific parameters           */
 
     struct {

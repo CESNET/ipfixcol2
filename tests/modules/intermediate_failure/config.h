@@ -1,7 +1,7 @@
 /**
- * \file src/core/configurator/config_file.hpp
+ * \file src/plugins/output/dummy/config.h
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
- * \brief Parser of configuration file (header file)
+ * \brief Example parser of an XML configuration (header file)
  * \date 2018
  */
 
@@ -39,24 +39,38 @@
  *
  */
 
-#ifndef IPFIXCOL_CONFIG_FILE_H
-#define IPFIXCOL_CONFIG_FILE_H
+#ifndef CONFIG_H
+#define CONFIG_H
 
-#include <ipfixcol2/api.h>
-#include "configurator.hpp"
+#include <ipfixcol2.h>
+#include "stdint.h"
+
+/** Configuration of a instance of the dummy plugin      */
+struct instance_config {
+    /** Sleep time                                       */
+    struct timespec sleep_time;
+
+    /** Number of messages to generate before failure    */
+    unsigned int fail_after;
+    /** Type of failure (i.e. return code)               */
+    int fail_type;
+};
 
 /**
- * \brief Pass control to the file parser
- *
- * The function tries to load and parse a startup configuration from a file defined by \p path.
- * The parsed configuration is passed to the configurator \p conf and the pipeline is established.
- *
- * \note The function blocks until the collector is supposed to run.
- * \param[in] conf Collector configurator
- * \param[in] path Startup file
- * \return EXIT_SUCCESS or EXIT_FAILURE
+ * \brief Parse configuration of the plugin
+ * \param[in] ctx    Instance context
+ * \param[in] params XML parameters
+ * \return Pointer to the parse configuration of the instance on success
+ * \return NULL if arguments are not valid or if a memory allocation error has occurred
  */
-IPX_API int
-ipx_config_file(ipx_configurator &conf, const std::string &path);
+struct instance_config *
+config_parse(ipx_ctx_t *ctx, const char *params);
 
-#endif //IPFIXCOL_CONFIG_FILE_H
+/**
+ * \brief Destroy parsed configuration
+ * \param[in] cfg Parsed configuration
+ */
+void
+config_destroy(struct instance_config *cfg);
+
+#endif // CONFIG_H

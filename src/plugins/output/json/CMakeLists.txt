@@ -9,15 +9,25 @@ add_library(json-output MODULE
     src/Printer.hpp
     src/File.cpp
     src/File.hpp
+    src/Kafka.cpp
+    src/Kafka.hpp
     src/Server.cpp
     src/Server.hpp
     src/Sender.cpp
     src/Server.hpp
 )
 
+find_package(LibRDKafka 0.9.3 REQUIRED)
 find_package(ZLIB REQUIRED)
-include_directories(${ZLIB_INCLUDE_DIRS})
-target_link_libraries(json-output ${ZLIB_LIBRARIES})
+
+include_directories(
+    ${ZLIB_INCLUDE_DIRS}         # zlib
+    ${LIBRDKAFKA_INCLUDE_DIRS}   # librdkafka
+)
+target_link_libraries(json-output
+    ${ZLIB_LIBRARIES}
+    ${LIBRDKAFKA_LIBRARIES}
+)
 
 install(
     TARGETS json-output

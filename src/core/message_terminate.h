@@ -54,16 +54,6 @@ typedef struct ipx_msg_terminate ipx_msg_terminate_t;
 /** Type of instance termination */
 enum ipx_msg_terminate_type {
     /**
-     * \brief Stop processing of all messages (except Terminate messages)
-     *
-     * After receiving this message, a context MUST stop processing all IPFIX and Transport Session
-     * messages and let them through to other plugins until #IPX_MSG_TERMINATE_INSTANCE is received.
-     * This type of termination is usually used if a instance is not able to work correctly and
-     * the collector is about to shut down. The corrupted instance use this type of message to
-     * signalize this situation to other plugins.
-     */
-    IPX_MSG_TERMINATE_PROCESSING,
-    /**
      * \brief Stop instance
      *
      * After receiving this message, a context MUST call plugin destructor on its instance and
@@ -89,7 +79,7 @@ ipx_msg_terminate_create(enum ipx_msg_terminate_type type);
  * \param[in] msg Pointer to the message
  */
 IPX_API void
-ipx_msg_termiante_destroy(ipx_msg_terminate_t *msg);
+ipx_msg_terminate_destroy(ipx_msg_terminate_t *msg);
 
 /**
  * \brief Get the termination type

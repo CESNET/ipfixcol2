@@ -42,6 +42,7 @@
 #ifndef JSON_CONFIG_H
 #define JSON_CONFIG_H
 
+#include <map>
 #include <string>
 #include <vector>
 #include <ipfixcol2.h>
@@ -125,6 +126,25 @@ struct cfg_file : cfg_output {
     calg m_calg;
 };
 
+/** Configuration of kafka output                                                                */
+struct cfg_kafka : cfg_output {
+    /// Comma separated list of IP[:Port]
+    std::string brokers;
+    /// Produced topic
+    std::string topic;
+    /// Partition to which data should be send
+    int32_t partition;
+    /// Broker version fallback (empty or X.X.X.X)
+    std::string broker_fallback;
+    /// Block conversion if sender buffer is full
+    bool blocking;
+    /// Add default properties for librdkafka
+    bool perf_tuning;
+
+    /// Additional librdkafka properties (might overwrite common parameters)
+    std::map<std::string, std::string> properties;
+};
+
 /** Parsed configuration of an instance                                                          */
 class Config {
 private:
@@ -137,6 +157,8 @@ private:
     void parse_server(fds_xml_ctx_t *server);
     void parse_send(fds_xml_ctx_t *send);
     void parse_file(fds_xml_ctx_t *file);
+    void parse_kafka(fds_xml_ctx_t *kafka);
+    void parse_kafka_property(struct cfg_kafka &kafka, fds_xml_ctx_t *property);
     void parse_outputs(fds_xml_ctx_t *outputs);
     void parse_params(fds_xml_ctx_t *params);
 
@@ -153,6 +175,8 @@ public:
         std::vector<struct cfg_file> files;
         /** Servers                                                                              */
         std::vector<struct cfg_server> servers;
+        /** Kafkas                                                                                */
+        std::vector<struct cfg_kafka> kafkas;
     } outputs; /**< Outputs                                                                      */
 
     /**
@@ -166,5 +190,17 @@ public:
      */
     ~Config();
 };
+
+/**
+ * \brief Parse application version (i.e. A.B.C.D)
+ *
+ * \note At least major and minor version must be specified. Undefined sub-versions are set to zero.
+ * \param[in]  str     Version string
+ * \param[out] version Parsed version
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_FORMAT if the version string is malformed
+ */
+int
+parse_version(const std::string &str, int version[4]);
 
 #endif // JSON_CONFIG_H

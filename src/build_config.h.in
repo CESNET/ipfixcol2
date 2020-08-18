@@ -125,6 +125,9 @@
     #define IPX_BUILD_ARCH "unknown"
 #endif
 
+// Deep bind support
+#cmakedefine HAVE_RTLD_DEEPBIND
+
 /**@}*/
 
 #endif /* _BUILD_CONFIG_ */

@@ -2,10 +2,10 @@
  * \file src/plugins/output/dummy/dummy.c
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief Example output plugin for IPFIXcol 2
- * \date 2018
+ * \date 2018-2020
  */
 
-/* Copyright (C) 2018 CESNET, z.s.p.o.
+/* Copyright (C) 2018-2020 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -57,7 +57,7 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
     // Configuration flags (reserved for future use)
     .flags = 0,
     // Plugin version string (like "1.2.3")
-    .version = "2.0.0",
+    .version = "2.1.0",
     // Minimal IPFIXcol version string (like "1.2.3")
     .ipx_min = "2.0.0"
 };
@@ -66,7 +66,71 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
 struct instance_data {
     /** Parsed configuration of the instance  */
     struct instance_config *config;
+
+    /** Total number of Data Records (based on an IPFIX Template) */
+    uint64_t cnt_flows_data;
+    /** Total number of Data Records (based on an IPFIX Options Template */
+    uint64_t cnt_flows_opts;
+    /** Total number of bytes in Data Records   */
+    uint64_t cnt_bytes;
+    /** Total number of packets in Data Records */
+    uint64_t cnt_pkts;
 };
+
+/**
+ * @brief Update statistics about flow records
+ *
+ * @param[in] inst Plugin instance
+ * @param[in] msg  IPFIX Message
+ */
+static void
+stats_update(struct instance_data *inst, ipx_msg_ipfix_t *msg)
+{
+    uint32_t rec_cnt = ipx_msg_ipfix_get_drec_cnt(msg);
+
+    // For each IPFIX Data Record
+    for (uint32_t i = 0; i < rec_cnt; ++i) {
+        struct ipx_ipfix_record *rec_ptr = ipx_msg_ipfix_get_drec(msg, i);
+        enum fds_template_type ttype = rec_ptr->rec.tmplt->type;
+
+        struct fds_drec_field field;
+        uint64_t value;
+
+        // Get type of the Data Record
+        if (ttype == FDS_TYPE_TEMPLATE) {
+            inst->cnt_flows_data++;
+        } else if (ttype == FDS_TYPE_TEMPLATE_OPTS) {
+            inst->cnt_flows_opts++;
+            continue; // Options records doesn't contain packet and byte counters
+        }
+
+        // Get octetDeltaCount
+        if (fds_drec_find(&rec_ptr->rec, 0, 1, &field) != FDS_EOC
+                && fds_get_uint_be(field.data, field.size, &value) == FDS_OK) {
+            inst->cnt_bytes += value;
+        }
+
+        // Get packetDeltaCount
+        if (fds_drec_find(&rec_ptr->rec, 0, 2, &field) != FDS_EOC
+                && fds_get_uint_be(field.data, field.size, &value) == FDS_OK) {
+            inst->cnt_pkts += value;
+        }
+    }
+}
+
+/**
+ * @brief Print statistics
+ * @param[in] inst Plugin instance
+ */
+static void
+stats_print(const struct instance_data *inst)
+{
+    printf("Stats:\n");
+    printf("- data records:    %10" PRIu64 "\n", inst->cnt_flows_data);
+    printf("- options records: %10" PRIu64 "\n", inst->cnt_flows_opts);
+    printf("- total bytes:     %10" PRIu64 "\n", inst->cnt_bytes);
+    printf("- total packets:   %10" PRIu64 "\n", inst->cnt_pkts);
+}
 
 int
 ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
@@ -94,8 +158,12 @@ void
 ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
 {
     (void) ctx; // Suppress warnings
-
     struct instance_data *data = (struct instance_data *) cfg;
+
+    if (data->config->en_stats) {
+        stats_print(data);
+    }
+
     config_destroy(data->config);
     free(data);
 }
@@ -111,6 +179,10 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
         ipx_msg_ipfix_t *ipfix_msg = ipx_msg_base2ipfix(msg);
         const struct ipx_msg_ctx *ipfix_ctx = ipx_msg_ipfix_get_ctx(ipfix_msg);
         IPX_CTX_INFO(ctx, "[ODID: %" PRIu32 "] Received an IPFIX message", ipfix_ctx->odid);
+
+        if (data->config->en_stats) {
+            stats_update(data, ipfix_msg);
+        }
     }
 
     if (type == IPX_MSG_SESSION) {

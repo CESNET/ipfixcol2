@@ -2,7 +2,7 @@
  * \file src/core/configurator/instance_input.hpp
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief Input instance wrapper (header file)
- * \date 2018
+ * \date 2018-2020
  */
 
 /* Copyright (C) 2018 CESNET, z.s.p.o.
@@ -144,6 +144,44 @@ public:
      * \param[in] intermediate Intermediate plugin to receive our messages
      */
     void connect_to(ipx_instance_intermediate &intermediate);
+
+    /**
+     * \brief Registered extensions and dependencies
+     * \param[in] ext_mgr Extension manager
+     */
+    void
+    extensions_register(ipx_cfg_extensions *ext_mgr, size_t pos) override;
+
+    /**
+     * \brief Resolve definition of the extension/dependency definitions of the instance
+     *
+     * Description of each extension/dependency is updated to contain size, offset, etc.
+     * \param[in] ext_mgr Extension manager
+     */
+    void
+    extensions_resolve(ipx_cfg_extensions *ext_mgr) override;
+
+    /**
+     * \brief Enable/disable processing of data messages by the plugin (IPFIX and Transport Session)
+     *
+     * \warning This doesn't affect NetFlow/IPFIX Message parser, see set_parser_processing()
+     * \note By default, data processing is enabled.
+     * \see ipx_ctx_processing() for more details
+     * \param[in] en Enable/disable processing
+     */
+    void
+    set_processing(bool en) override;
+
+    /**
+     * \brief Enable/disable processing of data messages by the parser (IPFIX and Transport Session)
+     *
+     * \warning This doesn't affect the input plugin, see set_processing()
+     * \note By default, data processing is enabled.
+     * \see ipx_ctx_processing() for more details
+     * \param[in] en Enable/disable processing
+     */
+    void
+    set_parser_processing(bool en);
 };
 
 #endif //IPFIXCOL_INSTANCE_INPUT_HPP

@@ -152,6 +152,14 @@ public:
      * \param[in] intermediate Intermediate plugin to receive our messages
      */
     virtual void connect_to(ipx_instance_intermediate &intermediate);
+
+    /**
+     * \brief Get the plugin context (read only)
+     */
+    virtual const ipx_ctx_t *
+    get_ctx() {
+        return _ctx;
+    }
 };
 
 #endif //IPFIXCOL_INSTANCE_INTERMEDIATE_HPP

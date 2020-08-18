@@ -50,6 +50,8 @@ except the one you would like to use.
         <plugin>unirec</plugin>
         <params>
             <uniRecFormat>TIME_FIRST,TIME_LAST,SRC_IP,DST_IP,PROTOCOL,?SRC_PORT,?DST_PORT,?TCP_FLAGS,PACKETS,BYTES</uniRecFormat>
+            <splitBiflow>true</splitBiflow>
+
             <trapIfcCommon>
                 <timeout>NO_WAIT</timeout>
                 <buffer>true</buffer>
@@ -91,6 +93,10 @@ Parameters
     record (e.g. TCP_FLAGS) default value (typically zero) is used. List of all supported UniRec
     fields is defined in `unirec-element.txt <config/unirec-elements.txt>`_ file.
     Example value: "DST_IP,SRC_IP,BYTES,DST_PORT,?TCP_FLAGS,SRC_PORT,PROTOCOL".
+
+:``splitBiflow``:
+    In case of Biflow records, split the record to two unidirectional flow records. Non-biflow
+    records are unaffected. [values: true/false, default: true]
 
 :``trapIfcCommon``:
     The following parameters can be used with any type of a TRAP interface. There are parameters
@@ -246,9 +252,6 @@ with increased verbosity level i.e. ``ipfixcol2 -v``.
 
 Notes
 -----
-
-Bidirectional flows are not currently supported by UniRec, therefore, biflow records are
-automatically split into two unidirectional flow records during conversion.
 
 When multiple IPFIX Information Elements are mapped to the same UniRec field and those IPFIX fields
 are present in an IPFIX record, the last field occurrence (in the appropriate IPFIX Template)
