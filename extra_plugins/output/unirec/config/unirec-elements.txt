@@ -139,6 +139,10 @@ HTTP_UA_APP_MIN                uint16        flowmon:httpUaAppMin
 HTTP_UA_APP_BLD                uint16        flowmon:httpUaAppBld
 
 
+# --- TLS elements ---
+HTTPS_SNI                      string        e8057id809
+TLS_JA3                        string        e8057id830
+
 
 # --- Other fields ---
 IPV6_TUN_TYPE                  uint8         e16982id405      # IPv6 tunnel type
