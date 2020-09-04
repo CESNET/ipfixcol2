@@ -140,7 +140,7 @@ HTTP_UA_APP_BLD                uint16        flowmon:httpUaAppBld
 
 
 # --- TLS elements ---
-HTTPS_SNI                      string        e8057id809
+TLS_SNI                        string        e8057id808
 TLS_JA3                        string        e8057id830
 
 
