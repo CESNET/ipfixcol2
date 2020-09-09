@@ -41,6 +41,7 @@
 
 #include <memory>
 #include <set>
+#include <stdexcept>
 
 #include <libfds.h>
 #include <inttypes.h>
