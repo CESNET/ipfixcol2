@@ -1,0 +1,71 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "IPFIX output",
+    "description": "The plugin writes incoming IPFIX Messages to an IPFIX File or a series of IPFIX Files.|https://github.com/CESNET/ipfixcol2/tree/master/src/plugins/output/ipfix",
+    "type": "object",
+    "properties": {
+        "name": {
+            "title": "Name",
+            "description": "User identification of the instance. Must be unique within the section.",
+            "type": "string",
+            "default": "IPFIX output",
+            "minLength": 1
+        },
+        "plugin": {
+            "title": "Plugin",
+            "description": "Internal identification of a plugin to whom the instance belongs. The identification is assigned by an author of the plugin.",
+            "type": "string",
+            "const": "ipfix"
+        },
+        "params": {
+            "title": "Parameters",
+            "description": "Configuration parameters of the instance.",
+            "type": "object",
+            "properties": {
+                "filename": {
+                    "title": "File name",
+                    "description": "Specifies an absolute path of output files. The path should contain format specifier for day, month, etc. For example \"/tmp/ipfix/%Y%m%d%H%M%S.ipfix\".",
+                    "type": "string",
+                    "minLength": 1
+                },
+                "useLocalTime": {
+                    "title": "Use local time",
+                    "description": "Specifies whether the time values in filenames should be in local time instead of UTC. [default: false]",
+                    "type": "boolean",
+                    "default": false,
+                    "enum": [true, false]
+                },
+                "windowSize": {
+                    "title": "Window size",
+                    "description": "Specifies the time interval in seconds to rotate files. If the value is \"0\", all flow will be stored into a single file. [default: 0]",
+                    "type": "integer",
+                    "default": 0,
+                    "minimum": 0
+                },
+                "alignWindows": {
+                    "title": "Align windows",
+                    "description": "Align file rotation with next N minute interval. [values: true/false, default: true]",
+                    "type": "boolean",
+                    "default": true,
+                    "enum": [true, false]
+                },
+                "preserveOriginal": {
+                    "title": "Preserve original",
+                    "description": "Preserve and store original IPFIX Messages as received by the plugin i.e. do not modify the Messages or their sequence numbers. If this option is disabled (recommended), Data Sets with unknown (Options) Templates are left out from the file and sequence numbers are adjusted accordingly (starts from 0), which should produce warning-free stream of IPFIX Messages. However, if the original IPFIX Messages are preserved, some warnings (e.g. missing (Options) Templates, unexpected sequence number, etc.) might be produced during replay and even errors might raise when there is an ODID collision and the main Transport Session is replaced. Use with caution. [values: true/false, default: false]",
+                    "type": "boolean",
+                    "default": false,
+                    "enum": [true, false]
+                },
+                "rotateOnExportTime": {
+                    "title": "Rotate on export time",
+                    "description": "Specifies whether files should be rotated based on IPFIX Export Time (i.e. timestamp from IPFIX Message header) instead of system time. If enabled, the Export Time is used also for creating filenames. Warning: If the plugin receives flow records from multiple exporters at time the rotation could be unsteady. [default: false]",
+                    "type": "boolean",
+                    "default": false,
+                    "enum": [true, false]
+                }
+            },
+            "required": ["filename", "useLocalTime", "windowSize", "alignWindows", "preserveOriginal", "rotateOnExportTime"]
+        }
+    },
+    "required": ["name", "plugin", "params"]
+}

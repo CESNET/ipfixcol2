@@ -1,0 +1,36 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Dummy output",
+    "description": "The plugin provides a means to test the collector without actually storing any data.|https://github.com/CESNET/ipfixcol2/tree/master/src/plugins/output/dummy",
+    "type": "object",
+    "properties": {
+        "name": {
+            "title": "Name",
+            "description": "User identification of the instance. Must be unique within the section.",
+            "type": "string",
+            "default": "Dummy output",
+            "minLength": 1
+        },
+        "plugin": {
+            "title": "Plugin",
+            "description": "Internal identification of a plugin to whom the instance belongs. The identification is assigned by an author of the plugin.",
+            "type": "string",
+            "const": "dummy"
+        },
+        "params": {
+            "title": "Parameters",
+            "description": "Configuration parameters of the instance.",
+            "type": "object",
+            "properties": {
+                "delay": {
+                    "title": "Delay",
+                    "description": "Minimum delay between processing of two consecutive messages in microseconds.",
+                    "type": "integer",
+                    "minimum": 0
+                }
+            },
+            "required": ["delay"]
+        }
+    },
+    "required": ["name", "plugin", "params"]
+}

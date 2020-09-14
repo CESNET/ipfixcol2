@@ -1,0 +1,305 @@
+$default_shadow: 5px 5px 5px rgba(0, 0, 0, 0.24);
+$default_line_height: 40px;
+$default_border_radius: 20px;
+$blue_dark: #1e88e5;
+$blue_light: #64b5f6;
+$orange_dark: #ff8f00;
+$orange_light: #ffca28;
+$red_dark: #e64a19;
+$red_light: #ff7043;
+$xml_print_bg: #eceff1;
+
+%default_column_elem_settings {
+    margin: 20px;
+    box-shadow: $default_shadow;
+    border-radius: $default_border_radius;
+    line-height: $default_line_height;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+*::-webkit-scrollbar {
+    width: 16px;
+    height: 16px;
+}
+
+*::-webkit-scrollbar-thumb {
+    background-clip: padding-box;
+    border-radius: 10px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 4px solid rgba(255, 255, 255, 0);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.25);
+}
+
+body {
+    min-width: 420px;
+    font-family: "Roboto", sans-serif;
+    display: flex;
+    align-content: center;
+    align-items: center;
+    width: 100%;
+    min-width: 600px;
+    background: white;
+}
+
+#configurator_app {
+    width: 100%;
+}
+
+.title {
+    flex-grow: 1;
+}
+
+.form {
+    width: 100%;
+    max-width: 1920px;
+    min-width: 420px;
+    margin-top: 10px;
+}
+
+.mainLayer {
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.column {
+    min-width: 400px;
+    width: calc(33% - 20px);
+    margin: 10px;
+    margin-bottom: auto;
+}
+
+#XMLPrint-title {
+    line-height: 1em;
+    margin-bottom: 14px;
+}
+
+#XMLPrint {
+    font-family: monospace;
+    line-height: 1em;
+    margin-bottom: 7px;
+}
+
+.select {
+    min-width: 182px;
+}
+
+.expandable {
+    transition: transform 0.3s ease;
+}
+
+.expanded {
+    transform: rotate(180deg);
+}
+
+p + p {
+    margin-top: 16px;
+}
+
+.MuiExpansionPanelSummary-root {
+    padding: 0 12px 0 16px;
+    .MuiExpansionPanelSummary-content {
+        margin: 0;
+        .title {
+            flex-grow: 1;
+            margin: 12px 0;
+        }
+    }
+    .MuiFormControlLabel-root {
+        margin-right: 12px;
+    }
+    .MuiFormControlLabel-root:last-child {
+        margin-right: 0px;
+    }
+}
+
+.MuiCardContent-root {
+    padding: 12px;
+
+    & + .MuiCardContent-root {
+        padding-top: 0;
+    }
+    &:last-child {
+        padding-bottom: 4px;
+    }
+}
+
+.MuiDialog-root {
+    min-width: 600px;
+}
+
+.form {
+    max-width: 1280px;
+    margin: 10px auto 0;
+
+    .blue {
+        background-color: $blue_dark;
+        //background: linear-gradient(135deg, #6599ff 0%, #3266cc 100%);
+    }
+    
+    .orange {
+        background-color: $orange_dark;
+        //background: linear-gradient(135deg, #fe9900 0%, #ff7c00 100%);
+    }
+    
+    .red {
+        background-color: $red_dark;
+        //background: linear-gradient(135deg, #ff5e34 0%, #f63c01 100%);
+    }
+
+    .MuiCard-root {
+        &:last-child {
+            margin-bottom: 10px;
+        }
+    }
+
+    .MuiCardHeader-action {
+        margin-top: 0;
+        margin-right: 0;
+        .MuiIconButton-root {
+            background: white;
+        }
+        .MuiButtonBase-root {
+            padding: 6px;
+        }
+    }
+
+    .MuiCardContent-root {
+        padding: 8px;
+
+        & + .MuiCardContent-root {
+            padding-top: 0;
+        }
+    }
+
+    .MuiButton-root,
+    .MuiButton-root:hover {
+        background: white;
+    }
+
+    .plugin .MuiCard-root {
+        .MuiCardHeader-root {
+            padding: 8px 16px;
+
+            .MuiCardHeader-title {
+                font-size: 1.2em;
+            }
+
+            .MuiCardHeader-action {
+                margin-top: 0;
+                .MuiButtonBase-root {
+                    padding: 6px;
+                }
+            }
+        }
+
+        .MuiCollapse-container {
+            .MuiCardContent-root {
+                padding: 0 8px 8px 0;
+                li {
+                    .MuiButtonBase-root {
+                        padding: 0 8px;
+                        cursor: default;
+                    }
+                    .MuiListItemText-root {
+                        display: grid;
+                        grid-template-columns: auto auto;
+                        span,
+                        p {
+                            display: block;
+                        }
+                        p {
+                            text-align: right;
+                        }
+                    }
+                    padding: 0;
+                }
+                ul {
+                    width: 100%;
+                    padding: 0;
+                    padding-left: 8px;
+                    ul {
+                        padding-left: 16px;
+                    }
+                }
+            }
+        }
+    }
+}
+
+.XMLPrint {
+    margin: 10px;
+    padding: 16px;
+    background-color: $xml_print_bg;
+    border-radius: 4px;
+    pre {
+        border-radius: 4px;
+    }
+    .input {
+        background: $blue_light;
+        // background: #91cfff;
+    }
+    .intermediate {
+        background: $orange_light;
+        // background: #ffe25f;
+    }
+    .output {
+        background: $red_light;
+        // background: #ffb078;
+    }
+}
+
+.overlaySubtitle {
+    font-size: small;
+    font-weight: 400;
+}
+
+.settings {
+    label + .MuiInput-formControl {
+        margin-top: 8px;
+    }
+
+    .MuiFormControl-root + .MuiFormControl-root {
+        padding-top: 1.5rem;
+    }
+}
+
+.MuiButtonBase-root.overlayIcon {
+    color: #9e9e9e;
+    position: absolute;
+    right: 48px;
+    top: 8px;
+    & + .MuiButtonBase-root.overlayIcon {
+        right: 8px;
+    }
+}
+
+.MuiDialog-container .MuiPaper-outlined {
+    border: 2px solid rgba(0, 0, 0, 0.12);
+}
+
+@media screen and (min-width: 840px) {
+    .form .sideBySide {
+        display: grid;
+        grid-template-columns: 420px 1fr;
+        align-items: start;
+
+        .mainLayer {
+            margin-bottom: 0;
+        }
+    }
+}
+
+// html {
+//     background: black;
+//     filter: invert(1) hue-rotate(180deg);
+// }

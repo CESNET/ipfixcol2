@@ -1,0 +1,255 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+*::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-clip: padding-box;
+  border-radius: 10px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 4px solid rgba(255, 255, 255, 0);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
+body {
+  min-width: 420px;
+  font-family: "Roboto", sans-serif;
+  display: flex;
+  align-content: center;
+  align-items: center;
+  width: 100%;
+  min-width: 600px;
+  background: white;
+}
+
+#configurator_app {
+  width: 100%;
+}
+
+.title {
+  flex-grow: 1;
+}
+
+.form {
+  width: 100%;
+  max-width: 1920px;
+  min-width: 420px;
+  margin-top: 10px;
+}
+
+.mainLayer {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.column {
+  min-width: 400px;
+  width: calc(33% - 20px);
+  margin: 10px;
+  margin-bottom: auto;
+}
+
+#XMLPrint-title {
+  line-height: 1em;
+  margin-bottom: 14px;
+}
+
+#XMLPrint {
+  font-family: monospace;
+  line-height: 1em;
+  margin-bottom: 7px;
+}
+
+.select {
+  min-width: 182px;
+}
+
+.expandable {
+  transition: transform 0.3s ease;
+}
+
+.expanded {
+  transform: rotate(180deg);
+}
+
+p + p {
+  margin-top: 16px;
+}
+
+.MuiExpansionPanelSummary-root {
+  padding: 0 12px 0 16px;
+}
+.MuiExpansionPanelSummary-root .MuiExpansionPanelSummary-content {
+  margin: 0;
+}
+.MuiExpansionPanelSummary-root .MuiExpansionPanelSummary-content .title {
+  flex-grow: 1;
+  margin: 12px 0;
+}
+.MuiExpansionPanelSummary-root .MuiFormControlLabel-root {
+  margin-right: 12px;
+}
+.MuiExpansionPanelSummary-root .MuiFormControlLabel-root:last-child {
+  margin-right: 0px;
+}
+
+.MuiCardContent-root {
+  padding: 12px;
+}
+.MuiCardContent-root + .MuiCardContent-root {
+  padding-top: 0;
+}
+.MuiCardContent-root:last-child {
+  padding-bottom: 4px;
+}
+
+.MuiDialog-root {
+  min-width: 600px;
+}
+
+.form {
+  max-width: 1280px;
+  margin: 10px auto 0;
+}
+.form .blue {
+  background-color: #1e88e5;
+}
+.form .orange {
+  background-color: #ff8f00;
+}
+.form .red {
+  background-color: #e64a19;
+}
+.form .MuiCard-root:last-child {
+  margin-bottom: 10px;
+}
+.form .MuiCardHeader-action {
+  margin-top: 0;
+  margin-right: 0;
+}
+.form .MuiCardHeader-action .MuiIconButton-root {
+  background: white;
+}
+.form .MuiCardHeader-action .MuiButtonBase-root {
+  padding: 6px;
+}
+.form .MuiCardContent-root {
+  padding: 8px;
+}
+.form .MuiCardContent-root + .MuiCardContent-root {
+  padding-top: 0;
+}
+.form .MuiButton-root,
+.form .MuiButton-root:hover {
+  background: white;
+}
+.form .plugin .MuiCard-root .MuiCardHeader-root {
+  padding: 8px 16px;
+}
+.form .plugin .MuiCard-root .MuiCardHeader-root .MuiCardHeader-title {
+  font-size: 1.2em;
+}
+.form .plugin .MuiCard-root .MuiCardHeader-root .MuiCardHeader-action {
+  margin-top: 0;
+}
+.form .plugin .MuiCard-root .MuiCardHeader-root .MuiCardHeader-action .MuiButtonBase-root {
+  padding: 6px;
+}
+.form .plugin .MuiCard-root .MuiCollapse-container .MuiCardContent-root {
+  padding: 0 8px 8px 0;
+}
+.form .plugin .MuiCard-root .MuiCollapse-container .MuiCardContent-root li {
+  padding: 0;
+}
+.form .plugin .MuiCard-root .MuiCollapse-container .MuiCardContent-root li .MuiButtonBase-root {
+  padding: 0 8px;
+  cursor: default;
+}
+.form .plugin .MuiCard-root .MuiCollapse-container .MuiCardContent-root li .MuiListItemText-root {
+  display: grid;
+  grid-template-columns: auto auto;
+}
+.form .plugin .MuiCard-root .MuiCollapse-container .MuiCardContent-root li .MuiListItemText-root span,
+.form .plugin .MuiCard-root .MuiCollapse-container .MuiCardContent-root li .MuiListItemText-root p {
+  display: block;
+}
+.form .plugin .MuiCard-root .MuiCollapse-container .MuiCardContent-root li .MuiListItemText-root p {
+  text-align: right;
+}
+.form .plugin .MuiCard-root .MuiCollapse-container .MuiCardContent-root ul {
+  width: 100%;
+  padding: 0;
+  padding-left: 8px;
+}
+.form .plugin .MuiCard-root .MuiCollapse-container .MuiCardContent-root ul ul {
+  padding-left: 16px;
+}
+
+.XMLPrint {
+  margin: 10px;
+  padding: 16px;
+  background-color: #eceff1;
+  border-radius: 4px;
+}
+.XMLPrint pre {
+  border-radius: 4px;
+}
+.XMLPrint .input {
+  background: #64b5f6;
+}
+.XMLPrint .intermediate {
+  background: #ffca28;
+}
+.XMLPrint .output {
+  background: #ff7043;
+}
+
+.overlaySubtitle {
+  font-size: small;
+  font-weight: 400;
+}
+
+.settings label + .MuiInput-formControl {
+  margin-top: 8px;
+}
+.settings .MuiFormControl-root + .MuiFormControl-root {
+  padding-top: 1.5rem;
+}
+
+.MuiButtonBase-root.overlayIcon {
+  color: #9e9e9e;
+  position: absolute;
+  right: 48px;
+  top: 8px;
+}
+.MuiButtonBase-root.overlayIcon + .MuiButtonBase-root.overlayIcon {
+  right: 8px;
+}
+
+.MuiDialog-container .MuiPaper-outlined {
+  border: 2px solid rgba(0, 0, 0, 0.12);
+}
+
+@media screen and (min-width: 840px) {
+  .form .sideBySide {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    align-items: start;
+  }
+  .form .sideBySide .mainLayer {
+    margin-bottom: 0;
+  }
+}
+
+/*# sourceMappingURL=main.css.map */

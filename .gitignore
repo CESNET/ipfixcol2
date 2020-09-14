@@ -1,0 +1,7 @@
+# IDE settings #
+################
+**/.vscode
+
+# SASS source map #
+###################
+*.map

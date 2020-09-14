@@ -1,0 +1,32 @@
+{
+    "schemaLocations": {
+        "input": {
+            "path": "./schemas/input/",
+            "pluginSchemas": ["udp.json", "tcp.json"]
+        },
+        "intermediate": {
+            "path": "./schemas/intermediate/",
+            "pluginSchemas": ["anonymization.json"]
+        },
+        "output": {
+            "path": "./schemas/output/",
+            "pluginSchemas": [
+                "dummy.json",
+                "fds.json",
+                "ipfix.json",
+                "json.json",
+                "lnfstore.json",
+                "timecheck.json",
+                "unirec.json",
+                "viewer.json"
+            ]
+        },
+        "special": {
+            "path": "./schemas/special/",
+            "nameValidationSchema": "cross-plugin_name_validaton.json",
+            "outputExtraParams": "output_extra_params.json",
+            "allPluginsExtraParams": "all_plugins_extra_params.json",
+            "generalStructure": "general_structure.json"
+        }
+    }
+}

@@ -1,0 +1,22 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+        "odidOnly": {
+            "title": "ODID only",
+            "description": "Process flows only from the selected ODID range.\nThe filter expression is represented as comma separated list of unsigned numbers and intervals. Interval is all the numbers between two given numbers separated by a dash. If one number of the interval is missing, the minimum or the maximum is used by default.\nFor example, \"1-5, 7, 10-\" represents all ODIDs except 0, 6, 8 and 9.",
+            "type": "string",
+            "minLength": 1
+        },
+        "odidExcept": {
+            "title": "ODID except",
+            "description": "Process all flows except those from the selected ODID range.\nThe filter expression is represented as comma separated list of unsigned numbers and intervals. Interval is all the numbers between two given numbers separated by a dash. If one number of the interval is missing, the minimum or the maximum is used by default.\nFor example, \"1-5, 7, 10-\" represents all ODIDs except 0, 6, 8 and 9.",
+            "type": "string",
+            "minLength": 1
+        }
+    },
+    "dependencies": {
+        "odidOnly": {"properties": {"odidExcept": false}},
+        "odidExcept": {"properties": { "odidOnly": false}}
+    }
+}

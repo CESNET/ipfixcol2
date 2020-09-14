@@ -1,0 +1,276 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "JSON output",
+    "description": "The plugin converts IPFIX flow records into JSON format and sends them, stores them or prints them.|https://github.com/CESNET/ipfixcol2/tree/master/src/plugins/output/json",
+    "type": "object",
+    "properties": {
+        "name": {
+            "title": "Name",
+            "description": "User identification of the instance. Must be unique within the section.",
+            "type": "string",
+            "default": "JSON output",
+            "minLength": 1
+        },
+        "plugin": {
+            "title": "Plugin",
+            "description": "Internal identification of a plugin to whom the instance belongs. The identification is assigned by an author of the plugin.",
+            "type": "string",
+            "const": "json"
+        },
+        "params": {
+            "title": "Parameters",
+            "description": "Configuration parameters of the instance.",
+            "type": "object",
+            "properties": {
+                "tcpFlags": {
+                    "title": "TCP flags",
+                    "description": "Convert TCP flags to common textual representation (formatted, e.g. \".A..S.\") or to a number (raw). [values: formatted/raw, default: formatted]",
+                    "type": "string",
+                    "default": "formatted",
+                    "enum": ["formatted", "raw"]
+                },
+                "timestamp": {
+                    "title": "Timestamp",
+                    "description": "Convert timestamp to ISO 8601 textual representation (all timestamps in UTC and milliseconds, e.g. \"2018-01-22T09:29:57.828Z\") or to a unix timestamp (all timestamps in milliseconds). [values: formatted/unix, default: formatted]",
+                    "type": "string",
+                    "default": "formatted",
+                    "enum": ["formatted", "unix"]
+                },
+                "protocol": {
+                    "title": "Protocol",
+                    "description": "Convert protocol identification to formatted style (e.g. instead 6 writes \"TCP\") or to a number. [values: formatted/raw, default: formatted]",
+                    "type": "string",
+                    "default": "formatted",
+                    "enum": ["formatted", "raw"]
+                },
+                "ignoreUnknown": {
+                    "title": "Ignore unknown",
+                    "description": "Skip unknown Information Elements (i.e. record fields with unknown name and data type). If disabled, data of unknown elements are formatted as unsigned integer or hexadecimal values. For more information, see octetArrayAsUint option. [values: true/false, default: true]",
+                    "type": "boolean",
+                    "default": true,
+                    "enum": [true, false]
+                },
+                "ignoreOptions": {
+                    "title": "Ignore options",
+                    "description": "Skip non-flow records used for reporting metadata about IPFIX Exporting and Metering Processes (i.e. records described by Options Templates). [values: true/false, default: true]",
+                    "type": "boolean",
+                    "default": true,
+                    "enum": [true, false]
+                },
+                "nonPrintableChar": {
+                    "title": "Non-printable characters",
+                    "description": "Ignore non-printable characters (newline, tab, control characters, etc.) in IPFIX strings. If disabled, these characters are escaped on output. [values: true/false, default: true]",
+                    "type": "boolean",
+                    "default": true,
+                    "enum": [true, false]
+                },
+                "octetArrayAsUint": {
+                    "title": "Octet array as uint",
+                    "description": "Converter each IPFIX field with octetArray type (including IPFIX fields with unknown definitions) as unsigned integer if the size of the field is less or equal to 8 bytes. Fields with the size above the limit are always converted as string representing hexadecimal value, which is typically in network byte order (e.g. \"0x71E1\"). Keep on mind, that there might be octetArray fields with variable length that might be interpreted differently based on their size. If disabled, octetArray fields are never interpreted as unsigned integers. [values: true/false, default: true]",
+                    "type": "boolean",
+                    "default": true,
+                    "enum": [true, false]
+                },
+                "numericNames": {
+                    "title": "Numeric names",
+                    "description": "Use only short identification of Information Elements (i.e. \"enXX:idYY\"). If enabled, the short version is used even if the definition of the field is known. This option can help to create a shorter JSON records with key identifiers which are independent on the internal configuration. [values: true/false, default: false]",
+                    "type": "boolean",
+                    "default": false,
+                    "enum": [true, false]
+                },
+                "splitBiflow": {
+                    "title": "Split Biflow",
+                    "description": "In case of Biflow records, split the record to two unidirectional flow records. Non-biflow records are unaffected. [values: true/false, default: false]",
+                    "type": "boolean",
+                    "default": false,
+                    "enum": [true, false]
+                },
+                "detailedInfo": {
+                    "title": "Detailed info",
+                    "description": "Add additional information about the IPFIX message (such as export time, Observation Domain ID, IP address of the exporter, etc.) to which each record belongs. Additional fields starts with \"ipfix:\" prefix. [values: true/false, default: false]",
+                    "type": "boolean",
+                    "default": false,
+                    "enum": [true, false]
+                },
+                "templateInfo": {
+                    "title": "Template info",
+                    "description": "Convert Template and Options Template records. See the particular section below for information about the formatting of these records. [values: true/false, default: false]",
+                    "type": "boolean",
+                    "default": false,
+                    "enum": [true, false]
+                },
+                "outputs": {
+                    "title": "Output types",
+                    "description": "At least one output must be configured. Multiple server/send/file outputs can be used at the same time if the outputs are not in collision with each other.",
+                    "type": "object",
+                    "properties": {
+                        "server": {
+                            "title": "Server",
+                            "type": "array",
+                            "minItems": 1,
+                            "items": {
+                                "title": "Server",
+                                "description": "TCP (push) server provides data on a local port. Converted records are automatically send to all clients that are connected to the port. To test the server you can use, for example, ncat(1) utility: \"ncat <server ip> <port>\".",
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "title": "Name",
+                                        "description": "Identification name of the output. Used only for readability.",
+                                        "type": "string",
+                                        "minLength": 1
+                                    },
+                                    "port": {
+                                        "title": "Port",
+                                        "description": "Local port number of the server.",
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 65535
+                                    },
+                                    "blocking": {
+                                        "title": "Blocking",
+                                        "description": "Enable blocking on TCP sockets (true/false). If blocking mode is disabled and a client is not able to retrieve records fast enough, some flow records may be dropped (only individual clients are affected). On the other hand, if the blocking mode is enabled, no records are dropped. However, if at least one client is slow, the plugin waits (i.e. blocks) until data are send. This can significantly slow down the whole collector and other output plugins because processing records is suspended. In the worst-case scenario, if the client is not responding at all, the whole collector is blocked! Therefore, it is usually preferred (and much safer) to disable blocking.",
+                                        "type": "boolean",
+                                        "enum": [true, false]
+                                    }
+                                },
+                                "required": ["name", "port", "blocking"]
+                            }
+                        },
+                        "send": {
+                            "title": "Send",
+                            "type": "array",
+                            "minItems": 1,
+                            "items": {
+                                "title": "Send",
+                                "description": "Send records over network to a client. If the destination is not reachable or the client is disconnected, the plugin drops all records and tries to reconnect every 5 seconds. As with the server, you can verify functionality using ncat(1) utility: \"ncat -lk <local ip> <local port>\"",
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "title": "Name",
+                                        "description": "Identification name of the output. Used only for readability.",
+                                        "type": "string",
+                                        "minLength": 1
+                                    },
+                                    "ip": {
+                                        "title": "IP address",
+                                        "description": "IPv4/IPv6 address of the client",
+                                        "type": "string",
+                                        "oneOf": [{ "format": "ipv4" }, { "format": "ipv6" }]
+                                    },
+                                    "port": {
+                                        "title": "Port",
+                                        "description": "Remote port number",
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 65535
+                                    },
+                                    "protocol": {
+                                        "title": "Protocol",
+                                        "description": "Transport protocol: TCP or UDP (this field is case insensitive)",
+                                        "type": "string",
+                                        "enum": ["TCP", "UDP"]
+                                    },
+                                    "blocking": {
+                                        "title": "Blocking",
+                                        "description": "Enable blocking on TCP sockets (true/false). If blocking mode is disabled and a client is not able to retrieve records fast enough, some flow records may be dropped (only individual clients are affected). On the other hand, if the blocking mode is enabled, no records are dropped. However, if at least one client is slow, the plugin waits (i.e. blocks) until data are send. This can significantly slow down the whole collector and other output plugins because processing records is suspended. In the worst-case scenario, if the client is not responding at all, the whole collector is blocked! Therefore, it is usually preferred (and much safer) to disable blocking.",
+                                        "type": "boolean",
+                                        "enum": [true, false]
+                                    }
+                                },
+                                "required": ["name", "ip", "port", "protocol", "blocking"]
+                            }
+                        },
+                        "file": {
+                            "title": "File",
+                            "type": "array",
+                            "minItems": 1,
+                            "items": {
+                                "title": "File",
+                                "description": "Store data to files.",
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "title": "Name",
+                                        "description": "Identification name of the output. Used only for readability.",
+                                        "type": "string",
+                                        "minLength": 1
+                                    },
+                                    "path": {
+                                        "title": "Path",
+                                        "description": "The path specifies storage directory for data collected by the plugin. Format specifiers for day, month, etc. are supported so you can create suitable directory hierarchy. See \"strftime\" for conversion specification. (Note: UTC time)",
+                                        "type": "string",
+                                        "minLength": 1
+                                    },
+                                    "prefix": {
+                                        "title": "Prefix",
+                                        "description": "Specifies name prefix for output files.",
+                                        "type": "string",
+                                        "minLength": 1
+                                    },
+                                    "timeWindow": {
+                                        "title": "Time window",
+                                        "description": "Specifies the time interval in seconds to rotate files [minimum 60, default 300]",
+                                        "type": "integer",
+                                        "default": 300,
+                                        "minimum": 60
+                                    },
+                                    "timeAlignment": {
+                                        "title": "Time alignment",
+                                        "description": "Align file rotation with next N minute interval (yes/no).",
+                                        "type": "string",
+                                        "enum": ["yes", "no"]
+                                    },
+                                    "compression": {
+                                        "title": "Compression",
+                                        "description": "Data compression helps to significantly reduce size of output files. Following compression algorithms are available:\nnone: Compression disabled [default]\ngzip: GZIP compression",
+                                        "type": "string",
+                                        "enum": ["none", "gzip"],
+                                        "default": "none"
+                                    }
+                                },
+                                "required": [
+                                    "name",
+                                    "path",
+                                    "prefix",
+                                    "timeWindow",
+                                    "timeAlignment",
+                                    "compression"
+                                ]
+                            }
+                        },
+                        "print": {
+                            "title": "Print",
+                            "description": "Write data on standard output.",
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "title": "Name",
+                                    "description": "Identification name of the output. Used only for readability.",
+                                    "type": "string",
+                                    "minLength": 1
+                                }
+                            },
+                            "required": ["name"]
+                        }
+                    },
+                    "minProperties": 1
+                }
+            },
+            "required": [
+                "tcpFlags",
+                "timestamp",
+                "protocol",
+                "ignoreUnknown",
+                "ignoreOptions",
+                "nonPrintableChar",
+                "octetArrayAsUint",
+                "numericNames",
+                "splitBiflow",
+                "detailedInfo",
+                "templateInfo",
+                "outputs"
+            ]
+        }
+    },
+    "required": ["name", "plugin", "params"]
+}

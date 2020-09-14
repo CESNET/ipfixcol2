@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+        <title>IPFIXcol2 configuration generator</title>
+        
+        <link rel="stylesheet" href="./css/main.css">
+        
+        <!-- Load React. -->
+        <script type="application/javascript" src="https://unpkg.com/react@16.13.1/umd/react.production.min.js"></script>
+        <script type="application/javascript" src="https://unpkg.com/react-dom@16.13.1/umd/react-dom.production.min.js"></script>
+        
+        <!-- Material design -->
+        <script rel="application/javascript" src="https://unpkg.com/@material-ui/core@4.11.0/umd/material-ui.production.min.js"></script>
+        
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+
+        <!-- Load Babel -->
+        <script type="application/javascript" src="https://unpkg.com/babel-standalone@6.26.0/babel.js"></script>
+
+        <!-- x2js -->
+        <script src="js/xml2json.min.js"></script>
+        
+        <!-- XML pretty print -->
+        <script src="js/formatXML.js"></script>
+
+        <!-- JSON schema (AJV) -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/ajv/6.10.2/ajv.bundle.js" integrity="sha256-zfdZCu4tlTSeaLzMOl+AQUKZUi9NMxW8P490AfdkgRE=" crossorigin="anonymous"></script>
+    </head>
+    <body>
+        <div id="configurator_app">
+            
+        </div>
+        
+        <!-- Load React app. -->
+        <script type="text/babel" src="./js/constants.js"></script>
+        <script type="text/babel" src="./js/app.js"></script>
+        <script type="text/babel" src="./js/overlay.js"></script>
+    </body>
+</html>
