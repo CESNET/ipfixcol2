@@ -82,7 +82,7 @@ RTCP_PACKETS                   uint64        flowmon:rtcpPackets
 RTCP_OCTETS                    uint64        flowmon:rtcpOctets
 RTCP_SOURCE_COUNT              uint8         flowmon:rtcpSourceCount
 
-# --- Service discovery protocols (SSDP, DNS-SD) ---
+# --- Service discovery protocols (SSDP, DNS-SD, NetBIOS) ---
 SSDP_LOCATION_PORT             uint16        e8057id900                   # service port
 SSDP_SERVER                    string        e8057id901                   # server info
 SSDP_USER_AGENT                string        e8057id902                   # list of user agents (semicolon-separated)
@@ -90,6 +90,8 @@ SSDP_NT                        string        e8057id903                   # list
 SSDP_ST                        string        e8057id904                   # list of queried service URNs (semicolon-separated)
 DNSSD_QUERIES                  string        e8057id905                   # list of queries for services (format: [service_instance_name;][...])
 DNSSD_RESPONSES                string        e8057id906                   # list of advertised services (format: [service_instance_name;service_port;service_target;hinfo;txt;][...])
+NB_NAME                        string        e8057id831                   # NetBIOS Name Service name
+NB_SUFFIX                      uint8         e8057id832                   # NetBIOS Name Service suffix
 
 # --- HTTP elements ---
 HTTP_REQUEST_HOST              string        flowmon:httpHost
