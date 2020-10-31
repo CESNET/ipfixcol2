@@ -480,7 +480,7 @@ translate_time(translator_t *trans, const struct translator_rec *rec,
             return 1;
         }
 
-        *field_ptr = ur_time_from_sec_msec(ts.tv_sec, ts.tv_nsec / 1000000);
+        *field_ptr = ur_time_from_sec_usec(ts.tv_sec, ts.tv_nsec / 1000);
         return 0;
     }
 
