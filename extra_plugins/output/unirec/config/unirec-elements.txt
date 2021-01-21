@@ -232,3 +232,13 @@ ARP_SRC_HA                      bytes        cesnet:ARPSrcHA
 ARP_SRC_PA                      bytes        cesnet:ARPSrcPA
 ARP_DST_HA                      bytes        cesnet:ARPDstHA
 ARP_DST_PA                      bytes        cesnet:ARPDstPa
+
+# --- NetBios Information elements  ---
+
+NB_NAME                         string      cesnet:NBName
+NB_SUFFIX                       uint8       cesnet:NBSuffix
+
+# --- IDPContent Information elements  ---
+
+IDP_CONTENT                     bytes       cesnet:IDPContent
+IDP_CONTENT_REV                 bytes       cesnet:IDPContentRev
