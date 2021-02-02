@@ -110,8 +110,7 @@ Connection::send_some()
             }
         }
         return true;
-
-    } else if (params.protocol == TransProto::Tcp) {
+    } else {
         return buffer.send_data(sockfd) >= 0;
     }
 }
