@@ -44,7 +44,7 @@
 Connection &
 ConnectionManager::add_client(ConnectionParams params)
 {
-    auto connection_ptr = std::unique_ptr<Connection>(new Connection(*this, params));
+    auto connection_ptr = std::unique_ptr<Connection>(new Connection(*this, params, connection_buffer_size));
     auto &connection = *connection_ptr;
     std::lock_guard<std::mutex> guard(mutex);
     if (connection.connect()) {
@@ -157,8 +157,14 @@ ConnectionManager::stop()
 }
 
 void
-ConnectionManager::set_reconnect_interval(int secs)
+ConnectionManager::set_reconnect_interval(int number_of_seconds)
 {
-    reconnect_interval_secs = secs;
+    reconnect_interval_secs = number_of_seconds;
+}
+
+void
+ConnectionManager::set_connection_buffer_size(long number_of_bytes)
+{
+    connection_buffer_size = number_of_bytes;
 }
 

@@ -89,15 +89,23 @@ parse_and_configure(ipx_ctx_t *log_ctx, const char *xml_config, Forwarder &forwa
     /// Config schema definition
     ///
     enum {
-        MODE, PROTOCOL, RECONNECT_INTERVAL_SECS,
-        TEMPLATE_REFRESH_INTERVAL_SECS, TEMPLATE_REFRESH_INTERVAL_BYTES,
-        HOSTS, HOST, NAME, ADDRESS, PORT
+        MODE, 
+        PROTOCOL, 
+        RECONNECT_INTERVAL_SECS,
+        TEMPLATE_REFRESH_INTERVAL_SECS, 
+        TEMPLATE_REFRESH_INTERVAL_BYTES,
+        CONNECTION_BUFFER_SIZE,
+        HOSTS, 
+        HOST, 
+        NAME, 
+        ADDRESS, 
+        PORT
     };
 
     fds_xml_args host_schema[] = {
-        FDS_OPTS_ELEM(NAME, "name", FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
-        FDS_OPTS_ELEM(ADDRESS, "address", FDS_OPTS_T_STRING, 0),
-        FDS_OPTS_ELEM(PORT, "port", FDS_OPTS_T_STRING, 0),
+        FDS_OPTS_ELEM(NAME   , "name"   , FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
+        FDS_OPTS_ELEM(ADDRESS, "address", FDS_OPTS_T_STRING, 0             ),
+        FDS_OPTS_ELEM(PORT   , "port"   , FDS_OPTS_T_STRING, 0             ),
         FDS_OPTS_END
     };
 
@@ -107,22 +115,24 @@ parse_and_configure(ipx_ctx_t *log_ctx, const char *xml_config, Forwarder &forwa
     };
 
     fds_xml_args params_schema[] = {
-        FDS_OPTS_ROOT("params"),
-        FDS_OPTS_ELEM(MODE, "mode", FDS_OPTS_T_STRING, 0),
-        FDS_OPTS_ELEM(PROTOCOL, "protocol", FDS_OPTS_T_STRING, 0),
-        FDS_OPTS_ELEM(TEMPLATE_REFRESH_INTERVAL_SECS, "templateRefreshIntervalSecs", FDS_OPTS_T_INT, FDS_OPTS_P_OPT),
-        FDS_OPTS_ELEM(TEMPLATE_REFRESH_INTERVAL_BYTES, "templateRefreshIntervalBytes", FDS_OPTS_T_INT, FDS_OPTS_P_OPT),
-        FDS_OPTS_ELEM(RECONNECT_INTERVAL_SECS, "reconnectIntervalSecs", FDS_OPTS_T_INT, FDS_OPTS_P_OPT),
-        FDS_OPTS_NESTED(HOSTS, "hosts", hosts_schema, 0),
+        FDS_OPTS_ROOT  ("params"),
+        FDS_OPTS_ELEM  (MODE                           , "mode"                        , FDS_OPTS_T_STRING, 0             ),
+        FDS_OPTS_ELEM  (PROTOCOL                       , "protocol"                    , FDS_OPTS_T_STRING, 0             ),
+        FDS_OPTS_ELEM  (CONNECTION_BUFFER_SIZE         , "connectionBufferSize"        , FDS_OPTS_T_INT   , FDS_OPTS_P_OPT),
+        FDS_OPTS_ELEM  (TEMPLATE_REFRESH_INTERVAL_SECS , "templateRefreshIntervalSecs" , FDS_OPTS_T_INT   , FDS_OPTS_P_OPT),
+        FDS_OPTS_ELEM  (TEMPLATE_REFRESH_INTERVAL_BYTES, "templateRefreshIntervalBytes", FDS_OPTS_T_INT   , FDS_OPTS_P_OPT),
+        FDS_OPTS_ELEM  (RECONNECT_INTERVAL_SECS        , "reconnectIntervalSecs"       , FDS_OPTS_T_INT   , FDS_OPTS_P_OPT),
+        FDS_OPTS_NESTED(HOSTS                          , "hosts"                       , hosts_schema     , 0             ),
         FDS_OPTS_END
     };
 
     ///
     /// Default parameter values
     ///
-    const int default_template_refresh_interval_secs = 10 * 60;
+    const int default_template_refresh_interval_secs  = 10 * 60;
     const int default_template_refresh_interval_bytes = 5 * 1024 * 1024;
-    const int default_reconnect_interval_secs = 10;
+    const int default_reconnect_interval_secs         = 10;
+    const int default_connection_buffer_size          = 4 * 1024 * 1024;
     
     ///
     /// Parsed parameters
@@ -136,6 +146,7 @@ parse_and_configure(ipx_ctx_t *log_ctx, const char *xml_config, Forwarder &forwa
     std::string mode;
     std::string protocol;
     std::vector<HostInfo> hosts;
+    Maybe<int> connection_buffer_size;
     Maybe<int> template_refresh_interval_secs;
     Maybe<int> template_refresh_interval_bytes;
     Maybe<int> reconnect_interval_secs;
@@ -206,6 +217,9 @@ parse_and_configure(ipx_ctx_t *log_ctx, const char *xml_config, Forwarder &forwa
         case HOSTS:
             process_hosts(content->ptr_ctx);
             break;
+        case CONNECTION_BUFFER_SIZE:
+            connection_buffer_size = content->val_int;
+            break;
         case TEMPLATE_REFRESH_INTERVAL_SECS:
             template_refresh_interval_secs = content->val_int;
             break;
@@ -235,6 +249,16 @@ parse_and_configure(ipx_ctx_t *log_ctx, const char *xml_config, Forwarder &forwa
         forwarder.set_transport_protocol(TransProto::Tcp);
     } else {
         throw "Invalid protocol '" + protocol + "', possible values are: 'tcp', 'udp'";
+    }
+
+    if (connection_buffer_size.has_value()) {
+        if (connection_buffer_size.value() > 0) {
+            forwarder.set_connection_buffer_size(connection_buffer_size.value());
+        } else {
+            throw std::string("Invalid connection buffer size");
+        }
+    } else {
+        forwarder.set_connection_buffer_size(default_connection_buffer_size);
     }
 
     if (template_refresh_interval_secs.has_value()) {

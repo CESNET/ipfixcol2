@@ -54,8 +54,6 @@
 #include <mutex>
 #include <cstdint>
 
-static constexpr int DEFAULT_BUFFER_SIZE = 4 * 1024 * 1024;
-
 class ConnectionManager;
 
 class Connection
@@ -67,7 +65,7 @@ public:
     /// The flag won't be reset when the connection is reestablished!
     std::atomic<bool> connection_lost_flag { false };
 
-    Connection(ConnectionManager &manager, ConnectionParams params, long buffer_size = DEFAULT_BUFFER_SIZE);
+    Connection(ConnectionManager &manager, ConnectionParams params, long buffer_size);
     
     bool
     connect();

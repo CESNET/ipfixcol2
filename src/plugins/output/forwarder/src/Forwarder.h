@@ -156,6 +156,12 @@ public:
     }
 
     void 
+    set_connection_buffer_size(long number_of_bytes)
+    {
+        connection_manager.set_connection_buffer_size(number_of_bytes);
+    }
+
+    void 
     set_template_refresh_interval_secs(int number_of_seconds)
     {
         this->template_refresh_interval_secs = number_of_seconds;

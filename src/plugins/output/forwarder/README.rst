@@ -43,6 +43,10 @@ Parameters
     The transport protocol to use
     [values: TCP/UDP]
 
+:``connectionBufferSize``:
+    Size of the buffer of each connection (Warning: number of connections = number of input exporters * number of hosts)
+    [value: number of bytes, default: 4194304]
+
 :``templateRefreshIntervalSecs``:
     Send templates again every N seconds (UDP only)
     [value: number of seconds, default: 600]

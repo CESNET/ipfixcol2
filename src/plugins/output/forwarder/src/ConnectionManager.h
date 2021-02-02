@@ -55,6 +55,7 @@
 
 class Connection;
 
+static constexpr long DEFAULT_BUFFER_SIZE = 4 * 1024 * 1024;
 static constexpr int DEFAULT_RECONNECT_INTERVAL_SECS = 5;
 
 class ConnectionManager
@@ -72,9 +73,13 @@ public:
     stop();
 
     void
-    set_reconnect_interval(int secs);
+    set_reconnect_interval(int number_of_seconds);
+
+    void
+    set_connection_buffer_size(long number_of_bytes);
     
 private:
+    long connection_buffer_size = DEFAULT_BUFFER_SIZE;
     int reconnect_interval_secs = DEFAULT_RECONNECT_INTERVAL_SECS;
     std::mutex mutex;
     std::vector<std::unique_ptr<Connection>> active_connections;
