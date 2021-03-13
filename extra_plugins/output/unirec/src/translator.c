@@ -524,7 +524,7 @@ translator_store_time(const enum fds_iemgr_element_type type_ipx, const uint8_t 
             return 1;
         }
 
-        *field_ptr = ur_time_from_sec_msec(ts.tv_sec, ts.tv_nsec / 1000000);
+        *field_ptr = ur_time_from_sec_usec(ts.tv_sec, ts.tv_nsec / 1000);
         return 0;
     }
 
