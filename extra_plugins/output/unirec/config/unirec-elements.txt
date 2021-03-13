@@ -21,20 +21,20 @@
 
 #UNIREC NAME                   UNIREC TYPE   IPFIX IEs        DESCRIPTION
 # --- Basic fields ---
-SRC_IP                         ipaddr        e0id8,e0id27     # IPv4 or IPv6 source address
-DST_IP                         ipaddr        e0id12,e0id28    # IPv4 or IPv6 destination address
-SRC_PORT                       uint16        e0id7            # Transport protocol source port
-DST_PORT                       uint16        e0id11           # Transport protocol destination port
-PROTOCOL                       uint8         e0id4            # Transport protocol
-TCP_FLAGS                      uint8         e0id6            # TCP flags
-BYTES                          uint64        e0id1            # Number of bytes in flow
-PACKETS                        uint32        e0id2            # Number of packets in flow
-TTL                            uint8         e0id192          # IP time to live
-TOS                            uint8         e0id5            # IP type of service
-TIME_FIRST                     time          e0id150,e0id152,e0id154,e0id156 # Time of the first packet of a flow
-TIME_LAST                      time          e0id151,e0id153,e0id155,e0id157 # Time of the last packet of a flow
-DIR_BIT_FIELD                  uint8         _internal_dbf_   # Bit field used for determining incoming/outgoing flow (1 => Incoming, 0 => Outgoing)
-LINK_BIT_FIELD                 uint64        _internal_lbf_   # Bit field of links on which was flow seen
+SRC_IP                         ipaddr        e0id8,e0id27                       # IPv4 or IPv6 source address
+DST_IP                         ipaddr        e0id12,e0id28                      # IPv4 or IPv6 destination address
+SRC_PORT                       uint16        e0id7                              # Transport protocol source port
+DST_PORT                       uint16        e0id11                             # Transport protocol destination port
+PROTOCOL                       uint8         e0id4                              # Transport protocol
+TCP_FLAGS                      uint8         e0id6                              # TCP flags
+BYTES                          uint64        e0id1                              # Number of bytes in flow
+PACKETS                        uint32        e0id2                              # Number of packets in flow
+TTL                            uint8         e0id192                            # IP time to live
+TOS                            uint8         e0id5                              # IP type of service
+TIME_FIRST                     time          e0id150,e0id152,e0id154,e0id156    # Time of the first packet of a flow
+TIME_LAST                      time          e0id151,e0id153,e0id155,e0id157    # Time of the last packet of a flow
+DIR_BIT_FIELD                  uint8         _internal_dbf_                     # Bit field used for determining incoming/outgoing flow (1 => Incoming, 0 => Outgoing)
+LINK_BIT_FIELD                 uint64        _internal_lbf_                     # Bit field of links on which was flow seen
 SRC_MAC                        macaddr       e0id56
 DST_MAC                        macaddr       e0id80
 
@@ -43,99 +43,202 @@ BYTES_REV                      uint64        e29305id1
 PACKETS_REV                    uint32        e29305id2
 TCP_FLAGS_REV                  uint8         e29305id6
 
+
 # --- DNS specific fields ---
-DNS_ID                         uint16        flowmon:dnsId             # DNS transaction id
-DNS_FLAGS                      uint16        flowmon:dnsFlagsCodes     # DNS header flags
-DNS_CNT_QUESTIONS              uint16        flowmon:dnsQuestionCount  # DNS questions
-DNS_CNT_ANSWERS                uint16        flowmon:dnsAnswrecCount   # DNS answers
-DNS_CNT_AUTHS                  uint16        flowmon:dnsAuthrecCount   # DNS auth. records
-DNS_CNT_ADDIT                  uint16        flowmon:dnsAddtrecCount   # DNS additional records
-DNS_Q_NAME                     string        flowmon:dnsQname          # DNS query name
-DNS_Q_TYPE                     uint16        flowmon:dnsQtype          # DNS query type
-DNS_Q_CLASS                    uint16        flowmon:dnsQclass         # DNS query class
-DNS_RR_NAME                    string        flowmon:dnsCrrName        # DNS RR name
-DNS_RR_TYPE                    uint16        flowmon:dnsCrrType        # DNS RR type
-DNS_RR_CLASS                   uint16        flowmon:dnsCrrClass       # DNS RR class
-DNS_RR_TTL                     uint32        flowmon:dnsCrrTtl         # DNS RR ttl
-DNS_RR_RDATA                   bytes         flowmon:dnsCrrRdata       # DNS RR rdata
-DNS_RR_RLENGTH                 uint16        flowmon:dnsCrrRdataLen    # DNS RR rlenght
+DNS_ANSWERS                    uint16        cesnet:DNSAnswers                  # DNS answers
+DNS_RCODE                      uint8         cesnet:DNSRCode                    # DNS rcode
+DNS_NAME                       string        cesnet:DNSName                     # DNS name
+DNS_QTYPE                      uint16        cesnet:DNSQType                    # DNS qtype
+DNS_CLASS                      uint16        cesnet:DNSClass                    # DNS class
+DNS_RR_TTL                     uint32        cesnet:DNSRRTTL                    # DNS rr ttl
+DNS_RLENGTH                    uint16        cesnet:DNSRDataLength              # DNS rlenght
+DNS_RDATA                      bytes         cesnet:DNSRData                    # DNS rdata
+DNS_PSIZE                      uint16        cesnet:DNSPSize                    # DNS payload size
+DNS_DO                         uint8         cesnet:DNSRDO                      # DNS DNSSEC OK bit
+DNS_ID                         uint16        cesnet:DNSTransactionID            # DNS transaction id
+
+FME_DNS_FLAGS                  uint16        flowmon:dnsFlagsCodes              # DNS header flags
+FME_DNS_CNT_QUESTIONS          uint16        flowmon:dnsQuestionCount           # DNS questions
+FME_DNS_CNT_ANSWERS            uint16        flowmon:dnsAnswrecCount            # DNS answers
+FME_DNS_CNT_AUTHS              uint16        flowmon:dnsAuthrecCount            # DNS auth. records
+FME_DNS_CNT_ADDIT              uint16        flowmon:dnsAddtrecCount            # DNS additional records
+FME_DNS_Q_NAME                 string        flowmon:dnsQname                   # DNS query name
+FME_DNS_Q_TYPE                 uint16        flowmon:dnsQtype                   # DNS query type
+FME_DNS_Q_CLASS                uint16        flowmon:dnsQclass                  # DNS query class
+FME_DNS_RR_NAME                string        flowmon:dnsCrrName                 # DNS RR name
+FME_DNS_RR_TYPE                uint16        flowmon:dnsCrrType                 # DNS RR type
+FME_DNS_RR_CLASS               uint16        flowmon:dnsCrrClass                # DNS RR class
+FME_DNS_RR_RDATA               bytes         flowmon:dnsCrrRdata                # DNS RR rdata
+FME_DNS_RR_RLENGTH             uint16        flowmon:dnsCrrRdataLen             # DNS RR rlenght
+FME_DNS_ID                     uint16        flowmon:dnsId                      # DNS transaction id
+FME_DNS_RR_TTL                 uint32        flowmon:dnsCrrTtl                  # DNS rr ttl
 # Note: Old fields DNS_RCODE, DNS_PSIDE and DNS_DO are not available anymore...
 
+
+# --- SMTP specific fields ---
+SMTP_COMMAND_FLAGS             uint32        cesnet:SMTPCommands                # SMTP command flags
+SMTP_MAIL_CMD_COUNT            uint32        cesnet:SMTPMailCount               # SMTP MAIL command count
+SMTP_RCPT_CMD_COUNT            uint32        cesnet:SMTPRcptCount               # SMTP RCPT command count
+SMTP_FIRST_SENDER              string        cesnet:SMTPSender                  # SMTP first sender
+SMTP_FIRST_RECIPIENT           string        cesnet:SMTPRecipient               # SMTP first recipient
+SMTP_STAT_CODE_FLAGS           uint32        cesnet:SMTPStatusCodes             # SMTP status code flags
+SMTP_2XX_STAT_CODE_COUNT       uint32        cesnet:SMTPCode2XXCount            # SMTP 2XX status code count
+SMTP_3XX_STAT_CODE_COUNT       uint32        cesnet:SMTPCode3XXCount            # SMTP 3XX status code count
+SMTP_4XX_STAT_CODE_COUNT       uint32        cesnet:SMTPCode4XXCount            # SMTP 4XX status code count
+SMTP_5XX_STAT_CODE_COUNT       uint32        cesnet:SMTPCode5XXCount            # SMTP 5XX status code count
+SMTP_DOMAIN                    string        cesnet:SMTPDomain                  # SMTP domain
+
 # --- SIP specific fields ---
-VOIP_PACKET_TYPE               uint8         flowmon:voipPacketType
-SIP_CALL_ID                    string        flowmon:sipCallId
-SIP_CALLING_PARTY              string        flowmon:sipCallingParty
-SIP_CALLED_PARTY               string        flowmon:sipCalledParty
-SIP_VIA                        string        flowmon:sipVia
-SIP_INVITE_RINGING_TIME        uint64        flowmon:sipInviteRingingTime
-SIP_OK_TIME                    uint64        flowmon:sipOkTime
-SIP_BYE_TIME                   uint64        flowmon:sipByeTime
-SIP_RTP_IP4                    ipaddr        flowmon:sipRtpIp4
-SIP_RTP_IP6                    ipaddr        flowmon:sipRtpIp6
-SIP_RTP_AUDIO                  uint16        flowmon:sipRtpAudio
-SIP_RTP_VIDEO                  uint16        flowmon:sipRtpVideo
-SIP_STATS                      bytes         flowmon:sipStats
-RTP_CODEC                      uint8         flowmon:rtpCodec
-RTP_JITTER                     uint32        flowmon:rtpJitter
-RTCP_LOST                      uint32        flowmon:rtcpLost
-RTCP_PACKETS                   uint64        flowmon:rtcpPackets
-RTCP_OCTETS                    uint64        flowmon:rtcpOctets
-RTCP_SOURCE_COUNT              uint8         flowmon:rtcpSourceCount
+SIP_MSG_TYPE                   uint16        cesnet:SIPMsgType                  # SIP message type
+SIP_STATUS_CODE                uint16        cesnet:SIPStatusCode               # SIP status code
+SIP_CALL_ID                    string        cesnet:SIPCallID                   # SIP call id
+SIP_CALLING_PARTY              string        cesnet:SIPCallingParty             # SIP from
+SIP_CALLED_PARTY               string        cesnet:SIPCalledParty              # SIP to
+SIP_VIA                        string        cesnet:SIPVia                      # SIP VIA
+SIP_USER_AGENT                 string        cesnet:SIPUserAgent                # SIP user agent
+SIP_REQUEST_URI                string        cesnet:SIPRequestURI               # SIP request uri
+SIP_CSEQ                       string        cesnet:SIPCseq                     # SIP CSeq
+
+FME_VOIP_PACKET_TYPE           uint8         flowmon:voipPacketType
+FME_SIP_INVITE_RINGING_TIME    uint64        flowmon:sipInviteRingingTime
+FME_SIP_OK_TIME                uint64        flowmon:sipOkTime
+FME_SIP_BYE_TIME               uint64        flowmon:sipByeTime
+FME_SIP_RTP_IP4                ipaddr        flowmon:sipRtpIp4
+FME_SIP_RTP_IP6                ipaddr        flowmon:sipRtpIp6
+FME_SIP_RTP_AUDIO              uint16        flowmon:sipRtpAudio
+FME_SIP_RTP_VIDEO              uint16        flowmon:sipRtpVideo
+FME_SIP_STATS                  bytes         flowmon:sipStats
+FME_RTP_CODEC                  uint8         flowmon:rtpCodec
+FME_RTP_JITTER                 uint32        flowmon:rtpJitter
+FME_RTCP_LOST                  uint32        flowmon:rtcpLost
+FME_RTCP_PACKETS               uint64        flowmon:rtcpPackets
+FME_RTCP_OCTETS                uint64        flowmon:rtcpOctets
+FME_RTCP_SOURCE_COUNT          uint8         flowmon:rtcpSourceCount
+FME_SIP_CALL_ID                string        flowmon:sipCallId                  # SIP call id
+FME_SIP_CALLING_PARTY          string        flowmon:sipCallingParty            # SIP from
+FME_SIP_CALLED_PARTY           string        flowmon:sipCalledParty             # SIP to
+FME_SIP_VIA                    string        flowmon:sipVia                     # SIP VIA
+
+
 
 # --- HTTP elements ---
-HTTP_REQUEST_HOST              string        flowmon:httpHost
-HTTP_REQUEST_URL               string        flowmon:httpUrl
-HTTP_REQUEST_REFERER           string        flowmon:httpReferer
-HTTP_METHOD_MASK               uint16        flowmon:httpMethodMask
-HTTP_RESPONSE_CONTENT_TYPE     string        flowmon:httpContentType
-HTTP_RESPONSE_STATUS_CODE      uint16        flowmon:httpStatusCode
-HTTP_UA_OS                     uint16        flowmon:httpUaOs
-HTTP_UA_OS_MAJ                 uint16        flowmon:httpUaOsMaj
-HTTP_UA_OS_MIN                 uint16        flowmon:httpUaOsMin
-HTTP_UA_OS_BLD                 uint16        flowmon:httpUaOsBld
-HTTP_UA_APP                    uint16        flowmon:httpUaApp
-HTTP_UA_APP_MAJ                uint16        flowmon:httpUaAppMaj
-HTTP_UA_APP_MIN                uint16        flowmon:httpUaAppMin
-HTTP_UA_APP_BLD                uint16        flowmon:httpUaAppBld
+HTTP_REQUEST_METHOD_ID         uint32        e16982id500                        # HTTP request method id
+HTTP_REQUEST_HOST              string        e16982id501                        # HTTP(S) request host
+HTTP_REQUEST_URL               string        e16982id502                        # HTTP request url
+HTTP_REQUEST_AGENT_ID          uint32        e16982id503                        # HTTP request agent id
+HTTP_REQUEST_AGENT             string        e16982id504                        # HTTP request agent
+HTTP_REQUEST_REFERER           string        e16982id505                        # HTTP referer
+HTTP_RESPONSE_STATUS_CODE      uint32        e16982id506                        # HTTP response status code
+HTTP_RESPONSE_CONTENT_TYPE     string        e16982id507                        # HTTP response content type
+
+
+FME_HTTP_METHOD_ID             uint16        flowmon:httpMethodID
+FME_HTTP_UA_OS                 uint16        flowmon:httpUaOs
+FME_HTTP_UA_OS_MAJ             uint16        flowmon:httpUaOsMaj
+FME_HTTP_UA_OS_MIN             uint16        flowmon:httpUaOsMin
+FME_HTTP_UA_OS_BLD             uint16        flowmon:httpUaOsBld
+FME_HTTP_UA_APP                uint16        flowmon:httpUaApp
+FME_HTTP_UA_APP_MAJ            uint16        flowmon:httpUaAppMaj
+FME_HTTP_UA_APP_MIN            uint16        flowmon:httpUaAppMin
+FME_HTTP_UA_APP_BLD            uint16        flowmon:httpUaAppBld
+FME_HTTP_REQUEST_HOST          string        flowmon:httpHost                   # HTTP(S) request host
+FME_HTTP_REQUEST_URL           string        flowmon:httpUrl                    # HTTP request url
+FME_HTTP_RESPONSE_STATUS_CODE  uint32        flowmon:httpStatusCode             # HTTP response status code
+
 
 # --- Other fields ---
-APP_ID                         bytes         e0id95           # Application ID from libprotoident / NBAR2 / Flowmon's NBAR plugin
+IPV6_TUN_TYPE                  uint8         e16982id405                        # IPv6 tunnel type
+APP_ID                         bytes         e0id95                             # Application ID from libprotoident / NBAR2 / Flowmon's NBAR plugin
 
-# --- Flowmon TLS fields
-TLS_CONTENT_TYPE               uint8         flowmon:tlsContentType       # tlsContentType
-TLS_HANDSHAKE_TYPE             uint32        flowmon:tlsHandshakeType     # https://tools.ietf.org/html/rfc5246#appendix-A.4
-TLS_SETUP_TIME                 uint64        flowmon:tlsSetupTime         # tlsSetupTime
-TLS_SERVER_VERSION             uint16        flowmon:tlsServerVersion     # 8b major and 8b minor, 0x0303 ~ TLS1.2
-TLS_SERVER_RANDOM              bytes         flowmon:tlsServerRandom      # tlsServerRandom
-TLS_SERVER_SESSIONID           bytes         flowmon:tlsServerSessionId   # tlsServerSessionId
-TLS_CIPHER_SUITE               uint16        flowmon:tlsCipherSuite       # https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4
-TLS_ALPN                       string        flowmon:tlsAlpn              # TLS Application-Layer Protocol Negotiation https://www.iana.org/assignments/tls-extensiontype-values/tls-extensiontype-values.xhtml#alpn-protocol-ids
-TLS_SNI                        string        flowmon:tlsSni               # Server Name Indication https://en.wikipedia.org/wiki/Server_Name_Indication
-TLS_SNI_LENGTH                 uint16        flowmon:tlsSniLength         # Length of TLS_SNI field
-TLS_CLIENT_VERSION             uint16        flowmon:tlsClientVersion     # tlsClientVersion
-TLS_CIPHER_SUITES              bytes         flowmon:tlsCipherSuites      # List of 2B ciphers, beware of network byte order. See https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4
-TLS_CLIENT_RANDOM              bytes         flowmon:tlsClientRandom      # tlsClientRandom
-TLS_CLIENT_SESSIONID           bytes         flowmon:tlsClientSessionId   # tlsClientSessionId
-TLS_EXTENSION_TYPES            bytes         flowmon:tlsExtensionTypes    # tlsExtensionTypes
-TLS_EXTENSION_LENGTHS          bytes         flowmon:tlsExtensionLengths  # tlsExtensionLengths
-TLS_ELLIPTIC_CURVES            bytes         flowmon:tlsEllipticCurves    # tlsEllipticCurves
-TLS_EC_POINTFORMATS            bytes         flowmon:tlsEcPointFormats    # tlsEcPointFormats
-TLS_CLIENT_KEYLENGTH           int32         flowmon:tlsClientKeyLength   # Length of client's key
-TLS_ISSUER_CN                  string        flowmon:tlsIssuerCn          # Common name of certificate issuer
-TLS_SUBJECT_CN                 string        flowmon:tlsSubjectCn         # Certificate Common Name
-TLS_SUBJECT_ON                 string        flowmon:tlsSubjectOn         # Certificate Organization Name
-TLS_VALIDITY_NOTBEFORE         int64         flowmon:tlsValidityNotBefore # UNIX timestamp of certificate creation
-TLS_VALIDITY_NOTAFTER          int64         flowmon:tlsValidityNotAfter  # UNIX timestamp of certificate expiration
-TLS_SIGNATURE_ALG              uint16        flowmon:tlsSignatureAlg      # tlsSignatureAlg
-TLS_PUBLIC_KEYALG              uint16        flowmon:tlsPublicKeyAlg      # tlsPublicKeyAlg
-TLS_PUBLIC_KEYLENGTH           int32         flowmon:tlsPublicKeyLength   # tlsPublicKeyLength
-TLS_JA_3FINGERPRINT            bytes         flowmon:tlsJa3Fingerprint    # tlsJa3Fingerprint
+# --- TLS fields
+FME_TLS_CONTENT_TYPE           uint8         flowmon:tlsContentType             # tlsContentType
+FME_TLS_HANDSHAKE_TYPE         uint32        flowmon:tlsHandshakeType           # https://tools.ietf.org/html/rfc5246#appendix-A.4
+FME_TLS_SETUP_TIME             uint64        flowmon:tlsSetupTime               # tlsSetupTime
+FME_TLS_SERVER_VERSION         uint16        flowmon:tlsServerVersion           # 8b major and 8b minor, 0x0303 ~ TLS1.2
+FME_TLS_SERVER_RANDOM          bytes         flowmon:tlsServerRandom            # tlsServerRandom
+FME_TLS_SERVER_SESSIONID       bytes         flowmon:tlsServerSessionId         # tlsServerSessionId
+FME_TLS_CIPHER_SUITE           uint16        flowmon:tlsCipherSuite             # https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4
+FME_TLS_ALPN                   string        flowmon:tlsAlpn                    # TLS Application-Layer Protocol Negotiation https://www.iana.org/assignments/tls-extensiontype-values/tls-extensiontype-values.xhtml#alpn-protocol-ids
+FME_TLS_SNI                    string        flowmon:tlsSni                     # Server Name Indication https://en.wikipedia.org/wiki/Server_Name_Indication
+FME_TLS_SNI_LENGTH             uint16        flowmon:tlsSniLength               # Length of TLS_SNI field
+FME_TLS_CLIENT_VERSION         uint16        flowmon:tlsClientVersion           # tlsClientVersion
+FME_TLS_CIPHER_SUITES          bytes         flowmon:tlsCipherSuites            # List of 2B ciphers, beware of network byte order. See https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4
+FME_TLS_CLIENT_RANDOM          bytes         flowmon:tlsClientRandom            # tlsClientRandom
+FME_TLS_CLIENT_SESSIONID       bytes         flowmon:tlsClientSessionId         # tlsClientSessionId
+FME_TLS_EXTENSION_TYPES        bytes         flowmon:tlsExtensionTypes          # tlsExtensionTypes
+FME_TLS_EXTENSION_LENGTHS      bytes         flowmon:tlsExtensionLengths        # tlsExtensionLengths
+FME_TLS_ELLIPTIC_CURVES        bytes         flowmon:tlsEllipticCurves          # tlsEllipticCurves
+FME_TLS_EC_POINTFORMATS        bytes         flowmon:tlsEcPointFormats          # tlsEcPointFormats
+FME_TLS_CLIENT_KEYLENGTH       int32         flowmon:tlsClientKeyLength         # Length of client's key
+FME_TLS_ISSUER_CN              string        flowmon:tlsIssuerCn                # Common name of certificate issuer
+FME_TLS_SUBJECT_CN             string        flowmon:tlsSubjectCn               # Certificate Common Name
+FME_TLS_SUBJECT_ON             string        flowmon:tlsSubjectOn               # Certificate Organization Name
+FME_TLS_VALIDITY_NOTBEFORE     int64         flowmon:tlsValidityNotBefore       # UNIX timestamp of certificate creation
+FME_TLS_VALIDITY_NOTAFTER      int64         flowmon:tlsValidityNotAfter        # UNIX timestamp of certificate expiration
+FME_TLS_SIGNATURE_ALG          uint16        flowmon:tlsSignatureAlg            # tlsSignatureAlg
+FME_TLS_PUBLIC_KEYALG          uint16        flowmon:tlsPublicKeyAlg            # tlsPublicKeyAlg
+FME_TLS_PUBLIC_KEYLENGTH       int32         flowmon:tlsPublicKeyLength         # tlsPublicKeyLength
+FME_TLS_JA_3FINGERPRINT        bytes         flowmon:tlsJa3Fingerprint          # tlsJa3Fingerprint
+
+TLS_SNI                        string        cesnet:TLSSNI                      # Server Name Indication https://en.wikipedia.org/wiki/Server_Name_Indication
+TLS_JA_3FINGERPRINT            bytes         cesnet:tlsJa3Fingerprint           # tlsJa3Fingerprint
+
+
 
 # --- Per-Packet Information elements ---
-PPI_TLS_REC_LENGTHS            int16*        e0id291/e8057id1010          # basicList of TLS record lengths
-PPI_TLS_REC_TIMES             uint16*        e0id291/e8057id1011          # basicList of TLS record timestamps
-PPI_TLS_CONTENT_TYPES          uint8*        e0id291/e8057id1012          # basicList of TLS record content types
-PPI_PKT_LENGTHS                int16*        e0id291/e8057id1013          # basicList of packet lengths
-PPI_PKT_TIMES                   time*        e0id291/e8057id1014          # basicList of packet timestamps
-PPI_PKT_FLAGS                   int8*        e0id291/e8057id1015          # basicList of packet TCP flags
-PPI_PKT_DIRECTIONS              int8*        e0id291/e8057id1016          # basicList of packet directions
+PPI_PKT_LENGTHS                uint16*       e0id291/cesnet:packetLength         # basicList of packet lengths
+PPI_PKT_TIMES                  time*         e0id291/cesnet:packetTime           # basicList of packet timestamps
+PPI_PKT_FLAGS                  uint8*        e0id291/cesnet:packetFlag           # basicList of packet TCP flags
+PPI_PKT_DIRECTIONS             int8*         e0id291/cesnet:packetDirection      # basicList of packet directions
+
+# --- SSDP Information elements ---
+
+SSDP_LOCATION_PORT             uint16        cesnet:SSDPLocationPort
+SSDP_SERVER                    string        cesnet:SSDPServer
+SSDP_USER_AGENT                string        cesnet:SSDPUserAgent
+SSDP_NT                        string        cesnet:SSDPNT
+SSDP_ST                        string        cesnet:SSDPST
+
+# --- DNSDD Information elements ---
+
+DNSSD_QUERIES                  string        cesnet:DNSSDQueries
+DNSSD_RESPONSES                string        cesnet:DNSSDResponses
+
+# --- OVPN Information elements ---
+
+OVPN_CONF_LEVEL                 uint8        cesnet:OVPNConfLevel
+
+# --- NTP Information elements  ---
+NTP_LEAP                        uint8        cesnet:NTPLeap
+NTP_VERSION                     uint8        cesnet:NTPVersion
+NTP_MODE                        uint8        cesnet:NTPMode
+NTP_STRATUM                     uint8        cesnet:NTPStratum
+NTP_POLL                        uint8        cesnet:NTPPoll
+NTP_PRECISION                   uint8        cesnet:NTPPrecision
+NTP_DELAY                       uint32       cesnet:NTPDelay
+NTP_DISPERSION                  uint32       cesnet:NTPDispersion
+NTP_REF_ID                      string       cesnet:NTPRefID
+NTP_REF                         string       cesnet:NTPRef
+NTP_ORIG                        string       cesnet:NTPOrig
+NTP_RECV                        string       cesnet:NTPRecv
+NTP_SENT                        string       cesnet:NTPSent
+
+# --- ARP Information elements  ---
+
+ARP_HA_FORMAT                   uint16       cesnet:ARPHAFormat
+ARP_PA_FORMAT                   uint16       cesnet:ARPPAFormat
+ARP_OPCODE                      uint16       cesnet:ARPOpcode
+ARP_SRC_HA                      bytes        cesnet:ARPSrcHA
+ARP_SRC_PA                      bytes        cesnet:ARPSrcPA
+ARP_DST_HA                      bytes        cesnet:ARPDstHA
+ARP_DST_PA                      bytes        cesnet:ARPDstPa
+
+# --- NetBios Information elements  ---
+
+NB_NAME                         string      cesnet:NBName
+NB_SUFFIX                       uint8       cesnet:NBSuffix
+
+# --- IDPContent Information elements  ---
+
+IDP_CONTENT                     bytes       cesnet:IDPContent
+IDP_CONTENT_REV                 bytes       cesnet:IDPContentRev
