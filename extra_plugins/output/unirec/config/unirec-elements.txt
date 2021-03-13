@@ -127,7 +127,6 @@ HTTP_REQUEST_REFERER           string        e16982id505                        
 HTTP_RESPONSE_STATUS_CODE      uint32        e16982id506                        # HTTP response status code
 HTTP_RESPONSE_CONTENT_TYPE     string        e16982id507                        # HTTP response content type
 
-FME_HTTP_METHOD_ID             uint16        flowmon:httpMethodID
 FME_HTTP_UA_OS                 uint16        flowmon:httpUaOs
 FME_HTTP_UA_OS_MAJ             uint16        flowmon:httpUaOsMaj
 FME_HTTP_UA_OS_MIN             uint16        flowmon:httpUaOsMin
@@ -136,9 +135,11 @@ FME_HTTP_UA_APP                uint16        flowmon:httpUaApp
 FME_HTTP_UA_APP_MAJ            uint16        flowmon:httpUaAppMaj
 FME_HTTP_UA_APP_MIN            uint16        flowmon:httpUaAppMin
 FME_HTTP_UA_APP_BLD            uint16        flowmon:httpUaAppBld
+FME_HTTP_METHOD_MASK           uint16        flowmon:httpMethodMask
 FME_HTTP_REQUEST_HOST          string        flowmon:httpHost                   # HTTP(S) request host
 FME_HTTP_REQUEST_URL           string        flowmon:httpUrl                    # HTTP request url
 FME_HTTP_RESPONSE_STATUS_CODE  uint32        flowmon:httpStatusCode             # HTTP response status code
+FME_HTTP_REQUEST_USER_AGENT    string        flowmon:httpUserAgent
 
 # --- Other fields ---
 IPV6_TUN_TYPE                  uint8         e16982id405                        # IPv6 tunnel type
