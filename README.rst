@@ -87,11 +87,11 @@ Second, install build dependencies of the collector
 * Note: latest systems (e.g. Fedora/CentOS 8) use ``dnf`` instead of ``yum``.
 * Note: package ``python3-docutils`` may by also named as ``python-docutils`` or ``python2-docutils``
 * Note: package ``pkgconfig`` may by also named as ``pkg-config``
-* Note: CentOS 8 requires additional system repositories (``AppStream`` and ``PowerTools``) to be enabled:
+* Note: CentOS 8 requires additional system repositories (``appstream`` and ``powertools``) to be enabled:
 
 .. code-block::
 
-    dnf config-manager --set-enabled AppStream PowerTools
+    dnf config-manager --set-enabled appstream powertools
 
 **Debian/Ubuntu:**
 
