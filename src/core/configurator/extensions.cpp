@@ -40,6 +40,7 @@
  */
 
 #include <algorithm>
+#include <stdexcept>
 #include "extensions.hpp"
 
 extern "C" {
