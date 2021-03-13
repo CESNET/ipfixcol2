@@ -43,7 +43,6 @@ BYTES_REV                      uint64        e29305id1
 PACKETS_REV                    uint32        e29305id2
 TCP_FLAGS_REV                  uint8         e29305id6
 
-
 # --- DNS specific fields ---
 DNS_ANSWERS                    uint16        cesnet:DNSAnswers                  # DNS answers
 DNS_RCODE                      uint8         cesnet:DNSRCode                    # DNS rcode
@@ -73,7 +72,6 @@ FME_DNS_RR_RLENGTH             uint16        flowmon:dnsCrrRdataLen             
 FME_DNS_ID                     uint16        flowmon:dnsId                      # DNS transaction id
 FME_DNS_RR_TTL                 uint32        flowmon:dnsCrrTtl                  # DNS rr ttl
 # Note: Old fields DNS_RCODE, DNS_PSIDE and DNS_DO are not available anymore...
-
 
 # --- SMTP specific fields ---
 SMTP_COMMAND_FLAGS             uint32        cesnet:SMTPCommands                # SMTP command flags
@@ -119,8 +117,6 @@ FME_SIP_CALLING_PARTY          string        flowmon:sipCallingParty            
 FME_SIP_CALLED_PARTY           string        flowmon:sipCalledParty             # SIP to
 FME_SIP_VIA                    string        flowmon:sipVia                     # SIP VIA
 
-
-
 # --- HTTP elements ---
 HTTP_REQUEST_METHOD_ID         uint32        e16982id500                        # HTTP request method id
 HTTP_REQUEST_HOST              string        e16982id501                        # HTTP(S) request host
@@ -130,7 +126,6 @@ HTTP_REQUEST_AGENT             string        e16982id504                        
 HTTP_REQUEST_REFERER           string        e16982id505                        # HTTP referer
 HTTP_RESPONSE_STATUS_CODE      uint32        e16982id506                        # HTTP response status code
 HTTP_RESPONSE_CONTENT_TYPE     string        e16982id507                        # HTTP response content type
-
 
 FME_HTTP_METHOD_ID             uint16        flowmon:httpMethodID
 FME_HTTP_UA_OS                 uint16        flowmon:httpUaOs
@@ -144,7 +139,6 @@ FME_HTTP_UA_APP_BLD            uint16        flowmon:httpUaAppBld
 FME_HTTP_REQUEST_HOST          string        flowmon:httpHost                   # HTTP(S) request host
 FME_HTTP_REQUEST_URL           string        flowmon:httpUrl                    # HTTP request url
 FME_HTTP_RESPONSE_STATUS_CODE  uint32        flowmon:httpStatusCode             # HTTP response status code
-
 
 # --- Other fields ---
 IPV6_TUN_TYPE                  uint8         e16982id405                        # IPv6 tunnel type
@@ -183,8 +177,6 @@ FME_TLS_JA_3FINGERPRINT        bytes         flowmon:tlsJa3Fingerprint          
 TLS_SNI                        string        cesnet:TLSSNI                      # Server Name Indication https://en.wikipedia.org/wiki/Server_Name_Indication
 TLS_JA_3FINGERPRINT            bytes         cesnet:tlsJa3Fingerprint           # tlsJa3Fingerprint
 
-
-
 # --- Per-Packet Information elements ---
 PPI_PKT_LENGTHS                uint16*       e0id291/cesnet:packetLength         # basicList of packet lengths
 PPI_PKT_TIMES                  time*         e0id291/cesnet:packetTime           # basicList of packet timestamps
@@ -192,7 +184,6 @@ PPI_PKT_FLAGS                  uint8*        e0id291/cesnet:packetFlag          
 PPI_PKT_DIRECTIONS             int8*         e0id291/cesnet:packetDirection      # basicList of packet directions
 
 # --- SSDP Information elements ---
-
 SSDP_LOCATION_PORT             uint16        cesnet:SSDPLocationPort
 SSDP_SERVER                    string        cesnet:SSDPServer
 SSDP_USER_AGENT                string        cesnet:SSDPUserAgent
@@ -200,12 +191,10 @@ SSDP_NT                        string        cesnet:SSDPNT
 SSDP_ST                        string        cesnet:SSDPST
 
 # --- DNSDD Information elements ---
-
 DNSSD_QUERIES                  string        cesnet:DNSSDQueries
 DNSSD_RESPONSES                string        cesnet:DNSSDResponses
 
 # --- OVPN Information elements ---
-
 OVPN_CONF_LEVEL                 uint8        cesnet:OVPNConfLevel
 
 # --- NTP Information elements  ---
@@ -224,7 +213,6 @@ NTP_RECV                        string       cesnet:NTPRecv
 NTP_SENT                        string       cesnet:NTPSent
 
 # --- ARP Information elements  ---
-
 ARP_HA_FORMAT                   uint16       cesnet:ARPHAFormat
 ARP_PA_FORMAT                   uint16       cesnet:ARPPAFormat
 ARP_OPCODE                      uint16       cesnet:ARPOpcode
@@ -234,11 +222,9 @@ ARP_DST_HA                      bytes        cesnet:ARPDstHA
 ARP_DST_PA                      bytes        cesnet:ARPDstPa
 
 # --- NetBios Information elements  ---
-
 NB_NAME                         string      cesnet:NBName
 NB_SUFFIX                       uint8       cesnet:NBSuffix
 
 # --- IDPContent Information elements  ---
-
 IDP_CONTENT                     bytes       cesnet:IDPContent
 IDP_CONTENT_REV                 bytes       cesnet:IDPContentRev
