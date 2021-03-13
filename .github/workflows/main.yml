@@ -36,7 +36,7 @@ jobs:
       if: startsWith(matrix.image, 'centos:8')
       run: |
         dnf -y install 'dnf-command(config-manager)'
-        dnf config-manager --set-enabled AppStream PowerTools
+        dnf config-manager --set-enabled appstream powertools
     - name: Install dependencies  for libfds and IPFIXcol2 (CentOS)
       if: startsWith(matrix.image, 'centos')
       run: |
