@@ -47,7 +47,7 @@ network interface and a port. Multiple instances of these plugins can run concur
 - `FDS File <src/plugins/output/fds>`_ - store all flows in FDS file format (efficient long-term storage)
 - `IPFIX File <src/plugins/output/ipfix>`_ - store all flows in IPFIX File format
 - `JSON <src/plugins/output/json>`_ - convert flow records to JSON and send/store them
-- `JSON <src/plugins/output/json-kafka>`_ - convert flow records to JSON and send them to Apache Kafka
+- `JSON-Kafka <src/plugins/output/json-kafka>`_ - convert flow records to JSON and send them to Apache Kafka
 - `Viewer <src/plugins/output/viewer>`_ - convert IPFIX into plain text and print
   it on standard output
 - `Time Check <src/plugins/output/timecheck>`_ - flow timestamp check
