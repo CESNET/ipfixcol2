@@ -8,6 +8,7 @@
 #ifndef FDS_BUILDER_HPP
 #define FDS_BUILDER_HPP
 
+#include <cstdlib>
 #include <memory>
 #include <libfds.h>
 
