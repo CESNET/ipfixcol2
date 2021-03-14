@@ -50,11 +50,11 @@
 /// Plugin definition
 IPX_API struct ipx_plugin_info ipx_plugin_info = {
     "forwarder",
-    "Example output plugin.",
+    "Forward flow records as IPFIX to one or more subcollectors.",
     IPX_PT_OUTPUT,
     0,
     "1.0.0",
-    "2.0.0"
+    "2.2.0"
 };
 
 int
