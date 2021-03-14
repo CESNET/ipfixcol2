@@ -259,6 +259,10 @@ with each other.
 
 :``kafka``:
     Send data to Kafka i.e. Kafka producer.
+    
+    **Warning:** Library librdkafka < ``1.5.0`` contains a bug which might prevent the plugin 
+    from starting. If so, use ``json-kafka`` output plugin which implements workaround for this 
+    issue.
 
     :``name``: Identification name of the output. Used only for readability.
     :``brokers``:
