@@ -85,6 +85,7 @@ struct ifc_common {
 /*
  *  <params>
  *      <uniRecFormat>DST_IP,SRC_IP,BYTES,DST_PORT,?TCP_FLAGS,SRC_PORT,PROTOCOL</uniRecFormat>
+ *      <splitBiflow>true</splitBiflow>
  *      <trapIfcCommon>                                                           <!-- optional -->
  *          <timeout>NO_WAIT</timeout>                                            <!-- optional -->
  *          <buffer>true</buffer>                                                 <!-- optional -->
@@ -121,6 +122,7 @@ struct ifc_common {
 enum params_xml_nodes {
     // Main parameters
     NODE_UNIREC_FMT = 1,
+    NODE_BIFLOW_SPLIT,
     NODE_TRAP_COMMON,
     NODE_TRAP_SPEC,
     // TRAP common parameters
@@ -205,6 +207,7 @@ static const struct fds_xml_args args_trap_common[] = {
 static const struct fds_xml_args args_params[] = {
     FDS_OPTS_ROOT("params"),
     FDS_OPTS_ELEM(NODE_UNIREC_FMT,     "uniRecFormat",  FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_ELEM(NODE_BIFLOW_SPLIT,   "splitBiflow",   FDS_OPTS_T_BOOL,   FDS_OPTS_P_OPT),
     FDS_OPTS_NESTED(NODE_TRAP_COMMON,  "trapIfcCommon", args_trap_common,  FDS_OPTS_P_OPT),
     FDS_OPTS_NESTED(NODE_TRAP_SPEC,    "trapIfcSpec",   args_trap_spec,    0),
     FDS_OPTS_END
@@ -775,7 +778,10 @@ cfg_parse_params(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct conf_params *cfg)
 {
     int rc;
 
-    // Prepare default TRAP common parameters
+    // Set default values
+    cfg->biflow_split = true;
+
+    // Set default TRAP common parameters
     struct ifc_common common;
     common.autoflush = DEF_IFC_AUTOFLUSH;
     common.buffer =    DEF_IFC_BUFFER;
@@ -794,6 +800,11 @@ cfg_parse_params(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct conf_params *cfg)
                 IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
                 return IPX_ERR_NOMEM;
             }
+            break;
+        case NODE_BIFLOW_SPLIT:
+            // Split biflow
+            assert(content->type == FDS_OPTS_T_BOOL);
+            cfg->biflow_split = content->val_bool;
             break;
         case NODE_TRAP_SPEC:
             // TRAP output interface specifier

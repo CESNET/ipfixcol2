@@ -1,0 +1,58 @@
+<!-- 
+  Receive flow data over UDP, convert them into JSON and provide them as
+  a server on local port
+-->
+<ipfixcol2>
+  <!-- Input plugins -->
+  <inputPlugins>
+    <input>
+      <name>UDP collector</name>
+      <plugin>udp</plugin>
+      <params>
+        <!-- List on port 4739 -->
+        <localPort>4739</localPort>
+        <!-- Bind to all local adresses -->
+        <localIPAddress></localIPAddress>
+      </params>
+    </input>
+  </inputPlugins>
+
+  <!-- Output plugins -->
+  <outputPlugins>
+    <output>
+      <name>JSON output</name>
+      <plugin>json-kafka</plugin>
+      <params>
+        <!-- JSON format paramters -->
+        <tcpFlags>formatted</tcpFlags>
+        <timestamp>formatted</timestamp>
+        <protocol>formatted</protocol>
+        <ignoreUnknown>true</ignoreUnknown>
+        <ignoreOptions>true</ignoreOptions>
+        <nonPrintableChar>true</nonPrintableChar>
+        <octetArrayAsUint>true</octetArrayAsUint>
+        <numericNames>false</numericNames>
+        <splitBiflow>false</splitBiflow>
+        <detailedInfo>false</detailedInfo>
+        <templateInfo>false</templateInfo>
+
+        <!-- Output methods -->
+        <outputs>
+          <kafka>
+            <name>Send to Kafka</name>
+            <brokers>127.0.0.1</brokers>
+            <topic>ipfix</topic>
+            <blocking>false</blocking>
+            <partition>unassigned</partition>
+
+            <!-- Zero or more additional properties -->
+            <property>
+              <key>compression.codec</key>
+              <value>lz4</value>
+            </property>
+          </kafka>
+        </outputs>
+      </params>
+    </output>
+  </outputPlugins>
+</ipfixcol2>

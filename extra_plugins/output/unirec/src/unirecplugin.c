@@ -78,7 +78,7 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
     // Configuration flags (reserved for future use)
     .flags = 0,
     // Plugin version string (like "1.2.3")
-    .version = "2.1.0",
+    .version = "2.2.0",
     // Minimal IPFIXcol version string (like "1.2.3")
     .ipx_min = "2.0.0"
 };
@@ -354,6 +354,7 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
 {
     (void) ctx;
     struct conf_unirec *conf = (struct conf_unirec *) cfg;
+    const bool split_enabled = conf->params->biflow_split;
     IPX_CTX_DEBUG(ctx, "Received a new message to process.");
 
     uint16_t msg_size = 0;
@@ -367,10 +368,11 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
     for (uint32_t i = 0; i < rec_cnt; i++) {
         // Get a pointer to the next record
         struct ipx_ipfix_record *ipfix_rec = ipx_msg_ipfix_get_drec(ipfix, i);
-        bool biflow = (ipfix_rec->rec.tmplt->flags & FDS_TEMPLATE_BIFLOW) != 0;
+        bool rec_is_biflow = (ipfix_rec->rec.tmplt->flags & FDS_TEMPLATE_BIFLOW) != 0;
+        bool biflow_split = split_enabled && rec_is_biflow;
 
-        // Fill record
-        uint16_t flags = biflow ? FDS_DREC_BIFLOW_FWD : 0; // In case of biflow, forward fields only
+        // Fill record (Note: in case of biflow split, forward fields only)
+        uint16_t flags = biflow_split ? (FDS_DREC_BIFLOW_FWD | FDS_DREC_REVERSE_SKIP) : 0;
         msg_data = translator_translate(conf->trans, &ipfix_rec->rec, flags, &msg_size);
         if (!msg_data) {
             // Nothing to send
@@ -380,12 +382,12 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
         IPX_CTX_DEBUG(ctx, "Send via TRAP IFC.");
         trap_ctx_send(conf->trap_ctx, 0, msg_data, msg_size);
 
-        // Is it biflow? Send the reverse direction
-        if (!biflow) {
+        // Is it biflow and split is enabled? Send the reverse direction
+        if (!biflow_split) {
             continue;
         }
 
-        flags = FDS_DREC_BIFLOW_REV;
+        flags = FDS_DREC_BIFLOW_REV | FDS_DREC_REVERSE_SKIP;
         msg_data = translator_translate(conf->trans, &ipfix_rec->rec, flags, &msg_size);
         if (!msg_data) {
             // Nothing to send

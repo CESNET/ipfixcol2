@@ -169,6 +169,8 @@ of IPFIXcol. Always keep in mind that you should modify a configuration to fit y
 
 :`udp2json <../data/configs/udp2json.xml>`_:
     Receive flow data over UDP, convert them into JSON and provide them as a server on local port.
+:`udp2json-kafka <../data/configs/udp2json-kafka.xml>`_:
+    Receive flow data over UDP, convert them into JSON and send them to Apache Kafka.
 :`tcp2anon2json <../data/configs/tcp2anon2json.xml>`_:
     Receive  flow data over TCP, anonymize them and store in JSON format on a local drive.
 :`tcpUdp2lnf <../data/configs/tcpUdp2lnf.xml>`_:

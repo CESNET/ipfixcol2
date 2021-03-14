@@ -2,27 +2,14 @@ if (POLICY CMP0063)
     cmake_policy(SET CMP0063 NEW)
 endif()
 
+include(CheckSymbolExists)
+check_symbol_exists("RTLD_DEEPBIND" "dlfcn.h" HAVE_RTLD_DEEPBIND)
+
 # Configure a header file to pass some CMake variables
 configure_file(
     "${PROJECT_SOURCE_DIR}/src/build_config.h.in"
     "${PROJECT_BINARY_DIR}/src/build_config.h"
 )
-
-# Find libfds
-find_package(LibFds 0.2.0 REQUIRED)
-# Find rst2man
-
-if (ENABLE_DOC_MANPAGE)
-    find_package(Rst2Man)
-    if (NOT RST2MAN_FOUND)
-        message(FATAL_ERROR "rst2man is not available. Install python-docutils or disable manual page generation (-DENABLE_DOC_MANPAGE=False)")
-    endif()
-endif()
-
-# Find pthreads
-set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-set(THREADS_PREFER_PTHREAD_FLAG TRUE)
-find_package(Threads REQUIRED)
 
 # Header files for source code building
 include_directories(

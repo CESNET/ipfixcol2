@@ -51,13 +51,15 @@
 
 /** XML nodes */
 enum params_xml_nodes {
-    NODE_DELAY = 1
+    NODE_DELAY = 1,
+    NODE_STATS
 };
 
 /** Definition of the \<params\> node  */
 static const struct fds_xml_args args_params[] = {
     FDS_OPTS_ROOT("params"),
     FDS_OPTS_ELEM(NODE_DELAY, "delay", FDS_OPTS_T_UINT, 0),
+    FDS_OPTS_ELEM(NODE_STATS, "stats", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
     FDS_OPTS_END
 };
 
@@ -83,6 +85,10 @@ config_parser_root(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct instance_config *
             cfg->sleep_time.tv_nsec = (content->val_uint % 1000000LL) * 1000LL;
             cfg->sleep_time.tv_sec  = content->val_uint / 1000000LL;
             break;
+        case NODE_STATS:
+            assert(content->type == FDS_OPTS_T_BOOL);
+            cfg->en_stats = content->val_bool;
+            break;
         default:
             // Internal error
             assert(false);
@@ -101,6 +107,7 @@ config_default_set(struct instance_config *cfg)
 {
     cfg->sleep_time.tv_sec = 0;
     cfg->sleep_time.tv_nsec = 100000000LL; // 100ms between messages
+    cfg->en_stats = false;
 }
 
 struct instance_config *

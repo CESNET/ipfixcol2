@@ -29,24 +29,28 @@ No problem, pick any combination of plugins.
 Available plugins
 -----------------
 
-**Input plugins** - receive IPFIX data. Each can be configured to to listen on a specific
+**Input plugins** - receive NetFlow/IPFIX data. Each can be configured to listen on a specific
 network interface and a port. Multiple instances of these plugins can run concurrently.
 
-- `UDP <src/plugins/input/udp>`_ - receives NetFlow v5/v9 and IPFIX over UDP
-- `TCP <src/plugins/input/tcp>`_ - receives IPFIX over TCP
+- `UDP <src/plugins/input/udp>`_ - receive NetFlow v5/v9 and IPFIX over UDP
+- `TCP <src/plugins/input/tcp>`_ - receive IPFIX over TCP
+- `FDS File <src/plugins/input/fds>`_ - read flow data from FDS File (efficient long-term storage)
+- `IPFIX File <src/plugins/input/ipfix>`_ - read flow data from IPFIX File
 
 **Intermediate plugins** - modify, enrich and filter flow records.
 
-- `anonymization <src/plugins/intermediate/anonymization/>`_ - anonymize IP addresses
+- `Anonymization <src/plugins/intermediate/anonymization/>`_ - anonymize IP addresses
   (in flow records) with Crypto-PAn algorithm
 
 **Output plugins** - store or forward your flows.
 
-- `FDS file <src/plugins/output/fds>`_ - store all flows in FDS file format (efficient long-term storage)
+- `FDS File <src/plugins/output/fds>`_ - store all flows in FDS file format (efficient long-term storage)
+- `Forwarder <src/plugins/output/forwarder>`_ - forward flows as IPFIX to one or mode subcollectors
+- `IPFIX File <src/plugins/output/ipfix>`_ - store all flows in IPFIX File format
 - `JSON <src/plugins/output/json>`_ - convert flow records to JSON and send/store them
+- `JSON-Kafka <src/plugins/output/json-kafka>`_ - convert flow records to JSON and send them to Apache Kafka
 - `Viewer <src/plugins/output/viewer>`_ - convert IPFIX into plain text and print
   it on standard output
-- `IPFIX file <src/plugins/output/ipfix>`_ - store all flows in IPFIX File format
 - `Time Check <src/plugins/output/timecheck>`_ - flow timestamp check
 - `Dummy <src/plugins/output/dummy>`_ - simple output module example
 - `lnfstore <extra_plugins/output/lnfstore>`_ (*) - store all flows in nfdump compatible
@@ -79,24 +83,31 @@ Second, install build dependencies of the collector
 
 .. code-block::
 
-    yum install gcc gcc-c++ cmake make python3-docutils zlib-devel
+    yum install gcc gcc-c++ cmake make python3-docutils zlib-devel librdkafka-devel
     # Optionally: doxygen pkgconfig
 
-* Note: latest systems (e.g. Fedora) use ``dnf`` instead of ``yum``.
+* Note: latest systems (e.g. Fedora/CentOS 8) use ``dnf`` instead of ``yum``.
 * Note: package ``python3-docutils`` may by also named as ``python-docutils`` or ``python2-docutils``
 * Note: package ``pkgconfig`` may by also named as ``pkg-config``
+* Note: CentOS 8 requires additional system repositories (``appstream`` and ``powertools``) to be enabled:
+
+.. code-block::
+
+    dnf config-manager --set-enabled appstream powertools
 
 **Debian/Ubuntu:**
 
 .. code-block::
 
-    apt-get install gcc g++ cmake make python3-docutils zlib1g-dev
+    apt-get install gcc g++ cmake make python3-docutils zlib1g-dev librdkafka-dev
     # Optionally: doxygen pkg-config
 
 Finally, build and install the collector:
 
 .. code-block:: bash
 
+    $ git clone https://github.com/CESNET/ipfixcol2.git
+    $ cd ipfixcol2
     $ mkdir build && cd build && cmake ..
     $ make
     # make install

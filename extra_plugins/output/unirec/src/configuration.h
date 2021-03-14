@@ -59,6 +59,8 @@ struct conf_params {
     char *unirec_spec;
     /** The same as \ref conf_params.unirec_spec, however, question marks have been removed  */
     char *unirec_fmt;
+    /** Split biflow record to 2 unidirectional flows                                        */
+    bool biflow_split;
 };
 
 /**

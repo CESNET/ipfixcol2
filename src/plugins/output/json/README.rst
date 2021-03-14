@@ -96,6 +96,7 @@ Don't forget to remove (or comment) outputs that you don't want to use!
             <templateInfo>false</templateInfo>
 
             <outputs>
+                <!-- Choose one or more of the following outputs -->
                 <server>
                     <name>Local server</name>
                     <port>8000</port>
@@ -122,6 +123,20 @@ Don't forget to remove (or comment) outputs that you don't want to use!
                     <timeAlignment>yes</timeAlignment>
                     <compression>none</compression>
                 </file>
+
+                <kafka>
+                    <name>Send to Kafka</name>
+                    <brokers>127.0.0.1</brokers>
+                    <topic>ipfix</topic>
+                    <blocking>false</blocking>
+                    <partition>unassigned</partition>
+
+                    <!-- Zero or more additional properties -->
+                    <property>
+                        <key>compression.codec</key>
+                        <value>lz4</value>
+                    </property>
+                </kafka>
             </outputs>
         </params>
     </output>
@@ -187,8 +202,9 @@ Formatting parameters:
 
 ----
 
-Output types: At least one of the following output must be configured. Multiple server/send/file
-outputs can be used at the same time if the outputs are not in collision with each other.
+Output types: At least one of the following output must be configured. Multiple
+server/send/file/kafka outputs can be used at the same time if the outputs are not in collision
+with each other.
 
 :``server``:
     TCP (push) server provides data on a local port. Converted records are automatically send to
@@ -240,6 +256,46 @@ outputs can be used at the same time if the outputs are not in collision with ea
 
         :``none``: Compression disabled [default]
         :``gzip``: GZIP compression
+
+:``kafka``:
+    Send data to Kafka i.e. Kafka producer.
+    
+    **Warning:** Library librdkafka < ``1.5.0`` contains a bug which might prevent the plugin 
+    from starting. If so, use ``json-kafka`` output plugin which implements workaround for this 
+    issue.
+
+    :``name``: Identification name of the output. Used only for readability.
+    :``brokers``:
+        Initial list of brokers as a CSV list of broker "host" or "host:port".
+    :``topic``:
+        Kafka topic to produce to.
+    :``partition``:
+        Partition number to produce to. If the value is "unassigned", then the default random
+        distribution is used. [default: "unassigned"]
+    :``brokerVersion``:
+        Older broker versions (before 0.10.0) provide no way for a client to query for
+        supported protocol features making it impossible for the client to know what features
+        it may use. As a workaround a user may set this property to the expected broker
+        version and the client will automatically adjust its feature set.
+        [default: <empty>]
+    :``blocking``:
+        Enable blocking on produce. If disabled and a cluster is down or not able
+        to retrieve records fast enough, some flow records may be dropped. On the other hand,
+        if enabled, no records are dropped. However, if the cluster is slow or not accessible
+        at all, the plugin waits (i.e. blocks) until data are send. This can significantly slow
+        down or block(!) the whole collector and other output plugins [true/false, default: false]
+    :``performanceTuning``:
+        By default, the connection provided by librdkafka is not optimized for high throughput
+        required for transport of JSON records. This option adds optional library parameters,
+        which reduces messaging overhead and significantly improves throughput. In particular,
+        Kafka message capacity is increased and maximal buffering interval is prolonged.
+        These options can be overwritten by user defined properties.
+        [true/false, default: true]
+    :``property``:
+        Additional configuration properties of librdkafka library as key/value pairs.
+        Multiple <property> parameters, which can improve performance, can be defined.
+        See the project website for the full list of supported options. Keep on mind that
+        some options might not be available in all versions of the library.
 
 :``print``:
     Write data on standard output.

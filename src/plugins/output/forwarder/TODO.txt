@@ -1,0 +1,5 @@
+* Template withdrawals
+* More effective way of handling template changes - currently all the templates are being sent again every time any change in templates is detected
+* Message MTU
+* Possible bug: when testing, a small number of data records seems to be lost (something like 20 out of 1,000,000)
+* Connection buffer size

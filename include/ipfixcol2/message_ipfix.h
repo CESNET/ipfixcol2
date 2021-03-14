@@ -51,7 +51,6 @@ extern "C" {
 
 #include <ipfixcol2/api.h>
 #include "session.h"
-#include "plugins.h"
 
 /**
  * \defgroup ipxMsgIPFIX IPFIX message
@@ -99,11 +98,16 @@ struct ipx_ipfix_set {
  * \brief Data record (record + extensions)
  */
 struct ipx_ipfix_record {
-    /** Data record information                                               */
+    /** Data record information                                                 */
     struct fds_drec rec;
-    /** Start of reserved space for registered extensions (filled by plugins) */
+
+    /** Bit mask of filled extensions (set by producers)                        */
+    uint64_t ext_mask;
+    /** Start of reserved space for registered extensions (filled by producers) */
     uint8_t ext[1];
 };
+
+#include "plugins.h"
 
 /**
  * \brief Create an empty wrapper around IPFIX (or NetFlow) Message

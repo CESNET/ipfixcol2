@@ -101,6 +101,13 @@ map_clear(map_t *map)
 {
     for (size_t i = 0; i < map->rec_size; ++i) {
         struct map_rec *rec = map->rec_array[i];
+        struct map_ipfix_s *ipfix = rec->ipfix.next;
+        while (ipfix) {
+           struct map_ipfix_s *tmp = ipfix->next;
+           free(ipfix);
+           ipfix = tmp;
+        }
+
         free(rec->unirec.name);
         free(rec->unirec.type_str);
         free(rec);
@@ -280,15 +287,51 @@ map_load_line_ie_defs(map_t *map, char *ur_name, int ur_type, char *ur_type_str,
         }
 
         // Parse IPFIX specifier
-        const struct fds_iemgr_elem *elem_def = map_elem_get_ipfix(map->iemgr, subtoken);
+        const struct fds_iemgr_elem *elem_def = NULL;
+        char *subsave_ptr_list = NULL;
+        struct map_ipfix_s *ipfix = &rec.ipfix;
+        rec.ipfix.next = NULL;
+
+        for (char *list = subtoken; ;list = NULL) {
+            // Test if the specifier describes basicList
+            char *list_token = strtok_r(list, "/", &subsave_ptr_list);
+            if (!list_token) {
+                break;
+            }
+
+            elem_def = map_elem_get_ipfix(map->iemgr, list_token);
+            if (elem_def != NULL) {
+                if (list == NULL) {
+                    ipfix->next = malloc(sizeof(struct map_ipfix_s));
+                    if (!ipfix->next) {
+                        rc = IPX_ERR_NOMEM;
+                        elem_def = NULL;
+                        break;
+                    }
+                    ipfix = ipfix->next;
+                }
+
+                // Store the "IPFIX element" record
+                ipfix->source = MAP_SRC_IPFIX;
+                ipfix->def = elem_def;
+                ipfix->id = elem_def->id;
+                ipfix->en = elem_def->scope->pen;
+                ipfix->next = NULL;
+                continue;
+            }
+            break;
+        }
+
         if (elem_def != NULL) {
-            // Store the "IPFIX element" record
-            rec.ipfix.source = MAP_SRC_IPFIX;
-            rec.ipfix.def = elem_def;
-            rec.ipfix.id = elem_def->id;
-            rec.ipfix.en = elem_def->scope->pen;
             rc = map_rec_add(map, &rec);
             continue;
+        }
+
+        ipfix = rec.ipfix.next;
+        while (ipfix) {
+            struct map_ipfix_s *tmp = ipfix->next;
+            free(ipfix);
+            ipfix = tmp;
         }
 
         enum MAP_SRC fn_id = map_elem_get_internal(subtoken);
@@ -298,6 +341,7 @@ map_load_line_ie_defs(map_t *map, char *ur_name, int ur_type, char *ur_type_str,
             rec.ipfix.def = NULL;
             rec.ipfix.id = 0;
             rec.ipfix.en = 0;
+            rec.ipfix.next = NULL;
             rc = map_rec_add(map, &rec);
             continue;
         }
@@ -414,21 +458,32 @@ end:
 static int
 map_sort_fn(const void *p1, const void *p2)
 {
-    struct map_rec *rec1 = *(struct map_rec **) p1;
-    struct map_rec *rec2 = *(struct map_rec **) p2;
+    const struct map_ipfix_s *ipfix1 = &(*(struct map_rec **) p1)->ipfix;
+    const struct map_ipfix_s *ipfix2 = &(*(struct map_rec **) p2)->ipfix;
 
-    if (rec1->ipfix.source != rec2->ipfix.source) {
-        return (rec1->ipfix.source < rec2->ipfix.source) ? (-1) : 1;
+    while (ipfix1 && ipfix2) {
+        if (ipfix1->source != ipfix2->source) {
+            return (ipfix1->source < ipfix2->source) ? (-1) : 1;
+        }
+
+        // Primary sort by PEN
+        if (ipfix1->en != ipfix2->en) {
+            return (ipfix1->en < ipfix2->en) ? (-1) : 1;
+        }
+
+        // Secondary sort by ID
+        if (ipfix1->id != ipfix2->id) {
+            return (ipfix1->id < ipfix2->id) ? (-1) : 1;
+        }
+
+        ipfix1 = ipfix1->next;
+        ipfix2 = ipfix2->next;
     }
 
-    // Primary sort by PEN
-    if (rec1->ipfix.en != rec2->ipfix.en) {
-        return (rec1->ipfix.en < rec2->ipfix.en) ? (-1) : 1;
-    }
-
-    // Secondary sort by ID
-    if (rec1->ipfix.id != rec2->ipfix.id) {
-        return (rec1->ipfix.id < rec2->ipfix.id) ? (-1) : 1;
+    if (ipfix1->next) {
+        return -1;
+    } else if (ipfix2->next) {
+        return 1;
     }
 
     return 0;
@@ -507,8 +562,24 @@ map_load(map_t *map, const char *file)
             continue;
         }
 
-        if (rec_prev->ipfix.en != rec_now->ipfix.en || rec_prev->ipfix.id != rec_now->ipfix.id) {
-            rec_prev = rec_now;
+        bool collision = false;
+        const struct map_ipfix_s *ipfix_prev = &rec_prev->ipfix;
+        const struct map_ipfix_s *ipfix_now = &rec_now->ipfix;
+        while (1) {
+            if (!ipfix_prev || !ipfix_now || ipfix_prev->en != ipfix_now->en
+                    || ipfix_prev->id != ipfix_now->id) {
+                rec_prev = rec_now;
+                break;
+            }
+
+            ipfix_prev = ipfix_prev->next;
+            ipfix_now = ipfix_now->next;
+            if (!ipfix_prev && !ipfix_now) {
+                collision = true;
+                break;
+            }
+        }
+        if (!collision) {
             continue;
         }
 
