@@ -45,6 +45,7 @@ network interface and a port. Multiple instances of these plugins can run concur
 **Output plugins** - store or forward your flows.
 
 - `FDS File <src/plugins/output/fds>`_ - store all flows in FDS file format (efficient long-term storage)
+- `Forwarder <src/plugins/output/forwarder>`_ - forward flows as IPFIX to one or mode subcollectors
 - `IPFIX File <src/plugins/output/ipfix>`_ - store all flows in IPFIX File format
 - `JSON <src/plugins/output/json>`_ - convert flow records to JSON and send/store them
 - `JSON-Kafka <src/plugins/output/json-kafka>`_ - convert flow records to JSON and send them to Apache Kafka
