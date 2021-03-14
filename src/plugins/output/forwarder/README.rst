@@ -1,9 +1,9 @@
-Forwarder (output plugin)
-==========================
+Forwarder (output plugin) [Preview]
+===================================
 
 This plugin allows forwarding incoming IPFIX messages to other collector in various modes.
 
-It can be used to broadcast messages to multiple collectors (e.g. a main and a backup collector), 
+It can be used to broadcast messages to multiple collectors (e.g. a main and a backup collector),
 or to distribute messages across multiple collectors (e.g. for load balancing).
 
 Example configuration
