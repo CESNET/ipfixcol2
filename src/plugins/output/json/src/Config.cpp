@@ -45,6 +45,7 @@
 #include <sstream>
 
 #include <libfds.h>
+#include <stdexcept>
 #include <inttypes.h>
 #include <arpa/inet.h>
 #include <librdkafka/rdkafka.h>
