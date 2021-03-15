@@ -53,6 +53,7 @@
 #include <unistd.h>
 #include <climits>
 #include <zlib.h>
+#include <locale.h>
 
 /**
  * \brief Class constructor
@@ -110,6 +111,7 @@ File::File(const struct cfg_file &cfg, ipx_ctx_t *ctx) : Output(cfg.name, ctx)
         throw std::runtime_error("(File output) Rwlockattr initialization failed!");
     }
 
+#if defined(HAVE_PTHREAD_RWLOCKATTR_SETKIND_NP)
     if (pthread_rwlockattr_setkind_np(&attr, PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP) != 0) {
         if (_thread->m_calg == calg::GZIP) {
             gzclose((gzFile)_thread->file);
@@ -120,6 +122,7 @@ File::File(const struct cfg_file &cfg, ipx_ctx_t *ctx) : Output(cfg.name, ctx)
         delete _thread;
         throw std::runtime_error("(File output) Rwlockattr setkind failed!");
     }
+#endif
 
     if (pthread_rwlock_init(&_thread->rwlock, &attr) != 0) {
         if (_thread->m_calg == calg::GZIP) {
@@ -340,8 +343,21 @@ File::dir_create(ipx_ctx_t *ctx, const std::string &path)
             continue;
         default:
             // Other errors
-            char buffer[128];
-            const char *err_str = strerror_r(errno, buffer, 128);
+            int errno_save = errno;
+            locale_t loc = newlocale(LC_MESSAGES_MASK, "", (locale_t)0);
+            const char *err_str;
+            if (loc == (locale_t)0) {
+                if (errno == ENOENT) {
+                    loc = newlocale(LC_MESSAGES_MASK, "POSIX", (locale_t)0);
+                }
+            }
+            if (loc != (locale_t)0) {
+                err_str = strerror_l(errno_save, loc);
+                freelocale(loc);
+            } else {
+                err_str = "newlocale() failed";
+            }
+            errno = errno_save;
             IPX_CTX_ERROR(ctx, "(File output) Failed to create a directory %s (%s).",
                 aux_str.c_str(), err_str);
             return 1;
@@ -355,8 +371,21 @@ File::dir_create(ipx_ctx_t *ctx, const std::string &path)
 
         if (mkdir(aux_str.c_str(), mask) != 0) {
             // Failed to create directory
-            char buffer[128];
-            const char *err_str = strerror_r(errno, buffer, 128);
+            int errno_save = errno;
+            locale_t loc = newlocale(LC_MESSAGES_MASK, "", (locale_t)0);
+            const char *err_str;
+            if (loc == (locale_t)0) {
+                if (errno == ENOENT) {
+                    loc = newlocale(LC_MESSAGES_MASK, "POSIX", (locale_t)0);
+                }
+            }
+            if (loc != (locale_t)0) {
+                err_str = strerror_l(errno_save, loc);
+                freelocale(loc);
+            } else {
+                err_str = "newlocale() failed";
+            }
+            errno = errno_save;
             IPX_CTX_ERROR(ctx, "(File output) Failed to create a directory %s (%s).",
                 aux_str.c_str(), err_str);
             return 1;
@@ -417,8 +446,21 @@ File::file_create(ipx_ctx_t *ctx, const std::string &tmplt, const std::string &p
     }
     if (!file) {
         // Failed to create a flow file
-        char buffer[128];
-        const char *err_str = strerror_r(errno, buffer, 128);
+        int errno_save = errno;
+        locale_t loc = newlocale(LC_MESSAGES_MASK, "", (locale_t)0);
+        const char *err_str;
+        if (loc == (locale_t)0) {
+            if (errno == ENOENT) {
+                loc = newlocale(LC_MESSAGES_MASK, "POSIX", (locale_t)0);
+            }
+        }
+        if (loc != (locale_t)0) {
+            err_str = strerror_l(errno_save, loc);
+            freelocale(loc);
+        } else {
+            err_str = "newlocale() failed";
+        }
+        errno = errno_save;
         IPX_CTX_ERROR(ctx, "Failed to create a flow file '%s' (%s).", file_name.c_str(), err_str);
         return NULL;
     }
