@@ -1,17 +1,10 @@
 # Create a linkable module
 add_library(forwarder-output MODULE
     src/main.cpp
-    src/config.h
+    src/ForwarderConfig.h
+    src/ForwarderConfig.cpp
     src/Forwarder.h
-    src/ConnectionManager.h
-    src/ConnectionManager.cpp
-    src/ConnectionParams.h
-    src/Connection.h
-    src/Connection.cpp
-    src/ConnectionBuffer.h
-    src/SyncPipe.h
-    src/IPFIXMessage.h
-    src/MessageBuilder.h
+    src/Forwarder.cpp
 )
 
 install(

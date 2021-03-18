@@ -1,7 +1,7 @@
 /**
  * \file src/plugins/output/forwarder/src/Forwarder.h
  * \author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
- * \brief Forwarder logic
+ * \brief Forwarder header file
  * \date 2021
  */
 
@@ -38,405 +38,141 @@
  * if advised of the possibility of such damage.
  *
  */
-
 #pragma once
 
-#include "ConnectionManager.h"
-#include "IPFIXMessage.h"
-#include "MessageBuilder.h"
-
+#include "ForwarderConfig.h"
 #include <ipfixcol2.h>
-#include <libfds.h>
-
-#include <map>
+#include <unordered_map>
 #include <memory>
 
-enum class ForwardMode { SendToAll, RoundRobin };
+constexpr unsigned MAX_TMPLT_MSG_SIZE = 2500;
 
-struct Session;
-struct Client;
-
-struct Odid
-{
-    Odid() {} // Default constructor needed because of std::map
-
-    Odid(Session &session, uint32_t odid)
-    : session(&session)
-    , odid(odid)
-    {}
-
-    Session *session;
-    uint32_t odid;
-    uint32_t seq_num = 0;
-
-    const fds_tsnapshot_t *templates_snapshot = NULL;
-    std::time_t last_templates_send_time = 0;
-    unsigned bytes_since_templates_sent = 0;
-
-    std::string
-    str();
-
-    void
-    reset_values()
-    {
-        seq_num = 0;
-        templates_snapshot = NULL;
-        last_templates_send_time = 0;
-        bytes_since_templates_sent = 0;
-    }
+/// State stored per ODID
+struct odid_s {
+    /// The most recent templates snapshot, to detect template changed
+    const fds_tsnapshot_t *tmplt_snap;
+    /// The time templates were last sent, used to check for resend when UDP is used
+    time_t last_tmplts_sent_time;
+    /// The number of packets of this ODID since the templates were sent, used to check for resend when UDP is used
+    uint32_t pkts_since_tmplts_sent;
 };
 
-struct Session
-{
-    Session(Connection &connection, Client &client, std::string ident)
-    : connection(connection)
-    , client(client)
-    , ident(ident)
-    {}
+struct host_s;
 
-    Connection &connection;
-    Client &client;
-    std::string ident;
-
-    std::map<uint32_t, Odid> odids;
-
-    std::string
-    str();
+struct connection_s {
+    /// The host this connection is for
+    host_s *host;
+    /// The connection socket
+    int sockfd;
+    /// State stored per ODID
+    std::unordered_map<uint32_t, odid_s> odids;
+    /// The last IPFIX sequence number
+    uint32_t seq_num;
+    /// Number of transfers the connection is still part of, to avoid prematurely destroying the connection
+    unsigned n_transfers;
+    /// Flag indicating that the connection is finished and can be destroyed once all the transfers are finished
+    bool finished;
 };
 
-struct Client
-{
-    Client(ConnectionManager &connection_manager, ConnectionParams connection_params, std::string name = "")
-    : connection_manager(connection_manager)
-    , connection_params(connection_params)
-    , name(name)
-    {}
-
-    ConnectionManager &connection_manager;
-    ConnectionParams connection_params;
-    std::string name;
-    std::map<const ipx_session *, std::unique_ptr<Session>> sessions;
-
-    std::string
-    str()
-    {
-        return name;
-    }
+/// A struct for storing unfinished transfers
+struct transfer_s {
+    /// The bytes to be sent
+    std::vector<uint8_t> data;
+    /// The connection to send the data over
+    connection_s *connection;
+    /// The offset to read the data from, respectively how much was sent already
+    uint16_t offset;
 };
 
-std::string
-Odid::str()
-{
-    return session->ident + "(" + std::to_string(odid) + ") -> " + session->client.name;
-}
+/// The host parameters and state
+struct host_s {
+    /// Address of the host, as a hostname or IP address
+    std::string address;
+    /// Port of the host
+    uint16_t port;
+    /// Connections to the host per session
+    std::unordered_map<const ipx_session *, connection_s *> connections;
+};
 
-std::string
-Session::str()
-{
-    return ident + " -> " + client.name;
-}
-
-class Forwarder
-{
+/// The forwarder parameters and state
+class Forwarder {
 public:
-    Forwarder(ipx_ctx_t *log_ctx)
-    : log_ctx(log_ctx)
-    {}
+    /**
+     * \brief Initialize a forwarder instance based on the configuration provided
+     * \param config   The forwarder configuration
+     * \param log_ctx  The logging context
+     */
+    Forwarder(ForwarderConfig &config, ipx_ctx_t *log_ctx);
 
+    /**
+     * \brief Process a session message from the collector and open or close connections
+     * \param msg  The session message
+     */
     void
-    set_transport_protocol(TransProto transport_protocol)
-    {
-        this->transport_protocol = transport_protocol;
-    }
+    handle_session_message(ipx_msg_session_t *msg);
 
+    /**
+     * \brief Process an IPFIX message from the collector and forward it
+     * \param fwd  The forwarder instance
+     * \param msg  The session message
+     */
     void
-    set_forward_mode(ForwardMode forward_mode)
-    {
-        this->forward_mode = forward_mode;
-    }
+    handle_ipfix_message(ipx_msg_ipfix_t *msg);
 
+    /**
+     * \brief Finish all the waiting transfers and close the connections
+     * \param fwd  The forwarder instance
+     */
     void
-    set_connection_buffer_size(long number_of_bytes)
-    {
-        connection_manager.set_connection_buffer_size(number_of_bytes);
-    }
-
-    void
-    set_template_refresh_interval_secs(int number_of_seconds)
-    {
-        this->template_refresh_interval_secs = number_of_seconds;
-    }
-
-    void
-    set_template_refresh_interval_bytes(int number_of_bytes)
-    {
-        this->template_refresh_interval_bytes = number_of_bytes;
-    }
-
-    void
-    set_reconnect_interval(int secs)
-    {
-        connection_manager.set_reconnect_interval(secs);
-    }
-
-    void
-    add_client(std::string address, std::string port, std::string name = "")
-    {
-        auto connection_params = ConnectionParams { address, port, transport_protocol };
-        if (!connection_params.resolve_address()) {
-            throw "Cannot resolve address " + address;
-        }
-        if (name.empty()) {
-            name = connection_params.str();
-        }
-        auto client = Client { connection_manager, connection_params, name };
-        clients.push_back(std::move(client));
-        IPX_CTX_INFO(log_ctx, "Added client %s @ %s\n", name.c_str(), connection_params.str().c_str());
-    }
-
-    void
-    on_session_message(ipx_msg_session_t *session_msg)
-    {
-        const ipx_session *session = ipx_msg_session_get_session(session_msg);
-        switch (ipx_msg_session_get_event(session_msg)) {
-            case IPX_MSG_SESSION_OPEN:
-                for (auto &client : clients) {
-                    open_session(client, session);
-                }
-                break;
-            case IPX_MSG_SESSION_CLOSE:
-                for (auto &client : clients) {
-                    close_session(client, session);
-                }
-                break;
-        }
-    }
-
-    void
-    on_ipfix_message(ipx_msg_ipfix_t *ipfix_msg)
-    {
-        auto message = IPFIXMessage { ipfix_msg };
-        switch (forward_mode) {
-        case ForwardMode::RoundRobin:
-            forward_round_robin(message);
-            break;
-        case ForwardMode::SendToAll:
-            forward_to_all(message);
-            break;
-        }
-    }
-
-    void
-    start()
-    {
-        connection_manager.start();
-    }
-
-    void
-    stop()
-    {
-        connection_manager.stop();
-
-        IPX_CTX_INFO(log_ctx, "Total bytes forwarded: %ld", total_bytes);
-        IPX_CTX_INFO(log_ctx, "Dropped messages: %ld", dropped_messages);
-        IPX_CTX_INFO(log_ctx, "Dropped data records: %ld", dropped_data_records);
-    }
-
-    ~Forwarder()
-    {
-    }
+    finalize();
 
 private:
-    /// Logging context
-    ipx_ctx_t *log_ctx;
+    friend bool
+    send_templates_tsnap_for_cb(const fds_template *tmplt, void *data);
 
-    /// Configuration
-    TransProto transport_protocol = TransProto::Tcp;
-    ForwardMode forward_mode = ForwardMode::SendToAll;
-    int template_refresh_interval_secs = 0;
-    int template_refresh_interval_bytes = 0;
+    /// The forwarding mode
+    forwardmode_e m_forward_mode;
+    /// The transport protocol
+    protocol_e m_protocol;
+    /// How often should we try to reconnect
+    unsigned m_reconnect_secs;
+    /// How often should we resend templates when UDP is used in seconds
+    unsigned m_tmplts_resend_secs;
+    /// How often should we resend templates when UDP is used in number of packets processed per ODID
+    unsigned m_tmplts_resend_pkts;
 
-    /// Mutating state
-    ConnectionManager connection_manager;
-    std::vector<Client> clients;
-    int rr_next_client = 0;
-
-    /// Statistics
-    long dropped_messages = 0;
-    long dropped_data_records = 0;
-    long total_bytes = 0;
-
-    void
-    open_session(Client &client, const ipx_session *session_info)
-    {
-        auto &connection = connection_manager.add_client(client.connection_params);
-        auto session_ptr = std::unique_ptr<Session>(new Session { connection, client, session_info->ident });
-        IPX_CTX_INFO(log_ctx, "Opened session %s", session_ptr->str().c_str());
-        client.sessions[session_info] = std::move(session_ptr);
-    }
-
-    void
-    close_session(Client &client, const ipx_session *session_info)
-    {
-        auto &session = *client.sessions[session_info];
-        session.connection.close();
-        IPX_CTX_INFO(log_ctx, "Closed session %s", session.str().c_str());
-        client.sessions.erase(session_info);
-    }
+    /// The hosts to forward messages to
+    std::vector<host_s> m_hosts;
+    /// Connections that are down and are waiting to be reconnected
+    std::vector<connection_s *> m_reconnects;
+    /// A list of transfers that couldn't have been completed because the socket would block
+    std::vector<transfer_s> m_waiting_transfers;
+    /// Time of the last attempt at reconnecting disconnected connections
+    time_t m_last_reconnect_check = 0;
+    /// The index of the next host in round-robin mode
+    unsigned m_rr_host = 0;
+    /// The logging context
+    ipx_ctx_t *m_log_ctx;
 
     void
-    forward_to_all(IPFIXMessage &message)
-    {
-        for (auto &client : clients) {
-            if (!forward_message(client, message)) {
-                dropped_messages += 1;
-                dropped_data_records += message.drec_count();
-            }
-        }
-    }
+    process_transfers();
 
     void
-    forward_round_robin(IPFIXMessage &message)
-    {
-        int i = 0;
-        while (1) {
-            auto &client = next_client();
-            if (forward_message(client, message)) {
-                break;
-            }
+    process_reconnects();
 
-            i++;
+    int
+    forward_message(host_s *host, ipx_msg_ipfix_t *msg);
 
-            // If we went through all the clients multiple times in a row and all the buffers are still full,
-            // let's just give up and move onto the next message. If we loop for too long we'll start losing messages!
-            if (i < (int)clients.size() * 10) {
-                dropped_messages += 1;
-                dropped_data_records += message.drec_count();
-                break;
-            }
-        }
-    }
+    int
+    send_ipfix_message(connection_s *conn, const uint8_t *data, uint16_t len);
 
-    /// Pick the next client in round-robin mode
-    Client &
-    next_client()
-    {
-        if (rr_next_client == (int)clients.size()) {
-            rr_next_client = 0;
-        }
-        return clients[rr_next_client++];
-    }
+    int
+    send_templates(connection_s *conn, const fds_ipfix_msg_hdr *hdr, const fds_tsnapshot_t *snap);
 
-    /// Send all templates from the templates snapshot obtained from the message
-    /// through the session connection and update the state accordingly
-    ///
-    /// \return true if there was enough space in the connection buffer, false otherwise
-    bool
-    send_templates(Session &session, Odid &odid, IPFIXMessage &message)
-    {
-        auto templates_snapshot = message.get_templates_snapshot();
+    void
+    setup_connection(host_s *host, const ipx_session *session);
 
-        auto header = *message.header();
-        header.seq_num = htonl(odid.seq_num);
-
-        MessageBuilder builder;
-        builder.begin_message(header);
-
-        fds_tsnapshot_for(templates_snapshot,
-            [](const fds_template *tmplt, void *data) -> bool {
-                auto &builder = *(MessageBuilder *)data;
-                builder.write_template(tmplt);
-                return true;
-            }, &builder);
-
-        builder.finalize_message();
-
-        auto lock = session.connection.begin_write();
-        if (builder.message_length() > session.connection.writeable()) {
-            // IPX_CTX_WARNING(log_ctx,
-            //     "[%s] Cannot send templates because buffer is full! (need %dB, have %ldB)",
-            //     odid.str().c_str(), builder.message_length(), session.connection.writeable());
-            return false;
-        }
-        session.connection.write(builder.message_data(), builder.message_length());
-        session.connection.commit_write();
-
-        odid.templates_snapshot = templates_snapshot;
-        odid.bytes_since_templates_sent = 0;
-        odid.last_templates_send_time = std::time(NULL);
-
-        total_bytes += builder.message_length();
-        // IPX_CTX_INFO(log_ctx, "[%s] Sent templates", odid.str().c_str());
-
-        return true;
-    }
-
-    bool
-    should_refresh_templates(Odid &odid)
-    {
-        if (transport_protocol != TransProto::Udp) {
-            return false;
-        }
-        auto time_since = (std::time(NULL) - odid.last_templates_send_time);
-        return (time_since > (unsigned)template_refresh_interval_secs)
-            || (odid.bytes_since_templates_sent > (unsigned)template_refresh_interval_bytes);
-    }
-
-    bool
-    templates_changed(Odid &odid, IPFIXMessage &message)
-    {
-        auto templates_snapshot = message.get_templates_snapshot();
-        return templates_snapshot && odid.templates_snapshot != templates_snapshot;
-    }
-
-    /// Forward message to the client, including templates update if needed
-    ///
-    /// \return true if there was enough space in the connection buffer, false otherwise
-    bool
-    forward_message(Client &client, IPFIXMessage &message)
-    {
-        auto &session = *client.sessions[message.session()];
-
-        if (session.connection.connection_lost_flag) {
-            for (auto &p : session.odids) {
-                p.second.reset_values();
-            }
-            session.connection.connection_lost_flag = false;
-        }
-
-        if (session.odids.find(message.odid()) == session.odids.end()) {
-            session.odids[message.odid()] = Odid { session, message.odid() };
-            IPX_CTX_INFO(log_ctx, "[%s] Seen new ODID %u", session.str().c_str(), message.odid());
-        }
-        auto &odid = session.odids[message.odid()];
-
-        if (should_refresh_templates(odid) || templates_changed(odid, message)) {
-            if (message.get_templates_snapshot() != nullptr && !send_templates(session, odid, message)) {
-                return false;
-            }
-        }
-
-        auto lock = session.connection.begin_write();
-        if (message.length() > session.connection.writeable()) {
-            // IPX_CTX_WARNING(log_ctx,
-            //     "[%s] Cannot forward message because buffer is full! (need %dB, have %ldB)",
-            //     odid.str().c_str(), message.length(), session.connection.writeable());
-            return false;
-        }
-
-        auto header = *message.header();
-        header.seq_num = htonl(odid.seq_num);
-        session.connection.write(&header, sizeof(header));
-        session.connection.write(message.data() + sizeof(header), message.length() - sizeof(header));
-        session.connection.commit_write();
-
-        // IPX_CTX_DEBUG(log_ctx, "[%s] Forwarded message", odid.str().c_str());
-
-        odid.bytes_since_templates_sent += message.length();
-        odid.seq_num += message.drec_count();
-
-        total_bytes += message.length();
-
-        return true;
-    }
+    void
+    close_connection(connection_s *conn);
 };
+
