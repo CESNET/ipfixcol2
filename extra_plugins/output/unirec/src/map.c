@@ -480,9 +480,9 @@ map_sort_fn(const void *p1, const void *p2)
         ipfix2 = ipfix2->next;
     }
 
-    if (ipfix1->next) {
+    if (ipfix1 && ipfix1->next) {
         return -1;
-    } else if (ipfix2->next) {
+    } else if (ipfix2 && ipfix2->next) {
         return 1;
     }
 
@@ -585,7 +585,7 @@ map_load(map_t *map, const char *file)
 
         // Collision detected!
         snprintf(map->err_buffer, ERR_SIZE, "The IPFIX IE '%s' (PEN %" PRIu32 ", ID %" PRIu16 ") "
-            "is mapped to multiple different UniRec fields ('%s' and '%s')",
+            "is mapped to multiple UniRec fields ('%s' and '%s')",
             rec_now->ipfix.def->name, rec_now->ipfix.en, rec_now->ipfix.id,
             rec_now->unirec.name, rec_prev->unirec.name);
         map_clear(map);
