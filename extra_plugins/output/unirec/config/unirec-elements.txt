@@ -24,7 +24,7 @@
 SRC_IP                         ipaddr        e0id8,e0id27                       # IPv4 or IPv6 source address
 DST_IP                         ipaddr        e0id12,e0id28                      # IPv4 or IPv6 destination address
 SRC_PORT                       uint16        e0id7                              # Transport protocol source port
-DST_PORT                       uint16        e0id11                             # Transport protocol destination port
+DST_PORT                       uint16        e0id11,e0id32                      # Transport protocol destination port or ICMP type/code
 PROTOCOL                       uint8         e0id4                              # Transport protocol
 TCP_FLAGS                      uint8         e0id6                              # TCP flags
 BYTES                          uint64        e0id1                              # Number of bytes in flow
