@@ -276,6 +276,9 @@ Storage::convert_tset(struct ipx_ipfix_set *set, const struct fds_ipfix_msg_hdr 
 
     // Iteration through all (Options) Templates in the Set
     while (fds_tset_iter_next(&tset_iter) == FDS_OK) {
+        // Buffer is empty
+        m_record.size_used = 0;
+
         // Read and print single template
         convert_tmplt_rec(&tset_iter, set_id, hdr);
 
@@ -285,9 +288,6 @@ Storage::convert_tset(struct ipx_ipfix_set *set, const struct fds_ipfix_msg_hdr 
                 return IPX_ERR_DENIED;
             }
         }
-
-        // Buffer is empty
-        m_record.size_used = 0;
     }
 
     return IPX_OK;
