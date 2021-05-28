@@ -24,8 +24,8 @@
 #include "../verbose.h"
 
 // Simple static asserts to prevent unexpected structure modifications!
-static_assert(IPX_NF5_MSG_HDR_LEN == 24U, "NetFlow v5 header size is not valid!");
-static_assert(IPX_NF5_MSG_REC_LEN == 48U, "NetFlow v5 record size is not valid!");
+_Static_assert(IPX_NF5_MSG_HDR_LEN == 24U, "NetFlow v5 header size is not valid!");
+_Static_assert(IPX_NF5_MSG_REC_LEN == 48U, "NetFlow v5 record size is not valid!");
 
 /// Auxiliary definition to represent size of 1 byte
 #define BYTES_1 (1U)
@@ -78,7 +78,7 @@ static const uint16_t nf5_tmpl_set[] = {
 
 /// Number of fields (including header fields) in the Template Set
 #define NF5_TSET_ITEMS (sizeof(nf5_tmpl_set) / sizeof(nf5_tmpl_set[0]))
-static_assert(NF5_TSET_ITEMS % 2 == 0, "Number of fields MUST be even!");
+_Static_assert(NF5_TSET_ITEMS % 2 == 0, "Number of fields MUST be even!");
 
 /**
  * @brief Structure of a NetFlow v5 record after convertion to IPFIX
@@ -130,8 +130,8 @@ struct __attribute__((__packed__)) new_ipx_rec {
 /// Size of the second part to copy (without tailing padding)
 #define PART2_LEN (offsetof(struct ipx_nf5_rec, _pad2) - offsetof(struct ipx_nf5_rec, port_src))
 
-static_assert(PART1_LEN == offsetof(struct new_ipx_rec, ts_first), "Different Part 1 size");
-static_assert(PART2_LEN ==
+_Static_assert(PART1_LEN == offsetof(struct new_ipx_rec, ts_first), "Different Part 1 size");
+_Static_assert(PART2_LEN ==
     offsetof(struct new_ipx_rec, sampling_alg) - offsetof(struct new_ipx_rec, port_src),
     "Different Part 2 size");
 

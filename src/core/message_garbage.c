@@ -68,7 +68,7 @@ struct ipx_msg_garbage {
     ipx_msg_garbage_cb object_destructor;
 };
 
-static_assert(offsetof(struct ipx_msg_garbage, msg_header.type) == 0,
+_Static_assert(offsetof(struct ipx_msg_garbage, msg_header.type) == 0,
     "Message header must be the first element of each IPFIXcol message.");
 
 // Create a garbage message

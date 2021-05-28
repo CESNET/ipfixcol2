@@ -41,8 +41,8 @@
     (UINT16_MAX - FDS_IPFIX_MSG_HDR_LEN - FDS_IPFIX_SET_HDR_LEN)
 
 // Simple static asserts to prevent unexpected structure modifications!
-static_assert(IPX_NF9_MSG_HDR_LEN == 20U, "NetFlow v9 Message header size is not valid!");
-static_assert(IPX_NF9_SET_HDR_LEN == 4U,  "NetFlow v9 Set header size is not valid!");
+_Static_assert(IPX_NF9_MSG_HDR_LEN == 20U, "NetFlow v9 Message header size is not valid!");
+_Static_assert(IPX_NF9_SET_HDR_LEN == 4U,  "NetFlow v9 Set header size is not valid!");
 
 /// Auxiliary conversion structure from NetFlow Options Field to IPFIX Inf. Element ID
 struct nf2ipx_opts {

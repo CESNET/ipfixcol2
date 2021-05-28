@@ -56,7 +56,7 @@ struct ipx_msg_terminate {
     enum ipx_msg_terminate_type type;
 };
 
-static_assert(offsetof(struct ipx_msg_terminate, msg_header.type) == 0,
+_Static_assert(offsetof(struct ipx_msg_terminate, msg_header.type) == 0,
     "Message type must be the first element of each IPFIXcol message.");
 
 ipx_msg_terminate_t *

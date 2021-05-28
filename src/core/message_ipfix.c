@@ -49,7 +49,7 @@
 #include <stdlib.h> // free
 
 // Check correctness of structure implementation
-static_assert(offsetof(struct ipx_msg_ipfix, msg_header.type) == 0,
+_Static_assert(offsetof(struct ipx_msg_ipfix, msg_header.type) == 0,
     "Message header must be the first element of each IPFIXcol message.");
 
 size_t
