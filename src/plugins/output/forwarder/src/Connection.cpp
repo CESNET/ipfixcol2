@@ -39,6 +39,7 @@
  *
  */
 
+#include <sys/socket.h>
 #include "Connection.h"
 
 #include <libfds.h>

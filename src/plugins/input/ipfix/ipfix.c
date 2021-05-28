@@ -132,6 +132,9 @@ static inline int
 files_list_get(ipx_ctx_t *ctx, const char *pattern, glob_t *list)
 {
     size_t file_cnt;
+#ifndef GLOB_TILDE_CHECK
+#define GLOB_TILDE_CHECK GLOB_TILDE
+#endif
     int glob_flags = GLOB_MARK | GLOB_BRACE | GLOB_TILDE_CHECK;
     int rc = glob(pattern, glob_flags, NULL, list);
 

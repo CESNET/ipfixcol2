@@ -146,7 +146,7 @@ range_is_empty(const char *str)
 static int
 range_str2uint32(const char *str, uint32_t *res)
 {
-    static_assert(ULONG_MAX >= UINT32_MAX, "Unsigned long is too small.");
+    _Static_assert(ULONG_MAX >= UINT32_MAX, "Unsigned long is too small.");
 
     errno = 0;
     char *end_ptr = NULL;

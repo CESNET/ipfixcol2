@@ -25,6 +25,9 @@ include(CMakeModules/install_dirs.cmake)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 
+# Include headers
+include_directories(/usr/local/include/libepoll-shim)
+
 # Include custom FindXXX modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMakeModules")
 

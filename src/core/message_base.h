@@ -70,7 +70,7 @@ struct ipx_msg {
     unsigned int ref_cnt;
 }; // TODO: 64 bytes alignment
 
-static_assert(offsetof(struct ipx_msg, type) == 0,
+_Static_assert(offsetof(struct ipx_msg, type) == 0,
     "Message type must be the first element of each IPFIXcol message.");
 
 /**

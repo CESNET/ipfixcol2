@@ -824,7 +824,7 @@ socket_process(ipx_ctx_t *ctx, struct tcp_pair *pair)
 {
     const char *err_str;
     struct fds_ipfix_msg_hdr hdr;
-    static_assert(sizeof(hdr) == FDS_IPFIX_MSG_HDR_LEN, "Invalid size of IPFIX Message header");
+    _Static_assert(sizeof(hdr) == FDS_IPFIX_MSG_HDR_LEN, "Invalid size of IPFIX Message header");
 
     // Get the message header (do not move pointer)
     ssize_t len = recv(pair->fd, &hdr, FDS_IPFIX_MSG_HDR_LEN, MSG_WAITALL | MSG_PEEK);
