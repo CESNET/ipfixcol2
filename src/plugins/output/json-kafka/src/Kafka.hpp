@@ -48,6 +48,7 @@
 #include <ctime>
 #include <memory>
 #include <librdkafka/rdkafka.h>
+#include <pthread.h>
 
 /** JSON kafka connector */
 class Kafka : public Output {
