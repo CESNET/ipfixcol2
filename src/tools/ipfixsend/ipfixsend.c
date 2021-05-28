@@ -46,7 +46,9 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <sys/ioctl.h>
+#ifdef __linux__
 #include <linux/sockios.h>
+#endif
 #include <time.h>
 
 #include "siso.h"
@@ -268,6 +270,9 @@ int main(int argc, char** argv)
     // Make sure that all packets are delivered before socket closes
     int socket_fd = siso_get_socket(sender);
     int not_sent = 0;
+#ifndef SIOCOUTQ
+#define SIOCOUTQ TIOCOUTQ
+#endif
     while (!stop && ioctl(socket_fd, SIOCOUTQ, &not_sent) != -1) {
         if (not_sent <= 0) {
             break;
