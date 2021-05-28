@@ -39,6 +39,7 @@
  *
  */
 
+#include <sys/socket.h>
 #include "Forwarder.h"
 #include "config.h"
 

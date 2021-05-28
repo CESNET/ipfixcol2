@@ -39,6 +39,7 @@
  *
  */
 
+#include <sys/socket.h>
 #include "ConnectionManager.h"
 
 Connection &
