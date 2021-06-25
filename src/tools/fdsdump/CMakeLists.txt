@@ -9,6 +9,12 @@ add_executable(fdsdump
     table_printer.hpp
     reader.cpp
     reader.hpp
+    ipfix_filter.cpp
+    ipfix_filter.hpp
+    config.cpp
+    config.hpp
+    aggregate_filter.cpp
+    aggregate_filter.hpp
 )
 
 target_link_libraries(fdsdump
