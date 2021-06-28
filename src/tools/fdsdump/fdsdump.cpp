@@ -25,7 +25,7 @@ main(int argc, char *argv[])
 
     Reader reader{config.input_file.c_str(), *iemgr.get()};
     IPFIXFilter ipfix_filter{config.input_filter.c_str(), *iemgr.get()};
-    Aggregator aggregator;
+    Aggregator aggregator{config.aggregate_config};
     AggregateFilter aggregate_filter{config.output_filter.c_str()};
     std::unique_ptr<Printer> printer{new TablePrinter};
 
@@ -45,6 +45,7 @@ main(int argc, char *argv[])
             break;
         }
     }
+    printf("                           \r");
 
     printer->print_prologue();
     for (auto *record : aggregator.records()) {

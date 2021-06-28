@@ -4,8 +4,9 @@
 #include <vector>
 #include <cstdint>
 #include <libfds.h>
+#include "config.hpp"
 
-constexpr std::size_t BUCKETS_COUNT = 4096;
+constexpr std::size_t BUCKETS_COUNT = 4096 * 100;
 
 struct ip_address_s
 {
@@ -34,18 +35,16 @@ struct aggregate_record_s
 class Aggregator
 {
 public:
-    Aggregator();
+    Aggregator(aggregate_config_s config);
 
     void
     process_record(fds_drec &drec);
 
     std::vector<aggregate_record_s *>
-    records()
-    {
-        return m_records;
-    }
+    records() { return m_records; }
 
 private:
+    aggregate_config_s m_config;
     std::array<aggregate_record_s *, BUCKETS_COUNT> m_buckets;
     std::vector<aggregate_record_s *> m_records;
 };

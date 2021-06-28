@@ -13,7 +13,7 @@ TablePrinter::~TablePrinter()
 void
 TablePrinter::print_prologue()
 {
-    printf("SOURCE -> DESTINATION PROTO  BYTES  PACKETS  FLOWS\n");
+    printf("%39s:%5s -> %39s:%5s %5s %10s %10s %10s\n", "srcip", "sport", "dstip", "dport", "proto", "bytes", "packets", "flows");
 }
 
 void
@@ -31,13 +31,13 @@ TablePrinter::print_record(aggregate_record_s &record)
 
     switch (record.key.protocol) {
     case 6:
-        printf(" TCP ");
+        printf("   TCP ");
         break;
     case 17:
-        printf(" UDP ");
+        printf("   UDP ");
         break;
     default:
-        printf(" (%5d) ", record.key.protocol);
+        printf(" %5d ", record.key.protocol);
     }
 
     printf("%10lu %10lu %10lu\n", record.bytes, record.packets, record.flows);

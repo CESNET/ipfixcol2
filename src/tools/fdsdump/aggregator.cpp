@@ -5,7 +5,6 @@
 #include "xxhash.h"
 #include <cstring>
 
-
 static ip_address_s
 make_ipv4_address(uint8_t *address)
 {
@@ -24,11 +23,10 @@ make_ipv6_address(uint8_t *address)
     return a;
 }
 
-Aggregator::Aggregator()
+Aggregator::Aggregator(aggregate_config_s config) : 
+    m_config(config), 
+    m_buckets{nullptr}
 {
-    for (auto &bucket : m_buckets) {
-        bucket = nullptr;
-    }
 }
 
 void
@@ -42,39 +40,48 @@ Aggregator::process_record(fds_drec &drec)
         return fds_drec_find(&drec, IPFIX::iana, id, &field) != FDS_EOC;
     };
 
-    if (fetch(IPFIX::sourceIPv4Address)) {
-        key.src_ip = make_ipv4_address(field.data);
-    } else if (fetch(IPFIX::sourceIPv6Address)) {
-        key.src_ip = make_ipv6_address(field.data);
-    } else {
-        return;
+    if (m_config.key_src_ip) {
+        if (fetch(IPFIX::sourceIPv4Address)) {
+            key.src_ip = make_ipv4_address(field.data);
+        } else if (fetch(IPFIX::sourceIPv6Address)) {
+            key.src_ip = make_ipv6_address(field.data);
+        } else {
+            return;
+        }
     }
 
-    if (fetch(IPFIX::destinationIPv4Address)) {
-        key.dst_ip = make_ipv4_address(field.data);
-    } else if (fetch(IPFIX::destinationIPv6Address)) {
-        key.dst_ip = make_ipv6_address(field.data);
-    } else {
-        return;
+    if (m_config.key_dst_ip) {
+        if (fetch(IPFIX::destinationIPv4Address)) {
+            key.dst_ip = make_ipv4_address(field.data);
+        } else if (fetch(IPFIX::destinationIPv6Address)) {
+            key.dst_ip = make_ipv6_address(field.data);
+        } else {
+            return;
+        }
     }
 
-    if (!fetch(IPFIX::sourceTransportPort)) {
-        return;
-    }
-    fds_get_uint_be(field.data, field.size, &tmp);
-    key.src_port = tmp;
-
-    if (!fetch(IPFIX::destinationTransportPort)) {
-        return;
-    }
-    fds_get_uint_be(field.data, field.size, &tmp);
-    key.dst_port = tmp;
-
-    if (!fetch(IPFIX::protocolIdentifier)) {
-        return;
+    if (m_config.key_src_port) {
+        if (!fetch(IPFIX::sourceTransportPort)) {
+            return;
+        }
+        fds_get_uint_be(field.data, field.size, &tmp);
+        key.src_port = tmp;
     }
 
-    key.protocol = *field.data;
+    if (m_config.key_dst_port) {
+        if (!fetch(IPFIX::destinationTransportPort)) {
+            return;
+        }
+        fds_get_uint_be(field.data, field.size, &tmp);
+        key.dst_port = tmp;
+    }
+
+    if (m_config.key_protocol) {
+        if (!fetch(IPFIX::protocolIdentifier)) {
+            return;
+        }
+        key.protocol = *field.data;
+    }
 
     auto hash = XXH3_64bits(reinterpret_cast<uint8_t *>(&key), sizeof(key));
     std::size_t bucket_index = hash % BUCKETS_COUNT;
@@ -109,8 +116,5 @@ Aggregator::process_record(fds_drec &drec)
         (*arec)->packets += tmp;
     }
 
-    if (fetch(IPFIX::deltaFlowCount)) {
-        fds_get_uint_be(field.data, field.size, &tmp);
-        (*arec)->flows += tmp;
-    }
+    (*arec)->flows++;
 }
