@@ -18,6 +18,8 @@ struct config_s
     std::string output_filter;
     uint64_t max_input_records;
     aggregate_config_s aggregate_config;
+    std::string sort_field;
+    uint64_t max_output_records;
 };
 
 int

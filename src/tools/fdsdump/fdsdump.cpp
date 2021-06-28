@@ -1,5 +1,7 @@
 #include <iostream>
 #include <memory>
+#include <functional>
+#include <algorithm>
 #include "reader.hpp"
 #include "aggregator.hpp"
 #include "table_printer.hpp"
@@ -7,8 +9,11 @@
 #include "aggregate_filter.hpp"
 #include "config.hpp"
 
-unique_fds_iemgr
+static unique_fds_iemgr
 make_iemgr();
+
+static void
+sort_records(std::vector<aggregate_record_s *> &records, const std::string &sort_field);
 
 int
 main(int argc, char *argv[])
@@ -47,18 +52,29 @@ main(int argc, char *argv[])
     }
     printf("                           \r");
 
+    auto records = aggregator.records();
+
+    if (!config.sort_field.empty()) {
+        sort_records(records, config.sort_field);
+    }
+
+    uint64_t output_counter;
     printer->print_prologue();
-    for (auto *record : aggregator.records()) {
+    for (auto *record : records) {
         aggregate_record_s &arec = *record;
         if (aggregate_filter.record_passes(arec)) {
+            if (config.max_output_records > 0 && output_counter == config.max_output_records) {
+                break;
+            }
             printer->print_record(arec);
+            output_counter++;
         }
     }
     printer->print_epilogue();
 
 }
 
-unique_fds_iemgr
+static unique_fds_iemgr
 make_iemgr()
 {
     int rc;
@@ -75,4 +91,26 @@ make_iemgr()
     }
 
     return iemgr;
+}
+
+static void
+sort_records(std::vector<aggregate_record_s *> &records, const std::string &sort_field)
+{
+    std::function<bool(const aggregate_record_s *, const aggregate_record_s *)> compare_fn;
+
+    if (sort_field == "packets") {
+        compare_fn = [](const aggregate_record_s *a, const aggregate_record_s *b) {
+            return a->packets > b->packets;
+        };
+    } else if (sort_field == "bytes") {
+        compare_fn = [](const aggregate_record_s *a, const aggregate_record_s *b) {
+            return a->bytes > b->bytes;
+        };
+    } else if (sort_field == "flows") {
+        compare_fn = [](const aggregate_record_s *a, const aggregate_record_s *b) {
+            return a->flows > b->flows;
+        };
+    }
+
+    std::sort(records.begin(), records.end(), compare_fn);
 }

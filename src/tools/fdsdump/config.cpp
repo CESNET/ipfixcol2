@@ -51,6 +51,8 @@ usage()
     "  -of expr   Output filter\n"
     "  -c num     Max number of records to read\n"
     "  -a keys    Aggregator keys (e.g. srcip,dstip,srcport,dstport)\n"
+    "  -s field   Field to sort on (e.g. bytes, packets, flows)\n"
+    "  -n num     Maximum number of records to write\n"
     ;
     fprintf(stderr, text);
 }
@@ -78,7 +80,18 @@ string_split(const std::string &str, const std::string &delimiter)
     return pieces;
 }
 
-static void
+static bool
+is_one_of(const std::string &value, const std::vector<std::string> values)
+{
+    for (const auto &v : values) {
+        if (v == value) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static int 
 parse_aggregate_config(const std::string &options, aggregate_config_s &aggregate_config)
 {
     aggregate_config = {};
@@ -94,8 +107,12 @@ parse_aggregate_config(const std::string &options, aggregate_config_s &aggregate
             aggregate_config.key_dst_port = true;
         } else if (key == "proto") {
             aggregate_config.key_protocol = true;
+        } else {
+            fprintf(stderr, "Invalid aggregation key \"%s\"\n", key.c_str());
+            return 1;
         }
     }
+    return 0;
 }
 
 int
@@ -142,7 +159,25 @@ config_from_args(int argc, char **argv, config_s &config)
                 missing_arg("-a");
                 return 1;
             }
-            parse_aggregate_config(parser.arg(), config.aggregate_config);
+            if (parse_aggregate_config(parser.arg(), config.aggregate_config) == 1) {
+                return 1;
+            }
+        } else if (parser.arg() == "-n") {
+            if (!parser.next()) {
+                missing_arg("-n");
+                return 1;
+            }
+            config.max_output_records = std::stoul(parser.arg());
+        } else if (parser.arg() == "-s") {
+            if (!parser.next()) {
+                missing_arg("-s");
+                return 1;
+            }
+            config.sort_field = parser.arg();
+            if (!is_one_of(config.sort_field, {"bytes", "packets", "flows"})) {
+                fprintf(stderr, "Invalid sort field \"%s\"\n", config.sort_field.c_str());
+                return 1;
+            }
         } else {
             fprintf(stderr, "Unknown argument %s\n", parser.arg().c_str());
             return 1;
