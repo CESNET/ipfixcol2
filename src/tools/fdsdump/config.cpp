@@ -1,6 +1,7 @@
 #include "config.hpp"
 #include <cstdio>
 #include <vector>
+#include "information_elements.hpp"
 
 class ArgParser
 {
@@ -51,6 +52,7 @@ usage()
     "  -of expr   Output filter\n"
     "  -c num     Max number of records to read\n"
     "  -a keys    Aggregator keys (e.g. srcip,dstip,srcport,dstport)\n"
+    "  -av values Aggregator values // TODO\n"
     "  -s field   Field to sort on (e.g. bytes, packets, flows)\n"
     "  -n num     Maximum number of records to write\n"
     ;
@@ -92,7 +94,7 @@ is_one_of(const std::string &value, const std::vector<std::string> values)
 }
 
 static int 
-parse_aggregate_config(const std::string &options, aggregate_config_s &aggregate_config)
+parse_aggregate_key_config(const std::string &options, AggregateConfig &aggregate_config)
 {
     aggregate_config = {};
 
@@ -115,8 +117,47 @@ parse_aggregate_config(const std::string &options, aggregate_config_s &aggregate
     return 0;
 }
 
+static int
+parse_aggregate_value_config(const std::string &options, AggregateConfig &aggregate_config)
+{
+    auto values = string_split(options, ",");
+    AggregateField field;
+
+    for (const auto &value : values) {
+        if (value == "packets") {
+            field.data_type = DataType::Unsigned64;
+            field.pen = IPFIX::iana;
+            field.id = IPFIX::packetDeltaCount;
+            field.kind = AggregateFieldKind::Sum;
+            field.name = "packets";
+            field.size = sizeof(Value::u64);
+            aggregate_config.values_size += sizeof(Value::u64);
+        } else if (value == "bytes") {
+            field.data_type = DataType::Unsigned64;
+            field.pen = IPFIX::iana;
+            field.id = IPFIX::octetDeltaCount;
+            field.kind = AggregateFieldKind::Sum;
+            field.name = "bytes";
+            field.size = sizeof(Value::u64);
+            aggregate_config.values_size += sizeof(Value::u64);
+        } else if (value == "flows") {
+            field.data_type = DataType::Unsigned64;
+            field.kind = AggregateFieldKind::FlowCount;
+            field.name = "flows";
+            field.size = sizeof(Value::u64);
+            aggregate_config.values_size += sizeof(Value::u64);
+        } else {
+            fprintf(stderr, "Invalid aggregation value \"%s\"\n", value.c_str());
+            return 1;
+        }
+        aggregate_config.value_fields.push_back(field);
+    }
+
+    return 0;
+}
+
 int
-config_from_args(int argc, char **argv, config_s &config)
+config_from_args(int argc, char **argv, Config &config)
 {
     config = {};
     config.aggregate_config.key_src_ip = true;
@@ -159,7 +200,15 @@ config_from_args(int argc, char **argv, config_s &config)
                 missing_arg("-a");
                 return 1;
             }
-            if (parse_aggregate_config(parser.arg(), config.aggregate_config) == 1) {
+            if (parse_aggregate_key_config(parser.arg(), config.aggregate_config) == 1) {
+                return 1;
+            }
+        } else if (parser.arg() == "-av") {
+            if (!parser.next()) {
+                missing_arg("-av");
+                return 1;
+            }
+            if (parse_aggregate_value_config(parser.arg(), config.aggregate_config) == 1) {
                 return 1;
             }
         } else if (parser.arg() == "-n") {

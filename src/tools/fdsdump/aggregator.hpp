@@ -8,43 +8,54 @@
 
 constexpr std::size_t BUCKETS_COUNT = 4096 * 100;
 
-struct ip_address_s
+static inline void
+advance_value_ptr(Value *&value, std::size_t value_size)
 {
-    uint8_t length;
-    uint8_t address[16];
-};
+    value = reinterpret_cast<Value *>(reinterpret_cast<uint8_t *>(value) + value_size);
+}
 
-struct aggregate_record_s
+static inline Value *
+get_value_by_name(AggregateConfig &config, uint8_t *values, const std::string &name)
 {
-    struct __attribute__((packed)) key_s
+    Value *value = reinterpret_cast<Value *>(values);
+    for (const auto &field : config.value_fields) {
+        if (field.name == name) {
+            return value;
+        }
+        advance_value_ptr(value, field.size);
+    }
+    return nullptr;
+}
+
+struct AggregateRecord
+{
+    AggregateRecord *next;
+
+    struct __attribute__((packed)) Key
     {
         uint8_t protocol;
-        ip_address_s src_ip;
+        IPAddress src_ip;
         uint16_t src_port;
-        ip_address_s dst_ip;
+        IPAddress dst_ip;
         uint16_t dst_port;
     } key;
 
-    uint64_t packets;
-    uint64_t bytes;
-    uint64_t flows;
-
-    aggregate_record_s *next;
+    uint8_t values[];
 };
 
 class Aggregator
 {
 public:
-    Aggregator(aggregate_config_s config);
+    Aggregator(AggregateConfig config);
 
     void
     process_record(fds_drec &drec);
 
-    std::vector<aggregate_record_s *>
+    std::vector<AggregateRecord *>
     records() { return m_records; }
 
 private:
-    aggregate_config_s m_config;
-    std::array<aggregate_record_s *, BUCKETS_COUNT> m_buckets;
-    std::vector<aggregate_record_s *> m_records;
+    AggregateConfig m_config;
+    std::array<AggregateRecord *, BUCKETS_COUNT> m_buckets;
+    std::vector<AggregateRecord *> m_records;
 };

@@ -2,7 +2,8 @@
 #include <cstdio>
 #include <arpa/inet.h>
 
-TablePrinter::TablePrinter()
+TablePrinter::TablePrinter(AggregateConfig aggregate_config)
+    : m_aggregate_config(aggregate_config)
 {
 }
 
@@ -17,7 +18,7 @@ TablePrinter::print_prologue()
 }
 
 void
-TablePrinter::print_record(aggregate_record_s &record)
+TablePrinter::print_record(AggregateRecord &record)
 {
     char buf[64];
 
@@ -40,7 +41,17 @@ TablePrinter::print_record(aggregate_record_s &record)
         printf(" %5d ", record.key.protocol);
     }
 
-    printf("%10lu %10lu %10lu\n", record.bytes, record.packets, record.flows);
+    Value *value = reinterpret_cast<Value *>(record.values);
+    for (const auto &aggregate_field : m_aggregate_config.value_fields) {
+        switch (aggregate_field.data_type) {
+        case DataType::Unsigned64:
+            printf("%10lu", value->u64);
+            advance_value_ptr(value, sizeof(value->u64));
+            break;
+        default: assert(0);
+        }
+    }
+    printf("\n");
 }
 
 void

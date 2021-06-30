@@ -1,6 +1,7 @@
 #include "aggregate_filter.hpp"
 
-enum : int {
+enum : int
+{
     PACKETS_ID = 1,
     BYTES_ID = 2,
     FLOWS_ID = 3
@@ -29,16 +30,17 @@ lookup_callback(void *user_ctx, const char *name_, const char *other_name,
 static int
 data_callback(void *user_ctx, bool reset_ctx, int id, void *data, fds_filter_value_u *out_value)
 {
-    aggregate_record_s &arec = *static_cast<aggregate_record_s *>(data);
+    AggregateConfig &aggregate_config = *static_cast<AggregateConfig *>(user_ctx);
+    AggregateRecord &arec = *static_cast<AggregateRecord *>(data);
     switch (id) {
     case FLOWS_ID:
-        out_value->u = arec.flows;
+        out_value->u = get_value_by_name(aggregate_config, arec.values, "flows")->u64;
         break;
     case PACKETS_ID:
-        out_value->u = arec.packets;
+        out_value->u = get_value_by_name(aggregate_config, arec.values, "packets")->u64;
         break;
     case BYTES_ID:
-        out_value->u = arec.bytes;
+        out_value->u = get_value_by_name(aggregate_config, arec.values, "bytes")->u64;
         break;
     default:
         return FDS_ERR_NOTFOUND;
@@ -46,7 +48,8 @@ data_callback(void *user_ctx, bool reset_ctx, int id, void *data, fds_filter_val
     return FDS_OK;
 }
 
-AggregateFilter::AggregateFilter(const char *filter_expr)
+AggregateFilter::AggregateFilter(const char *filter_expr, AggregateConfig aggregate_config)
+    : m_aggregate_config(aggregate_config)
 {
     int rc;
 
@@ -55,6 +58,7 @@ AggregateFilter::AggregateFilter(const char *filter_expr)
         throw std::bad_alloc();
     }
 
+    fds_filter_opts_set_user_ctx(m_filter_opts.get(), &m_aggregate_config);
     fds_filter_opts_set_lookup_cb(m_filter_opts.get(), lookup_callback);
     fds_filter_opts_set_data_cb(m_filter_opts.get(), data_callback);
 
@@ -68,7 +72,7 @@ AggregateFilter::AggregateFilter(const char *filter_expr)
 }
 
 bool
-AggregateFilter::record_passes(aggregate_record_s &record)
+AggregateFilter::record_passes(AggregateRecord &record)
 {
     if (fds_filter_eval(m_filter.get(), &record)) {
         return true;

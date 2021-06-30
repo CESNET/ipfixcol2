@@ -5,7 +5,7 @@
 class TablePrinter : public Printer
 {
 public:
-    TablePrinter();
+    TablePrinter(AggregateConfig aggregate_config);
 
     ~TablePrinter() override;
 
@@ -13,9 +13,11 @@ public:
     print_prologue() override;
 
     void
-    print_record(aggregate_record_s &record) override;
+    print_record(AggregateRecord &record) override;
 
     void
     print_epilogue() override;
 
+private:
+    AggregateConfig m_aggregate_config;
 };

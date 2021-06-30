@@ -6,12 +6,13 @@
 class AggregateFilter
 {
 public:
-    AggregateFilter(const char *filter_expr);
+    AggregateFilter(const char *filter_expr, AggregateConfig aggregate_config);
 
     bool
-    record_passes(aggregate_record_s &record);
+    record_passes(AggregateRecord &record);
 
 private:
     unique_fds_filter_opts m_filter_opts;
     unique_fds_filter m_filter;
+    AggregateConfig m_aggregate_config;
 };
