@@ -100,15 +100,15 @@ sort_records(std::vector<AggregateRecord *> &records, const std::string &sort_fi
 
     if (sort_field == "packets") {
         compare_fn = [&](AggregateRecord *a, AggregateRecord *b) {
-            return get_value_by_name(view_def, a->values, "packets")->u64 > get_value_by_name(view_def, b->values, "packets")->u64;
+            return get_value_by_name(view_def, a->data, "packets")->u64 > get_value_by_name(view_def, b->data, "packets")->u64;
         };
     } else if (sort_field == "bytes") {
         compare_fn = [&](AggregateRecord *a, AggregateRecord *b) {
-            return get_value_by_name(view_def, a->values, "bytes")->u64 > get_value_by_name(view_def, b->values, "bytes")->u64;
+            return get_value_by_name(view_def, a->data, "bytes")->u64 > get_value_by_name(view_def, b->data, "bytes")->u64;
         };
     } else if (sort_field == "flows") {
         compare_fn = [&](AggregateRecord *a, AggregateRecord *b) {
-            return get_value_by_name(view_def, a->values, "flows")->u64 > get_value_by_name(view_def, b->values, "flows")->u64;
+            return get_value_by_name(view_def, a->data, "flows")->u64 > get_value_by_name(view_def, b->data, "flows")->u64;
         };
     }
 

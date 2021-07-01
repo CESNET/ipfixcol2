@@ -5,7 +5,7 @@
 class TablePrinter : public Printer
 {
 public:
-    TablePrinter(ViewDefinition aggregate_config);
+    TablePrinter(ViewDefinition view_def);
 
     ~TablePrinter() override;
 
@@ -19,5 +19,5 @@ public:
     print_epilogue() override;
 
 private:
-    ViewDefinition m_aggregate_config;
+    ViewDefinition m_view_def;
 };

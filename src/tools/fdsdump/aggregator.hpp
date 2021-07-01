@@ -11,17 +11,7 @@ constexpr std::size_t BUCKETS_COUNT = 4096 * 100;
 struct AggregateRecord
 {
     AggregateRecord *next;
-
-    struct __attribute__((packed)) Key
-    {
-        uint8_t protocol;
-        IPAddress src_ip;
-        uint16_t src_port;
-        IPAddress dst_ip;
-        uint16_t dst_port;
-    } key;
-
-    uint8_t values[];
+    uint8_t data[];
 };
 
 class Aggregator

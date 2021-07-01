@@ -96,24 +96,58 @@ is_one_of(const std::string &value, const std::vector<std::string> values)
 static int 
 parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def)
 {
-    view_def = {};
-
     for (const auto &key : string_split(options, ",")) {
+        ViewField field = {};
+
         if (key == "srcip") {
-            view_def.key_src_ip = true;
+            field.data_type = DataType::IPAddress;
+            field.kind = ViewFieldKind::SourceIPAddressKey;
+            field.name = "srcip";
+            field.size = sizeof(ViewValue::ip);
+            view_def.keys_size += sizeof(ViewValue::ip);
+
         } else if (key == "dstip") {
-            view_def.key_dst_ip = true;
+            field.data_type = DataType::IPAddress;
+            field.kind = ViewFieldKind::DestinationIPAddressKey;
+            field.name = "dstip";
+            field.size = sizeof(ViewValue::ip);
+            view_def.keys_size += sizeof(ViewValue::ip);
+
         } else if (key == "srcport") {
-            view_def.key_src_port = true;
+            field.data_type = DataType::Unsigned16;
+            field.kind = ViewFieldKind::VerbatimKey;
+            field.pen = IPFIX::iana;
+            field.id = IPFIX::sourceTransportPort;
+            field.name = "srcport";
+            field.size = sizeof(ViewValue::u16);
+            view_def.keys_size += sizeof(ViewValue::u16);
+
         } else if (key == "dstport") {
-            view_def.key_dst_port = true;
+            field.data_type = DataType::Unsigned16;
+            field.kind = ViewFieldKind::VerbatimKey;
+            field.pen = IPFIX::iana;
+            field.id = IPFIX::destinationTransportPort;
+            field.name = "dstport";
+            field.size = sizeof(ViewValue::u16);
+            view_def.keys_size += sizeof(ViewValue::u16);
+
         } else if (key == "proto") {
-            view_def.key_protocol = true;
+            field.data_type = DataType::Unsigned8;
+            field.kind = ViewFieldKind::VerbatimKey;
+            field.pen = IPFIX::iana;
+            field.id = IPFIX::destinationTransportPort;
+            field.name = "proto";
+            field.size = sizeof(ViewValue::u8);
+            view_def.keys_size += sizeof(ViewValue::u8);
+
         } else {
             fprintf(stderr, "Invalid aggregation key \"%s\"\n", key.c_str());
             return 1;
         }
+
+        view_def.key_fields.push_back(field);
     }
+
     return 0;
 }
 
@@ -121,14 +155,14 @@ static int
 parse_aggregate_value_config(const std::string &options, ViewDefinition &view_def)
 {
     auto values = string_split(options, ",");
-    ViewField field;
 
     for (const auto &value : values) {
+        ViewField field = {};
         if (value == "packets") {
             field.data_type = DataType::Unsigned64;
             field.pen = IPFIX::iana;
             field.id = IPFIX::packetDeltaCount;
-            field.kind = ViewFieldKind::Sum;
+            field.kind = ViewFieldKind::SumAggregate;
             field.name = "packets";
             field.size = sizeof(ViewValue::u64);
             view_def.values_size += sizeof(ViewValue::u64);
@@ -136,7 +170,7 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
             field.data_type = DataType::Unsigned64;
             field.pen = IPFIX::iana;
             field.id = IPFIX::octetDeltaCount;
-            field.kind = ViewFieldKind::Sum;
+            field.kind = ViewFieldKind::SumAggregate;
             field.name = "bytes";
             field.size = sizeof(ViewValue::u64);
             view_def.values_size += sizeof(ViewValue::u64);
@@ -160,11 +194,6 @@ int
 config_from_args(int argc, char **argv, Config &config)
 {
     config = {};
-    config.view_def.key_src_ip = true;
-    config.view_def.key_dst_ip = true;
-    config.view_def.key_src_port = true;
-    config.view_def.key_dst_port = true;
-    config.view_def.key_protocol = true;
 
     ArgParser parser{argc, argv};
     while (parser.next()) {

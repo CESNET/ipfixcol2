@@ -13,6 +13,14 @@ struct IPAddress
 enum class DataType
 {
     IPAddress,
+    IPv4Address,
+    IPv6Address,
+    Unsigned8,
+    Signed8,
+    Unsigned16,
+    Signed16,
+    Unsigned32,
+    Signed32,
     Unsigned64,
     Signed64
 };
@@ -20,16 +28,33 @@ enum class DataType
 union ViewValue
 {
     IPAddress ip;
+    uint8_t u8;
+    uint16_t u16;
+    uint32_t u32;
     uint64_t u64;
-    int64_t i64;    
+    int8_t i8;
+    int16_t i16;
+    int32_t i32;
+    int64_t i64;
 };
 
 enum class ViewFieldKind
 {
-    Sum,
-    Min,
-    Max,
+    VerbatimKey,
+    SourceIPAddressKey,
+    DestinationIPAddressKey,
+    IPAddressKey,
+    SumAggregate,
+    MinAggregate,
+    MaxAggregate,
     FlowCount
+};
+
+enum class FieldDirection
+{
+    None,
+    In,
+    Out
 };
 
 struct ViewField
@@ -40,17 +65,16 @@ struct ViewField
     uint16_t id;
     DataType data_type;
     ViewFieldKind kind;
+    FieldDirection direction; //TODO
 };
 
 struct ViewDefinition
 {
-    bool key_src_ip;
-    bool key_dst_ip;
-    bool key_src_port;
-    bool key_dst_port;
-    bool key_protocol;
+    bool bidirectional; //TODO
 
+    std::vector<ViewField> key_fields;
     std::vector<ViewField> value_fields;
+    std::size_t keys_size;
     std::size_t values_size;
 };
 

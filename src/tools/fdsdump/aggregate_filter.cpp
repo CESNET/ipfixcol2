@@ -34,13 +34,13 @@ data_callback(void *user_ctx, bool reset_ctx, int id, void *data, fds_filter_val
     AggregateRecord &arec = *static_cast<AggregateRecord *>(data);
     switch (id) {
     case FLOWS_ID:
-        out_value->u = get_value_by_name(view_def, arec.values, "flows")->u64;
+        out_value->u = get_value_by_name(view_def, arec.data, "flows")->u64;
         break;
     case PACKETS_ID:
-        out_value->u = get_value_by_name(view_def, arec.values, "packets")->u64;
+        out_value->u = get_value_by_name(view_def, arec.data, "packets")->u64;
         break;
     case BYTES_ID:
-        out_value->u = get_value_by_name(view_def, arec.values, "bytes")->u64;
+        out_value->u = get_value_by_name(view_def, arec.data, "bytes")->u64;
         break;
     default:
         return FDS_ERR_NOTFOUND;

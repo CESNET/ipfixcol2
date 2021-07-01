@@ -2,8 +2,45 @@
 #include <cstdio>
 #include <arpa/inet.h>
 
-TablePrinter::TablePrinter(ViewDefinition aggregate_config)
-    : m_aggregate_config(aggregate_config)
+static void
+print_value(const ViewField &field, ViewValue &value)
+{
+    char buffer[64];
+    switch (field.data_type) {
+    case DataType::Unsigned8:
+        printf("%hhu", value.u8);
+        break;
+    case DataType::Unsigned16:
+        printf("%hu", value.u16);
+        break;
+    case DataType::Unsigned32:
+        printf("%u", value.u32);
+        break;
+    case DataType::Unsigned64:
+        printf("%lu", value.u64);
+        break;
+    case DataType::Signed8:
+        printf("%hh", value.i8);
+        break;
+    case DataType::Signed16:
+        printf("%h", value.i16);
+        break;
+    case DataType::Signed32:
+        printf("%d", value.i32);
+        break;
+    case DataType::Signed64:
+        printf("%ld", value.i64);
+        break;
+    case DataType::IPAddress:
+        inet_ntop(value.ip.length == 4 ? AF_INET : AF_INET6, value.ip.address, buffer, 64);
+        printf("%s", buffer);
+        break;
+    default: assert(0);
+    }
+}
+
+TablePrinter::TablePrinter(ViewDefinition view_def)
+    : m_view_def(view_def)
 {
 }
 
@@ -14,43 +51,34 @@ TablePrinter::~TablePrinter()
 void
 TablePrinter::print_prologue()
 {
-    printf("%39s:%5s -> %39s:%5s %5s %10s %10s %10s\n", "srcip", "sport", "dstip", "dport", "proto", "bytes", "packets", "flows");
+    for (const auto &field : m_view_def.key_fields) {
+        printf("%s ", field.name.c_str());
+    }
+
+    for (const auto &field : m_view_def.value_fields) {
+        printf("%s ", field.name.c_str());
+    }
+
+    printf("\n");
 }
 
 void
 TablePrinter::print_record(AggregateRecord &record)
 {
-    char buf[64];
+    ViewValue *value = reinterpret_cast<ViewValue *>(record.data);
 
-    inet_ntop(record.key.src_ip.length == 4 ? AF_INET : AF_INET6, record.key.src_ip.address, buf, 64);
-    printf("%39s:%5hu", buf, record.key.src_port);
-
-    printf(" -> ");
-
-    inet_ntop(record.key.dst_ip.length == 4 ? AF_INET : AF_INET6, record.key.dst_ip.address, buf, 64);
-    printf("%39s:%5hu", buf, record.key.dst_port);
-
-    switch (record.key.protocol) {
-    case 6:
-        printf("   TCP ");
-        break;
-    case 17:
-        printf("   UDP ");
-        break;
-    default:
-        printf(" %5d ", record.key.protocol);
+    for (const auto &field : m_view_def.key_fields) {
+        print_value(field, *value);
+        advance_value_ptr(value, field.size);
+        printf(" ");
     }
 
-    ViewValue *value = reinterpret_cast<ViewValue *>(record.values);
-    for (const auto &aggregate_field : m_aggregate_config.value_fields) {
-        switch (aggregate_field.data_type) {
-        case DataType::Unsigned64:
-            printf("%10lu", value->u64);
-            advance_value_ptr(value, sizeof(value->u64));
-            break;
-        default: assert(0);
-        }
+    for (const auto &field : m_view_def.value_fields) {
+        print_value(field, *value);
+        advance_value_ptr(value, field.size);
+        printf(" ");
     }
+
     printf("\n");
 }
 
