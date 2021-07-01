@@ -1,6 +1,7 @@
 #include "config.hpp"
 #include <cstdio>
 #include <vector>
+#include "common.hpp"
 #include "information_elements.hpp"
 
 class ArgParser
@@ -65,34 +66,6 @@ missing_arg(const char *opt)
     fprintf(stderr, "Missing argument for %s", opt);
 }
 
-static std::vector<std::string>
-string_split(const std::string &str, const std::string &delimiter)
-{
-    std::vector<std::string> pieces;
-    std::size_t pos = 0;
-    for (;;) {
-        std::size_t next_pos = str.find(delimiter, pos);
-        if (next_pos == std::string::npos) {
-            pieces.emplace_back(str.begin() + pos, str.end());
-            break;
-        }
-        pieces.emplace_back(str.begin() + pos, str.begin() + next_pos);
-        pos = next_pos + 1;
-    }
-    return pieces;
-}
-
-static bool
-is_one_of(const std::string &value, const std::vector<std::string> values)
-{
-    for (const auto &v : values) {
-        if (v == value) {
-            return true;
-        }
-    }
-    return false;
-}
-
 static int 
 parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def)
 {
@@ -135,10 +108,26 @@ parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def)
             field.data_type = DataType::Unsigned8;
             field.kind = ViewFieldKind::VerbatimKey;
             field.pen = IPFIX::iana;
-            field.id = IPFIX::destinationTransportPort;
+            field.id = IPFIX::protocolIdentifier;
             field.name = "proto";
             field.size = sizeof(ViewValue::u8);
             view_def.keys_size += sizeof(ViewValue::u8);
+        
+        } else if (key == "ip") {
+            field.data_type = DataType::IPAddress;
+            field.kind = ViewFieldKind::BidirectionalIPAddressKey;
+            field.name = "ip";
+            field.size = sizeof(ViewValue::ip);
+            view_def.keys_size += sizeof(ViewValue::ip);
+            view_def.bidirectional = true;
+
+        } else if (key == "port") {
+            field.data_type = DataType::Unsigned16;
+            field.kind = ViewFieldKind::BidirectionalPortKey;
+            field.name = "port";
+            field.size = sizeof(ViewValue::u16);
+            view_def.keys_size += sizeof(ViewValue::u16);
+            view_def.bidirectional = true;
 
         } else {
             fprintf(stderr, "Invalid aggregation key \"%s\"\n", key.c_str());
@@ -158,6 +147,7 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
 
     for (const auto &value : values) {
         ViewField field = {};
+
         if (value == "packets") {
             field.data_type = DataType::Unsigned64;
             field.pen = IPFIX::iana;
@@ -166,6 +156,7 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
             field.name = "packets";
             field.size = sizeof(ViewValue::u64);
             view_def.values_size += sizeof(ViewValue::u64);
+
         } else if (value == "bytes") {
             field.data_type = DataType::Unsigned64;
             field.pen = IPFIX::iana;
@@ -174,12 +165,70 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
             field.name = "bytes";
             field.size = sizeof(ViewValue::u64);
             view_def.values_size += sizeof(ViewValue::u64);
+
         } else if (value == "flows") {
             field.data_type = DataType::Unsigned64;
             field.kind = ViewFieldKind::FlowCount;
             field.name = "flows";
             field.size = sizeof(ViewValue::u64);
             view_def.values_size += sizeof(ViewValue::u64);
+
+        } else if (value == "inpackets") {
+            field.data_type = DataType::Unsigned64;
+            field.pen = IPFIX::iana;
+            field.id = IPFIX::packetDeltaCount;
+            field.kind = ViewFieldKind::SumAggregate;
+            field.name = "inpackets";
+            field.size = sizeof(ViewValue::u64);
+            field.direction = Direction::In;
+            view_def.values_size += sizeof(ViewValue::u64);
+
+        } else if (value == "inbytes") {
+            field.data_type = DataType::Unsigned64;
+            field.pen = IPFIX::iana;
+            field.id = IPFIX::octetDeltaCount;
+            field.kind = ViewFieldKind::SumAggregate;
+            field.name = "inbytes";
+            field.size = sizeof(ViewValue::u64);
+            field.direction = Direction::In;
+            view_def.values_size += sizeof(ViewValue::u64);
+
+        } else if (value == "inflows") {
+            field.data_type = DataType::Unsigned64;
+            field.kind = ViewFieldKind::FlowCount;
+            field.name = "inflows";
+            field.size = sizeof(ViewValue::u64);
+            field.direction = Direction::In;
+            view_def.values_size += sizeof(ViewValue::u64);
+        
+        }else if (value == "outpackets") {
+            field.data_type = DataType::Unsigned64;
+            field.pen = IPFIX::iana;
+            field.id = IPFIX::packetDeltaCount;
+            field.kind = ViewFieldKind::SumAggregate;
+            field.name = "outpackets";
+            field.size = sizeof(ViewValue::u64);
+            field.direction = Direction::Out;
+            view_def.values_size += sizeof(ViewValue::u64);
+
+        } else if (value == "outbytes") {
+            field.data_type = DataType::Unsigned64;
+            field.pen = IPFIX::iana;
+            field.id = IPFIX::octetDeltaCount;
+            field.kind = ViewFieldKind::SumAggregate;
+            field.name = "outbytes";
+            field.size = sizeof(ViewValue::u64);
+            field.direction = Direction::Out;
+            view_def.values_size += sizeof(ViewValue::u64);
+
+        } else if (value == "outflows") {
+            field.data_type = DataType::Unsigned64;
+            field.kind = ViewFieldKind::FlowCount;
+            field.name = "outflows";
+            field.size = sizeof(ViewValue::u64);
+            field.direction = Direction::Out;
+            view_def.values_size += sizeof(ViewValue::u64);
+
         } else {
             fprintf(stderr, "Invalid aggregation value \"%s\"\n", value.c_str());
             return 1;
@@ -252,7 +301,7 @@ config_from_args(int argc, char **argv, Config &config)
                 return 1;
             }
             config.sort_field = parser.arg();
-            if (!is_one_of(config.sort_field, {"bytes", "packets", "flows"})) {
+            if (!is_one_of(config.sort_field, {"bytes", "packets", "flows", "inbytes", "inpackets", "inflows", "outbytes", "outpackets", "outflows"})) {
                 fprintf(stderr, "Invalid sort field \"%s\"\n", config.sort_field.c_str());
                 return 1;
             }

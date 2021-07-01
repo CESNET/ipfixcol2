@@ -43,14 +43,15 @@ enum class ViewFieldKind
     VerbatimKey,
     SourceIPAddressKey,
     DestinationIPAddressKey,
-    IPAddressKey,
+    BidirectionalIPAddressKey,
+    BidirectionalPortKey,
     SumAggregate,
     MinAggregate,
     MaxAggregate,
     FlowCount
 };
 
-enum class FieldDirection
+enum class Direction
 {
     None,
     In,
@@ -65,12 +66,12 @@ struct ViewField
     uint16_t id;
     DataType data_type;
     ViewFieldKind kind;
-    FieldDirection direction; //TODO
+    Direction direction;
 };
 
 struct ViewDefinition
 {
-    bool bidirectional; //TODO
+    bool bidirectional;
 
     std::vector<ViewField> key_fields;
     std::vector<ViewField> value_fields;

@@ -1,7 +1,9 @@
 #pragma once
 
-#include <libfds.h>
+#include <vector>
 #include <memory>
+#include <string>
+#include <libfds.h>
 
 struct fds_file_closer
 {
@@ -58,3 +60,8 @@ struct fds_ipfix_filter_destroyer
 
 using unique_fds_ipfix_filter = std::unique_ptr<fds_ipfix_filter_t, fds_ipfix_filter_destroyer>;
 
+std::vector<std::string>
+string_split(const std::string &str, const std::string &delimiter);
+
+bool
+is_one_of(const std::string &value, const std::vector<std::string> values);

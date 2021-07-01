@@ -20,10 +20,10 @@ print_value(const ViewField &field, ViewValue &value)
         printf("%lu", value.u64);
         break;
     case DataType::Signed8:
-        printf("%hh", value.i8);
+        printf("%hhd", value.i8);
         break;
     case DataType::Signed16:
-        printf("%h", value.i16);
+        printf("%hd", value.i16);
         break;
     case DataType::Signed32:
         printf("%d", value.i32);

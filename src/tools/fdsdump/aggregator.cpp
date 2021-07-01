@@ -4,6 +4,7 @@
 #include "information_elements.hpp"
 #include "xxhash.h"
 #include <cstring>
+#include <iostream>
 
 static IPAddress
 make_ipv4_address(uint8_t *address)
@@ -42,7 +43,7 @@ get_int(fds_drec_field &field)
 }
 
 static int
-build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer)
+build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, Direction direction)
 {
     ViewValue *key_value = reinterpret_cast<ViewValue *>(key_buffer);
     fds_drec_field drec_field;
@@ -114,6 +115,52 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer)
             advance_value_ptr(key_value, sizeof(key_value->ip));
             break;
         
+        case ViewFieldKind::BidirectionalIPAddressKey:
+            switch (direction) {
+            case Direction::Out:
+                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceIPv4Address, &drec_field) != FDS_EOC) {
+                    key_value->ip = make_ipv4_address(drec_field.data);
+                } else if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceIPv6Address, &drec_field) != FDS_EOC) {
+                    key_value->ip = make_ipv6_address(drec_field.data);
+                } else {
+                    return 0;
+                }
+                break;
+            case Direction::In:
+                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationIPv4Address, &drec_field) != FDS_EOC) {
+                    key_value->ip = make_ipv4_address(drec_field.data);
+                } else if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationIPv6Address, &drec_field) != FDS_EOC) {
+                    key_value->ip = make_ipv6_address(drec_field.data);
+                } else {
+                    return 0;
+                }
+                break;
+            default: assert(0);
+            }
+            advance_value_ptr(key_value, sizeof(key_value->ip));
+            break;
+        
+        case ViewFieldKind::BidirectionalPortKey:
+            switch (direction) {
+            case Direction::Out:
+                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceTransportPort, &drec_field) != FDS_EOC) {
+                    key_value->u16 = get_uint(drec_field);
+                } else {
+                    return 0;
+                }
+                break;
+            case Direction::In:
+                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationTransportPort, &drec_field) != FDS_EOC) {
+                    key_value->u16 = get_uint(drec_field);
+                } else {
+                    return 0;
+                }
+                break;
+            default: assert(0);
+            }
+            advance_value_ptr(key_value, sizeof(key_value->u16));
+            break;
+        
         default: assert(0);
         }
 
@@ -123,8 +170,12 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer)
 }
 
 static void
-aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *&value)
+aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *&value, Direction direction)
 {
+    if (aggregate_field.direction != Direction::None && direction != aggregate_field.direction) {
+        return;
+    }
+
     fds_drec_field drec_field;
 
     switch (aggregate_field.kind) {
@@ -166,12 +217,23 @@ Aggregator::Aggregator(ViewDefinition view_def) :
 void
 Aggregator::process_record(fds_drec &drec)
 {
+    if (m_view_def.bidirectional) {
+        aggregate(drec, Direction::In);
+        aggregate(drec, Direction::Out);
+    } else {
+        aggregate(drec, Direction::None);
+    }
+}
+
+void
+Aggregator::aggregate(fds_drec &drec, Direction direction)
+{
     constexpr std::size_t key_buffer_size = 1024;
     assert(m_view_def.keys_size <= key_buffer_size);
 
-    uint8_t key_buffer[key_buffer_size];
+    static uint8_t key_buffer[key_buffer_size];
 
-    if (!build_key(m_view_def, drec, key_buffer)) {
+    if (!build_key(m_view_def, drec, key_buffer, direction)) {
         return;
     }
 
@@ -204,6 +266,37 @@ Aggregator::process_record(fds_drec &drec)
 
     ViewValue *value = reinterpret_cast<ViewValue *>((*arec)->data + m_view_def.keys_size);
     for (const auto &aggregate_field : m_view_def.value_fields) {
-        aggregate_value(aggregate_field, drec, value);
+        aggregate_value(aggregate_field, drec, value, direction);
     }
+}
+
+void
+Aggregator::print_debug_info()
+{
+    std::size_t n_total_records = 0;
+    std::size_t max_records_in_bucket = 0;
+    std::size_t min_records_in_bucket = 0;
+    std::size_t avg_records_in_bucket = 0;
+    for (const auto bucket : m_buckets) {
+        AggregateRecord *rec = bucket;
+        std::size_t n_records = 0;
+        while (rec) {
+            n_records++;
+            rec = rec->next;
+        }
+        n_total_records += n_records;
+        if (n_records > max_records_in_bucket) {
+            max_records_in_bucket = n_records;
+        }
+        if (n_records < min_records_in_bucket) {
+            min_records_in_bucket = n_records;
+        }
+        std::cout << n_records << "\n";
+    }
+    avg_records_in_bucket = n_total_records / BUCKETS_COUNT;
+
+    std::cout << "Total records: " << n_total_records << "\n";
+    std::cout << "Max in bucket: " << max_records_in_bucket << "\n";
+    std::cout << "Min in bucket: " << min_records_in_bucket << "\n";
+    std::cout << "Avg in bucket: " << avg_records_in_bucket << "\n";
 }

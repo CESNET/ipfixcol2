@@ -2,12 +2,14 @@
 #include <memory>
 #include <functional>
 #include <algorithm>
+#include <vector>
 #include "reader.hpp"
 #include "aggregator.hpp"
 #include "table_printer.hpp"
 #include "ipfix_filter.hpp"
 #include "aggregate_filter.hpp"
 #include "config.hpp"
+#include "common.hpp"
 
 static unique_fds_iemgr
 make_iemgr();
@@ -25,6 +27,8 @@ main(int argc, char *argv[])
     if (rc != 0) {
         return rc;
     }
+
+    //std::cout << "key size: " << config.view_def.keys_size << "\n";
 
     unique_fds_iemgr iemgr = make_iemgr();
 
@@ -51,6 +55,8 @@ main(int argc, char *argv[])
         }
     }
     printf("                           \r");
+
+    //aggregator.print_debug_info();
 
     auto records = aggregator.records();
 
@@ -98,19 +104,13 @@ sort_records(std::vector<AggregateRecord *> &records, const std::string &sort_fi
 {
     std::function<bool(AggregateRecord *, AggregateRecord *)> compare_fn;
 
-    if (sort_field == "packets") {
+    if (is_one_of(sort_field, {"bytes", "packets", "flows", "inbytes", "inpackets", "inflows", "outbytes", "outpackets", "outflows"})) {
         compare_fn = [&](AggregateRecord *a, AggregateRecord *b) {
-            return get_value_by_name(view_def, a->data, "packets")->u64 > get_value_by_name(view_def, b->data, "packets")->u64;
+            return get_value_by_name(view_def, a->data, sort_field)->u64 > get_value_by_name(view_def, b->data, sort_field)->u64;
         };
-    } else if (sort_field == "bytes") {
-        compare_fn = [&](AggregateRecord *a, AggregateRecord *b) {
-            return get_value_by_name(view_def, a->data, "bytes")->u64 > get_value_by_name(view_def, b->data, "bytes")->u64;
-        };
-    } else if (sort_field == "flows") {
-        compare_fn = [&](AggregateRecord *a, AggregateRecord *b) {
-            return get_value_by_name(view_def, a->data, "flows")->u64 > get_value_by_name(view_def, b->data, "flows")->u64;
-        };
-    }
+    } else {
+        assert(0);
+    } 
 
     std::sort(records.begin(), records.end(), compare_fn);
 }

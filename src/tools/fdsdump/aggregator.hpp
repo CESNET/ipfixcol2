@@ -6,7 +6,7 @@
 #include <libfds.h>
 #include "config.hpp"
 
-constexpr std::size_t BUCKETS_COUNT = 4096 * 100;
+constexpr std::size_t BUCKETS_COUNT = 4096 * 4;
 
 struct AggregateRecord
 {
@@ -26,8 +26,14 @@ public:
     std::vector<AggregateRecord *>
     records() { return m_records; }
 
+    void
+    print_debug_info();
+
 private:
     ViewDefinition m_view_def;
     std::array<AggregateRecord *, BUCKETS_COUNT> m_buckets;
     std::vector<AggregateRecord *> m_records;
+
+    void
+    aggregate(fds_drec &drec, Direction direction);
 };
