@@ -11,6 +11,7 @@ constexpr std::size_t BUCKETS_COUNT = 4096 * 100;
 struct AggregateRecord
 {
     AggregateRecord *next;
+    uint64_t hash;
     uint8_t data[];
 };
 

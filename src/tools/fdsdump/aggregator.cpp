@@ -184,7 +184,7 @@ Aggregator::process_record(fds_drec &drec)
             break;
         }
 
-        if (std::memcmp((*arec)->data, key_buffer, m_view_def.keys_size) == 0) {
+        if ((*arec)->hash == hash && std::memcmp((*arec)->data, key_buffer, m_view_def.keys_size) == 0) {
             break;
         }
 
@@ -197,6 +197,7 @@ Aggregator::process_record(fds_drec &drec)
             throw std::bad_alloc{};
         }
         *arec = static_cast<AggregateRecord *>(tmp);
+        (*arec)->hash = hash;
         m_records.push_back(*arec);
         std::memcpy((*arec)->data, key_buffer, m_view_def.keys_size);
     }

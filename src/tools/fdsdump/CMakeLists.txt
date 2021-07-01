@@ -1,3 +1,5 @@
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer")
+
 add_executable(fdsdump
     fdsdump.cpp
     common.hpp
@@ -19,9 +21,11 @@ add_executable(fdsdump
     view.hpp
 )
 
+
 target_link_libraries(fdsdump
     ${FDS_LIBRARIES}           # libfds
 )
+
 
 install(
     TARGETS fdsdump
