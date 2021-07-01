@@ -30,17 +30,17 @@ lookup_callback(void *user_ctx, const char *name_, const char *other_name,
 static int
 data_callback(void *user_ctx, bool reset_ctx, int id, void *data, fds_filter_value_u *out_value)
 {
-    AggregateConfig &aggregate_config = *static_cast<AggregateConfig *>(user_ctx);
+    ViewDefinition &view_def = *static_cast<ViewDefinition *>(user_ctx);
     AggregateRecord &arec = *static_cast<AggregateRecord *>(data);
     switch (id) {
     case FLOWS_ID:
-        out_value->u = get_value_by_name(aggregate_config, arec.values, "flows")->u64;
+        out_value->u = get_value_by_name(view_def, arec.values, "flows")->u64;
         break;
     case PACKETS_ID:
-        out_value->u = get_value_by_name(aggregate_config, arec.values, "packets")->u64;
+        out_value->u = get_value_by_name(view_def, arec.values, "packets")->u64;
         break;
     case BYTES_ID:
-        out_value->u = get_value_by_name(aggregate_config, arec.values, "bytes")->u64;
+        out_value->u = get_value_by_name(view_def, arec.values, "bytes")->u64;
         break;
     default:
         return FDS_ERR_NOTFOUND;
@@ -48,8 +48,8 @@ data_callback(void *user_ctx, bool reset_ctx, int id, void *data, fds_filter_val
     return FDS_OK;
 }
 
-AggregateFilter::AggregateFilter(const char *filter_expr, AggregateConfig aggregate_config)
-    : m_aggregate_config(aggregate_config)
+AggregateFilter::AggregateFilter(const char *filter_expr, ViewDefinition view_def)
+    : m_view_def(view_def)
 {
     int rc;
 
@@ -58,7 +58,7 @@ AggregateFilter::AggregateFilter(const char *filter_expr, AggregateConfig aggreg
         throw std::bad_alloc();
     }
 
-    fds_filter_opts_set_user_ctx(m_filter_opts.get(), &m_aggregate_config);
+    fds_filter_opts_set_user_ctx(m_filter_opts.get(), &m_view_def);
     fds_filter_opts_set_lookup_cb(m_filter_opts.get(), lookup_callback);
     fds_filter_opts_set_data_cb(m_filter_opts.get(), data_callback);
 

@@ -13,7 +13,7 @@ static unique_fds_iemgr
 make_iemgr();
 
 static void
-sort_records(std::vector<AggregateRecord *> &records, const std::string &sort_field, AggregateConfig &config);
+sort_records(std::vector<AggregateRecord *> &records, const std::string &sort_field, ViewDefinition &config);
 
 int
 main(int argc, char *argv[])
@@ -30,9 +30,9 @@ main(int argc, char *argv[])
 
     Reader reader{config.input_file.c_str(), *iemgr.get()};
     IPFIXFilter ipfix_filter{config.input_filter.c_str(), *iemgr.get()};
-    Aggregator aggregator{config.aggregate_config};
-    AggregateFilter aggregate_filter{config.output_filter.c_str(), config.aggregate_config};
-    std::unique_ptr<Printer> printer{new TablePrinter{config.aggregate_config}};
+    Aggregator aggregator{config.view_def};
+    AggregateFilter aggregate_filter{config.output_filter.c_str(), config.view_def};
+    std::unique_ptr<Printer> printer{new TablePrinter{config.view_def}};
 
     fds_drec drec;
     uint64_t i = 0;
@@ -55,7 +55,7 @@ main(int argc, char *argv[])
     auto records = aggregator.records();
 
     if (!config.sort_field.empty()) {
-        sort_records(records, config.sort_field, config.aggregate_config);
+        sort_records(records, config.sort_field, config.view_def);
     }
 
     uint64_t output_counter;
@@ -94,21 +94,21 @@ make_iemgr()
 }
 
 static void
-sort_records(std::vector<AggregateRecord *> &records, const std::string &sort_field, AggregateConfig &config)
+sort_records(std::vector<AggregateRecord *> &records, const std::string &sort_field, ViewDefinition &view_def)
 {
     std::function<bool(AggregateRecord *, AggregateRecord *)> compare_fn;
 
     if (sort_field == "packets") {
         compare_fn = [&](AggregateRecord *a, AggregateRecord *b) {
-            return get_value_by_name(config, a->values, "packets")->u64 > get_value_by_name(config, b->values, "packets")->u64;
+            return get_value_by_name(view_def, a->values, "packets")->u64 > get_value_by_name(view_def, b->values, "packets")->u64;
         };
     } else if (sort_field == "bytes") {
         compare_fn = [&](AggregateRecord *a, AggregateRecord *b) {
-            return get_value_by_name(config, a->values, "bytes")->u64 > get_value_by_name(config, b->values, "bytes")->u64;
+            return get_value_by_name(view_def, a->values, "bytes")->u64 > get_value_by_name(view_def, b->values, "bytes")->u64;
         };
     } else if (sort_field == "flows") {
         compare_fn = [&](AggregateRecord *a, AggregateRecord *b) {
-            return get_value_by_name(config, a->values, "flows")->u64 > get_value_by_name(config, b->values, "flows")->u64;
+            return get_value_by_name(view_def, a->values, "flows")->u64 > get_value_by_name(view_def, b->values, "flows")->u64;
         };
     }
 

@@ -23,7 +23,7 @@ make_ipv6_address(uint8_t *address)
     return a;
 }
 
-uint64_t
+static uint64_t
 get_uint(fds_drec_field &field)
 {
     uint64_t tmp;
@@ -32,7 +32,7 @@ get_uint(fds_drec_field &field)
     return tmp;
 }
 
-int64_t
+static int64_t
 get_int(fds_drec_field &field)
 {
     int64_t tmp;
@@ -42,14 +42,14 @@ get_int(fds_drec_field &field)
 }
 
 static void
-aggregate_value(const AggregateField &aggregate_field, fds_drec &drec, Value *&value)
+aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *&value)
 {
     fds_drec_field drec_field;
 
     switch (aggregate_field.kind) {
 
-    case AggregateFieldKind::Sum:
-        if (fds_drec_find(&drec, aggregate_field.pen, aggregate_field.id, &drec_field) != FDS_OK) {
+    case ViewFieldKind::Sum:
+        if (fds_drec_find(&drec, aggregate_field.pen, aggregate_field.id, &drec_field) == FDS_EOC) {
             return;
         }
 
@@ -59,14 +59,14 @@ aggregate_value(const AggregateField &aggregate_field, fds_drec &drec, Value *&v
             advance_value_ptr(value, sizeof(value->u64));
             break;
         case DataType::Signed64:
-            value->i64 += get_uint(drec_field);
+            value->i64 += get_int(drec_field);
             advance_value_ptr(value, sizeof(value->i64));
             break;
         default: assert(0);
         }
         break;
     
-    case AggregateFieldKind::FlowCount:
+    case ViewFieldKind::FlowCount:
         value->u64++;
         advance_value_ptr(value, sizeof(value->u64));
         break;
@@ -76,8 +76,8 @@ aggregate_value(const AggregateField &aggregate_field, fds_drec &drec, Value *&v
     }
 }
 
-Aggregator::Aggregator(AggregateConfig config) : 
-    m_config(config), 
+Aggregator::Aggregator(ViewDefinition view_def) : 
+    m_view_def(view_def), 
     m_buckets{nullptr}
 {
 }
@@ -93,7 +93,7 @@ Aggregator::process_record(fds_drec &drec)
         return fds_drec_find(&drec, IPFIX::iana, id, &field) != FDS_EOC;
     };
 
-    if (m_config.key_src_ip) {
+    if (m_view_def.key_src_ip) {
         if (fetch(IPFIX::sourceIPv4Address)) {
             key.src_ip = make_ipv4_address(field.data);
         } else if (fetch(IPFIX::sourceIPv6Address)) {
@@ -103,7 +103,7 @@ Aggregator::process_record(fds_drec &drec)
         }
     }
 
-    if (m_config.key_dst_ip) {
+    if (m_view_def.key_dst_ip) {
         if (fetch(IPFIX::destinationIPv4Address)) {
             key.dst_ip = make_ipv4_address(field.data);
         } else if (fetch(IPFIX::destinationIPv6Address)) {
@@ -113,7 +113,7 @@ Aggregator::process_record(fds_drec &drec)
         }
     }
 
-    if (m_config.key_src_port) {
+    if (m_view_def.key_src_port) {
         if (!fetch(IPFIX::sourceTransportPort)) {
             return;
         }
@@ -121,7 +121,7 @@ Aggregator::process_record(fds_drec &drec)
         key.src_port = tmp;
     }
 
-    if (m_config.key_dst_port) {
+    if (m_view_def.key_dst_port) {
         if (!fetch(IPFIX::destinationTransportPort)) {
             return;
         }
@@ -129,7 +129,7 @@ Aggregator::process_record(fds_drec &drec)
         key.dst_port = tmp;
     }
 
-    if (m_config.key_protocol) {
+    if (m_view_def.key_protocol) {
         if (!fetch(IPFIX::protocolIdentifier)) {
             return;
         }
@@ -154,7 +154,7 @@ Aggregator::process_record(fds_drec &drec)
     }
 
     if (*arec == nullptr) {
-        void *tmp = calloc(1, sizeof(AggregateRecord) + m_config.values_size);
+        void *tmp = calloc(1, sizeof(AggregateRecord) + m_view_def.values_size);
         if (!tmp) {
             throw std::bad_alloc{};
         }
@@ -163,8 +163,8 @@ Aggregator::process_record(fds_drec &drec)
         std::memcpy(reinterpret_cast<uint8_t *>(&((*arec)->key)), reinterpret_cast<uint8_t *>(&key), sizeof(key));
     }
 
-    Value *value = reinterpret_cast<Value *>((*arec)->values);
-    for (const auto &aggregate_field : m_config.value_fields) {
+    ViewValue *value = reinterpret_cast<ViewValue *>((*arec)->values);
+    for (const auto &aggregate_field : m_view_def.value_fields) {
         aggregate_value(aggregate_field, drec, value);
     }
 }

@@ -94,21 +94,21 @@ is_one_of(const std::string &value, const std::vector<std::string> values)
 }
 
 static int 
-parse_aggregate_key_config(const std::string &options, AggregateConfig &aggregate_config)
+parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def)
 {
-    aggregate_config = {};
+    view_def = {};
 
     for (const auto &key : string_split(options, ",")) {
         if (key == "srcip") {
-            aggregate_config.key_src_ip = true;
+            view_def.key_src_ip = true;
         } else if (key == "dstip") {
-            aggregate_config.key_dst_ip = true;
+            view_def.key_dst_ip = true;
         } else if (key == "srcport") {
-            aggregate_config.key_src_port = true;
+            view_def.key_src_port = true;
         } else if (key == "dstport") {
-            aggregate_config.key_dst_port = true;
+            view_def.key_dst_port = true;
         } else if (key == "proto") {
-            aggregate_config.key_protocol = true;
+            view_def.key_protocol = true;
         } else {
             fprintf(stderr, "Invalid aggregation key \"%s\"\n", key.c_str());
             return 1;
@@ -118,39 +118,39 @@ parse_aggregate_key_config(const std::string &options, AggregateConfig &aggregat
 }
 
 static int
-parse_aggregate_value_config(const std::string &options, AggregateConfig &aggregate_config)
+parse_aggregate_value_config(const std::string &options, ViewDefinition &view_def)
 {
     auto values = string_split(options, ",");
-    AggregateField field;
+    ViewField field;
 
     for (const auto &value : values) {
         if (value == "packets") {
             field.data_type = DataType::Unsigned64;
             field.pen = IPFIX::iana;
             field.id = IPFIX::packetDeltaCount;
-            field.kind = AggregateFieldKind::Sum;
+            field.kind = ViewFieldKind::Sum;
             field.name = "packets";
-            field.size = sizeof(Value::u64);
-            aggregate_config.values_size += sizeof(Value::u64);
+            field.size = sizeof(ViewValue::u64);
+            view_def.values_size += sizeof(ViewValue::u64);
         } else if (value == "bytes") {
             field.data_type = DataType::Unsigned64;
             field.pen = IPFIX::iana;
             field.id = IPFIX::octetDeltaCount;
-            field.kind = AggregateFieldKind::Sum;
+            field.kind = ViewFieldKind::Sum;
             field.name = "bytes";
-            field.size = sizeof(Value::u64);
-            aggregate_config.values_size += sizeof(Value::u64);
+            field.size = sizeof(ViewValue::u64);
+            view_def.values_size += sizeof(ViewValue::u64);
         } else if (value == "flows") {
             field.data_type = DataType::Unsigned64;
-            field.kind = AggregateFieldKind::FlowCount;
+            field.kind = ViewFieldKind::FlowCount;
             field.name = "flows";
-            field.size = sizeof(Value::u64);
-            aggregate_config.values_size += sizeof(Value::u64);
+            field.size = sizeof(ViewValue::u64);
+            view_def.values_size += sizeof(ViewValue::u64);
         } else {
             fprintf(stderr, "Invalid aggregation value \"%s\"\n", value.c_str());
             return 1;
         }
-        aggregate_config.value_fields.push_back(field);
+        view_def.value_fields.push_back(field);
     }
 
     return 0;
@@ -160,11 +160,11 @@ int
 config_from_args(int argc, char **argv, Config &config)
 {
     config = {};
-    config.aggregate_config.key_src_ip = true;
-    config.aggregate_config.key_dst_ip = true;
-    config.aggregate_config.key_src_port = true;
-    config.aggregate_config.key_dst_port = true;
-    config.aggregate_config.key_protocol = true;
+    config.view_def.key_src_ip = true;
+    config.view_def.key_dst_ip = true;
+    config.view_def.key_src_port = true;
+    config.view_def.key_dst_port = true;
+    config.view_def.key_protocol = true;
 
     ArgParser parser{argc, argv};
     while (parser.next()) {
@@ -200,7 +200,7 @@ config_from_args(int argc, char **argv, Config &config)
                 missing_arg("-a");
                 return 1;
             }
-            if (parse_aggregate_key_config(parser.arg(), config.aggregate_config) == 1) {
+            if (parse_aggregate_key_config(parser.arg(), config.view_def) == 1) {
                 return 1;
             }
         } else if (parser.arg() == "-av") {
@@ -208,7 +208,7 @@ config_from_args(int argc, char **argv, Config &config)
                 missing_arg("-av");
                 return 1;
             }
-            if (parse_aggregate_value_config(parser.arg(), config.aggregate_config) == 1) {
+            if (parse_aggregate_value_config(parser.arg(), config.view_def) == 1) {
                 return 1;
             }
         } else if (parser.arg() == "-n") {

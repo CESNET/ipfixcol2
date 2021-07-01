@@ -6,7 +6,7 @@
 class AggregateFilter
 {
 public:
-    AggregateFilter(const char *filter_expr, AggregateConfig aggregate_config);
+    AggregateFilter(const char *filter_expr, ViewDefinition view_def);
 
     bool
     record_passes(AggregateRecord &record);
@@ -14,5 +14,5 @@ public:
 private:
     unique_fds_filter_opts m_filter_opts;
     unique_fds_filter m_filter;
-    AggregateConfig m_aggregate_config;
+    ViewDefinition m_view_def;
 };

@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <arpa/inet.h>
 
-TablePrinter::TablePrinter(AggregateConfig aggregate_config)
+TablePrinter::TablePrinter(ViewDefinition aggregate_config)
     : m_aggregate_config(aggregate_config)
 {
 }
@@ -41,7 +41,7 @@ TablePrinter::print_record(AggregateRecord &record)
         printf(" %5d ", record.key.protocol);
     }
 
-    Value *value = reinterpret_cast<Value *>(record.values);
+    ViewValue *value = reinterpret_cast<ViewValue *>(record.values);
     for (const auto &aggregate_field : m_aggregate_config.value_fields) {
         switch (aggregate_field.data_type) {
         case DataType::Unsigned64:

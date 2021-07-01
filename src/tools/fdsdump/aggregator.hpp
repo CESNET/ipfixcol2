@@ -8,25 +8,6 @@
 
 constexpr std::size_t BUCKETS_COUNT = 4096 * 100;
 
-static inline void
-advance_value_ptr(Value *&value, std::size_t value_size)
-{
-    value = reinterpret_cast<Value *>(reinterpret_cast<uint8_t *>(value) + value_size);
-}
-
-static inline Value *
-get_value_by_name(AggregateConfig &config, uint8_t *values, const std::string &name)
-{
-    Value *value = reinterpret_cast<Value *>(values);
-    for (const auto &field : config.value_fields) {
-        if (field.name == name) {
-            return value;
-        }
-        advance_value_ptr(value, field.size);
-    }
-    return nullptr;
-}
-
 struct AggregateRecord
 {
     AggregateRecord *next;
@@ -46,7 +27,7 @@ struct AggregateRecord
 class Aggregator
 {
 public:
-    Aggregator(AggregateConfig config);
+    Aggregator(ViewDefinition view_def);
 
     void
     process_record(fds_drec &drec);
@@ -55,7 +36,7 @@ public:
     records() { return m_records; }
 
 private:
-    AggregateConfig m_config;
+    ViewDefinition m_view_def;
     std::array<AggregateRecord *, BUCKETS_COUNT> m_buckets;
     std::vector<AggregateRecord *> m_records;
 };

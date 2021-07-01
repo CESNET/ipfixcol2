@@ -15,6 +15,8 @@ add_executable(fdsdump
     config.hpp
     aggregate_filter.cpp
     aggregate_filter.hpp
+    view.cpp
+    view.hpp
 )
 
 target_link_libraries(fdsdump
