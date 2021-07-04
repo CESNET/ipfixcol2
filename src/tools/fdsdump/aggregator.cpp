@@ -209,9 +209,9 @@ aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *&va
 }
 
 Aggregator::Aggregator(ViewDefinition view_def) : 
-    m_view_def(view_def), 
-    m_buckets{nullptr}
+    m_view_def(view_def)
 {
+    m_buckets.resize(m_buckets_count, nullptr);
 }
 
 void
@@ -238,7 +238,7 @@ Aggregator::aggregate(fds_drec &drec, Direction direction)
     }
 
     uint64_t hash = XXH3_64bits(key_buffer, sizeof(m_view_def.keys_size));
-    std::size_t bucket_index = hash % BUCKETS_COUNT;
+    std::size_t bucket_index = hash % m_buckets_count;
     AggregateRecord **arec = &m_buckets[bucket_index];
 
     for (;;) {
@@ -293,7 +293,7 @@ Aggregator::print_debug_info()
         }
         std::cout << n_records << "\n";
     }
-    avg_records_in_bucket = n_total_records / BUCKETS_COUNT;
+    avg_records_in_bucket = n_total_records / m_buckets_count;
 
     std::cout << "Total records: " << n_total_records << "\n";
     std::cout << "Max in bucket: " << max_records_in_bucket << "\n";

@@ -64,7 +64,7 @@ main(int argc, char *argv[])
         sort_records(records, config.sort_field, config.view_def);
     }
 
-    uint64_t output_counter;
+    uint64_t output_counter = 0;
     printer->print_prologue();
     for (auto *record : records) {
         AggregateRecord &arec = *record;
