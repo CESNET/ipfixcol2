@@ -3,7 +3,6 @@
 #define XXH_INLINE_ALL
 
 #include <xmmintrin.h>
-#include "hashmap.hpp"
 #include "xxhash.h"
 #include <iostream>
 
