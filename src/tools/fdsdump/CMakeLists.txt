@@ -20,6 +20,8 @@ add_executable(fdsdump
     aggregate_filter.hpp
     view.cpp
     view.hpp
+    aggregate_table.cpp
+    aggregate_table.hpp
 )
 
 

@@ -5,13 +5,7 @@
 #include <cstdint>
 #include <libfds.h>
 #include "config.hpp"
-
-struct AggregateRecord
-{
-    AggregateRecord *next;
-    uint64_t hash;
-    uint8_t data[];
-};
+#include "aggregate_table.hpp"
 
 class Aggregator
 {
@@ -22,17 +16,15 @@ public:
     process_record(fds_drec &drec);
 
     std::vector<AggregateRecord *>
-    records() { return m_records; }
+    records() { return m_table.records(); }
 
-    void
-    print_debug_info();
+    // void
+    // print_debug_info();
 
 private:
     ViewDefinition m_view_def;
-    std::size_t m_buckets_count = 1024;
-    std::size_t m_records_count = 0;
-    std::vector<AggregateRecord *> m_buckets;
-    std::vector<AggregateRecord *> m_records;
+
+    AggregateTable m_table;
 
     void
     aggregate(fds_drec &drec, Direction direction);

@@ -209,9 +209,9 @@ aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *&va
 }
 
 Aggregator::Aggregator(ViewDefinition view_def) : 
-    m_view_def(view_def)
+    m_view_def(view_def),
+    m_table(view_def.keys_size, view_def.values_size)
 {
-    m_buckets.resize(m_buckets_count, nullptr);
 }
 
 void
@@ -237,66 +237,43 @@ Aggregator::aggregate(fds_drec &drec, Direction direction)
         return;
     }
 
-    uint64_t hash = XXH3_64bits(key_buffer, sizeof(m_view_def.keys_size));
-    std::size_t bucket_index = hash % m_buckets_count;
-    AggregateRecord **arec = &m_buckets[bucket_index];
+    AggregateRecord *record;
+    m_table.lookup(key_buffer, record);
 
-    for (;;) {
-        if (*arec == nullptr) {
-            break;
-        }
-
-        if ((*arec)->hash == hash && std::memcmp((*arec)->data, key_buffer, m_view_def.keys_size) == 0) {
-            break;
-        }
-
-        arec = &(*arec)->next;
-    }
-
-    if (*arec == nullptr) {
-        void *tmp = calloc(1, sizeof(AggregateRecord) + m_view_def.keys_size + m_view_def.values_size);
-        if (!tmp) {
-            throw std::bad_alloc{};
-        }
-        *arec = static_cast<AggregateRecord *>(tmp);
-        (*arec)->hash = hash;
-        m_records.push_back(*arec);
-        std::memcpy((*arec)->data, key_buffer, m_view_def.keys_size);
-    }
-
-    ViewValue *value = reinterpret_cast<ViewValue *>((*arec)->data + m_view_def.keys_size);
+    ViewValue *value = reinterpret_cast<ViewValue *>(record->data + m_view_def.keys_size);
     for (const auto &aggregate_field : m_view_def.value_fields) {
         aggregate_value(aggregate_field, drec, value, direction);
     }
 }
 
-void
-Aggregator::print_debug_info()
-{
-    std::size_t n_total_records = 0;
-    std::size_t max_records_in_bucket = 0;
-    std::size_t min_records_in_bucket = 0;
-    std::size_t avg_records_in_bucket = 0;
-    for (const auto bucket : m_buckets) {
-        AggregateRecord *rec = bucket;
-        std::size_t n_records = 0;
-        while (rec) {
-            n_records++;
-            rec = rec->next;
-        }
-        n_total_records += n_records;
-        if (n_records > max_records_in_bucket) {
-            max_records_in_bucket = n_records;
-        }
-        if (n_records < min_records_in_bucket) {
-            min_records_in_bucket = n_records;
-        }
-        std::cout << n_records << "\n";
-    }
-    avg_records_in_bucket = n_total_records / m_buckets_count;
+// void
+// Aggregator::print_debug_info()
+// {
+//     std::size_t n_total_records = 0;
+//     std::size_t max_records_in_bucket = 0;
+//     std::size_t min_records_in_bucket = 0;
+//     std::size_t avg_records_in_bucket = 0;
+//     for (const auto bucket : m_buckets) {
+//         AggregateRecord *rec = bucket;
+//         std::size_t n_records = 0;
+//         while (rec) {
+//             n_records++;
+//             rec = rec->next;
+//         }
+//         n_total_records += n_records;
+//         if (n_records > max_records_in_bucket) {
+//             max_records_in_bucket = n_records;
+//         }
+//         if (n_records < min_records_in_bucket) {
+//             min_records_in_bucket = n_records;
+//         }
+//         std::cout << n_records << "\n";
+//     }
+//     avg_records_in_bucket = n_total_records / m_buckets_count;
 
-    std::cout << "Total records: " << n_total_records << "\n";
-    std::cout << "Max in bucket: " << max_records_in_bucket << "\n";
-    std::cout << "Min in bucket: " << min_records_in_bucket << "\n";
-    std::cout << "Avg in bucket: " << avg_records_in_bucket << "\n";
-}
+//     std::cout << "Total records: " << n_total_records << "\n";
+//     std::cout << "Max in bucket: " << max_records_in_bucket << "\n";
+//     std::cout << "Min in bucket: " << min_records_in_bucket << "\n";
+//     std::cout << "Avg in bucket: " << avg_records_in_bucket << "\n";
+// }
+
