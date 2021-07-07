@@ -24,6 +24,17 @@ make_ipv6_address(uint8_t *address)
     return a;
 }
 
+static void
+memcpy_bits(uint8_t *dst, uint8_t *src, unsigned n_bits)
+{
+    unsigned n_bytes = (n_bits + 7) >> 3;
+    unsigned rem_bits = 8 - (n_bits & 0x07);
+    memcpy(dst, src, n_bytes);
+    if (rem_bits != 8) {
+        dst[n_bytes - 1] &= (0xFF >> rem_bits) << rem_bits;
+    }
+}
+
 static uint64_t
 get_uint(fds_drec_field &field)
 {
@@ -160,7 +171,59 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
             }
             advance_value_ptr(key_value, sizeof(key_value->u16));
             break;
-        
+
+        case ViewFieldKind::IPv4SubnetKey:
+            if (fds_drec_find(&drec, view_field.pen, view_field.id, &drec_field) == FDS_EOC) {
+                return 0;
+            }
+            memcpy_bits(key_value->ipv4, drec_field.data, view_field.extra.prefix_length);
+            advance_value_ptr(key_value, sizeof(key_value->ipv4));
+            break;
+
+        case ViewFieldKind::IPv6SubnetKey:
+            if (fds_drec_find(&drec, view_field.pen, view_field.id, &drec_field) == FDS_EOC) {
+                return 0;
+            }
+            memcpy_bits(key_value->ipv6, drec_field.data, view_field.extra.prefix_length);
+            advance_value_ptr(key_value, sizeof(key_value->ipv6));
+            break;
+
+        case ViewFieldKind::BidirectionalIPv4SubnetKey:
+            switch (direction) {
+            case Direction::Out:
+                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceIPv4Address, &drec_field) == FDS_EOC) {
+                    return 0;
+                }
+                break;
+            case Direction::In:
+                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationIPv4Address, &drec_field) == FDS_EOC) {
+                    return 0;
+                }
+                break;
+            default: assert(0);
+            }
+            memcpy_bits(key_value->ipv4, drec_field.data, view_field.extra.prefix_length);
+            advance_value_ptr(key_value, sizeof(key_value->ipv4));
+            break;
+
+        case ViewFieldKind::BidirectionalIPv6SubnetKey:
+            switch (direction) {
+            case Direction::Out:
+                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceIPv6Address, &drec_field) == FDS_EOC) {
+                    return 0;
+                }
+                break;
+            case Direction::In:
+                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationIPv6Address, &drec_field) == FDS_EOC) {
+                    return 0;
+                }
+                break;
+            default: assert(0);
+            }
+            memcpy_bits(key_value->ipv6, drec_field.data, view_field.extra.prefix_length);
+            advance_value_ptr(key_value, sizeof(key_value->ipv4));
+            break;
+
         default: assert(0);
         }
 

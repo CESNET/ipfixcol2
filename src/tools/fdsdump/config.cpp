@@ -1,6 +1,7 @@
 #include "config.hpp"
 #include <cstdio>
 #include <vector>
+#include <regex>
 #include "common.hpp"
 #include "information_elements.hpp"
 
@@ -66,13 +67,97 @@ missing_arg(const char *opt)
     fprintf(stderr, "Missing argument for %s", opt);
 }
 
-static int 
+static int
 parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def, fds_iemgr_t &iemgr)
 {
     for (const auto &key : string_split(options, ",")) {
         ViewField field = {};
 
-        if (key == "srcip") {
+        std::regex subnet_regex{"([a-zA-Z0-9:]+)/(\\d+)"};
+        std::smatch m;
+
+        if (std::regex_match(key, m, subnet_regex)) {
+            field.name = key;
+            auto prefix_length = std::stoul(m[2].str());
+
+            if (m[1] == "srcipv4") {
+                field.pen = IPFIX::iana;
+                field.id = IPFIX::sourceIPv4Address;
+                field.data_type = DataType::IPv4Address;
+                field.size = sizeof(ViewValue::ipv4);
+                field.kind = ViewFieldKind::IPv4SubnetKey;
+
+            } else if (m[1] == "dstipv4") {
+                field.pen = IPFIX::iana;
+                field.id = IPFIX::destinationIPv4Address;
+                field.data_type = DataType::IPv4Address;
+                field.size = sizeof(ViewValue::ipv4);
+                field.kind = ViewFieldKind::IPv4SubnetKey;
+
+            } else if (m[1] == "srcipv6") {
+                field.pen = IPFIX::iana;
+                field.id = IPFIX::sourceIPv6Address;
+                field.data_type = DataType::IPv6Address;
+                field.size = sizeof(ViewValue::ipv6);
+                field.kind = ViewFieldKind::IPv6SubnetKey;
+
+            } else if (m[1] == "dstipv6") {
+                field.pen = IPFIX::iana;
+                field.id = IPFIX::destinationIPv6Address;
+                field.data_type = DataType::IPv6Address;
+                field.size = sizeof(ViewValue::ipv6);
+                field.kind = ViewFieldKind::IPv6SubnetKey;
+
+            } else if (m[1] == "ipv4") {
+                field.data_type = DataType::IPv4Address;
+                field.size = sizeof(ViewValue::ipv4);
+                field.kind = ViewFieldKind::BidirectionalIPv4SubnetKey;
+                view_def.bidirectional = true;
+
+            } else if (m[1] == "ipv6") {
+                field.data_type = DataType::IPv6Address;
+                field.size = sizeof(ViewValue::ipv6);
+                field.kind = ViewFieldKind::BidirectionalIPv6SubnetKey;
+                view_def.bidirectional = true;
+
+            } else {
+                const fds_iemgr_elem *elem = fds_iemgr_elem_find_name(&iemgr, m[1].str().c_str());
+
+                if (!elem) {
+                    fprintf(stderr, "Invalid aggregation key \"%s\" - element not found\n", key.c_str());
+                    return 1;
+                }
+
+                if (elem->data_type != FDS_ET_IPV4_ADDRESS && elem->data_type != FDS_ET_IPV6_ADDRESS) {
+                    fprintf(stderr, "Invalid aggregation key \"%s\" - not an IP address\n", key.c_str());
+                    return 1;
+                }
+
+                field.pen = elem->scope->pen;
+                field.id = elem->id;
+                if (elem->data_type == FDS_ET_IPV4_ADDRESS) {
+                    field.data_type = DataType::IPv4Address;
+                    field.size = sizeof(ViewValue::ipv4);
+                    field.kind = ViewFieldKind::IPv4SubnetKey;
+                } else if (elem->data_type == FDS_ET_IPV6_ADDRESS) {
+                    field.data_type = DataType::IPv6Address;
+                    field.size = sizeof(ViewValue::ipv6);
+                    field.kind = ViewFieldKind::IPv6SubnetKey;
+                }
+            }
+
+            if (field.data_type == DataType::IPv4Address && (prefix_length <= 0 || prefix_length > 32)) {
+                fprintf(stderr, "Invalid aggregation key \"%s\" - invalid prefix length %lu for IPv4 address\n", key.c_str(), prefix_length);
+                return 1;
+            } else if (field.data_type == DataType::IPv6Address && (prefix_length <= 0 || prefix_length > 128)) {
+                fprintf(stderr, "Invalid aggregation key \"%s\" - invalid prefix length %lu for IPv6 address\n", key.c_str(), prefix_length);
+                return 1;
+            }
+
+            field.extra.prefix_length = prefix_length;
+            view_def.keys_size += field.size;
+
+        } else if (key == "srcip") {
             field.data_type = DataType::IPAddress;
             field.kind = ViewFieldKind::SourceIPAddressKey;
             field.name = "srcip";
@@ -112,7 +197,7 @@ parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def,
             field.name = "proto";
             field.size = sizeof(ViewValue::u8);
             view_def.keys_size += sizeof(ViewValue::u8);
-        
+
         } else if (key == "ip") {
             field.data_type = DataType::IPAddress;
             field.kind = ViewFieldKind::BidirectionalIPAddressKey;

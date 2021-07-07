@@ -43,6 +43,10 @@ union ViewValue
 enum class ViewFieldKind
 {
     VerbatimKey,
+    IPv4SubnetKey,
+    IPv6SubnetKey,
+    BidirectionalIPv4SubnetKey,
+    BidirectionalIPv6SubnetKey,
     SourceIPAddressKey,
     DestinationIPAddressKey,
     BidirectionalIPAddressKey,
@@ -69,6 +73,10 @@ struct ViewField
     DataType data_type;
     ViewFieldKind kind;
     Direction direction;
+    struct
+    {
+        uint8_t prefix_length;
+    } extra;
 };
 
 struct ViewDefinition
