@@ -255,8 +255,8 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
             field.size = sizeof(ViewValue::u64);
             field.direction = Direction::In;
             view_def.values_size += sizeof(ViewValue::u64);
-        
-        }else if (value == "outpackets") {
+
+        } else if (value == "outpackets") {
             field.data_type = DataType::Unsigned64;
             field.pen = IPFIX::iana;
             field.id = IPFIX::packetDeltaCount;

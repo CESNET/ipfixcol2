@@ -57,6 +57,12 @@ print_value(const ViewField &field, ViewValue &value, char *buffer)
     case DataType::IPAddress:
         inet_ntop(value.ip.length == 4 ? AF_INET : AF_INET6, value.ip.address, buffer, 64);
         break;
+    case DataType::IPv4Address:
+        inet_ntop(AF_INET, value.ipv4, buffer, 64);
+        break;
+    case DataType::IPv6Address:
+        inet_ntop(AF_INET6, value.ipv6, buffer, 64);
+        break;
     default: assert(0);
     }
 }

@@ -49,7 +49,7 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
     fds_drec_field drec_field;
 
     for (const auto &view_field : view_def.key_fields) {
-        
+
         switch (view_field.kind) {
         case ViewFieldKind::VerbatimKey:
             if (fds_drec_find(&drec, view_field.pen, view_field.id, &drec_field) == FDS_EOC) {
@@ -103,7 +103,7 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
             }
             advance_value_ptr(key_value, sizeof(key_value->ip));
             break;
-        
+
         case ViewFieldKind::DestinationIPAddressKey:
             if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationIPv4Address, &drec_field) != FDS_EOC) {
                 key_value->ip = make_ipv4_address(drec_field.data);
@@ -114,7 +114,7 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
             }
             advance_value_ptr(key_value, sizeof(key_value->ip));
             break;
-        
+
         case ViewFieldKind::BidirectionalIPAddressKey:
             switch (direction) {
             case Direction::Out:
@@ -139,7 +139,7 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
             }
             advance_value_ptr(key_value, sizeof(key_value->ip));
             break;
-        
+
         case ViewFieldKind::BidirectionalPortKey:
             switch (direction) {
             case Direction::Out:
@@ -173,6 +173,7 @@ static void
 aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *&value, Direction direction)
 {
     if (aggregate_field.direction != Direction::None && direction != aggregate_field.direction) {
+        advance_value_ptr(value, aggregate_field.size);
         return;
     }
 
@@ -197,18 +198,18 @@ aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *&va
         default: assert(0);
         }
         break;
-    
+
     case ViewFieldKind::FlowCount:
         value->u64++;
         advance_value_ptr(value, sizeof(value->u64));
         break;
 
     default: assert(0);
-    
+
     }
 }
 
-Aggregator::Aggregator(ViewDefinition view_def) : 
+Aggregator::Aggregator(ViewDefinition view_def) :
     m_view_def(view_def),
     m_table(view_def.keys_size, view_def.values_size)
 {
