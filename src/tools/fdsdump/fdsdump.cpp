@@ -21,16 +21,16 @@ int
 main(int argc, char *argv[])
 {
     int rc;
+    unique_fds_iemgr iemgr = make_iemgr();
 
     Config config;
-    rc = config_from_args(argc, argv, config);
+    rc = config_from_args(argc, argv, config, *iemgr.get());
     if (rc != 0) {
         return rc;
     }
 
     //std::cout << "key size: " << config.view_def.keys_size << "\n";
 
-    unique_fds_iemgr iemgr = make_iemgr();
 
     Reader reader{config.input_file.c_str(), *iemgr.get()};
     IPFIXFilter ipfix_filter{config.input_filter.c_str(), *iemgr.get()};

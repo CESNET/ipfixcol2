@@ -1,4 +1,5 @@
 #include "ipfix_filter.hpp"
+#include <stdexcept>
 
 IPFIXFilter::IPFIXFilter(const char *filter_expr, fds_iemgr_t &iemgr)
     : m_iemgr(iemgr)

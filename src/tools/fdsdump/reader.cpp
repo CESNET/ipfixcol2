@@ -1,5 +1,6 @@
 #include "reader.hpp"
 #include <string>
+#include <stdexcept>
 
 Reader::Reader(const char *filename, fds_iemgr_t &iemgr)
     : m_iemgr(iemgr)

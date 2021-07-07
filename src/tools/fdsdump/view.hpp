@@ -28,6 +28,8 @@ enum class DataType
 union ViewValue
 {
     IPAddress ip;
+    uint8_t ipv4[4];
+    uint8_t ipv6[16];
     uint8_t u8;
     uint16_t u16;
     uint32_t u32;

@@ -1,4 +1,5 @@
 #include "aggregate_filter.hpp"
+#include <stdexcept>
 
 enum : int
 {

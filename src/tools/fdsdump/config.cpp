@@ -67,7 +67,7 @@ missing_arg(const char *opt)
 }
 
 static int 
-parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def)
+parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def, fds_iemgr_t &iemgr)
 {
     for (const auto &key : string_split(options, ",")) {
         ViewField field = {};
@@ -130,8 +130,63 @@ parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def)
             view_def.bidirectional = true;
 
         } else {
-            fprintf(stderr, "Invalid aggregation key \"%s\"\n", key.c_str());
-            return 1;
+            const fds_iemgr_elem *elem = fds_iemgr_elem_find_name(&iemgr, key.c_str());
+            if (!elem) {
+                fprintf(stderr, "Invalid aggregation key \"%s\" - element not found\n", key.c_str());
+                return 1;
+            }
+
+            switch (elem->data_type) {
+            case FDS_ET_UNSIGNED_8:
+                field.data_type = DataType::Unsigned8;
+                field.size = sizeof(ViewValue::u8);
+                break;
+            case FDS_ET_UNSIGNED_16:
+                field.data_type = DataType::Unsigned16;
+                field.size = sizeof(ViewValue::u16);
+                break;
+            case FDS_ET_UNSIGNED_32:
+                field.data_type = DataType::Unsigned32;
+                field.size = sizeof(ViewValue::u32);
+                break;
+            case FDS_ET_UNSIGNED_64:
+                field.data_type = DataType::Unsigned64;
+                field.size = sizeof(ViewValue::u64);
+                break;
+            case FDS_ET_SIGNED_8:
+                field.data_type = DataType::Signed8;
+                field.size = sizeof(ViewValue::i8);
+                break;
+            case FDS_ET_SIGNED_16:
+                field.data_type = DataType::Signed16;
+                field.size = sizeof(ViewValue::i16);
+                break;
+            case FDS_ET_SIGNED_32:
+                field.data_type = DataType::Signed32;
+                field.size = sizeof(ViewValue::i32);
+                break;
+            case FDS_ET_SIGNED_64:
+                field.data_type = DataType::Signed64;
+                field.size = sizeof(ViewValue::i64);
+                break;
+            case FDS_ET_IPV4_ADDRESS:
+                field.data_type = DataType::IPv4Address;
+                field.size = sizeof(ViewValue::ipv4);
+                break;
+            case FDS_ET_IPV6_ADDRESS:
+                field.data_type = DataType::IPv6Address;
+                field.size = sizeof(ViewValue::ipv6);
+                break;
+            default:
+                fprintf(stderr, "Invalid aggregation key \"%s\" - data type not supported\n", key.c_str());
+                return 1;
+            }
+
+            field.kind = ViewFieldKind::VerbatimKey;
+            field.pen = elem->scope->pen;
+            field.id = elem->id;
+            field.name = elem->name;
+            view_def.keys_size += field.size;
         }
 
         view_def.key_fields.push_back(field);
@@ -141,7 +196,7 @@ parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def)
 }
 
 static int
-parse_aggregate_value_config(const std::string &options, ViewDefinition &view_def)
+parse_aggregate_value_config(const std::string &options, ViewDefinition &view_def, fds_iemgr_t &iemgr)
 {
     auto values = string_split(options, ",");
 
@@ -240,7 +295,7 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
 }
 
 int
-config_from_args(int argc, char **argv, Config &config)
+config_from_args(int argc, char **argv, Config &config, fds_iemgr_t &iemgr)
 {
     config = {};
 
@@ -278,7 +333,7 @@ config_from_args(int argc, char **argv, Config &config)
                 missing_arg("-a");
                 return 1;
             }
-            if (parse_aggregate_key_config(parser.arg(), config.view_def) == 1) {
+            if (parse_aggregate_key_config(parser.arg(), config.view_def, iemgr) == 1) {
                 return 1;
             }
         } else if (parser.arg() == "-av") {
@@ -286,7 +341,7 @@ config_from_args(int argc, char **argv, Config &config)
                 missing_arg("-av");
                 return 1;
             }
-            if (parse_aggregate_value_config(parser.arg(), config.view_def) == 1) {
+            if (parse_aggregate_value_config(parser.arg(), config.view_def, iemgr) == 1) {
                 return 1;
             }
         } else if (parser.arg() == "-n") {

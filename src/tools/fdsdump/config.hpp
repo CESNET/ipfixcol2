@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <libfds.h>
 #include "view.hpp"
 
 struct Config
@@ -16,4 +17,4 @@ struct Config
 };
 
 int
-config_from_args(int argc, char **argv, Config &config);
+config_from_args(int argc, char **argv, Config &config, fds_iemgr_t &iemgr);

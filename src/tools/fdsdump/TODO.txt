@@ -1,0 +1,13 @@
+* General IPFIX elements
+    * In aggregate filter
+    * In aggregator
+* Aggregate on IP address subnet
+* String data type
+* Better validation of command line args
+* JSON output
+* CSV output
+* Terminal output user configurable format
+* Terminal output prints protocols by their names
+* Terminal output translates IP addresses to domain names
+* Multithreading
+* Unit tests (?)
