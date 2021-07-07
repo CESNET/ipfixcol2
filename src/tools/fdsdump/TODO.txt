@@ -1,8 +1,10 @@
 * General IPFIX elements
     * In aggregate filter
-    * In aggregator
-* Aggregate on IP address subnet
-* String data type
+    * [x] In aggregator
+* [x] Aggregate on IP address subnet
+* [x] (limited) String data type
+* Timestamp data type
+* Min, Max aggregation
 * Better validation of command line args
 * JSON output
 * CSV output
@@ -11,3 +13,4 @@
 * Terminal output translates IP addresses to domain names
 * Multithreading
 * Unit tests (?)
+* Sort by multiple fields

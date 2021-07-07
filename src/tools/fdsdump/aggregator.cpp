@@ -3,6 +3,7 @@
 #include "aggregator.hpp"
 #include "information_elements.hpp"
 #include "xxhash.h"
+#include <algorithm>
 #include <cstring>
 #include <iostream>
 
@@ -99,6 +100,11 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
             case DataType::Signed64:
                 key_value->i64 = get_int(drec_field);
                 advance_value_ptr(key_value, sizeof(key_value->i64));
+                break;
+            case DataType::String128B:
+                memset(key_value->str, 0, 128);
+                memcpy(key_value->str, drec_field.data, std::min<int>(drec_field.size, 128));
+                advance_value_ptr(key_value, 128);
                 break;
             default: assert(0);
             }

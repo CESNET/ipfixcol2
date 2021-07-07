@@ -23,6 +23,8 @@ get_width(const ViewField &field)
         return 39;
     case DataType::IPv4Address:
         return 15;
+    case DataType::String128B:
+        return 40;
     }
 }
 
@@ -62,6 +64,9 @@ print_value(const ViewField &field, ViewValue &value, char *buffer)
         break;
     case DataType::IPv6Address:
         inet_ntop(AF_INET6, value.ipv6, buffer, 64);
+        break;
+    case DataType::String128B:
+        sprintf(buffer, "%.128s", value.str);
         break;
     default: assert(0);
     }

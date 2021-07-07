@@ -22,7 +22,8 @@ enum class DataType
     Unsigned32,
     Signed32,
     Unsigned64,
-    Signed64
+    Signed64,
+    String128B
 };
 
 union ViewValue
@@ -38,6 +39,7 @@ union ViewValue
     int16_t i16;
     int32_t i32;
     int64_t i64;
+    char str[128];
 };
 
 enum class ViewFieldKind

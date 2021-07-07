@@ -262,6 +262,10 @@ parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def,
                 field.data_type = DataType::IPv6Address;
                 field.size = sizeof(ViewValue::ipv6);
                 break;
+            case FDS_ET_STRING:
+                field.data_type = DataType::String128B;
+                field.size = 128;
+                break;
             default:
                 fprintf(stderr, "Invalid aggregation key \"%s\" - data type not supported\n", key.c_str());
                 return 1;
