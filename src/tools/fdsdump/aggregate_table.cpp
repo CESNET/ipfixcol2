@@ -45,20 +45,20 @@ AggregateTable::lookup(uint8_t *key, AggregateRecord *&result)
         auto hash_match = _mm_movemask_epi8(_mm_cmpeq_epi8(block_tags, hash_mask));
         auto empty_match = _mm_movemask_epi8(_mm_cmpeq_epi8(block_tags, empty_mask));
 
-        int item_index = 0;  
+        int item_index = 0;
         while (hash_match) {
             //std::cout << "Hash match=" << hash_match << std::endl;
             auto one_index = __builtin_ctz(hash_match);
             item_index += one_index;
             //std::cout << "One index=" << one_index << " Item index=" << item_index << std::endl;
-            
+
             AggregateRecord *record = block.items[item_index];
             if (memcmp(record->data, key, m_key_size) == 0) {
                 //std::cout << "Found key on " << index << ":" << item_index << std::endl;
                 result = record;
                 return 1;
             }
-            
+
             hash_match >>= one_index + 1;
         }
 
@@ -67,7 +67,7 @@ AggregateTable::lookup(uint8_t *key, AggregateRecord *&result)
             auto empty_index = __builtin_ctz(empty_match);
             //std::cout << "Found empty index on " << index << ":" << empty_index << std::endl;
             block.tags[empty_index] = item_tag;
-            
+
             AggregateRecord *record = static_cast<AggregateRecord *>(calloc(1, sizeof(AggregateRecord) + m_key_size + m_value_size));
             block.items[empty_index] = record;
             m_items.push_back(record);
@@ -77,7 +77,7 @@ AggregateTable::lookup(uint8_t *key, AggregateRecord *&result)
             memcpy(record->data, key, m_key_size);
             //std::cout << "Memcpy done" << std::endl;
             result = record;
-            
+
             if (double{m_record_count} / (16 * double{m_block_count}) > 0.9) {
                 expand();
             }
@@ -89,7 +89,7 @@ AggregateTable::lookup(uint8_t *key, AggregateRecord *&result)
     }
 }
 
-void 
+void
 AggregateTable::expand()
 {
     m_block_count *= 2;

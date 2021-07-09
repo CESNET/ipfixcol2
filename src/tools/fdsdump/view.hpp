@@ -12,6 +12,7 @@ struct IPAddress
 
 enum class DataType
 {
+    Unassigned,
     IPAddress,
     IPv4Address,
     IPv6Address,
@@ -23,6 +24,7 @@ enum class DataType
     Signed32,
     Unsigned64,
     Signed64,
+    DateTime,
     String128B
 };
 
@@ -35,6 +37,7 @@ union ViewValue
     uint16_t u16;
     uint32_t u32;
     uint64_t u64;
+    uint64_t ts_millisecs;
     int8_t i8;
     int16_t i16;
     int32_t i32;
@@ -44,6 +47,7 @@ union ViewValue
 
 enum class ViewFieldKind
 {
+    Unassigned,
     VerbatimKey,
     IPv4SubnetKey,
     IPv6SubnetKey,
@@ -56,12 +60,12 @@ enum class ViewFieldKind
     SumAggregate,
     MinAggregate,
     MaxAggregate,
-    FlowCount
+    CountAggregate
 };
 
 enum class Direction
 {
-    None,
+    Unassigned,
     In,
     Out
 };

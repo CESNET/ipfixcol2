@@ -292,7 +292,107 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
     for (const auto &value : values) {
         ViewField field = {};
 
-        if (value == "packets") {
+        std::regex aggregate_regex{"(.+)\\((.+)\\)"};
+        std::smatch m;
+
+        if (std::regex_match(value, m, aggregate_regex)) {
+
+            if (m[1] == "min") {
+                field.kind = ViewFieldKind::MinAggregate;
+            } else if (m[1] == "max") {
+                field.kind = ViewFieldKind::MaxAggregate;
+            } else if (m[1] == "sum") {
+                field.kind = ViewFieldKind::SumAggregate;
+            } else {
+                fprintf(stderr, "Invalid aggregation value \"%s\" - unknown aggregation function\n", value.c_str());
+                return 1;
+            }
+
+            const fds_iemgr_elem *elem = fds_iemgr_elem_find_name(&iemgr, m[2].str().c_str());
+
+            if (!elem) {
+                fprintf(stderr, "Invalid aggregation value \"%s\" - element not found\n", value.c_str());
+                return 1;
+            }
+
+            field.pen = elem->scope->pen;
+            field.id = elem->id;
+            field.name = value;
+
+            if (field.kind == ViewFieldKind::MinAggregate || field.kind == ViewFieldKind::MaxAggregate) {
+                switch (elem->data_type) {
+                case FDS_ET_UNSIGNED_8:
+                    field.data_type = DataType::Unsigned8;
+                    field.size = sizeof(ViewValue::u8);
+                    break;
+                case FDS_ET_UNSIGNED_16:
+                    field.data_type = DataType::Unsigned16;
+                    field.size = sizeof(ViewValue::u16);
+                    break;
+                case FDS_ET_UNSIGNED_32:
+                    field.data_type = DataType::Unsigned32;
+                    field.size = sizeof(ViewValue::u32);
+                    break;
+                case FDS_ET_UNSIGNED_64:
+                    field.data_type = DataType::Unsigned64;
+                    field.size = sizeof(ViewValue::u64);
+                    break;
+                case FDS_ET_SIGNED_8:
+                    field.data_type = DataType::Signed8;
+                    field.size = sizeof(ViewValue::i8);
+                    break;
+                case FDS_ET_SIGNED_16:
+                    field.data_type = DataType::Signed16;
+                    field.size = sizeof(ViewValue::i16);
+                    break;
+                case FDS_ET_SIGNED_32:
+                    field.data_type = DataType::Signed32;
+                    field.size = sizeof(ViewValue::i32);
+                    break;
+                case FDS_ET_SIGNED_64:
+                    field.data_type = DataType::Signed64;
+                    field.size = sizeof(ViewValue::i64);
+                    break;
+                case FDS_ET_DATE_TIME_MILLISECONDS:
+                case FDS_ET_DATE_TIME_MICROSECONDS:
+                case FDS_ET_DATE_TIME_NANOSECONDS:
+                case FDS_ET_DATE_TIME_SECONDS:
+                    field.data_type = DataType::DateTime;
+                    field.size = sizeof(ViewValue::ts_millisecs);
+                    break;
+                default:
+                    fprintf(stderr, "Invalid aggregation value \"%s\" - data type not supported for selected aggregation\n", value.c_str());
+                    return 1;
+                }
+
+            } else if (field.kind == ViewFieldKind::SumAggregate) {
+                switch (elem->data_type) {
+                case FDS_ET_UNSIGNED_8:
+                case FDS_ET_UNSIGNED_16:
+                case FDS_ET_UNSIGNED_32:
+                case FDS_ET_UNSIGNED_64:
+                    field.data_type = DataType::Unsigned64;
+                    field.size = sizeof(ViewValue::u64);
+                    break;
+                case FDS_ET_SIGNED_8:
+                case FDS_ET_SIGNED_16:
+                case FDS_ET_SIGNED_32:
+                case FDS_ET_SIGNED_64:
+                    field.data_type = DataType::Signed64;
+                    field.size = sizeof(ViewValue::i64);
+                    break;
+                default:
+                    fprintf(stderr, "Invalid aggregation value \"%s\" - data type not supported for selected aggregation\n", value.c_str());
+                    return 1;
+                }
+
+            } else {
+                assert(0);
+            }
+
+            view_def.values_size += sizeof(field.size);
+
+        } else if (value == "packets") {
             field.data_type = DataType::Unsigned64;
             field.pen = IPFIX::iana;
             field.id = IPFIX::packetDeltaCount;
@@ -312,7 +412,7 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
 
         } else if (value == "flows") {
             field.data_type = DataType::Unsigned64;
-            field.kind = ViewFieldKind::FlowCount;
+            field.kind = ViewFieldKind::CountAggregate;
             field.name = "flows";
             field.size = sizeof(ViewValue::u64);
             view_def.values_size += sizeof(ViewValue::u64);
@@ -339,7 +439,7 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
 
         } else if (value == "inflows") {
             field.data_type = DataType::Unsigned64;
-            field.kind = ViewFieldKind::FlowCount;
+            field.kind = ViewFieldKind::CountAggregate;
             field.name = "inflows";
             field.size = sizeof(ViewValue::u64);
             field.direction = Direction::In;
@@ -367,7 +467,7 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
 
         } else if (value == "outflows") {
             field.data_type = DataType::Unsigned64;
-            field.kind = ViewFieldKind::FlowCount;
+            field.kind = ViewFieldKind::CountAggregate;
             field.name = "outflows";
             field.size = sizeof(ViewValue::u64);
             field.direction = Direction::Out;

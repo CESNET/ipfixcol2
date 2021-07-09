@@ -25,7 +25,31 @@ get_width(const ViewField &field)
         return 15;
     case DataType::String128B:
         return 40;
+    case DataType::DateTime:
+        return 30;
+    default:
+        assert(0);
     }
+}
+
+static void
+datetime_to_str(char *buffer, uint64_t ts_millisecs)
+{
+    static_assert(sizeof(uint64_t) == sizeof(time_t), "Assumed that time_t is uint64_t, but it's not");
+
+    uint64_t secs = ts_millisecs / 1000;
+    uint64_t msecs_part = ts_millisecs % 1000;
+    if (msecs_part < 10) {
+        msecs_part *= 100;
+    } else if (msecs_part < 100) {
+        msecs_part *= 10;
+    }
+
+    tm tm;
+    localtime_r(reinterpret_cast<time_t *>(&secs), &tm);
+    std::size_t n = strftime(buffer, 64, "%Y-%m-%d %H:%M:%S", &tm);
+    assert(n > 0);
+    sprintf(&buffer[n], ".%03lu", msecs_part);
 }
 
 static void
@@ -68,6 +92,10 @@ print_value(const ViewField &field, ViewValue &value, char *buffer)
     case DataType::String128B:
         sprintf(buffer, "%.128s", value.str);
         break;
+    case DataType::DateTime:
+        datetime_to_str(buffer, value.ts_millisecs);
+        break;
+
     default: assert(0);
     }
 }

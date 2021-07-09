@@ -54,6 +54,15 @@ get_int(fds_drec_field &field)
     return tmp;
 }
 
+static uint64_t
+get_datetime(fds_drec_field &field)
+{
+    uint64_t tmp;
+    int rc = fds_get_datetime_lp_be(field.data, field.size, field.info->def->data_type, &tmp);
+    assert(rc == FDS_OK);
+    return tmp;
+}
+
 static int
 build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, Direction direction)
 {
@@ -241,7 +250,7 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
 static void
 aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *&value, Direction direction)
 {
-    if (aggregate_field.direction != Direction::None && direction != aggregate_field.direction) {
+    if (aggregate_field.direction != Direction::Unassigned && direction != aggregate_field.direction) {
         advance_value_ptr(value, aggregate_field.size);
         return;
     }
@@ -268,7 +277,99 @@ aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *&va
         }
         break;
 
-    case ViewFieldKind::FlowCount:
+    case ViewFieldKind::MinAggregate:
+        if (fds_drec_find(&drec, aggregate_field.pen, aggregate_field.id, &drec_field) == FDS_EOC) {
+            return;
+        }
+
+        switch (aggregate_field.data_type) {
+        case DataType::Unsigned8:
+            value->u8 = std::min<uint8_t>(get_uint(drec_field), value->u8);
+            advance_value_ptr(value, sizeof(value->u8));
+            break;
+        case DataType::Unsigned16:
+            value->u16 = std::min<uint16_t>(get_uint(drec_field), value->u16);
+            advance_value_ptr(value, sizeof(value->u16));
+            break;
+        case DataType::Unsigned32:
+            value->u32 = std::min<uint32_t>(get_uint(drec_field), value->u32);
+            advance_value_ptr(value, sizeof(value->u32));
+            break;
+        case DataType::Unsigned64:
+            value->u64 = std::min<uint64_t>(get_uint(drec_field), value->u64);
+            advance_value_ptr(value, sizeof(value->u64));
+            break;
+        case DataType::Signed8:
+            value->i8 = std::min<int8_t>(get_int(drec_field), value->i8);
+            advance_value_ptr(value, sizeof(value->i8));
+            break;
+        case DataType::Signed16:
+            value->i16 = std::min<int16_t>(get_int(drec_field), value->i16);
+            advance_value_ptr(value, sizeof(value->i16));
+            break;
+        case DataType::Signed32:
+            value->i32 = std::min<int32_t>(get_int(drec_field), value->i32);
+            advance_value_ptr(value, sizeof(value->i32));
+            break;
+        case DataType::Signed64:
+            value->i64 = std::min<int64_t>(get_int(drec_field), value->i64);
+            advance_value_ptr(value, sizeof(value->i64));
+            break;
+        case DataType::DateTime:
+            value->ts_millisecs = std::min<uint64_t>(get_datetime(drec_field), value->ts_millisecs);
+            advance_value_ptr(value, sizeof(value->ts_millisecs));
+            break;
+        default: assert(0);
+        }
+        break;
+
+    case ViewFieldKind::MaxAggregate:
+        if (fds_drec_find(&drec, aggregate_field.pen, aggregate_field.id, &drec_field) == FDS_EOC) {
+            return;
+        }
+
+        switch (aggregate_field.data_type) {
+        case DataType::Unsigned8:
+            value->u8 = std::max<uint8_t>(get_uint(drec_field), value->u8);
+            advance_value_ptr(value, sizeof(value->u8));
+            break;
+        case DataType::Unsigned16:
+            value->u16 = std::max<uint16_t>(get_uint(drec_field), value->u16);
+            advance_value_ptr(value, sizeof(value->u16));
+            break;
+        case DataType::Unsigned32:
+            value->u32 = std::max<uint32_t>(get_uint(drec_field), value->u32);
+            advance_value_ptr(value, sizeof(value->u32));
+            break;
+        case DataType::Unsigned64:
+            value->u64 = std::max<uint64_t>(get_uint(drec_field), value->u64);
+            advance_value_ptr(value, sizeof(value->u64));
+            break;
+        case DataType::Signed8:
+            value->i8 = std::max<int8_t>(get_int(drec_field), value->i8);
+            advance_value_ptr(value, sizeof(value->i8));
+            break;
+        case DataType::Signed16:
+            value->i16 = std::max<int16_t>(get_int(drec_field), value->i16);
+            advance_value_ptr(value, sizeof(value->i16));
+            break;
+        case DataType::Signed32:
+            value->i32 = std::max<int32_t>(get_int(drec_field), value->i32);
+            advance_value_ptr(value, sizeof(value->i32));
+            break;
+        case DataType::Signed64:
+            value->i64 = std::max<int64_t>(get_int(drec_field), value->i64);
+            advance_value_ptr(value, sizeof(value->i64));
+            break;
+        case DataType::DateTime:
+            value->ts_millisecs = std::max<uint64_t>(get_datetime(drec_field), value->ts_millisecs);
+            advance_value_ptr(value, sizeof(value->ts_millisecs));
+            break;
+        default: assert(0);
+        }
+        break;
+
+    case ViewFieldKind::CountAggregate:
         value->u64++;
         advance_value_ptr(value, sizeof(value->u64));
         break;
@@ -291,7 +392,7 @@ Aggregator::process_record(fds_drec &drec)
         aggregate(drec, Direction::In);
         aggregate(drec, Direction::Out);
     } else {
-        aggregate(drec, Direction::None);
+        aggregate(drec, Direction::Unassigned);
     }
 }
 
@@ -308,7 +409,80 @@ Aggregator::aggregate(fds_drec &drec, Direction direction)
     }
 
     AggregateRecord *record;
-    m_table.lookup(key_buffer, record);
+    int rc = m_table.lookup(key_buffer, record);
+
+    if (rc == 1) {
+        // Set initial value
+        ViewValue *value = reinterpret_cast<ViewValue *>(record->data + m_view_def.keys_size);
+        for (const auto &field : m_view_def.value_fields) {
+            if (field.kind == ViewFieldKind::MinAggregate) {
+                switch (field.data_type) {
+                case DataType::Unsigned8:
+                    value->u8 = UINT8_MAX;
+                    advance_value_ptr(value, value->u8);
+                    break;
+                case DataType::Unsigned16:
+                    value->u16 = UINT16_MAX;
+                    advance_value_ptr(value, value->u16);
+                    break;
+                case DataType::Unsigned32:
+                    value->u32 = UINT32_MAX;
+                    advance_value_ptr(value, value->u32);
+                    break;
+                case DataType::Unsigned64:
+                    value->u64 = UINT64_MAX;
+                    advance_value_ptr(value, value->u64);
+                    break;
+                case DataType::Signed8:
+                    value->i8 = INT8_MAX;
+                    advance_value_ptr(value, value->i8);
+                    break;
+                case DataType::Signed16:
+                    value->i16 = INT16_MAX;
+                    advance_value_ptr(value, value->i16);
+                    break;
+                case DataType::Signed32:
+                    value->i32 = INT32_MAX;
+                    advance_value_ptr(value, value->i32);
+                    break;
+                case DataType::Signed64:
+                    value->i64 = INT64_MAX;
+                    advance_value_ptr(value, value->i64);
+                    break;
+                case DataType::DateTime:
+                    value->ts_millisecs = UINT64_MAX;
+                    break;
+                default: assert(0);
+                }
+            } else if (field.kind == ViewFieldKind::MaxAggregate) {
+                switch (field.data_type) {
+                case DataType::Unsigned8:
+                case DataType::Unsigned16:
+                case DataType::Unsigned32:
+                case DataType::Unsigned64:
+                case DataType::DateTime:
+                    break;
+                case DataType::Signed8:
+                    value->i8 = INT8_MIN;
+                    advance_value_ptr(value, value->i8);
+                    break;
+                case DataType::Signed16:
+                    value->i16 = INT16_MIN;
+                    advance_value_ptr(value, value->i16);
+                    break;
+                case DataType::Signed32:
+                    value->i32 = INT32_MIN;
+                    advance_value_ptr(value, value->i32);
+                    break;
+                case DataType::Signed64:
+                    value->i64 = INT64_MIN;
+                    advance_value_ptr(value, value->i64);
+                    break;
+                default: assert(0);
+                }
+            }
+        }
+    }
 
     ViewValue *value = reinterpret_cast<ViewValue *>(record->data + m_view_def.keys_size);
     for (const auto &aggregate_field : m_view_def.value_fields) {

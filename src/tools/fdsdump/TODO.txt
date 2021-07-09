@@ -1,10 +1,10 @@
-* General IPFIX elements
+* General IPFIX elements ([x] keys, [x] values)
     * In aggregate filter
     * [x] In aggregator
 * [x] Aggregate on IP address subnet
 * [x] (limited) String data type
-* Timestamp data type
-* Min, Max aggregation
+* [x] Timestamp data type
+* [x] Min, Max aggregation
 * Better validation of command line args
 * JSON output
 * CSV output
@@ -14,3 +14,4 @@
 * Multithreading
 * Unit tests (?)
 * Sort by multiple fields
+* Calculated fields (e.g. BPS, PPS, ...)
