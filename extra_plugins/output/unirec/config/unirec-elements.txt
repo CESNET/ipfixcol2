@@ -118,15 +118,6 @@ FME_SIP_CALLED_PARTY           string        flowmon:sipCalledParty             
 FME_SIP_VIA                    string        flowmon:sipVia                     # SIP VIA
 
 # --- HTTP elements ---
-HTTP_REQUEST_METHOD_ID         uint32        e16982id500                        # HTTP request method id
-HTTP_REQUEST_HOST              string        e16982id501                        # HTTP(S) request host
-HTTP_REQUEST_URL               string        e16982id502                        # HTTP request url
-HTTP_REQUEST_AGENT_ID          uint32        e16982id503                        # HTTP request agent id
-HTTP_REQUEST_AGENT             string        e16982id504                        # HTTP request agent
-HTTP_REQUEST_REFERER           string        e16982id505                        # HTTP referer
-HTTP_RESPONSE_STATUS_CODE      uint32        e16982id506                        # HTTP response status code
-HTTP_RESPONSE_CONTENT_TYPE     string        e16982id507                        # HTTP response content type
-
 FME_HTTP_UA_OS                 uint16        flowmon:httpUaOs
 FME_HTTP_UA_OS_MAJ             uint16        flowmon:httpUaOsMaj
 FME_HTTP_UA_OS_MIN             uint16        flowmon:httpUaOsMin
@@ -136,10 +127,14 @@ FME_HTTP_UA_APP_MAJ            uint16        flowmon:httpUaAppMaj
 FME_HTTP_UA_APP_MIN            uint16        flowmon:httpUaAppMin
 FME_HTTP_UA_APP_BLD            uint16        flowmon:httpUaAppBld
 FME_HTTP_METHOD_MASK           uint16        flowmon:httpMethodMask
-FME_HTTP_REQUEST_HOST          string        flowmon:httpHost                   # HTTP(S) request host
-FME_HTTP_REQUEST_URL           string        flowmon:httpUrl                    # HTTP request url
-FME_HTTP_RESPONSE_STATUS_CODE  uint32        flowmon:httpStatusCode             # HTTP response status code
-FME_HTTP_REQUEST_USER_AGENT    string        flowmon:httpUserAgent
+
+HTTP_REQUEST_AGENT             string        flowmon:httpUserAgent
+HTTP_REQUEST_HOST              string        flowmon:httpHost                   # HTTP(S) request host
+HTTP_REQUEST_REFERER           string        flowmon:httpReferer
+HTTP_REQUEST_URL               string        flowmon:httpUrl                    # HTTP request url
+HTTP_REQUEST_METHOD            string        cesnet:httpMethod                  # HTTP method text representation
+HTTP_RESPONSE_STATUS_CODE      uint16        flowmon:httpStatusCode             # HTTP response status code
+HTTP_RESPONSE_CONTENT_TYPE     string        flowmon:httpContentType            # HTTP ContentType text representation
 
 # --- Other fields ---
 IPV6_TUN_TYPE                  uint8         e16982id405                        # IPv6 tunnel type
