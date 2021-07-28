@@ -1,5 +1,5 @@
-* General IPFIX elements ([x] keys, [x] values)
-    * In aggregate filter
+* [x] General IPFIX elements ([x] keys, [x] values)
+    * [x] In aggregate filter
     * [x] In aggregator
 * [x] Aggregate on IP address subnet
 * [x] (limited) String data type
@@ -9,8 +9,8 @@
 * JSON output
 * CSV output
 * Terminal output user configurable format
-* Terminal output prints protocols by their names
-* Terminal output translates IP addresses to domain names
+* [x] Terminal output prints protocols by their names
+* [x] Terminal output translates IP addresses to domain names
 * Multithreading
 * Unit tests (?)
 * Sort by multiple fields

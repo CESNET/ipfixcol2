@@ -1,6 +1,10 @@
 #include "table_printer.hpp"
 #include <cstdio>
 #include <arpa/inet.h>
+#include <netdb.h>
+#include "information_elements.hpp"
+
+static constexpr bool TRANSLATE_IPADDRS = true; //TODO: This should really be a command line option
 
 static int
 get_width(const ViewField &field)
@@ -52,9 +56,52 @@ datetime_to_str(char *buffer, uint64_t ts_millisecs)
     sprintf(&buffer[n], ".%03lu", msecs_part);
 }
 
+static bool
+translate_ipv4_address(uint8_t *address, char *buffer)
+{
+    //TODO: This should probably be done in parallel by a thread pool and we should probably cache the results
+
+    sockaddr_in sa = {};
+    sa.sin_family = AF_INET;
+    memcpy((void *) &sa.sin_addr, address, 4);
+
+    int ret = getnameinfo((sockaddr *) &sa, sizeof(sa), buffer, 64, NULL, 0, NI_NAMEREQD);
+
+    if (ret == 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+static bool
+translate_ipv6_address(uint8_t *address, char *buffer)
+{
+    sockaddr_in6 sa = {};
+    sa.sin6_family = AF_INET6;
+    memcpy((void *) &sa.sin6_addr, address, 16);
+
+    int ret = getnameinfo((sockaddr *) &sa, sizeof(sa), buffer, 64, NULL, 0, NI_NAMEREQD);
+
+    if (ret == 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 static void
 print_value(const ViewField &field, ViewValue &value, char *buffer)
 {
+    // Print protocol name
+    if (field.kind == ViewFieldKind::VerbatimKey && field.pen == IPFIX::iana && field.id == IPFIX::protocolIdentifier) {
+        protoent *proto = getprotobynumber(value.u8);
+        if (proto) {
+            sprintf(buffer, "%s", proto->p_name);
+            return;
+        }
+    }
+
     switch (field.data_type) {
     case DataType::Unsigned8:
         sprintf(buffer, "%hhu", value.u8);
@@ -81,13 +128,25 @@ print_value(const ViewField &field, ViewValue &value, char *buffer)
         sprintf(buffer, "%ld", value.i64);
         break;
     case DataType::IPAddress:
-        inet_ntop(value.ip.length == 4 ? AF_INET : AF_INET6, value.ip.address, buffer, 64);
+        if (value.ip.length == 4) {
+            if (!TRANSLATE_IPADDRS || !translate_ipv4_address(value.ip.address, buffer)) {
+                inet_ntop(AF_INET, value.ip.address, buffer, 64);
+            }
+        } else if (value.ip.length == 16) {
+            if (!TRANSLATE_IPADDRS || !translate_ipv6_address(value.ip.address, buffer)) {
+                inet_ntop(AF_INET6, value.ip.address, buffer, 64);
+            }
+        }
         break;
     case DataType::IPv4Address:
-        inet_ntop(AF_INET, value.ipv4, buffer, 64);
+        if (!TRANSLATE_IPADDRS || !translate_ipv4_address(value.ipv4, buffer)) {
+            inet_ntop(AF_INET, value.ipv4, buffer, 64);
+        }
         break;
     case DataType::IPv6Address:
-        inet_ntop(AF_INET6, value.ipv6, buffer, 64);
+        if (!TRANSLATE_IPADDRS || !translate_ipv6_address(value.ipv6, buffer)) {
+            inet_ntop(AF_INET6, value.ipv6, buffer, 64);
+        }
         break;
     case DataType::String128B:
         sprintf(buffer, "%.128s", value.str);
