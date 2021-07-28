@@ -22,6 +22,8 @@ add_executable(fdsdump
     view.hpp
     aggregate_table.cpp
     aggregate_table.hpp
+    sorter.cpp
+    sorter.hpp
 )
 
 

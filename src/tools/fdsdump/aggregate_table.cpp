@@ -92,7 +92,7 @@ AggregateTable::lookup(uint8_t *key, AggregateRecord *&result)
 void
 AggregateTable::expand()
 {
-    m_block_count *= 2;
+    m_block_count *= 4;
     //std::cout << "Expand to " << m_block_count << std::endl;
     init_blocks();
     for (AggregateRecord *item : m_items) {

@@ -550,10 +550,12 @@ config_from_args(int argc, char **argv, Config &config, fds_iemgr_t &iemgr)
                 return 1;
             }
             config.sort_field = parser.arg();
-            if (!is_one_of(config.sort_field, {"bytes", "packets", "flows", "inbytes", "inpackets", "inflows", "outbytes", "outpackets", "outflows"})) {
-                fprintf(stderr, "Invalid sort field \"%s\"\n", config.sort_field.c_str());
-                return 1;
-            }
+            //TODO: check if the sort field is valid
+
+            //if (!is_one_of(config.sort_field, {"bytes", "packets", "flows", "inbytes", "inpackets", "inflows", "outbytes", "outpackets", "outflows"})) {
+            //    fprintf(stderr, "Invalid sort field \"%s\"\n", config.sort_field.c_str());
+            //    return 1;
+            //}
         } else {
             fprintf(stderr, "Unknown argument %s\n", parser.arg().c_str());
             return 1;

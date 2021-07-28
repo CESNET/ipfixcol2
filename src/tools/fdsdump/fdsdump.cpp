@@ -10,12 +10,7 @@
 #include "aggregate_filter.hpp"
 #include "config.hpp"
 #include "common.hpp"
-
-static unique_fds_iemgr
-make_iemgr();
-
-static void
-sort_records(std::vector<AggregateRecord *> &records, const std::string &sort_field, ViewDefinition &config);
+#include "sorter.hpp"
 
 int
 main(int argc, char *argv[])
@@ -80,37 +75,4 @@ main(int argc, char *argv[])
 
 }
 
-static unique_fds_iemgr
-make_iemgr()
-{
-    int rc;
 
-    unique_fds_iemgr iemgr;
-    iemgr.reset(fds_iemgr_create());
-    if (!iemgr) {
-        throw std::bad_alloc();
-    }
-
-    rc = fds_iemgr_read_dir(iemgr.get(), fds_api_cfg_dir());
-    if (rc != FDS_OK) {
-        throw std::runtime_error("cannot read iemgr definitions");
-    }
-
-    return iemgr;
-}
-
-static void
-sort_records(std::vector<AggregateRecord *> &records, const std::string &sort_field, ViewDefinition &view_def)
-{
-    std::function<bool(AggregateRecord *, AggregateRecord *)> compare_fn;
-
-    if (is_one_of(sort_field, {"bytes", "packets", "flows", "inbytes", "inpackets", "inflows", "outbytes", "outpackets", "outflows"})) {
-        compare_fn = [&](AggregateRecord *a, AggregateRecord *b) {
-            return get_value_by_name(view_def, a->data, sort_field)->u64 > get_value_by_name(view_def, b->data, sort_field)->u64;
-        };
-    } else {
-        assert(0);
-    } 
-
-    std::sort(records.begin(), records.end(), compare_fn);
-}

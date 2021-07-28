@@ -1,5 +1,24 @@
 #include "common.hpp"
 
+unique_fds_iemgr
+make_iemgr()
+{
+    int rc;
+
+    unique_fds_iemgr iemgr;
+    iemgr.reset(fds_iemgr_create());
+    if (!iemgr) {
+        throw std::bad_alloc();
+    }
+
+    rc = fds_iemgr_read_dir(iemgr.get(), fds_api_cfg_dir());
+    if (rc != FDS_OK) {
+        throw std::runtime_error("cannot read iemgr definitions");
+    }
+
+    return iemgr;
+}
+
 std::vector<std::string>
 string_split(const std::string &str, const std::string &delimiter)
 {

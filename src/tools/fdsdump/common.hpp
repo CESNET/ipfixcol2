@@ -60,6 +60,9 @@ struct fds_ipfix_filter_destroyer
 
 using unique_fds_ipfix_filter = std::unique_ptr<fds_ipfix_filter_t, fds_ipfix_filter_destroyer>;
 
+unique_fds_iemgr
+make_iemgr();
+
 std::vector<std::string>
 string_split(const std::string &str, const std::string &delimiter);
 
