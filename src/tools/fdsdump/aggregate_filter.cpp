@@ -16,7 +16,7 @@ enum : int
 
 int
 lookup_callback(void *user_ctx, const char *name, const char *other_name,
-                int *out_id, int *out_datatype, int *out_flags)
+                int *out_id, int *out_datatype, int *out_flags) noexcept
 {
     AggregateFilter *aggregate_filter = (AggregateFilter *) user_ctx;
 
@@ -32,7 +32,7 @@ lookup_callback(void *user_ctx, const char *name, const char *other_name,
 }
 
 int
-data_callback(void *user_ctx, bool reset_ctx, int id, void *data, fds_filter_value_u *out_value)
+data_callback(void *user_ctx, bool reset_ctx, int id, void *data, fds_filter_value_u *out_value) noexcept
 {
     AggregateFilter *aggregate_filter = (AggregateFilter *) user_ctx;
 

@@ -9,6 +9,7 @@ static constexpr bool TRANSLATE_IPADDRS = true; //TODO: This should really be a 
 static int
 get_width(const ViewField &field)
 {
+    //TODO: These are just randomly choosen numbers so the output looks somewhat nice for now
     switch (field.data_type) {
     case DataType::Unsigned8:
     case DataType::Signed8:
@@ -51,6 +52,8 @@ datetime_to_str(char *buffer, uint64_t ts_millisecs)
 
     tm tm;
     localtime_r(reinterpret_cast<time_t *>(&secs), &tm);
+    //TODO: The format should probably be configrable
+    //TODO: Have a look at the hard coded buffer size
     std::size_t n = strftime(buffer, 64, "%Y-%m-%d %H:%M:%S", &tm);
     assert(n > 0);
     sprintf(&buffer[n], ".%03lu", msecs_part);
@@ -65,6 +68,7 @@ translate_ipv4_address(uint8_t *address, char *buffer)
     sa.sin_family = AF_INET;
     memcpy((void *) &sa.sin_addr, address, 4);
 
+    //TODO: Have a look at the hard coded buffer size
     int ret = getnameinfo((sockaddr *) &sa, sizeof(sa), buffer, 64, NULL, 0, NI_NAMEREQD);
 
     if (ret == 0) {
@@ -77,10 +81,13 @@ translate_ipv4_address(uint8_t *address, char *buffer)
 static bool
 translate_ipv6_address(uint8_t *address, char *buffer)
 {
+    //TODO: This should probably be done in parallel by a thread pool and we should probably cache the results
+
     sockaddr_in6 sa = {};
     sa.sin6_family = AF_INET6;
     memcpy((void *) &sa.sin6_addr, address, 16);
 
+    //TODO: Have a look at the hard coded buffer size
     int ret = getnameinfo((sockaddr *) &sa, sizeof(sa), buffer, 64, NULL, 0, NI_NAMEREQD);
 
     if (ret == 0) {
@@ -102,6 +109,7 @@ print_value(const ViewField &field, ViewValue &value, char *buffer)
         }
     }
 
+    //TODO: Have a look at the hard coded sizes everywhere...
     switch (field.data_type) {
     case DataType::Unsigned8:
         sprintf(buffer, "%hhu", value.u8);
@@ -185,7 +193,7 @@ TablePrinter::print_prologue()
 void
 TablePrinter::print_record(AggregateRecord &record)
 {
-    char buffer[1024] = {0};
+    char buffer[1024] = {0}; //TODO: We might want to do this some other way
     ViewValue *value = reinterpret_cast<ViewValue *>(record.data);
 
     for (const auto &field : m_view_def.key_fields) {

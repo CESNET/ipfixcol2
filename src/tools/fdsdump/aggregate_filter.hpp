@@ -9,6 +9,7 @@ class AggregateFilter
 public:
     AggregateFilter(const char *filter_expr, ViewDefinition view_def);
 
+    // FDS Filter created in constructor holds pointer to the instance of AggregateFilter
     AggregateFilter(AggregateFilter &&) = delete;
     AggregateFilter(const AggregateFilter &) = delete;
 
@@ -31,10 +32,10 @@ private:
 
     friend int
     lookup_callback(void *user_ctx, const char *name, const char *other_name,
-                    int *out_id, int *out_datatype, int *out_flags);
+                    int *out_id, int *out_datatype, int *out_flags) noexcept;
 
     friend int
-    data_callback(void *user_ctx, bool reset_ctx, int id, void *data, fds_filter_value_u *out_value);
+    data_callback(void *user_ctx, bool reset_ctx, int id, void *data, fds_filter_value_u *out_value) noexcept;
 
     int
     lookup_callback(const char *name, const char *other_name, int *out_id, int *out_datatype, int *out_flags);
