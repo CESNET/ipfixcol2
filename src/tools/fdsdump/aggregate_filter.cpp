@@ -14,100 +14,52 @@ enum : int
     OUTBYTES_ID = 9
 };
 
-static int
-lookup_callback(void *user_ctx, const char *name_, const char *other_name,
+int
+lookup_callback(void *user_ctx, const char *name, const char *other_name,
                 int *out_id, int *out_datatype, int *out_flags)
 {
-    std::string name = name_;
-    if (name == "packets") {
-        *out_id = PACKETS_ID;
-        *out_datatype = FDS_FDT_UINT;
-    } else if (name == "bytes") {
-        *out_id = BYTES_ID;
-        *out_datatype = FDS_FDT_UINT;
-    } else if (name == "flows") {
-        *out_id = FLOWS_ID;
-        *out_datatype = FDS_FDT_UINT;
-    } else if (name == "inpackets") {
-        *out_id = INPACKETS_ID;
-        *out_datatype = FDS_FDT_UINT;
-    } else if (name == "inflows") {
-        *out_id = INFLOWS_ID;
-        *out_datatype = FDS_FDT_UINT;
-    } else if (name == "inbytes") {
-        *out_id = INBYTES_ID;
-        *out_datatype = FDS_FDT_UINT;
-    } else if (name == "outpackets") {
-        *out_id = OUTPACKETS_ID;
-        *out_datatype = FDS_FDT_UINT;
-    } else if (name == "outflows") {
-        *out_id = OUTFLOWS_ID;
-        *out_datatype = FDS_FDT_UINT;
-    } else if (name == "outbytes") {
-        *out_id = OUTBYTES_ID;
-        *out_datatype = FDS_FDT_UINT;
-    } else {
-        return FDS_ERR_NOTFOUND;
+    AggregateFilter *aggregate_filter = (AggregateFilter *) user_ctx;
+
+    try {
+        int ret = aggregate_filter->lookup_callback(name, other_name, out_id, out_datatype, out_flags);
+        return ret;
+
+    } catch (...) {
+        aggregate_filter->m_exception = std::current_exception();
+        return FDS_ERR_DENIED;
+
     }
-    return FDS_OK;
 }
 
-static int
+int
 data_callback(void *user_ctx, bool reset_ctx, int id, void *data, fds_filter_value_u *out_value)
 {
-    ViewDefinition &view_def = *static_cast<ViewDefinition *>(user_ctx);
-    AggregateRecord &arec = *static_cast<AggregateRecord *>(data);
-    switch (id) {
-    case FLOWS_ID:
-        out_value->u = get_value_by_name(view_def, arec.data, "flows")->u64;
-        break;
-    case PACKETS_ID:
-        out_value->u = get_value_by_name(view_def, arec.data, "packets")->u64;
-        break;
-    case BYTES_ID:
-        out_value->u = get_value_by_name(view_def, arec.data, "bytes")->u64;
-        break;
-    case INFLOWS_ID:
-        out_value->u = get_value_by_name(view_def, arec.data, "inflows")->u64;
-        break;
-    case INPACKETS_ID:
-        out_value->u = get_value_by_name(view_def, arec.data, "inpackets")->u64;
-        break;
-    case INBYTES_ID:
-        out_value->u = get_value_by_name(view_def, arec.data, "inbytes")->u64;
-        break;
-    case OUTFLOWS_ID:
-        out_value->u = get_value_by_name(view_def, arec.data, "outflows")->u64;
-        break;
-    case OUTPACKETS_ID:
-        out_value->u = get_value_by_name(view_def, arec.data, "outpackets")->u64;
-        break;
-    case OUTBYTES_ID:
-        out_value->u = get_value_by_name(view_def, arec.data, "outbytes")->u64;
-        break;
-    default:
-        return FDS_ERR_NOTFOUND;
-    }
-    return FDS_OK;
+    AggregateFilter *aggregate_filter = (AggregateFilter *) user_ctx;
+
+    int ret = aggregate_filter->data_callback(reset_ctx, id, data, out_value);
+    return ret;
 }
 
 AggregateFilter::AggregateFilter(const char *filter_expr, ViewDefinition view_def)
     : m_view_def(view_def)
 {
-    int rc;
-
     m_filter_opts.reset(fds_filter_create_default_opts());
     if (!m_filter_opts) {
         throw std::bad_alloc();
     }
 
-    fds_filter_opts_set_user_ctx(m_filter_opts.get(), &m_view_def);
-    fds_filter_opts_set_lookup_cb(m_filter_opts.get(), lookup_callback);
-    fds_filter_opts_set_data_cb(m_filter_opts.get(), data_callback);
+    fds_filter_opts_set_user_ctx(m_filter_opts.get(), this);
+    fds_filter_opts_set_lookup_cb(m_filter_opts.get(), &::lookup_callback);
+    fds_filter_opts_set_data_cb(m_filter_opts.get(), &::data_callback);
 
     fds_filter_t *filter;
-    rc = fds_filter_create(&filter, filter_expr, m_filter_opts.get());
+    int rc = fds_filter_create(&filter, filter_expr, m_filter_opts.get());
     m_filter.reset(filter);
+
+    if (m_exception) {
+        std::rethrow_exception(m_exception);
+    }
+
     if (rc != FDS_OK) {
         std::string error = fds_filter_get_error(filter)->msg;
         throw std::runtime_error(error);
@@ -117,9 +69,66 @@ AggregateFilter::AggregateFilter(const char *filter_expr, ViewDefinition view_de
 bool
 AggregateFilter::record_passes(AggregateRecord &record)
 {
-    if (fds_filter_eval(m_filter.get(), &record)) {
-        return true;
-    } else {
-        return false;
+    return fds_filter_eval(m_filter.get(), &record);
+}
+
+int
+AggregateFilter::lookup_callback(const char *name, const char *other_name, int *out_id, int *out_datatype, int *out_flags)
+{
+    *out_id = m_value_map.size();
+
+    Mapping mapping;
+    mapping.offset = m_view_def.keys_size;
+
+    bool found = false;
+    for (const auto &field : m_view_def.value_fields) {
+        if (field.name == name) {
+            found = true;
+            mapping.data_type = field.data_type;
+
+            switch (mapping.data_type) {
+            case DataType::Signed64:
+                *out_datatype = FDS_FDT_INT;
+                break;
+            case DataType::Unsigned64:
+                *out_datatype = FDS_FDT_UINT;
+                break;
+            default:
+                return FDS_ERR_NOTFOUND;
+            }
+
+            break;
+        }
+
+        mapping.offset += field.size;
     }
+
+    if (!found) {
+        return FDS_ERR_NOTFOUND;
+    }
+
+    m_value_map.push_back(mapping);
+
+    return FDS_OK;
+}
+
+int
+AggregateFilter::data_callback(bool reset_ctx, int id, void *data, fds_filter_value_u *out_value) noexcept
+{
+    assert(id >= 0 && id < m_value_map.size());
+
+    const Mapping &mapping = m_value_map[id];
+    const ViewValue *value = (const ViewValue *) ((uint8_t *) data + mapping.offset);
+
+    switch (mapping.data_type) {
+    case DataType::Signed64:
+        out_value->i = value->i64;
+        break;
+    case DataType::Unsigned64:
+        out_value->u = value->u64;
+        break;
+    default: assert(0);
+    }
+
+    return FDS_OK;
 }

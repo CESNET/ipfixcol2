@@ -15,3 +15,4 @@
 * Unit tests (?)
 * Sort by multiple fields
 * Calculated fields (e.g. BPS, PPS, ...)
+* Glob file loader

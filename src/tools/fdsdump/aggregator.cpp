@@ -10,19 +10,19 @@
 static IPAddress
 make_ipv4_address(uint8_t *address)
 {
-    IPAddress a = {};
-    a.length = 4;
-    std::memcpy(a.address, address, 4);
-    return a;
+    IPAddress ip = {};
+    ip.length = 4;
+    std::memcpy(ip.address, address, 4);
+    return ip;
 }
 
 static IPAddress
 make_ipv6_address(uint8_t *address)
 {
-    IPAddress a = {};
-    a.length = 16;
-    std::memcpy(a.address, address, 16);
-    return a;
+    IPAddress ip = {};
+    ip.length = 16;
+    std::memcpy(ip.address, address, 16);
+    return ip;
 }
 
 static void
@@ -63,6 +63,73 @@ get_datetime(fds_drec_field &field)
     return tmp;
 }
 
+static void
+init_zeroed_values(const ViewDefinition &view_def, uint8_t *values)
+{
+    ViewValue *value = reinterpret_cast<ViewValue *>(values);
+
+    for (const auto &field : view_def.value_fields) {
+
+        if (field.kind == ViewFieldKind::MinAggregate) {
+            switch (field.data_type) {
+            case DataType::Unsigned8:
+                value->u8 = UINT8_MAX;
+                break;
+            case DataType::Unsigned16:
+                value->u16 = UINT16_MAX;
+                break;
+            case DataType::Unsigned32:
+                value->u32 = UINT32_MAX;
+                break;
+            case DataType::Unsigned64:
+                value->u64 = UINT64_MAX;
+                break;
+            case DataType::Signed8:
+                value->i8 = INT8_MAX;
+                break;
+            case DataType::Signed16:
+                value->i16 = INT16_MAX;
+                break;
+            case DataType::Signed32:
+                value->i32 = INT32_MAX;
+                break;
+            case DataType::Signed64:
+                value->i64 = INT64_MAX;
+                break;
+            case DataType::DateTime:
+                value->ts_millisecs = UINT64_MAX;
+                break;
+            default: assert(0);
+            }
+
+        } else if (field.kind == ViewFieldKind::MaxAggregate) {
+            switch (field.data_type) {
+            case DataType::Unsigned8:
+            case DataType::Unsigned16:
+            case DataType::Unsigned32:
+            case DataType::Unsigned64:
+            case DataType::DateTime:
+                break;
+            case DataType::Signed8:
+                value->i8 = INT8_MIN;
+                break;
+            case DataType::Signed16:
+                value->i16 = INT16_MIN;
+                break;
+            case DataType::Signed32:
+                value->i32 = INT32_MIN;
+                break;
+            case DataType::Signed64:
+                value->i64 = INT64_MIN;
+                break;
+            default: assert(0);
+            }
+        }
+
+        advance_value_ptr(value, field.size);
+    }
+}
+
 static int
 build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, Direction direction)
 {
@@ -80,40 +147,31 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
             switch (view_field.data_type) {
             case DataType::Unsigned8:
                 key_value->u8 = get_uint(drec_field);
-                advance_value_ptr(key_value, sizeof(key_value->u8));
                 break;
             case DataType::Unsigned16:
                 key_value->u16 = get_uint(drec_field);
-                advance_value_ptr(key_value, sizeof(key_value->u16));
                 break;
             case DataType::Unsigned32:
                 key_value->u32 = get_uint(drec_field);
-                advance_value_ptr(key_value, sizeof(key_value->u32));
                 break;
             case DataType::Unsigned64:
                 key_value->u64 = get_uint(drec_field);
-                advance_value_ptr(key_value, sizeof(key_value->u64));
                 break;
             case DataType::Signed8:
                 key_value->i8 = get_int(drec_field);
-                advance_value_ptr(key_value, sizeof(key_value->i8));
                 break;
             case DataType::Signed16:
                 key_value->i16 = get_int(drec_field);
-                advance_value_ptr(key_value, sizeof(key_value->i16));
                 break;
             case DataType::Signed32:
                 key_value->i32 = get_int(drec_field);
-                advance_value_ptr(key_value, sizeof(key_value->i32));
                 break;
             case DataType::Signed64:
                 key_value->i64 = get_int(drec_field);
-                advance_value_ptr(key_value, sizeof(key_value->i64));
                 break;
             case DataType::String128B:
                 memset(key_value->str, 0, 128);
                 memcpy(key_value->str, drec_field.data, std::min<int>(drec_field.size, 128));
-                advance_value_ptr(key_value, 128);
                 break;
             default: assert(0);
             }
@@ -127,7 +185,6 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
             } else {
                 return 0;
             }
-            advance_value_ptr(key_value, sizeof(key_value->ip));
             break;
 
         case ViewFieldKind::DestinationIPAddressKey:
@@ -138,7 +195,6 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
             } else {
                 return 0;
             }
-            advance_value_ptr(key_value, sizeof(key_value->ip));
             break;
 
         case ViewFieldKind::BidirectionalIPAddressKey:
@@ -163,7 +219,6 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
                 break;
             default: assert(0);
             }
-            advance_value_ptr(key_value, sizeof(key_value->ip));
             break;
 
         case ViewFieldKind::BidirectionalPortKey:
@@ -184,7 +239,6 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
                 break;
             default: assert(0);
             }
-            advance_value_ptr(key_value, sizeof(key_value->u16));
             break;
 
         case ViewFieldKind::IPv4SubnetKey:
@@ -192,7 +246,6 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
                 return 0;
             }
             memcpy_bits(key_value->ipv4, drec_field.data, view_field.extra.prefix_length);
-            advance_value_ptr(key_value, sizeof(key_value->ipv4));
             break;
 
         case ViewFieldKind::IPv6SubnetKey:
@@ -200,7 +253,6 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
                 return 0;
             }
             memcpy_bits(key_value->ipv6, drec_field.data, view_field.extra.prefix_length);
-            advance_value_ptr(key_value, sizeof(key_value->ipv6));
             break;
 
         case ViewFieldKind::BidirectionalIPv4SubnetKey:
@@ -218,7 +270,6 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
             default: assert(0);
             }
             memcpy_bits(key_value->ipv4, drec_field.data, view_field.extra.prefix_length);
-            advance_value_ptr(key_value, sizeof(key_value->ipv4));
             break;
 
         case ViewFieldKind::BidirectionalIPv6SubnetKey:
@@ -236,12 +287,12 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
             default: assert(0);
             }
             memcpy_bits(key_value->ipv6, drec_field.data, view_field.extra.prefix_length);
-            advance_value_ptr(key_value, sizeof(key_value->ipv4));
             break;
 
         default: assert(0);
         }
 
+        advance_value_ptr(key_value, view_field.size);
     }
 
     return 1;
@@ -251,7 +302,6 @@ static void
 aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *&value, Direction direction)
 {
     if (aggregate_field.direction != Direction::Unassigned && direction != aggregate_field.direction) {
-        advance_value_ptr(value, aggregate_field.size);
         return;
     }
 
@@ -267,14 +317,13 @@ aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *&va
         switch (aggregate_field.data_type) {
         case DataType::Unsigned64:
             value->u64 += get_uint(drec_field);
-            advance_value_ptr(value, sizeof(value->u64));
             break;
         case DataType::Signed64:
             value->i64 += get_int(drec_field);
-            advance_value_ptr(value, sizeof(value->i64));
             break;
         default: assert(0);
         }
+
         break;
 
     case ViewFieldKind::MinAggregate:
@@ -285,42 +334,34 @@ aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *&va
         switch (aggregate_field.data_type) {
         case DataType::Unsigned8:
             value->u8 = std::min<uint8_t>(get_uint(drec_field), value->u8);
-            advance_value_ptr(value, sizeof(value->u8));
             break;
         case DataType::Unsigned16:
             value->u16 = std::min<uint16_t>(get_uint(drec_field), value->u16);
-            advance_value_ptr(value, sizeof(value->u16));
             break;
         case DataType::Unsigned32:
             value->u32 = std::min<uint32_t>(get_uint(drec_field), value->u32);
-            advance_value_ptr(value, sizeof(value->u32));
             break;
         case DataType::Unsigned64:
             value->u64 = std::min<uint64_t>(get_uint(drec_field), value->u64);
-            advance_value_ptr(value, sizeof(value->u64));
             break;
         case DataType::Signed8:
             value->i8 = std::min<int8_t>(get_int(drec_field), value->i8);
-            advance_value_ptr(value, sizeof(value->i8));
             break;
         case DataType::Signed16:
             value->i16 = std::min<int16_t>(get_int(drec_field), value->i16);
-            advance_value_ptr(value, sizeof(value->i16));
             break;
         case DataType::Signed32:
             value->i32 = std::min<int32_t>(get_int(drec_field), value->i32);
-            advance_value_ptr(value, sizeof(value->i32));
             break;
         case DataType::Signed64:
             value->i64 = std::min<int64_t>(get_int(drec_field), value->i64);
-            advance_value_ptr(value, sizeof(value->i64));
             break;
         case DataType::DateTime:
             value->ts_millisecs = std::min<uint64_t>(get_datetime(drec_field), value->ts_millisecs);
-            advance_value_ptr(value, sizeof(value->ts_millisecs));
             break;
         default: assert(0);
         }
+
         break;
 
     case ViewFieldKind::MaxAggregate:
@@ -331,47 +372,38 @@ aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *&va
         switch (aggregate_field.data_type) {
         case DataType::Unsigned8:
             value->u8 = std::max<uint8_t>(get_uint(drec_field), value->u8);
-            advance_value_ptr(value, sizeof(value->u8));
             break;
         case DataType::Unsigned16:
             value->u16 = std::max<uint16_t>(get_uint(drec_field), value->u16);
-            advance_value_ptr(value, sizeof(value->u16));
             break;
         case DataType::Unsigned32:
             value->u32 = std::max<uint32_t>(get_uint(drec_field), value->u32);
-            advance_value_ptr(value, sizeof(value->u32));
             break;
         case DataType::Unsigned64:
             value->u64 = std::max<uint64_t>(get_uint(drec_field), value->u64);
-            advance_value_ptr(value, sizeof(value->u64));
             break;
         case DataType::Signed8:
             value->i8 = std::max<int8_t>(get_int(drec_field), value->i8);
-            advance_value_ptr(value, sizeof(value->i8));
             break;
         case DataType::Signed16:
             value->i16 = std::max<int16_t>(get_int(drec_field), value->i16);
-            advance_value_ptr(value, sizeof(value->i16));
             break;
         case DataType::Signed32:
             value->i32 = std::max<int32_t>(get_int(drec_field), value->i32);
-            advance_value_ptr(value, sizeof(value->i32));
             break;
         case DataType::Signed64:
             value->i64 = std::max<int64_t>(get_int(drec_field), value->i64);
-            advance_value_ptr(value, sizeof(value->i64));
             break;
         case DataType::DateTime:
             value->ts_millisecs = std::max<uint64_t>(get_datetime(drec_field), value->ts_millisecs);
-            advance_value_ptr(value, sizeof(value->ts_millisecs));
             break;
         default: assert(0);
         }
+
         break;
 
     case ViewFieldKind::CountAggregate:
         value->u64++;
-        advance_value_ptr(value, sizeof(value->u64));
         break;
 
     default: assert(0);
@@ -412,112 +444,12 @@ Aggregator::aggregate(fds_drec &drec, Direction direction)
     int rc = m_table.lookup(key_buffer, record);
 
     if (rc == 1) {
-        // Set initial value
-        ViewValue *value = reinterpret_cast<ViewValue *>(record->data + m_view_def.keys_size);
-        for (const auto &field : m_view_def.value_fields) {
-            if (field.kind == ViewFieldKind::MinAggregate) {
-                switch (field.data_type) {
-                case DataType::Unsigned8:
-                    value->u8 = UINT8_MAX;
-                    advance_value_ptr(value, value->u8);
-                    break;
-                case DataType::Unsigned16:
-                    value->u16 = UINT16_MAX;
-                    advance_value_ptr(value, value->u16);
-                    break;
-                case DataType::Unsigned32:
-                    value->u32 = UINT32_MAX;
-                    advance_value_ptr(value, value->u32);
-                    break;
-                case DataType::Unsigned64:
-                    value->u64 = UINT64_MAX;
-                    advance_value_ptr(value, value->u64);
-                    break;
-                case DataType::Signed8:
-                    value->i8 = INT8_MAX;
-                    advance_value_ptr(value, value->i8);
-                    break;
-                case DataType::Signed16:
-                    value->i16 = INT16_MAX;
-                    advance_value_ptr(value, value->i16);
-                    break;
-                case DataType::Signed32:
-                    value->i32 = INT32_MAX;
-                    advance_value_ptr(value, value->i32);
-                    break;
-                case DataType::Signed64:
-                    value->i64 = INT64_MAX;
-                    advance_value_ptr(value, value->i64);
-                    break;
-                case DataType::DateTime:
-                    value->ts_millisecs = UINT64_MAX;
-                    break;
-                default: assert(0);
-                }
-            } else if (field.kind == ViewFieldKind::MaxAggregate) {
-                switch (field.data_type) {
-                case DataType::Unsigned8:
-                case DataType::Unsigned16:
-                case DataType::Unsigned32:
-                case DataType::Unsigned64:
-                case DataType::DateTime:
-                    break;
-                case DataType::Signed8:
-                    value->i8 = INT8_MIN;
-                    advance_value_ptr(value, value->i8);
-                    break;
-                case DataType::Signed16:
-                    value->i16 = INT16_MIN;
-                    advance_value_ptr(value, value->i16);
-                    break;
-                case DataType::Signed32:
-                    value->i32 = INT32_MIN;
-                    advance_value_ptr(value, value->i32);
-                    break;
-                case DataType::Signed64:
-                    value->i64 = INT64_MIN;
-                    advance_value_ptr(value, value->i64);
-                    break;
-                default: assert(0);
-                }
-            }
-        }
+        init_zeroed_values(m_view_def, record->data + m_view_def.keys_size);
     }
 
     ViewValue *value = reinterpret_cast<ViewValue *>(record->data + m_view_def.keys_size);
     for (const auto &aggregate_field : m_view_def.value_fields) {
         aggregate_value(aggregate_field, drec, value, direction);
+        advance_value_ptr(value, aggregate_field.size);
     }
 }
-
-// void
-// Aggregator::print_debug_info()
-// {
-//     std::size_t n_total_records = 0;
-//     std::size_t max_records_in_bucket = 0;
-//     std::size_t min_records_in_bucket = 0;
-//     std::size_t avg_records_in_bucket = 0;
-//     for (const auto bucket : m_buckets) {
-//         AggregateRecord *rec = bucket;
-//         std::size_t n_records = 0;
-//         while (rec) {
-//             n_records++;
-//             rec = rec->next;
-//         }
-//         n_total_records += n_records;
-//         if (n_records > max_records_in_bucket) {
-//             max_records_in_bucket = n_records;
-//         }
-//         if (n_records < min_records_in_bucket) {
-//             min_records_in_bucket = n_records;
-//         }
-//         std::cout << n_records << "\n";
-//     }
-//     avg_records_in_bucket = n_total_records / m_buckets_count;
-
-//     std::cout << "Total records: " << n_total_records << "\n";
-//     std::cout << "Max in bucket: " << max_records_in_bucket << "\n";
-//     std::cout << "Min in bucket: " << min_records_in_bucket << "\n";
-//     std::cout << "Avg in bucket: " << avg_records_in_bucket << "\n";
-// }
-

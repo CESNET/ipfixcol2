@@ -292,23 +292,28 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
     for (const auto &value : values) {
         ViewField field = {};
 
-        std::regex aggregate_regex{"(.+)\\((.+)\\)"};
+        //std::regex aggregate_regex{"(.+)\\((.+)\\)"};
+        std::regex aggregate_regex{"(.+):(min|max|sum)"};
         std::smatch m;
 
         if (std::regex_match(value, m, aggregate_regex)) {
+            //const std::string &func = m[1].str();
+            //const std::string &field_name = m[2].str();
+            const std::string &field_name = m[1].str();
+            const std::string &func = m[2].str();
 
-            if (m[1] == "min") {
+            if (func == "min") {
                 field.kind = ViewFieldKind::MinAggregate;
-            } else if (m[1] == "max") {
+            } else if (func == "max") {
                 field.kind = ViewFieldKind::MaxAggregate;
-            } else if (m[1] == "sum") {
+            } else if (func == "sum") {
                 field.kind = ViewFieldKind::SumAggregate;
             } else {
                 fprintf(stderr, "Invalid aggregation value \"%s\" - unknown aggregation function\n", value.c_str());
                 return 1;
             }
 
-            const fds_iemgr_elem *elem = fds_iemgr_elem_find_name(&iemgr, m[2].str().c_str());
+            const fds_iemgr_elem *elem = fds_iemgr_elem_find_name(&iemgr, field_name.c_str());
 
             if (!elem) {
                 fprintf(stderr, "Invalid aggregation value \"%s\" - element not found\n", value.c_str());
