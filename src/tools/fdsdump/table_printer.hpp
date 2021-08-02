@@ -5,6 +5,8 @@
 class TablePrinter : public Printer
 {
 public:
+    bool m_translate_ip_addrs;
+
     TablePrinter(ViewDefinition view_def);
 
     ~TablePrinter() override;

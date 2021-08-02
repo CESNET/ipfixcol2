@@ -4,8 +4,6 @@
 #include <netdb.h>
 #include "information_elements.hpp"
 
-static constexpr bool TRANSLATE_IPADDRS = true; //TODO: This should really be a command line option
-
 static int
 get_width(const ViewField &field)
 {
@@ -98,7 +96,7 @@ translate_ipv6_address(uint8_t *address, char *buffer)
 }
 
 static void
-print_value(const ViewField &field, ViewValue &value, char *buffer)
+print_value(const ViewField &field, ViewValue &value, char *buffer, bool translate_ip_addrs)
 {
     // Print protocol name
     if (field.kind == ViewFieldKind::VerbatimKey && field.pen == IPFIX::iana && field.id == IPFIX::protocolIdentifier) {
@@ -137,22 +135,22 @@ print_value(const ViewField &field, ViewValue &value, char *buffer)
         break;
     case DataType::IPAddress:
         if (value.ip.length == 4) {
-            if (!TRANSLATE_IPADDRS || !translate_ipv4_address(value.ip.address, buffer)) {
+            if (!translate_ip_addrs || !translate_ipv4_address(value.ip.address, buffer)) {
                 inet_ntop(AF_INET, value.ip.address, buffer, 64);
             }
         } else if (value.ip.length == 16) {
-            if (!TRANSLATE_IPADDRS || !translate_ipv6_address(value.ip.address, buffer)) {
+            if (!translate_ip_addrs || !translate_ipv6_address(value.ip.address, buffer)) {
                 inet_ntop(AF_INET6, value.ip.address, buffer, 64);
             }
         }
         break;
     case DataType::IPv4Address:
-        if (!TRANSLATE_IPADDRS || !translate_ipv4_address(value.ipv4, buffer)) {
+        if (!translate_ip_addrs || !translate_ipv4_address(value.ipv4, buffer)) {
             inet_ntop(AF_INET, value.ipv4, buffer, 64);
         }
         break;
     case DataType::IPv6Address:
-        if (!TRANSLATE_IPADDRS || !translate_ipv6_address(value.ipv6, buffer)) {
+        if (!translate_ip_addrs || !translate_ipv6_address(value.ipv6, buffer)) {
             inet_ntop(AF_INET6, value.ipv6, buffer, 64);
         }
         break;
@@ -197,13 +195,13 @@ TablePrinter::print_record(AggregateRecord &record)
     ViewValue *value = reinterpret_cast<ViewValue *>(record.data);
 
     for (const auto &field : m_view_def.key_fields) {
-        print_value(field, *value, buffer);
+        print_value(field, *value, buffer, m_translate_ip_addrs);
         advance_value_ptr(value, field.size);
         printf("%*s ", get_width(field), buffer);
     }
 
     for (const auto &field : m_view_def.value_fields) {
-        print_value(field, *value, buffer);
+        print_value(field, *value, buffer, m_translate_ip_addrs);
         advance_value_ptr(value, field.size);
         printf("%*s ", get_width(field), buffer);
     }

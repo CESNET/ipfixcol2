@@ -14,6 +14,7 @@ struct Config
     ViewDefinition view_def;
     std::string sort_field;
     uint64_t max_output_records;
+    bool translate_ip_addrs;
 };
 
 int

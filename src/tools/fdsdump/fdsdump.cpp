@@ -32,6 +32,9 @@ main(int argc, char *argv[])
     Aggregator aggregator{config.view_def};
     AggregateFilter aggregate_filter{config.output_filter.c_str(), config.view_def};
     std::unique_ptr<Printer> printer{new TablePrinter{config.view_def}};
+    if (auto *table_printer = dynamic_cast<TablePrinter *>(printer.get())) {
+        table_printer->m_translate_ip_addrs = config.translate_ip_addrs;
+    }
 
     fds_drec drec;
     uint64_t i = 0;

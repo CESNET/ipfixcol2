@@ -57,6 +57,7 @@ usage()
     "  -av values Aggregator values // TODO\n"
     "  -s field   Field to sort on (e.g. bytes, packets, flows)\n"
     "  -n num     Maximum number of records to write\n"
+    "  -t         Translate IP addresses to domain names\n"
     ;
     fprintf(stderr, text);
 }
@@ -556,6 +557,8 @@ config_from_args(int argc, char **argv, Config &config, fds_iemgr_t &iemgr)
             //    fprintf(stderr, "Invalid sort field \"%s\"\n", config.sort_field.c_str());
             //    return 1;
             //}
+        } else if (parser.arg() == "-t") {
+            config.translate_ip_addrs = true;
         } else {
             fprintf(stderr, "Unknown argument %s\n", parser.arg().c_str());
             return 1;
