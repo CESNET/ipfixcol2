@@ -2,15 +2,12 @@
 #include <vector>
 #include <functional>
 #include "view.hpp"
-#include "aggregatetable.hpp"
+#include "hashtable.hpp"
 
-using CompareFn = std::function<bool(AggregateRecord *, AggregateRecord *)>;
+using CompareFn = std::function<bool(uint8_t *, uint8_t *)>;
 
 void
-sort_records(std::vector<AggregateRecord *> &records, const std::string &sort_field, const ViewDefinition &view_def);
+sort_records(std::vector<uint8_t *> &records, const std::string &sort_field, const ViewDefinition &view_def);
 
 CompareFn
 get_compare_fn(const std::string &sort_field, const ViewDefinition &view_def);
-
-void
-keep_top_n(std::vector<AggregateRecord *> &records, size_t n, CompareFn &compare_fn);

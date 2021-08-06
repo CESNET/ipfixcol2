@@ -39,8 +39,11 @@ public:
         return result;
     }
 
-    size_t size() { return m_items.size(); }
+    ItemType top() const { return m_items[0]; }
 
+    size_t size() const { return m_items.size(); }
+
+private:
     std::vector<ItemType> m_items;
 
     CompareFn m_compare;

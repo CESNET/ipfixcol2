@@ -44,6 +44,8 @@ ThreadWorker::run()
     }
 #endif
 
+    sort_records(m_aggregator->m_items, m_config.sort_field, m_config.view_def);
+
     m_done = true;
 }
 

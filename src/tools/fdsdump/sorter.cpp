@@ -2,7 +2,7 @@
 #include <algorithm>
 
 void
-sort_records(std::vector<AggregateRecord *> &records, const std::string &sort_field, const ViewDefinition &view_def)
+sort_records(std::vector<uint8_t *> &records, const std::string &sort_field, const ViewDefinition &view_def)
 {
     auto compare_fn = get_compare_fn(sort_field, view_def);
     std::sort(records.begin(), records.end(), compare_fn);
@@ -11,7 +11,7 @@ sort_records(std::vector<AggregateRecord *> &records, const std::string &sort_fi
 CompareFn
 get_compare_fn(const std::string &sort_field, const ViewDefinition &view_def)
 {
-    std::function<bool(AggregateRecord *, AggregateRecord *)> compare_fn;
+    std::function<bool(uint8_t *, uint8_t *)> compare_fn;
 
     const ViewField *field = nullptr;
 
@@ -43,13 +43,13 @@ get_compare_fn(const std::string &sort_field, const ViewDefinition &view_def)
     switch (field->data_type) {
     case DataType::DateTime:
     case DataType::Unsigned64:
-        compare_fn = [=](AggregateRecord *a, AggregateRecord *b) {
-            return ((ViewValue *) (a->data + offset))->u64 > ((ViewValue *) (b->data + offset))->u64;
+        compare_fn = [=](uint8_t *a, uint8_t *b) {
+            return ((ViewValue *) (a + offset))->u64 > ((ViewValue *) (b + offset))->u64;
         };
         break;
     case DataType::Signed64:
-        compare_fn = [=](AggregateRecord *a, AggregateRecord *b) {
-            return ((ViewValue *) (a->data + offset))->i64 > ((ViewValue *) (b->data + offset))->i64;
+        compare_fn = [=](uint8_t *a, uint8_t *b) {
+            return ((ViewValue *) (a + offset))->i64 > ((ViewValue *) (b + offset))->i64;
         };
         break;
     default:
@@ -64,7 +64,7 @@ static size_t left(size_t i) { return 2*i + 1; }
 static size_t right(size_t i) { return 2*i + 2; }
 
 static void
-fix_heap(size_t i, std::vector<AggregateRecord *> &records, CompareFn &compare)
+fix_heap(size_t i, std::vector<uint8_t *> &records, CompareFn &compare)
 {
     size_t left = 2*i + 1;
     size_t right = 2*i + 2;
@@ -88,9 +88,9 @@ fix_heap(size_t i, std::vector<AggregateRecord *> &records, CompareFn &compare)
 }
 
 void
-keep_top_n(std::vector<AggregateRecord *> &records, size_t n, CompareFn &compare_fn)
+keep_top_n(std::vector<uint8_t *> &records, size_t n, CompareFn &compare_fn)
 {
-    std::vector<AggregateRecord *> top_records(n);
+    std::vector<uint8_t *> top_records(n);
 
     for (size_t i = 0; i < n; i++) {
 

@@ -7,6 +7,7 @@
 #include <cstring>
 #include <iostream>
 #include "binaryheap.hpp"
+#include "tableprinter.hpp"
 
 static IPAddress
 make_ipv4_address(uint8_t *address)
@@ -65,69 +66,193 @@ get_datetime(fds_drec_field &field)
 }
 
 static void
-init_zeroed_values(const ViewDefinition &view_def, uint8_t *values)
+init_value(const ViewField &field, ViewValue &value)
+{
+    switch (field.kind) {
+    case ViewFieldKind::MinAggregate:
+
+        switch (field.data_type) {
+        case DataType::Unsigned8:
+            value.u8 = UINT8_MAX;
+            break;
+        case DataType::Unsigned16:
+            value.u16 = UINT16_MAX;
+            break;
+        case DataType::Unsigned32:
+            value.u32 = UINT32_MAX;
+            break;
+        case DataType::Unsigned64:
+            value.u64 = UINT64_MAX;
+            break;
+        case DataType::Signed8:
+            value.i8 = INT8_MAX;
+            break;
+        case DataType::Signed16:
+            value.i16 = INT16_MAX;
+            break;
+        case DataType::Signed32:
+            value.i32 = INT32_MAX;
+            break;
+        case DataType::Signed64:
+            value.i64 = INT64_MAX;
+            break;
+        case DataType::DateTime:
+            value.ts_millisecs = UINT64_MAX;
+            break;
+        default: assert(0);
+        }
+
+        break;
+
+    case ViewFieldKind::MaxAggregate:
+
+        switch (field.data_type) {
+        case DataType::Unsigned8:
+        case DataType::Unsigned16:
+        case DataType::Unsigned32:
+        case DataType::Unsigned64:
+        case DataType::DateTime:
+            memset((uint8_t *) &value, 0, field.size);
+            break;
+        case DataType::Signed8:
+            value.i8 = INT8_MIN;
+            break;
+        case DataType::Signed16:
+            value.i16 = INT16_MIN;
+            break;
+        case DataType::Signed32:
+            value.i32 = INT32_MIN;
+            break;
+        case DataType::Signed64:
+            value.i64 = INT64_MIN;
+            break;
+        default: assert(0);
+        }
+
+        break;
+
+    default:
+        memset((uint8_t *) &value, 0, field.size);
+        break;
+    }
+}
+
+static void
+init_values(const ViewDefinition &view_def, uint8_t *values)
 {
     ViewValue *value = reinterpret_cast<ViewValue *>(values);
 
     for (const auto &field : view_def.value_fields) {
+        init_value(field, *value);
+        advance_value_ptr(value, field.size);
+    }
+}
 
-        if (field.kind == ViewFieldKind::MinAggregate) {
-            switch (field.data_type) {
-            case DataType::Unsigned8:
-                value->u8 = UINT8_MAX;
-                break;
-            case DataType::Unsigned16:
-                value->u16 = UINT16_MAX;
-                break;
-            case DataType::Unsigned32:
-                value->u32 = UINT32_MAX;
-                break;
-            case DataType::Unsigned64:
-                value->u64 = UINT64_MAX;
-                break;
-            case DataType::Signed8:
-                value->i8 = INT8_MAX;
-                break;
-            case DataType::Signed16:
-                value->i16 = INT16_MAX;
-                break;
-            case DataType::Signed32:
-                value->i32 = INT32_MAX;
-                break;
-            case DataType::Signed64:
-                value->i64 = INT64_MAX;
-                break;
-            case DataType::DateTime:
-                value->ts_millisecs = UINT64_MAX;
-                break;
-            default: assert(0);
-            }
+static void
+merge_value(const ViewField &aggregate_field, ViewValue &value, ViewValue &other_value)
+{
+    switch (aggregate_field.kind) {
 
-        } else if (field.kind == ViewFieldKind::MaxAggregate) {
-            switch (field.data_type) {
-            case DataType::Unsigned8:
-            case DataType::Unsigned16:
-            case DataType::Unsigned32:
-            case DataType::Unsigned64:
-            case DataType::DateTime:
-                break;
-            case DataType::Signed8:
-                value->i8 = INT8_MIN;
-                break;
-            case DataType::Signed16:
-                value->i16 = INT16_MIN;
-                break;
-            case DataType::Signed32:
-                value->i32 = INT32_MIN;
-                break;
-            case DataType::Signed64:
-                value->i64 = INT64_MIN;
-                break;
-            default: assert(0);
-            }
+    case ViewFieldKind::SumAggregate:
+        switch (aggregate_field.data_type) {
+        case DataType::Unsigned64:
+            value.u64 += other_value.u64;
+            break;
+        case DataType::Signed64:
+            value.i64 += other_value.i64;
+            break;
+        default: assert(0);
         }
 
-        advance_value_ptr(value, field.size);
+        break;
+
+    case ViewFieldKind::MinAggregate:
+        switch (aggregate_field.data_type) {
+        case DataType::Unsigned8:
+            value.u8 = std::min<uint8_t>(other_value.u8, value.u8);
+            break;
+        case DataType::Unsigned16:
+            value.u16 = std::min<uint16_t>(other_value.u16, value.u16);
+            break;
+        case DataType::Unsigned32:
+            value.u32 = std::min<uint32_t>(other_value.u32, value.u32);
+            break;
+        case DataType::Unsigned64:
+            value.u64 = std::min<uint64_t>(other_value.u64, value.u64);
+            break;
+        case DataType::Signed8:
+            value.i8 = std::min<int8_t>(other_value.i8, value.i8);
+            break;
+        case DataType::Signed16:
+            value.i16 = std::min<int16_t>(other_value.i16, value.i16);
+            break;
+        case DataType::Signed32:
+            value.i32 = std::min<int32_t>(other_value.i32, value.i32);
+            break;
+        case DataType::Signed64:
+            value.i64 = std::min<int64_t>(other_value.i64, value.i64);
+            break;
+        case DataType::DateTime:
+            value.ts_millisecs = std::min<uint64_t>(other_value.ts_millisecs, value.ts_millisecs);
+            break;
+        default: assert(0);
+        }
+
+        break;
+
+    case ViewFieldKind::MaxAggregate:
+        switch (aggregate_field.data_type) {
+        case DataType::Unsigned8:
+            value.u8 = std::max<uint8_t>(other_value.u8, value.u8);
+            break;
+        case DataType::Unsigned16:
+            value.u16 = std::max<uint16_t>(other_value.u16, value.u16);
+            break;
+        case DataType::Unsigned32:
+            value.u32 = std::max<uint32_t>(other_value.u32, value.u32);
+            break;
+        case DataType::Unsigned64:
+            value.u64 = std::max<uint64_t>(other_value.u64, value.u64);
+            break;
+        case DataType::Signed8:
+            value.i8 = std::max<int8_t>(other_value.i8, value.i8);
+            break;
+        case DataType::Signed16:
+            value.i16 = std::max<int16_t>(other_value.i16, value.i16);
+            break;
+        case DataType::Signed32:
+            value.i32 = std::max<int32_t>(other_value.i32, value.i32);
+            break;
+        case DataType::Signed64:
+            value.i64 = std::max<int64_t>(other_value.i64, value.i64);
+            break;
+        case DataType::DateTime:
+            value.ts_millisecs = std::max<uint64_t>(other_value.ts_millisecs, value.ts_millisecs);
+            break;
+        default: assert(0);
+        }
+
+        break;
+
+    case ViewFieldKind::CountAggregate:
+        value.u64 += other_value.u64;
+        break;
+
+    default: assert(0);
+
+    }
+}
+
+static void
+merge_records(const ViewDefinition &def, uint8_t *record, uint8_t *other_record)
+{
+    ViewValue *value = (ViewValue *) (record + def.keys_size);
+    ViewValue *other_value = (ViewValue *) (other_record + def.keys_size);
+
+    for (const auto &aggregate_field : def.value_fields) {
+        merge_value(aggregate_field, *value, *other_value);
+        advance_value_ptr(value, aggregate_field.size);
+        advance_value_ptr(other_value, aggregate_field.size);
     }
 }
 
@@ -299,100 +424,6 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
     return 1;
 }
 
-static void
-merge_value(const ViewField &aggregate_field, ViewValue *value, ViewValue *other_value)
-{
-    switch (aggregate_field.kind) {
-
-    case ViewFieldKind::SumAggregate:
-        switch (aggregate_field.data_type) {
-        case DataType::Unsigned64:
-            value->u64 += other_value->u64;
-            break;
-        case DataType::Signed64:
-            value->i64 += other_value->i64;
-            break;
-        default: assert(0);
-        }
-
-        break;
-
-    case ViewFieldKind::MinAggregate:
-        switch (aggregate_field.data_type) {
-        case DataType::Unsigned8:
-            value->u8 = std::min<uint8_t>(other_value->u8, value->u8);
-            break;
-        case DataType::Unsigned16:
-            value->u16 = std::min<uint16_t>(other_value->u16, value->u16);
-            break;
-        case DataType::Unsigned32:
-            value->u32 = std::min<uint32_t>(other_value->u32, value->u32);
-            break;
-        case DataType::Unsigned64:
-            value->u64 = std::min<uint64_t>(other_value->u64, value->u64);
-            break;
-        case DataType::Signed8:
-            value->i8 = std::min<int8_t>(other_value->i8, value->i8);
-            break;
-        case DataType::Signed16:
-            value->i16 = std::min<int16_t>(other_value->i16, value->i16);
-            break;
-        case DataType::Signed32:
-            value->i32 = std::min<int32_t>(other_value->i32, value->i32);
-            break;
-        case DataType::Signed64:
-            value->i64 = std::min<int64_t>(other_value->i64, value->i64);
-            break;
-        case DataType::DateTime:
-            value->ts_millisecs = std::min<uint64_t>(other_value->ts_millisecs, value->ts_millisecs);
-            break;
-        default: assert(0);
-        }
-
-        break;
-
-    case ViewFieldKind::MaxAggregate:
-        switch (aggregate_field.data_type) {
-        case DataType::Unsigned8:
-            value->u8 = std::max<uint8_t>(other_value->u8, value->u8);
-            break;
-        case DataType::Unsigned16:
-            value->u16 = std::max<uint16_t>(other_value->u16, value->u16);
-            break;
-        case DataType::Unsigned32:
-            value->u32 = std::max<uint32_t>(other_value->u32, value->u32);
-            break;
-        case DataType::Unsigned64:
-            value->u64 = std::max<uint64_t>(other_value->u64, value->u64);
-            break;
-        case DataType::Signed8:
-            value->i8 = std::max<int8_t>(other_value->i8, value->i8);
-            break;
-        case DataType::Signed16:
-            value->i16 = std::max<int16_t>(other_value->i16, value->i16);
-            break;
-        case DataType::Signed32:
-            value->i32 = std::max<int32_t>(other_value->i32, value->i32);
-            break;
-        case DataType::Signed64:
-            value->i64 = std::max<int64_t>(other_value->i64, value->i64);
-            break;
-        case DataType::DateTime:
-            value->ts_millisecs = std::max<uint64_t>(other_value->ts_millisecs, value->ts_millisecs);
-            break;
-        default: assert(0);
-        }
-
-        break;
-
-    case ViewFieldKind::CountAggregate:
-        value->u64 += other_value->u64;
-        break;
-
-    default: assert(0);
-
-    }
-}
 
 static void
 aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *value, Direction direction)
@@ -532,14 +563,14 @@ Aggregator::aggregate(fds_drec &drec, Direction direction)
         return;
     }
 
-    AggregateRecord *record;
-    int rc = m_table.lookup(&m_key_buffer[0], record);
+    uint8_t *record;
 
-    if (rc == 1) {
-        init_zeroed_values(m_view_def, record->data + m_view_def.keys_size);
+    if (!m_table.find_or_create(&m_key_buffer[0], record)) {
+        init_values(m_view_def, record + m_view_def.keys_size);
+        m_items.push_back(record);
     }
 
-    ViewValue *value = reinterpret_cast<ViewValue *>(record->data + m_view_def.keys_size);
+    ViewValue *value = reinterpret_cast<ViewValue *>(record + m_view_def.keys_size);
     for (const auto &aggregate_field : m_view_def.value_fields) {
         aggregate_value(aggregate_field, drec, value, direction);
         advance_value_ptr(value, aggregate_field.size);
@@ -549,23 +580,26 @@ Aggregator::aggregate(fds_drec &drec, Direction direction)
 void
 Aggregator::merge(Aggregator &other)
 {
-    for (auto *other_record : other.records()) {
-        AggregateRecord *record;
-        int rc = m_table.lookup(other_record->data, record);
+    for (uint8_t *other_record : other.m_items) {
+        uint8_t *record;
 
-        if (rc == 1) {
+        if (!m_table.find_or_create(other_record, record)) {
             //TODO: this copy is unnecessary, we could just take the already allocated record from the other table instead
-            memcpy(record->data, other_record->data, m_view_def.keys_size + m_view_def.values_size);
+            memcpy(record, other_record, m_view_def.keys_size + m_view_def.values_size);
+            m_items.push_back(record);
 
         } else {
-            ViewValue *value = (ViewValue *) (record->data + m_view_def.keys_size);
+            merge_records(m_view_def, record, other_record);
+/*
+            ViewValue *value = (ViewValue *) (record + m_view_def.keys_size);
             ViewValue *other_value = (ViewValue *) (other_record->data+ m_view_def.keys_size);
 
             for (const auto &aggregate_field : m_view_def.value_fields) {
-                merge_value(aggregate_field, value, other_value);
+                merge_value(aggregate_field, *value, *other_value);
                 advance_value_ptr(value, aggregate_field.size);
                 advance_value_ptr(other_value, aggregate_field.size);
             }
+*/
 
         }
     }
@@ -574,7 +608,7 @@ Aggregator::merge(Aggregator &other)
 void
 Aggregator::make_top_n(size_t n, CompareFn compare_fn)
 {
-    auto &recs = records();
+    auto &recs = m_items;
 
     if (recs.size() <= n) {
         std::sort(recs.begin(), recs.end(), compare_fn);
@@ -582,7 +616,7 @@ Aggregator::make_top_n(size_t n, CompareFn compare_fn)
     }
 
     auto records_it = recs.begin();
-    BinaryHeap<AggregateRecord *, CompareFn> heap(compare_fn);
+    BinaryHeap<uint8_t *, CompareFn> heap(compare_fn);
 
     size_t i = 0;
     for (auto rec : recs) {
@@ -595,7 +629,7 @@ Aggregator::make_top_n(size_t n, CompareFn compare_fn)
     }
 
     for (auto it = recs.begin() + n; it != recs.end(); it++) {
-        AggregateRecord *rec = *it;
+        uint8_t *rec = *it;
         heap.push_pop(rec);
     }
 
@@ -609,5 +643,199 @@ Aggregator::make_top_n(size_t n, CompareFn compare_fn)
     }
 }
 
+int
+compare_values(const ViewField &field, const ViewValue &a, const ViewValue &b)
+{
+    switch (field.data_type) {
+    case DataType::DateTime:
+    case DataType::Unsigned64:
+        return a.u64 > b.u64 ? 1 : (a.u64 < b.u64 ? -1 : 0);
+
+    case DataType::Signed64:
+        return a.i64 > b.i64 ? 1 : (a.i64 < b.i64 ? -1 : 0);
+
+    default:
+        assert(0);
+    }
+}
+
+int
+compare_records(SortField sort_field, const ViewDefinition &def, uint8_t *record, uint8_t *other_record)
+{
+    int result = compare_values(*sort_field.field,
+                                *(ViewValue *) (record + sort_field.field->offset),
+                                *(ViewValue *) (other_record + sort_field.field->offset));
+
+    if (sort_field.ascending) {
+        result = -result;
+    }
+
+    return result;
+}
 
 
+int
+compare_records(const std::vector<SortField> &sort_fields, const ViewDefinition &def, uint8_t *record, uint8_t *other_record)
+{
+    int result;
+
+    for (auto sort_field : sort_fields) {
+        result = compare_values(*sort_field.field,
+                                *(ViewValue *) (record + sort_field.field->offset),
+                                *(ViewValue *) (other_record + sort_field.field->offset));
+
+        if (result != 0) {
+            if (sort_field.ascending) {
+                result = -result;
+            }
+            break;
+        }
+
+    }
+
+    return result;
+}
+
+static std::vector<uint8_t>
+make_empty_record(const ViewDefinition &def)
+{
+    std::vector<uint8_t> empty_record(def.keys_size + def.values_size);
+    init_values(def, &empty_record[0]);
+    return empty_record;
+}
+
+static bool
+merge_index(const ViewDefinition &def, std::vector<Aggregator *> &aggregators, size_t idx, uint8_t *base_record)
+{
+    bool any = false;
+
+    for (auto *aggregator : aggregators) {
+        const auto &records = aggregator->m_items;
+
+        if (idx >= records.size()) {
+            continue;
+        }
+
+        merge_records(def, base_record, records[idx]);
+
+        any = true;
+    }
+
+    return any;
+}
+
+static void
+merge_corresponding(const ViewDefinition &def, std::vector<Aggregator> &aggregators, uint8_t *base_record)
+{
+    for (auto &aggregator : aggregators) {
+        uint8_t *other_record;
+
+        if (aggregator.m_table.find(base_record, other_record)) {
+            merge_records(def, base_record, other_record);
+        }
+    }
+}
+
+
+std::vector<uint8_t *>
+make_top_n(const ViewDefinition &def, std::vector<Aggregator *> &aggregators, size_t n, const std::vector<SortField> &sort_fields)
+{
+    // Using the threshold algorithm for distributed top-k
+    // Records in individual aggregators must be sorted
+
+    std::function<bool(uint8_t *, uint8_t *)> compare;
+
+    if (sort_fields.size() == 1) {
+        compare = [&](uint8_t *a, uint8_t *b) -> bool {
+            return compare_records(sort_fields[0], def, a, b) > 0;
+        };
+
+    } else {
+        compare = [&](uint8_t *a, uint8_t *b) -> bool {
+            return compare_records(sort_fields, def, a, b) > 0;
+        };
+
+    }
+
+    BinaryHeap<uint8_t *, std::function<bool(uint8_t *, uint8_t *)>> heap(compare);
+    HashTable seen(def.keys_size, 0);
+
+    size_t idx = 0;
+
+    std::vector<uint8_t> empty_record = make_empty_record(def);
+
+    for (;;) {
+
+        assert(heap.size() <= n);
+
+        if (heap.size() == n) {
+            std::vector<uint8_t> threshold = empty_record;
+
+            if (!merge_index(def, aggregators, idx, threshold.data())) {
+                break;
+            }
+/*
+            printf("\n");
+            printf("Threshold:\n");
+            TablePrinter(def).print_record(threshold.data());
+            printf("Record %u:\n", idx);
+            TablePrinter(def).print_record(aggregators[0]->m_items[idx]);
+*/
+            if (compare_records(sort_fields, def, heap.top(), threshold.data()) >= 0) {
+  /*
+                printf("Threshold is %u, heap top is %u\n",
+                    *(uint64_t *) (threshold.data() + sort_fields[0].field->offset),
+                    *(uint64_t *) (heap.top() + sort_fields[0].field->offset));
+            */
+                break;
+            }
+        }
+
+        for (auto *aggregator : aggregators) {
+            if (idx >= aggregator->m_items.size()) {
+                continue;
+            }
+
+            uint8_t *record = aggregator->m_items[idx];
+            uint8_t *throwaway;
+            if (seen.find_or_create(record, throwaway)) {
+                continue;
+            }
+
+            for (auto *aggregator_ : aggregators) {
+                if (aggregator == aggregator_) {
+                    continue;
+                }
+
+                uint8_t *other_record;
+
+                if (aggregator_->m_table.find(record, other_record)) {
+                    merge_records(def, record, other_record);
+                    //TODO: free memory
+                }
+            }
+/*
+            printf("Record to push is %u\n",
+                *(uint64_t *) (record + sort_fields[0].field->offset));
+*/
+            if (heap.size() < n) {
+                heap.push(record);
+                //TODO: free memory
+            } else {
+                heap.push_pop(record);
+            }
+        }
+
+        idx++;
+    }
+
+    std::vector<uint8_t *> top_records(heap.size());
+
+    size_t i = heap.size();
+    while (heap.size() > 0) {
+        i--;
+        top_records[i] = heap.pop();
+    }
+
+    return top_records;
+}

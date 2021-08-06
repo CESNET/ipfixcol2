@@ -189,10 +189,10 @@ TablePrinter::print_prologue()
 }
 
 void
-TablePrinter::print_record(AggregateRecord &record)
+TablePrinter::print_record(uint8_t *record)
 {
     char buffer[1024] = {0}; //TODO: We might want to do this some other way
-    ViewValue *value = reinterpret_cast<ViewValue *>(record.data);
+    ViewValue *value = (ViewValue *) record;
 
     for (const auto &field : m_view_def.key_fields) {
         print_value(field, *value, buffer, m_translate_ip_addrs);

@@ -14,7 +14,7 @@ public:
     AggregateFilter(const AggregateFilter &) = delete;
 
     bool
-    record_passes(AggregateRecord &record);
+    record_passes(uint8_t *record);
 
 private:
     unique_fds_filter_opts m_filter_opts;

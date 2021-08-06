@@ -156,6 +156,7 @@ parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def,
             }
 
             field.extra.prefix_length = prefix_length;
+            field.offset = view_def.keys_size;
             view_def.keys_size += field.size;
 
         } else if (key == "srcip") {
@@ -163,6 +164,7 @@ parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def,
             field.kind = ViewFieldKind::SourceIPAddressKey;
             field.name = "srcip";
             field.size = sizeof(ViewValue::ip);
+            field.offset = view_def.keys_size;
             view_def.keys_size += sizeof(ViewValue::ip);
 
         } else if (key == "dstip") {
@@ -170,6 +172,7 @@ parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def,
             field.kind = ViewFieldKind::DestinationIPAddressKey;
             field.name = "dstip";
             field.size = sizeof(ViewValue::ip);
+            field.offset = view_def.keys_size;
             view_def.keys_size += sizeof(ViewValue::ip);
 
         } else if (key == "srcport") {
@@ -179,6 +182,7 @@ parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def,
             field.id = IPFIX::sourceTransportPort;
             field.name = "srcport";
             field.size = sizeof(ViewValue::u16);
+            field.offset = view_def.keys_size;
             view_def.keys_size += sizeof(ViewValue::u16);
 
         } else if (key == "dstport") {
@@ -188,6 +192,7 @@ parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def,
             field.id = IPFIX::destinationTransportPort;
             field.name = "dstport";
             field.size = sizeof(ViewValue::u16);
+            field.offset = view_def.keys_size;
             view_def.keys_size += sizeof(ViewValue::u16);
 
         } else if (key == "proto") {
@@ -197,6 +202,7 @@ parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def,
             field.id = IPFIX::protocolIdentifier;
             field.name = "proto";
             field.size = sizeof(ViewValue::u8);
+            field.offset = view_def.keys_size;
             view_def.keys_size += sizeof(ViewValue::u8);
 
         } else if (key == "ip") {
@@ -204,6 +210,7 @@ parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def,
             field.kind = ViewFieldKind::BidirectionalIPAddressKey;
             field.name = "ip";
             field.size = sizeof(ViewValue::ip);
+            field.offset = view_def.keys_size;
             view_def.keys_size += sizeof(ViewValue::ip);
             view_def.bidirectional = true;
 
@@ -212,6 +219,7 @@ parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def,
             field.kind = ViewFieldKind::BidirectionalPortKey;
             field.name = "port";
             field.size = sizeof(ViewValue::u16);
+            field.offset = view_def.keys_size;
             view_def.keys_size += sizeof(ViewValue::u16);
             view_def.bidirectional = true;
 
@@ -276,6 +284,7 @@ parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def,
             field.pen = elem->scope->pen;
             field.id = elem->id;
             field.name = elem->name;
+            field.offset = view_def.keys_size;
             view_def.keys_size += field.size;
         }
 
@@ -396,6 +405,7 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
                 assert(0);
             }
 
+            field.offset = view_def.keys_size + view_def.values_size;
             view_def.values_size += sizeof(field.size);
 
         } else if (value == "packets") {
@@ -405,6 +415,7 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
             field.kind = ViewFieldKind::SumAggregate;
             field.name = "packets";
             field.size = sizeof(ViewValue::u64);
+            field.offset = view_def.keys_size + view_def.values_size;
             view_def.values_size += sizeof(ViewValue::u64);
 
         } else if (value == "bytes") {
@@ -414,6 +425,7 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
             field.kind = ViewFieldKind::SumAggregate;
             field.name = "bytes";
             field.size = sizeof(ViewValue::u64);
+            field.offset = view_def.keys_size + view_def.values_size;
             view_def.values_size += sizeof(ViewValue::u64);
 
         } else if (value == "flows") {
@@ -421,6 +433,7 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
             field.kind = ViewFieldKind::CountAggregate;
             field.name = "flows";
             field.size = sizeof(ViewValue::u64);
+            field.offset = view_def.keys_size + view_def.values_size;
             view_def.values_size += sizeof(ViewValue::u64);
 
         } else if (value == "inpackets") {
@@ -431,6 +444,7 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
             field.name = "inpackets";
             field.size = sizeof(ViewValue::u64);
             field.direction = Direction::In;
+            field.offset = view_def.keys_size + view_def.values_size;
             view_def.values_size += sizeof(ViewValue::u64);
 
         } else if (value == "inbytes") {
@@ -441,6 +455,7 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
             field.name = "inbytes";
             field.size = sizeof(ViewValue::u64);
             field.direction = Direction::In;
+            field.offset = view_def.keys_size + view_def.values_size;
             view_def.values_size += sizeof(ViewValue::u64);
 
         } else if (value == "inflows") {
@@ -449,6 +464,7 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
             field.name = "inflows";
             field.size = sizeof(ViewValue::u64);
             field.direction = Direction::In;
+            field.offset = view_def.keys_size + view_def.values_size;
             view_def.values_size += sizeof(ViewValue::u64);
 
         } else if (value == "outpackets") {
@@ -459,6 +475,7 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
             field.name = "outpackets";
             field.size = sizeof(ViewValue::u64);
             field.direction = Direction::Out;
+            field.offset = view_def.keys_size + view_def.values_size;
             view_def.values_size += sizeof(ViewValue::u64);
 
         } else if (value == "outbytes") {
@@ -469,6 +486,7 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
             field.name = "outbytes";
             field.size = sizeof(ViewValue::u64);
             field.direction = Direction::Out;
+            field.offset = view_def.keys_size + view_def.values_size;
             view_def.values_size += sizeof(ViewValue::u64);
 
         } else if (value == "outflows") {
@@ -477,6 +495,7 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
             field.name = "outflows";
             field.size = sizeof(ViewValue::u64);
             field.direction = Direction::Out;
+            field.offset = view_def.keys_size + view_def.values_size;
             view_def.values_size += sizeof(ViewValue::u64);
 
         } else {

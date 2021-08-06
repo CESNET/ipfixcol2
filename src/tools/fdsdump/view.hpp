@@ -72,7 +72,8 @@ enum class Direction
 
 struct ViewField
 {
-    std::size_t size;
+    size_t size;
+    size_t offset;
     std::string name;
     uint32_t pen;
     uint16_t id;
@@ -91,15 +92,37 @@ struct ViewDefinition
 
     std::vector<ViewField> key_fields;
     std::vector<ViewField> value_fields;
-    std::size_t keys_size;
-    std::size_t values_size;
+    size_t keys_size;
+    size_t values_size;
+};
+
+struct SortField {
+    ViewField *field;
+    bool ascending;
 };
 
 static inline void
-advance_value_ptr(ViewValue *&value, std::size_t value_size)
+advance_value_ptr(ViewValue *&value, size_t value_size)
 {
     value = (ViewValue *) ((uint8_t *) value + value_size);
 }
 
 ViewValue *
 get_value_by_name(ViewDefinition &view_definition, uint8_t *values, const std::string &name);
+
+/*
+void
+init_value(ViewField &field, ViewValue &value);
+
+void
+load_drec_value(ViewField &field, ViewValue &value, fds_drec &drec, Direction direction);
+
+void
+aggregate_value(ViewField &field, ViewValue &value, ViewValue &other_value);
+
+void
+aggregate_drec_value(ViewField &field, ViewValue &value, fds_drec &drec, Direction direction);
+
+bool
+compare_value(ViewField &field, ViewValue &value, ViewValue &other_value, bool descending = true);
+*/

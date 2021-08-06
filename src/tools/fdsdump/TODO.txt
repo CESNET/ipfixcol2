@@ -34,6 +34,7 @@ Modes
 * input filter + aggregate + output filter + sort + top N
 (note) Do we want the option to limit number of read records? How should it behave with multithreading?
 
+(note) Do we want sort over multiple fields?
 
 Command line options
 * as similiar to nfdump as possible

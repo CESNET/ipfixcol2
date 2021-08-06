@@ -1,4 +1,4 @@
-#include "aggregatetable.hpp"
+#include "hashtable.hpp"
 
 #define XXH_INLINE_ALL
 
@@ -6,16 +6,16 @@
 #include "xxhash.h"
 #include <iostream>
 
-AggregateTable::AggregateTable(std::size_t key_size, std::size_t value_size) :
+HashTable::HashTable(std::size_t key_size, std::size_t value_size) :
     m_key_size(key_size), m_value_size(value_size)
 {
     init_blocks();
 }
 
 void
-AggregateTable::init_blocks()
+HashTable::init_blocks()
 {
-    AggregateTableBlock zeroed_block;
+    HashTableBlock zeroed_block;
     memset(&zeroed_block, 0, sizeof(zeroed_block));
     for (int i = 0; i < 16; i++) {
         zeroed_block.tags[i] = 0x80;
@@ -26,8 +26,9 @@ AggregateTable::init_blocks()
     }
 }
 
-int
-AggregateTable::lookup(uint8_t *key, AggregateRecord *&result)
+
+bool
+HashTable::lookup(uint8_t *key, uint8_t *&item, bool create_if_not_found)
 {
     uint64_t hash = XXH3_64bits(key, m_key_size);
     uint64_t index = (hash >> 7) & (m_block_count - 1);
@@ -35,7 +36,7 @@ AggregateTable::lookup(uint8_t *key, AggregateRecord *&result)
     for (;;) {
         //std::cout << "Index=" << index << std::endl;
 
-        AggregateTableBlock &block = m_blocks[index];
+        HashTableBlock &block = m_blocks[index];
 
         uint8_t item_tag = (hash & 0xFF) & 0x7F;
         auto block_tags = _mm_load_si128(reinterpret_cast<__m128i *>(block.tags));
@@ -52,37 +53,42 @@ AggregateTable::lookup(uint8_t *key, AggregateRecord *&result)
             item_index += one_index;
             //std::cout << "One index=" << one_index << " Item index=" << item_index << std::endl;
 
-            AggregateRecord *record = block.items[item_index];
-            if (memcmp(record->data, key, m_key_size) == 0) {
+            uint8_t *record = block.items[item_index];
+            if (memcmp(record, key, m_key_size) == 0) {
                 //std::cout << "Found key on " << index << ":" << item_index << std::endl;
-                result = record;
-                return 1;
+                item = record;
+                return true;
             }
 
             hash_match >>= one_index + 1;
         }
 
         if (empty_match) {
+
+            if (!create_if_not_found) {
+                return false;
+            }
+
             //std::cout << "Empty match=" << empty_match << std::endl;
             auto empty_index = __builtin_ctz(empty_match);
             //std::cout << "Found empty index on " << index << ":" << empty_index << std::endl;
             block.tags[empty_index] = item_tag;
 
-            AggregateRecord *record = static_cast<AggregateRecord *>(calloc(1, sizeof(AggregateRecord) + m_key_size + m_value_size));
+            uint8_t *record = new uint8_t[m_key_size + m_value_size];
             block.items[empty_index] = record;
             m_items.push_back(record);
             m_record_count++;
 
             //std::cout << "Calloc done" << std::endl;
-            memcpy(record->data, key, m_key_size);
+            memcpy(record, key, m_key_size);
             //std::cout << "Memcpy done" << std::endl;
-            result = record;
+            item = record;
 
-            if (double{m_record_count} / (16 * double{m_block_count}) > 0.9) {
+            if (double(m_record_count) / (16 * double(m_block_count)) > 0.9) {
                 expand();
             }
 
-            return 0;
+            return false;
         }
 
         index = (index + 1) & (m_block_count - 1);
@@ -90,18 +96,18 @@ AggregateTable::lookup(uint8_t *key, AggregateRecord *&result)
 }
 
 void
-AggregateTable::expand()
+HashTable::expand()
 {
     m_block_count *= 4;
     //std::cout << "Expand to " << m_block_count << std::endl;
     init_blocks();
-    for (AggregateRecord *item : m_items) {
-        uint64_t hash = XXH3_64bits(item->data, m_key_size);
+    for (uint8_t *item : m_items) {
+        uint64_t hash = XXH3_64bits(item, m_key_size);
         uint64_t index = (hash >> 7) & (m_block_count - 1);
         uint8_t item_tag = (hash & 0xFF) & 0x7F;
 
         for (;;) {
-            AggregateTableBlock &block = m_blocks[index];
+            HashTableBlock &block = m_blocks[index];
 
             auto block_tags = _mm_load_si128(reinterpret_cast<__m128i *>(block.tags));
             auto empty_mask = _mm_set1_epi8(0x80);
@@ -119,4 +125,16 @@ AggregateTable::expand()
         }
 
     }
+}
+
+bool
+HashTable::find(uint8_t *key, uint8_t *&item)
+{
+    return lookup(key, item, false);
+}
+
+bool
+HashTable::find_or_create(uint8_t *key, uint8_t *&item)
+{
+    return lookup(key, item, true);
 }

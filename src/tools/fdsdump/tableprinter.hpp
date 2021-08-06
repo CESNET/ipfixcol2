@@ -15,7 +15,7 @@ public:
     print_prologue() override;
 
     void
-    print_record(AggregateRecord &record) override;
+    print_record(uint8_t *record) override;
 
     void
     print_epilogue() override;

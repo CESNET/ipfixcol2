@@ -20,8 +20,8 @@ add_executable(fdsdump
     aggregatefilter.hpp
     view.cpp
     view.hpp
-    aggregatetable.cpp
-    aggregatetable.hpp
+    hashtable.cpp
+    hashtable.hpp
     sorter.cpp
     sorter.hpp
     filelist.cpp

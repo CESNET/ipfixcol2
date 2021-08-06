@@ -54,9 +54,9 @@ AggregateFilter::AggregateFilter(const char *filter_expr, ViewDefinition view_de
 }
 
 bool
-AggregateFilter::record_passes(AggregateRecord &record)
+AggregateFilter::record_passes(uint8_t *record)
 {
-    return fds_filter_eval(m_filter.get(), &record);
+    return fds_filter_eval(m_filter.get(), record);
 }
 
 int

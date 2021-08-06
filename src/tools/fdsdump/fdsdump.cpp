@@ -29,7 +29,21 @@ main(int argc, char *argv[])
     if (rc != 0) {
         return rc;
     }
-    config.num_threads = 1;
+    config.num_threads = 2;
+
+    std::vector<SortField> sort_fields;
+    for (auto &field : config.view_def.key_fields) {
+        if (field.name == config.sort_field) {
+            sort_fields.push_back({ &field, false });
+        }
+    }
+
+    for (auto &field : config.view_def.value_fields) {
+        if (field.name == config.sort_field) {
+            sort_fields.push_back({ &field, false });
+        }
+    }
+
 
     //assert(!config.sort_field.empty()); // FIXME
 
@@ -97,7 +111,7 @@ main(int argc, char *argv[])
     }
 
     //TODO: we could start merging earlier
-
+#if 0
     Aggregator &aggregator = * workers[0]->m_aggregator.get();
 
     for (int i = 1; i < config.num_threads; i++) {
@@ -107,23 +121,31 @@ main(int argc, char *argv[])
         workers[i]->m_aggregator.release();
     }
 
+#endif
     printf("* Aggregating done                                                                     \r");
     fflush(stdout);
 
-
 #if 0
-#endif
     if (config.max_output_records > 0 && !config.sort_field.empty()) {
-        printf("* Sorting %lu records...\r", aggregator.records().size());
+        printf("* Sorting %lu records...\r", aggregator.m_items.size());
         fflush(stdout);
         auto compare_fn = get_compare_fn(config.sort_field, config.view_def);
         aggregator.make_top_n(config.max_output_records, compare_fn);
         printf("* Sorting done                        \r");
         fflush(stdout);
     }
+#endif
 
-    auto records = aggregator.records();
 
+    std::vector<Aggregator *> aggregators;
+    for (auto &worker : workers) {
+        aggregators.push_back(worker->m_aggregator.get());
+    }
+
+    auto records = make_top_n(config.view_def, aggregators, config.max_output_records, sort_fields);
+
+
+    // auto records = aggregator.m_items;
 
 #if 0
     if (!config.sort_field.empty()) {
@@ -147,13 +169,12 @@ main(int argc, char *argv[])
 
     uint64_t output_counter = 0;
     printer->print_prologue();
-    for (auto *record : records) {
-        AggregateRecord &arec = *record;
-        if (aggregate_filter.record_passes(arec)) {
+    for (uint8_t *record : records) {
+        if (aggregate_filter.record_passes(record)) {
             if (config.max_output_records > 0 && output_counter == config.max_output_records) {
                 break;
             }
-            printer->print_record(arec);
+            printer->print_record(record);
             output_counter++;
         }
     }
