@@ -1,4 +1,5 @@
 #include "common.hpp"
+#include <glob.h>
 
 unique_fds_iemgr
 make_iemgr()
@@ -45,4 +46,39 @@ is_one_of(const std::string &value, const std::vector<std::string> values)
         }
     }
     return false;
+}
+
+std::vector<std::string>
+match_files(const std::string &pattern)
+{
+    std::vector<std::string> files;
+
+    glob_t globbuf = {};
+
+    int ret = glob(pattern.c_str(), GLOB_MARK, NULL, &globbuf);
+
+    if (ret == GLOB_NOSPACE) {
+        throw std::bad_alloc();
+    }
+
+    if (ret == GLOB_ABORTED) {
+        throw std::runtime_error("glob failed");
+    }
+
+    if (ret == GLOB_NOMATCH) {
+        return {};
+    }
+
+    for (size_t i = 0; i < globbuf.gl_pathc; i++) {
+        std::string filename = globbuf.gl_pathv[i];
+
+        if (filename[filename.size() - 1] == '/') {
+            // Skip directories
+            continue;
+        }
+
+        files.push_back(std::move(filename));
+    }
+
+    return files;
 }

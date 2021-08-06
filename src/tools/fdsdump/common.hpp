@@ -68,3 +68,6 @@ string_split(const std::string &str, const std::string &delimiter);
 
 bool
 is_one_of(const std::string &value, const std::vector<std::string> values);
+
+std::vector<std::string>
+match_files(const std::string &pattern);

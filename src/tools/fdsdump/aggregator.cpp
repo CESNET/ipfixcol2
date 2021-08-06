@@ -299,7 +299,102 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
 }
 
 static void
-aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *&value, Direction direction)
+merge_value(const ViewField &aggregate_field, ViewValue *value, ViewValue *other_value)
+{
+    switch (aggregate_field.kind) {
+
+    case ViewFieldKind::SumAggregate:
+        switch (aggregate_field.data_type) {
+        case DataType::Unsigned64:
+            value->u64 += other_value->u64;
+            break;
+        case DataType::Signed64:
+            value->i64 += other_value->i64;
+            break;
+        default: assert(0);
+        }
+
+        break;
+
+    case ViewFieldKind::MinAggregate:
+        switch (aggregate_field.data_type) {
+        case DataType::Unsigned8:
+            value->u8 = std::min<uint8_t>(other_value->u8, value->u8);
+            break;
+        case DataType::Unsigned16:
+            value->u16 = std::min<uint16_t>(other_value->u16, value->u16);
+            break;
+        case DataType::Unsigned32:
+            value->u32 = std::min<uint32_t>(other_value->u32, value->u32);
+            break;
+        case DataType::Unsigned64:
+            value->u64 = std::min<uint64_t>(other_value->u64, value->u64);
+            break;
+        case DataType::Signed8:
+            value->i8 = std::min<int8_t>(other_value->i8, value->i8);
+            break;
+        case DataType::Signed16:
+            value->i16 = std::min<int16_t>(other_value->i16, value->i16);
+            break;
+        case DataType::Signed32:
+            value->i32 = std::min<int32_t>(other_value->i32, value->i32);
+            break;
+        case DataType::Signed64:
+            value->i64 = std::min<int64_t>(other_value->i64, value->i64);
+            break;
+        case DataType::DateTime:
+            value->ts_millisecs = std::min<uint64_t>(other_value->ts_millisecs, value->ts_millisecs);
+            break;
+        default: assert(0);
+        }
+
+        break;
+
+    case ViewFieldKind::MaxAggregate:
+        switch (aggregate_field.data_type) {
+        case DataType::Unsigned8:
+            value->u8 = std::max<uint8_t>(other_value->u8, value->u8);
+            break;
+        case DataType::Unsigned16:
+            value->u16 = std::max<uint16_t>(other_value->u16, value->u16);
+            break;
+        case DataType::Unsigned32:
+            value->u32 = std::max<uint32_t>(other_value->u32, value->u32);
+            break;
+        case DataType::Unsigned64:
+            value->u64 = std::max<uint64_t>(other_value->u64, value->u64);
+            break;
+        case DataType::Signed8:
+            value->i8 = std::max<int8_t>(other_value->i8, value->i8);
+            break;
+        case DataType::Signed16:
+            value->i16 = std::max<int16_t>(other_value->i16, value->i16);
+            break;
+        case DataType::Signed32:
+            value->i32 = std::max<int32_t>(other_value->i32, value->i32);
+            break;
+        case DataType::Signed64:
+            value->i64 = std::max<int64_t>(other_value->i64, value->i64);
+            break;
+        case DataType::DateTime:
+            value->ts_millisecs = std::max<uint64_t>(other_value->ts_millisecs, value->ts_millisecs);
+            break;
+        default: assert(0);
+        }
+
+        break;
+
+    case ViewFieldKind::CountAggregate:
+        value->u64 += other_value->u64;
+        break;
+
+    default: assert(0);
+
+    }
+}
+
+static void
+aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *value, Direction direction)
 {
     if (aggregate_field.direction != Direction::Unassigned && direction != aggregate_field.direction) {
         return;
@@ -433,8 +528,7 @@ Aggregator::aggregate(fds_drec &drec, Direction direction)
 {
     constexpr std::size_t key_buffer_size = 1024;
     assert(m_view_def.keys_size <= key_buffer_size);
-
-    static uint8_t key_buffer[key_buffer_size];
+    uint8_t key_buffer[key_buffer_size];
 
     if (!build_key(m_view_def, drec, key_buffer, direction)) {
         return;
@@ -451,5 +545,34 @@ Aggregator::aggregate(fds_drec &drec, Direction direction)
     for (const auto &aggregate_field : m_view_def.value_fields) {
         aggregate_value(aggregate_field, drec, value, direction);
         advance_value_ptr(value, aggregate_field.size);
+    }
+}
+
+void
+Aggregator::merge(Aggregator &other)
+{
+    constexpr std::size_t key_buffer_size = 1024;
+    assert(m_view_def.keys_size <= key_buffer_size);
+    uint8_t key_buffer[key_buffer_size];
+
+    for (auto *other_record : other.records()) {
+        AggregateRecord *record;
+        int rc = m_table.lookup(other_record->data, record);
+
+        if (rc == 1) {
+            //TODO: this copy is unnecessary, we could just take the already allocated record from the other table instead
+            memcpy(record->data, other_record->data, m_view_def.keys_size + m_view_def.values_size);
+
+        } else {
+            ViewValue *value = (ViewValue *) (record->data + m_view_def.keys_size);
+            ViewValue *other_value = (ViewValue *) (other_record->data+ m_view_def.keys_size);
+
+            for (const auto &aggregate_field : m_view_def.value_fields) {
+                merge_value(aggregate_field, value, other_value);
+                advance_value_ptr(value, aggregate_field.size);
+                advance_value_ptr(other_value, aggregate_field.size);
+            }
+
+        }
     }
 }

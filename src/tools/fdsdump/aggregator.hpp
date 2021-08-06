@@ -20,6 +20,8 @@ public:
 
     // void
     // print_debug_info();
+    void
+    merge(Aggregator &other);
 
 private:
     ViewDefinition m_view_def;

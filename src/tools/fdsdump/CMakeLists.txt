@@ -24,6 +24,8 @@ add_executable(fdsdump
     aggregate_table.hpp
     sorter.cpp
     sorter.hpp
+    file_list.cpp
+    file_list.hpp
 )
 
 
@@ -31,6 +33,8 @@ target_link_libraries(fdsdump
     ${FDS_LIBRARIES}           # libfds
 )
 
+find_package(Threads REQUIRED)
+target_link_libraries(fdsdump PRIVATE Threads::Threads)
 
 install(
     TARGETS fdsdump

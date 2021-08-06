@@ -2,19 +2,27 @@
 #include <string>
 #include <stdexcept>
 
-Reader::Reader(const char *filename, fds_iemgr_t &iemgr)
+Reader::Reader(fds_iemgr_t &iemgr)
     : m_iemgr(iemgr)
 {
+}
+
+void
+Reader::set_file(std::string filename)
+{
     int rc;
+
+    m_read_ctx = {};
+    m_filename = filename;
 
     m_file.reset(fds_file_init());
     if (!m_file) {
         throw std::bad_alloc();
     }
 
-    rc = fds_file_open(m_file.get(), filename, FDS_FILE_READ);
+    rc = fds_file_open(m_file.get(), m_filename.c_str(), FDS_FILE_READ);
     if (rc != FDS_OK) {
-        throw std::runtime_error("cannot open file \"" + std::string(filename) + "\"");
+        throw std::runtime_error("cannot open file \"" + m_filename + "\"");
     }
 
     rc = fds_file_set_iemgr(m_file.get(), &m_iemgr);
@@ -23,12 +31,24 @@ Reader::Reader(const char *filename, fds_iemgr_t &iemgr)
     }
 }
 
-int
+bool
 Reader::read_record(fds_drec &drec)
 {
-    int rc;
-    rc = fds_file_read_rec(m_file.get(), &drec, &m_read_ctx);
-    return rc;
+    if (!m_file) {
+        return false;
+    }
+
+    int rc = fds_file_read_rec(m_file.get(), &drec, &m_read_ctx);
+
+    if (rc == FDS_OK) {
+        return true;
+
+    } else if (rc == FDS_EOC) {
+        return false;
+
+    } else {
+        throw std::runtime_error("error reading record from file " + m_filename);
+    }
 }
 
 uint64_t

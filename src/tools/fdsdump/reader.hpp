@@ -4,9 +4,12 @@
 
 class Reader {
 public:
-    Reader(const char *filename, fds_iemgr_t &m_iemgr);
+    Reader(fds_iemgr_t &m_iemgr);
 
-    int
+    void
+    set_file(std::string filename);
+
+    bool
     read_record(fds_drec &drec);
 
     uint64_t
@@ -14,6 +17,10 @@ public:
 
 private:
     fds_iemgr_t &m_iemgr;
+
+    std::string m_filename;
+
     unique_fds_file m_file;
+
     fds_file_read_ctx m_read_ctx;
 };

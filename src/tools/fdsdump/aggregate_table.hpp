@@ -38,5 +38,5 @@ private:
     init_blocks();
 
     void
-    expand();    
+    expand();
 };
