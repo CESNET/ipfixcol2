@@ -98,7 +98,7 @@ struct ViewDefinition
 static inline void
 advance_value_ptr(ViewValue *&value, std::size_t value_size)
 {
-    value = reinterpret_cast<ViewValue *>(reinterpret_cast<uint8_t *>(value) + value_size);
+    value = (ViewValue *) ((uint8_t *) value + value_size);
 }
 
 ViewValue *

@@ -18,6 +18,35 @@
 * Unit tests (?)
 * Sort by multiple fields
 * Calculated fields (e.g. BPS, PPS, ...)
-* Glob file loader
+* [x] Glob file loader
 * Biflow
 * Smart Top N merging
+
+
+Refactorings
+* Command line opts parsing should probably use getopt
+* Worker should probably be a class
+* File list may be better as a class
+* Config shouldn't build view, it should parse it into vector of strings and let view build the view def
+
+
+Modes
+* input filter + aggregate + output filter + sort + top N
+(note) Do we want the option to limit number of read records? How should it behave with multithreading?
+
+
+Command line options
+* as similiar to nfdump as possible
+    -a/-A  aggregate keys
+    -s     aggregate values
+    -O     sort
+    -r     read from file
+    -R     read from file(s)/dir ... don't like this
+    -o     output mode
+    -c     input limit count
+    -n     output limit count (top N)
+    <filter> positional arg ... don't like this
+
+    ... what opt to use for input/output filter
+    -f/-F?
+    -f/-l? (l = limit?)

@@ -1,8 +1,8 @@
-#include "table_printer.hpp"
+#include "tableprinter.hpp"
 #include <cstdio>
 #include <arpa/inet.h>
 #include <netdb.h>
-#include "information_elements.hpp"
+#include "informationelements.hpp"
 
 static int
 get_width(const ViewField &field)

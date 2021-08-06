@@ -13,7 +13,7 @@ public:
     read_record(fds_drec &drec);
 
     uint64_t
-    total_number_of_records();
+    records_count();
 
 private:
     fds_iemgr_t &m_iemgr;

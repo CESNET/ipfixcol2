@@ -52,7 +52,7 @@ Reader::read_record(fds_drec &drec)
 }
 
 uint64_t
-Reader::total_number_of_records()
+Reader::records_count()
 {
     const fds_file_stats *stats = fds_file_stats_get(m_file.get());
     return stats->recs_total;

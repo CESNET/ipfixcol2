@@ -15,6 +15,7 @@ struct Config
     std::string sort_field;
     uint64_t max_output_records;
     bool translate_ip_addrs;
+    unsigned int num_threads;
 };
 
 int

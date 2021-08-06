@@ -1,4 +1,4 @@
-#include "file_list.hpp"
+#include "filelist.hpp"
 #include <glob.h>
 #include <cassert>
 
@@ -34,31 +34,20 @@ FileList::add_files(const std::string &pattern)
             continue;
         }
 
-        m_files.push(std::move(filename));
+        m_files.push_back(std::move(filename));
     }
 }
 
 bool
-FileList::has_next_file()
+FileList::pop(std::string &filename)
 {
     std::lock_guard<std::mutex> guard(m_mutex);
-    return !m_files.empty();
+
+    if (empty()) {
+        return false;
+    }
+
+    filename = std::move(*m_files.begin());
+    m_files.erase(m_files.begin());
+    return true;
 }
-
-std::string
-FileList::pop_next_file()
-{
-    std::lock_guard<std::mutex> guard(m_mutex);
-    std::string result = m_files.front();
-    m_files.pop();
-    return result;
-}
-
-size_t
-FileList::length()
-{
-    std::lock_guard<std::mutex> guard(m_mutex);
-    return m_files.size();
-}
-
-

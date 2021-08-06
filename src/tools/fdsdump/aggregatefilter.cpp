@@ -1,18 +1,5 @@
-#include "aggregate_filter.hpp"
+#include "aggregatefilter.hpp"
 #include <stdexcept>
-
-enum : int
-{
-    PACKETS_ID = 1,
-    BYTES_ID = 2,
-    FLOWS_ID = 3,
-    INPACKETS_ID = 4,
-    INFLOWS_ID = 5,
-    INBYTES_ID = 6,
-    OUTPACKETS_ID = 7,
-    OUTFLOWS_ID = 8,
-    OUTBYTES_ID = 9
-};
 
 int
 lookup_callback(void *user_ctx, const char *name, const char *other_name,

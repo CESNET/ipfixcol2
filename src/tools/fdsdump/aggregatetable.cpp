@@ -1,4 +1,4 @@
-#include "aggregate_table.hpp"
+#include "aggregatetable.hpp"
 
 #define XXH_INLINE_ALL
 

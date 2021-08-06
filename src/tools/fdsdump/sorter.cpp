@@ -2,7 +2,14 @@
 #include <algorithm>
 
 void
-sort_records(std::vector<AggregateRecord *> &records, const std::string &sort_field, ViewDefinition &view_def)
+sort_records(std::vector<AggregateRecord *> &records, const std::string &sort_field, const ViewDefinition &view_def)
+{
+    auto compare_fn = get_compare_fn(sort_field, view_def);
+    std::sort(records.begin(), records.end(), compare_fn);
+}
+
+CompareFn
+get_compare_fn(const std::string &sort_field, const ViewDefinition &view_def)
 {
     std::function<bool(AggregateRecord *, AggregateRecord *)> compare_fn;
 
@@ -49,5 +56,44 @@ sort_records(std::vector<AggregateRecord *> &records, const std::string &sort_fi
         throw std::runtime_error("sort field \"" + sort_field + "\" has unsupported data type");
     }
 
-    std::sort(records.begin(), records.end(), compare_fn);
+    return compare_fn;
+}
+
+static size_t left(size_t i) { return 2*i + 1; }
+
+static size_t right(size_t i) { return 2*i + 2; }
+
+static void
+fix_heap(size_t i, std::vector<AggregateRecord *> &records, CompareFn &compare)
+{
+    size_t left = 2*i + 1;
+    size_t right = 2*i + 2;
+
+    if (left < records.size() && records[left] && compare(records[i], records[left])) {
+        if (right < records.size() && records[right] && compare(records[right], records[left])) {
+            std::swap(records[i], records[left]);
+            fix_heap(left, records, compare);
+
+        } else {
+            std::swap(records[i], records[right]);
+            fix_heap(right, records, compare);
+
+        }
+
+    } else if (right < records.size() && records[right] && compare(records[i], records[right])) {
+        std::swap(records[i], records[right]);
+        fix_heap(right, records, compare);
+
+    }
+}
+
+void
+keep_top_n(std::vector<AggregateRecord *> &records, size_t n, CompareFn &compare_fn)
+{
+    std::vector<AggregateRecord *> top_records(n);
+
+    for (size_t i = 0; i < n; i++) {
+
+    }
+
 }

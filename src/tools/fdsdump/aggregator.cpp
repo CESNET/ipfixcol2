@@ -1,11 +1,12 @@
 #define XXH_INLINE_ALL
 
 #include "aggregator.hpp"
-#include "information_elements.hpp"
+#include "informationelements.hpp"
 #include "xxhash.h"
 #include <algorithm>
 #include <cstring>
 #include <iostream>
+#include "binaryheap.hpp"
 
 static IPAddress
 make_ipv4_address(uint8_t *address)
@@ -26,10 +27,10 @@ make_ipv6_address(uint8_t *address)
 }
 
 static void
-memcpy_bits(uint8_t *dst, uint8_t *src, unsigned n_bits)
+memcpy_bits(uint8_t *dst, uint8_t *src, unsigned int n_bits)
 {
-    unsigned n_bytes = (n_bits + 7) >> 3;
-    unsigned rem_bits = 8 - (n_bits & 0x07);
+    unsigned int n_bytes = (n_bits + 7) / 8;
+    unsigned int rem_bits = 8 - (n_bits % 8);
     memcpy(dst, src, n_bytes);
     if (rem_bits != 8) {
         dst[n_bytes - 1] &= (0xFF >> rem_bits) << rem_bits;
@@ -508,7 +509,8 @@ aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *val
 
 Aggregator::Aggregator(ViewDefinition view_def) :
     m_view_def(view_def),
-    m_table(view_def.keys_size, view_def.values_size)
+    m_table(view_def.keys_size, view_def.values_size),
+    m_key_buffer(view_def.keys_size)
 {
 }
 
@@ -526,16 +528,12 @@ Aggregator::process_record(fds_drec &drec)
 void
 Aggregator::aggregate(fds_drec &drec, Direction direction)
 {
-    constexpr std::size_t key_buffer_size = 1024;
-    assert(m_view_def.keys_size <= key_buffer_size);
-    uint8_t key_buffer[key_buffer_size];
-
-    if (!build_key(m_view_def, drec, key_buffer, direction)) {
+    if (!build_key(m_view_def, drec, &m_key_buffer[0], direction)) {
         return;
     }
 
     AggregateRecord *record;
-    int rc = m_table.lookup(key_buffer, record);
+    int rc = m_table.lookup(&m_key_buffer[0], record);
 
     if (rc == 1) {
         init_zeroed_values(m_view_def, record->data + m_view_def.keys_size);
@@ -551,10 +549,6 @@ Aggregator::aggregate(fds_drec &drec, Direction direction)
 void
 Aggregator::merge(Aggregator &other)
 {
-    constexpr std::size_t key_buffer_size = 1024;
-    assert(m_view_def.keys_size <= key_buffer_size);
-    uint8_t key_buffer[key_buffer_size];
-
     for (auto *other_record : other.records()) {
         AggregateRecord *record;
         int rc = m_table.lookup(other_record->data, record);
@@ -576,3 +570,44 @@ Aggregator::merge(Aggregator &other)
         }
     }
 }
+
+void
+Aggregator::make_top_n(size_t n, CompareFn compare_fn)
+{
+    auto &recs = records();
+
+    if (recs.size() <= n) {
+        std::sort(recs.begin(), recs.end(), compare_fn);
+        return;
+    }
+
+    auto records_it = recs.begin();
+    BinaryHeap<AggregateRecord *, CompareFn> heap(compare_fn);
+
+    size_t i = 0;
+    for (auto rec : recs) {
+        if (i == n) {
+            break;
+        }
+        //printf("pushing %p\n", rec);
+        heap.push(rec);
+        i++;
+    }
+
+    for (auto it = recs.begin() + n; it != recs.end(); it++) {
+        AggregateRecord *rec = *it;
+        heap.push_pop(rec);
+    }
+
+
+    assert(n == heap.size());
+
+    recs.resize(n);
+
+    for (auto it = recs.rbegin(); it != recs.rend(); it++) {
+        *it = heap.pop();
+    }
+}
+
+
+
