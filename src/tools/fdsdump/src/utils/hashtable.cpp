@@ -32,6 +32,9 @@ HashTable::lookup(uint8_t *key, uint8_t *&item, bool create_if_not_found)
 {
     uint64_t hash = XXH3_64bits(key, m_key_size);
     uint64_t index = (hash >> 7) & (m_block_count - 1);
+
+    //if (m_debug) printf("Hash is %lu\n", hash);
+
     //index = 42;
     for (;;) {
         //std::cout << "Index=" << index << std::endl;
@@ -48,24 +51,26 @@ HashTable::lookup(uint8_t *key, uint8_t *&item, bool create_if_not_found)
 
         int item_index = 0;
         while (hash_match) {
-            //std::cout << "Hash match=" << hash_match << std::endl;
+            //if (m_debug) std::cout << "Hash match=" << hash_match << std::endl;
             auto one_index = __builtin_ctz(hash_match);
             item_index += one_index;
-            //std::cout << "One index=" << one_index << " Item index=" << item_index << std::endl;
+            //if (m_debug) std::cout << "One index=" << one_index << " Item index=" << item_index << std::endl;
 
             uint8_t *record = block.items[item_index];
             if (memcmp(record, key, m_key_size) == 0) {
-                //std::cout << "Found key on " << index << ":" << item_index << std::endl;
+                //if (m_debug) std::cout << "Found key on " << index << ":" << item_index << std::endl;
                 item = record;
                 return true;
             }
 
             hash_match >>= one_index + 1;
+            item_index += 1;
         }
 
         if (empty_match) {
 
             if (!create_if_not_found) {
+                //if (m_debug) printf("Not found\n");
                 return false;
             }
 

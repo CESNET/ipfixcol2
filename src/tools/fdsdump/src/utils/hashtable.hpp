@@ -22,6 +22,8 @@ public:
 
     std::vector<uint8_t *> &items() { return m_items; }
 
+    //bool m_debug = false;
+
 private:
     std::size_t m_block_count = 4096;
     std::size_t m_record_count = 0;
