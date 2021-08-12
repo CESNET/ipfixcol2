@@ -20,6 +20,8 @@ public:
     bool
     find_or_create(uint8_t *key, uint8_t *&item);
 
+    std::vector<uint8_t *> &items() { return m_items; }
+
 private:
     std::size_t m_block_count = 4096;
     std::size_t m_record_count = 0;

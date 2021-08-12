@@ -1,6 +1,7 @@
 #pragma once
 
 #include "printer.hpp"
+#include "view/view.hpp"
 
 class TablePrinter : public Printer
 {

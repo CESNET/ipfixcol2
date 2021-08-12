@@ -1,75 +1,31 @@
-#include "config.hpp"
-#include <cstdio>
-#include <vector>
+#include "view.hpp"
+
 #include <regex>
+
 #include "common.hpp"
-#include "informationelements.hpp"
+#include "utils/util.hpp"
+#include "ipfix/informationelements.hpp"
 
-class ArgParser
+ViewField *
+find_field(ViewDefinition &def, const std::string &name)
 {
-public:
-    ArgParser(int argc, char **argv);
-
-    bool
-    next();
-
-    std::string
-    arg();
-
-private:
-    int m_argc;
-    char **m_argv;
-    int m_arg_index = 0;
-};
-
-ArgParser::ArgParser(int argc, char **argv)
-    : m_argc(argc), m_argv(argv)
-{
-}
-
-bool
-ArgParser::next()
-{
-    if (m_arg_index == m_argc - 1) {
-        return false;
+    for (auto &field : def.key_fields) {
+        if (field.name == name) {
+            return &field;
+        }
     }
-    m_arg_index++;
-    return true;
-}
 
-std::string
-ArgParser::arg()
-{
-    return m_argv[m_arg_index];
-}
+    for (auto &field : def.value_fields) {
+        if (field.name == name) {
+            return &field;
+        }
+    }
 
-static void
-usage()
-{
-    const char *text =
-    "Usage: fdsdump [options]\n"
-    "  -h         Show this help\n"
-    "  -r path    FDS input file\n"
-    "  -f expr    Input filter\n"
-    "  -of expr   Output filter\n"
-    "  -c num     Max number of records to read\n"
-    "  -a keys    Aggregator keys (e.g. srcip,dstip,srcport,dstport)\n"
-    "  -av values Aggregator values // TODO\n"
-    "  -s field   Field to sort on (e.g. bytes, packets, flows)\n"
-    "  -n num     Maximum number of records to write\n"
-    "  -t         Translate IP addresses to domain names\n"
-    ;
-    fprintf(stderr, text);
+    return nullptr;
 }
 
 static void
-missing_arg(const char *opt)
-{
-    fprintf(stderr, "Missing argument for %s", opt);
-}
-
-static int
-parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def, fds_iemgr_t &iemgr)
+configure_keys(const std::string &options, ViewDefinition &view_def, fds_iemgr_t *iemgr)
 {
     for (const auto &key : string_split(options, ",")) {
         ViewField field = {};
@@ -122,16 +78,14 @@ parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def,
                 view_def.bidirectional = true;
 
             } else {
-                const fds_iemgr_elem *elem = fds_iemgr_elem_find_name(&iemgr, m[1].str().c_str());
+                const fds_iemgr_elem *elem = fds_iemgr_elem_find_name(iemgr, m[1].str().c_str());
 
                 if (!elem) {
-                    fprintf(stderr, "Invalid aggregation key \"%s\" - element not found\n", key.c_str());
-                    return 1;
+                    throw ArgError("Invalid aggregation key \"" + key + "\" - element not found");
                 }
 
                 if (elem->data_type != FDS_ET_IPV4_ADDRESS && elem->data_type != FDS_ET_IPV6_ADDRESS) {
-                    fprintf(stderr, "Invalid aggregation key \"%s\" - not an IP address\n", key.c_str());
-                    return 1;
+                    throw ArgError("Invalid aggregation key \"" + key + "\" - not an IP address but subnet is specified");
                 }
 
                 field.pen = elem->scope->pen;
@@ -148,11 +102,9 @@ parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def,
             }
 
             if (field.data_type == DataType::IPv4Address && (prefix_length <= 0 || prefix_length > 32)) {
-                fprintf(stderr, "Invalid aggregation key \"%s\" - invalid prefix length %lu for IPv4 address\n", key.c_str(), prefix_length);
-                return 1;
+                throw ArgError("Invalid aggregation key \"" + key + "\" - invalid prefix length " + std::to_string(prefix_length) + " for IPv4 address");
             } else if (field.data_type == DataType::IPv6Address && (prefix_length <= 0 || prefix_length > 128)) {
-                fprintf(stderr, "Invalid aggregation key \"%s\" - invalid prefix length %lu for IPv6 address\n", key.c_str(), prefix_length);
-                return 1;
+                throw ArgError("Invalid aggregation key \"" + key + "\" - invalid prefix length " + std::to_string(prefix_length) + " for IPv6 address");
             }
 
             field.extra.prefix_length = prefix_length;
@@ -224,10 +176,9 @@ parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def,
             view_def.bidirectional = true;
 
         } else {
-            const fds_iemgr_elem *elem = fds_iemgr_elem_find_name(&iemgr, key.c_str());
+            const fds_iemgr_elem *elem = fds_iemgr_elem_find_name(iemgr, key.c_str());
             if (!elem) {
-                fprintf(stderr, "Invalid aggregation key \"%s\" - element not found\n", key.c_str());
-                return 1;
+                throw ArgError("Invalid aggregation key \"" + key + "\" - element not found");
             }
 
             switch (elem->data_type) {
@@ -276,8 +227,7 @@ parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def,
                 field.size = 128;
                 break;
             default:
-                fprintf(stderr, "Invalid aggregation key \"%s\" - data type not supported\n", key.c_str());
-                return 1;
+                throw ArgError("Invalid aggregation key \"" + key + "\" - data type not supported");
             }
 
             field.kind = ViewFieldKind::VerbatimKey;
@@ -290,12 +240,10 @@ parse_aggregate_key_config(const std::string &options, ViewDefinition &view_def,
 
         view_def.key_fields.push_back(field);
     }
-
-    return 0;
 }
 
-static int
-parse_aggregate_value_config(const std::string &options, ViewDefinition &view_def, fds_iemgr_t &iemgr)
+static void
+configure_values(const std::string &options, ViewDefinition &view_def, fds_iemgr_t *iemgr)
 {
     auto values = string_split(options, ",");
 
@@ -319,15 +267,13 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
             } else if (func == "sum") {
                 field.kind = ViewFieldKind::SumAggregate;
             } else {
-                fprintf(stderr, "Invalid aggregation value \"%s\" - unknown aggregation function\n", value.c_str());
-                return 1;
+                throw ArgError("Invalid aggregation value \"" + value + "\" - invalid aggregation function");
             }
 
-            const fds_iemgr_elem *elem = fds_iemgr_elem_find_name(&iemgr, field_name.c_str());
+            const fds_iemgr_elem *elem = fds_iemgr_elem_find_name(iemgr, field_name.c_str());
 
             if (!elem) {
-                fprintf(stderr, "Invalid aggregation value \"%s\" - element not found\n", value.c_str());
-                return 1;
+                throw ArgError("Invalid aggregation value \"" + value + "\" - element not found");
             }
 
             field.pen = elem->scope->pen;
@@ -376,8 +322,7 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
                     field.size = sizeof(ViewValue::ts_millisecs);
                     break;
                 default:
-                    fprintf(stderr, "Invalid aggregation value \"%s\" - data type not supported for selected aggregation\n", value.c_str());
-                    return 1;
+                    throw ArgError("Invalid aggregation value \"" + value + "\" - data type not supported for selected aggregation");
                 }
 
             } else if (field.kind == ViewFieldKind::SumAggregate) {
@@ -397,8 +342,7 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
                     field.size = sizeof(ViewValue::i64);
                     break;
                 default:
-                    fprintf(stderr, "Invalid aggregation value \"%s\" - data type not supported for selected aggregation\n", value.c_str());
-                    return 1;
+                    throw ArgError("Invalid aggregation value \"" + value + "\" - data type not supported for selected aggregation");
                 }
 
             } else {
@@ -499,103 +443,19 @@ parse_aggregate_value_config(const std::string &options, ViewDefinition &view_de
             view_def.values_size += sizeof(ViewValue::u64);
 
         } else {
-            fprintf(stderr, "Invalid aggregation value \"%s\"\n", value.c_str());
-            return 1;
+            throw ArgError("Invalid aggregation value \"" + value + "\"");
         }
         view_def.value_fields.push_back(field);
     }
-
-    return 0;
 }
 
-int
-config_from_args(int argc, char **argv, Config &config, fds_iemgr_t &iemgr)
+ViewDefinition
+make_view_def(const std::string &keys, const std::string &values, fds_iemgr_t *iemgr)
 {
-    config = {};
+    ViewDefinition def = {};
 
-    ArgParser parser{argc, argv};
-    while (parser.next()) {
-        if (parser.arg() == "-h") {
-            usage();
-            return 1;
-        } else if (parser.arg() == "-r") {
-            if (!parser.next()) {
-                missing_arg("-r");
-                return 1;
-            }
-            config.input_file = parser.arg();
-        } else if (parser.arg() == "-f") {
-            if (!parser.next()) {
-                missing_arg("-f");
-                return 1;
-            }
-            config.input_filter = parser.arg();
-        } else if (parser.arg() == "-of") {
-            if (!parser.next()) {
-                missing_arg("-of");
-                return 1;
-            }
-            config.output_filter = parser.arg();
-        } else if (parser.arg() == "-c") {
-            if (!parser.next()) {
-                missing_arg("-c");
-                return 1;
-            }
-            config.max_input_records = std::stoul(parser.arg());
-        } else if (parser.arg() == "-a") {
-            if (!parser.next()) {
-                missing_arg("-a");
-                return 1;
-            }
-            if (parse_aggregate_key_config(parser.arg(), config.view_def, iemgr) == 1) {
-                return 1;
-            }
-        } else if (parser.arg() == "-av") {
-            if (!parser.next()) {
-                missing_arg("-av");
-                return 1;
-            }
-            if (parse_aggregate_value_config(parser.arg(), config.view_def, iemgr) == 1) {
-                return 1;
-            }
-        } else if (parser.arg() == "-n") {
-            if (!parser.next()) {
-                missing_arg("-n");
-                return 1;
-            }
-            config.max_output_records = std::stoul(parser.arg());
-        } else if (parser.arg() == "-s") {
-            if (!parser.next()) {
-                missing_arg("-s");
-                return 1;
-            }
-            config.sort_field = parser.arg();
-            //TODO: check if the sort field is valid
+    configure_keys(keys, def, iemgr);
+    configure_values(values, def, iemgr);
 
-            //if (!is_one_of(config.sort_field, {"bytes", "packets", "flows", "inbytes", "inpackets", "inflows", "outbytes", "outpackets", "outflows"})) {
-            //    fprintf(stderr, "Invalid sort field \"%s\"\n", config.sort_field.c_str());
-            //    return 1;
-            //}
-        } else if (parser.arg() == "-t") {
-            config.translate_ip_addrs = true;
-        } else {
-            fprintf(stderr, "Unknown argument %s\n", parser.arg().c_str());
-            return 1;
-        }
-    }
-
-    if (config.input_file.empty()) {
-        usage();
-        return 1;
-    }
-
-    if (config.input_filter.empty()) {
-        config.input_filter = "true";
-    }
-
-    if (config.output_filter.empty()) {
-        config.output_filter = "true";
-    }
-
-    return 0;
+    return def;
 }

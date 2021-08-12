@@ -1,12 +1,15 @@
 #pragma once
 
-#include "common.hpp"
-#include "aggregator.hpp"
+#include <vector>
 
+#include "ipfix/util.hpp"
+#include "view/aggregator.hpp"
 
 class AggregateFilter
 {
 public:
+    AggregateFilter() {}
+
     AggregateFilter(const char *filter_expr, ViewDefinition view_def);
 
     // FDS Filter created in constructor holds pointer to the instance of AggregateFilter

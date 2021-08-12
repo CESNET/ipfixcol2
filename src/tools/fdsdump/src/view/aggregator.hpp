@@ -3,10 +3,12 @@
 #include <array>
 #include <vector>
 #include <cstdint>
+
 #include <libfds.h>
-#include "config.hpp"
-#include "hashtable.hpp"
-#include "sorter.hpp"
+
+#include "utils/hashtable.hpp"
+#include "view/sort.hpp"
+
 
 class Aggregator
 {
@@ -19,12 +21,9 @@ public:
     void
     merge(Aggregator &other);
 
-    void
-    make_top_n(size_t n, CompareFn compare_fn);
-
     HashTable m_table;
 
-    std::vector<uint8_t *> m_items;
+    std::vector<uint8_t *> &items() { return m_table.items(); }
 
 private:
     ViewDefinition m_view_def;

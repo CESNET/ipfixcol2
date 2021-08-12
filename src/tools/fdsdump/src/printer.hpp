@@ -1,6 +1,6 @@
 #pragma once
 
-#include "aggregator.hpp"
+#include <cstdint>
 
 class Printer
 {

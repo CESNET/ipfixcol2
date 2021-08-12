@@ -4,6 +4,8 @@
 #include <vector>
 #include <cstdint>
 
+#include <libfds.h>
+
 struct IPAddress
 {
     uint8_t length;
@@ -96,10 +98,11 @@ struct ViewDefinition
     size_t values_size;
 };
 
-struct SortField {
-    ViewField *field;
-    bool ascending;
-};
+ViewDefinition
+make_view_def(const std::string &keys, const std::string &values, fds_iemgr_t *iemgr);
+
+ViewField *
+find_field(ViewDefinition &def, const std::string &name);
 
 static inline void
 advance_value_ptr(ViewValue *&value, size_t value_size)
@@ -107,22 +110,20 @@ advance_value_ptr(ViewValue *&value, size_t value_size)
     value = (ViewValue *) ((uint8_t *) value + value_size);
 }
 
-ViewValue *
-get_value_by_name(ViewDefinition &view_definition, uint8_t *values, const std::string &name);
+static inline IPAddress
+make_ipv4_address(uint8_t *address)
+{
+    IPAddress ip = {};
+    ip.length = 4;
+    memcpy(ip.address, address, 4);
+    return ip;
+}
 
-/*
-void
-init_value(ViewField &field, ViewValue &value);
-
-void
-load_drec_value(ViewField &field, ViewValue &value, fds_drec &drec, Direction direction);
-
-void
-aggregate_value(ViewField &field, ViewValue &value, ViewValue &other_value);
-
-void
-aggregate_drec_value(ViewField &field, ViewValue &value, fds_drec &drec, Direction direction);
-
-bool
-compare_value(ViewField &field, ViewValue &value, ViewValue &other_value, bool descending = true);
-*/
+static inline IPAddress
+make_ipv6_address(uint8_t *address)
+{
+    IPAddress ip = {};
+    ip.length = 16;
+    memcpy(ip.address, address, 16);
+    return ip;
+}

@@ -1,69 +1,21 @@
 #define XXH_INLINE_ALL
 
-#include "aggregator.hpp"
-#include "informationelements.hpp"
-#include "xxhash.h"
+#include "view/aggregator.hpp"
+
 #include <algorithm>
 #include <cstring>
 #include <iostream>
-#include "binaryheap.hpp"
-#include "tableprinter.hpp"
 
-static IPAddress
-make_ipv4_address(uint8_t *address)
-{
-    IPAddress ip = {};
-    ip.length = 4;
-    std::memcpy(ip.address, address, 4);
-    return ip;
-}
+#include "thirdparty/xxhash.h"
 
-static IPAddress
-make_ipv6_address(uint8_t *address)
-{
-    IPAddress ip = {};
-    ip.length = 16;
-    std::memcpy(ip.address, address, 16);
-    return ip;
-}
+#include "utils/util.hpp"
+#include "utils/binaryheap.hpp"
 
-static void
-memcpy_bits(uint8_t *dst, uint8_t *src, unsigned int n_bits)
-{
-    unsigned int n_bytes = (n_bits + 7) / 8;
-    unsigned int rem_bits = 8 - (n_bits % 8);
-    memcpy(dst, src, n_bytes);
-    if (rem_bits != 8) {
-        dst[n_bytes - 1] &= (0xFF >> rem_bits) << rem_bits;
-    }
-}
+#include "ipfix/util.hpp"
+#include "ipfix/informationelements.hpp"
 
-static uint64_t
-get_uint(fds_drec_field &field)
-{
-    uint64_t tmp;
-    int rc = fds_get_uint_be(field.data, field.size, &tmp);
-    assert(rc == FDS_OK);
-    return tmp;
-}
-
-static int64_t
-get_int(fds_drec_field &field)
-{
-    int64_t tmp;
-    int rc = fds_get_int_be(field.data, field.size, &tmp);
-    assert(rc == FDS_OK);
-    return tmp;
-}
-
-static uint64_t
-get_datetime(fds_drec_field &field)
-{
-    uint64_t tmp;
-    int rc = fds_get_datetime_lp_be(field.data, field.size, field.info->def->data_type, &tmp);
-    assert(rc == FDS_OK);
-    return tmp;
-}
+#include "view/tableprinter.hpp"
+#include "view/sort.hpp"
 
 static void
 init_value(const ViewField &field, ViewValue &value)
@@ -567,7 +519,6 @@ Aggregator::aggregate(fds_drec &drec, Direction direction)
 
     if (!m_table.find_or_create(&m_key_buffer[0], record)) {
         init_values(m_view_def, record + m_view_def.keys_size);
-        m_items.push_back(record);
     }
 
     ViewValue *value = reinterpret_cast<ViewValue *>(record + m_view_def.keys_size);
@@ -580,17 +531,17 @@ Aggregator::aggregate(fds_drec &drec, Direction direction)
 void
 Aggregator::merge(Aggregator &other)
 {
-    for (uint8_t *other_record : other.m_items) {
+    for (uint8_t *other_record : other.items()) {
         uint8_t *record;
 
         if (!m_table.find_or_create(other_record, record)) {
             //TODO: this copy is unnecessary, we could just take the already allocated record from the other table instead
             memcpy(record, other_record, m_view_def.keys_size + m_view_def.values_size);
-            m_items.push_back(record);
+            //m_items.push_back(record);
 
         } else {
             merge_records(m_view_def, record, other_record);
-/*
+            /*
             ViewValue *value = (ViewValue *) (record + m_view_def.keys_size);
             ViewValue *other_value = (ViewValue *) (other_record->data+ m_view_def.keys_size);
 
@@ -599,101 +550,10 @@ Aggregator::merge(Aggregator &other)
                 advance_value_ptr(value, aggregate_field.size);
                 advance_value_ptr(other_value, aggregate_field.size);
             }
-*/
+            */
 
         }
     }
-}
-
-void
-Aggregator::make_top_n(size_t n, CompareFn compare_fn)
-{
-    auto &recs = m_items;
-
-    if (recs.size() <= n) {
-        std::sort(recs.begin(), recs.end(), compare_fn);
-        return;
-    }
-
-    auto records_it = recs.begin();
-    BinaryHeap<uint8_t *, CompareFn> heap(compare_fn);
-
-    size_t i = 0;
-    for (auto rec : recs) {
-        if (i == n) {
-            break;
-        }
-        //printf("pushing %p\n", rec);
-        heap.push(rec);
-        i++;
-    }
-
-    for (auto it = recs.begin() + n; it != recs.end(); it++) {
-        uint8_t *rec = *it;
-        heap.push_pop(rec);
-    }
-
-
-    assert(n == heap.size());
-
-    recs.resize(n);
-
-    for (auto it = recs.rbegin(); it != recs.rend(); it++) {
-        *it = heap.pop();
-    }
-}
-
-int
-compare_values(const ViewField &field, const ViewValue &a, const ViewValue &b)
-{
-    switch (field.data_type) {
-    case DataType::DateTime:
-    case DataType::Unsigned64:
-        return a.u64 > b.u64 ? 1 : (a.u64 < b.u64 ? -1 : 0);
-
-    case DataType::Signed64:
-        return a.i64 > b.i64 ? 1 : (a.i64 < b.i64 ? -1 : 0);
-
-    default:
-        assert(0);
-    }
-}
-
-int
-compare_records(SortField sort_field, const ViewDefinition &def, uint8_t *record, uint8_t *other_record)
-{
-    int result = compare_values(*sort_field.field,
-                                *(ViewValue *) (record + sort_field.field->offset),
-                                *(ViewValue *) (other_record + sort_field.field->offset));
-
-    if (sort_field.ascending) {
-        result = -result;
-    }
-
-    return result;
-}
-
-
-int
-compare_records(const std::vector<SortField> &sort_fields, const ViewDefinition &def, uint8_t *record, uint8_t *other_record)
-{
-    int result;
-
-    for (auto sort_field : sort_fields) {
-        result = compare_values(*sort_field.field,
-                                *(ViewValue *) (record + sort_field.field->offset),
-                                *(ViewValue *) (other_record + sort_field.field->offset));
-
-        if (result != 0) {
-            if (sort_field.ascending) {
-                result = -result;
-            }
-            break;
-        }
-
-    }
-
-    return result;
 }
 
 static std::vector<uint8_t>
@@ -710,7 +570,7 @@ merge_index(const ViewDefinition &def, std::vector<Aggregator *> &aggregators, s
     bool any = false;
 
     for (auto *aggregator : aggregators) {
-        const auto &records = aggregator->m_items;
+        const auto &records = aggregator->items();
 
         if (idx >= records.size()) {
             continue;
@@ -725,17 +585,21 @@ merge_index(const ViewDefinition &def, std::vector<Aggregator *> &aggregators, s
 }
 
 static void
-merge_corresponding(const ViewDefinition &def, std::vector<Aggregator> &aggregators, uint8_t *base_record)
+merge_corresponding(const ViewDefinition &def, std::vector<Aggregator *> &aggregators, uint8_t *base_record, Aggregator *base_aggregator)
 {
-    for (auto &aggregator : aggregators) {
+    for (auto *aggregator : aggregators) {
+
+        if (aggregator == base_aggregator) {
+            continue;
+        }
+
         uint8_t *other_record;
 
-        if (aggregator.m_table.find(base_record, other_record)) {
+        if (aggregator->m_table.find(base_record, other_record)) {
             merge_records(def, base_record, other_record);
         }
     }
 }
-
 
 std::vector<uint8_t *>
 make_top_n(const ViewDefinition &def, std::vector<Aggregator *> &aggregators, size_t n, const std::vector<SortField> &sort_fields)
@@ -743,19 +607,7 @@ make_top_n(const ViewDefinition &def, std::vector<Aggregator *> &aggregators, si
     // Using the threshold algorithm for distributed top-k
     // Records in individual aggregators must be sorted
 
-    std::function<bool(uint8_t *, uint8_t *)> compare;
-
-    if (sort_fields.size() == 1) {
-        compare = [&](uint8_t *a, uint8_t *b) -> bool {
-            return compare_records(sort_fields[0], def, a, b) > 0;
-        };
-
-    } else {
-        compare = [&](uint8_t *a, uint8_t *b) -> bool {
-            return compare_records(sort_fields, def, a, b) > 0;
-        };
-
-    }
+    std::function<bool(uint8_t *, uint8_t *)> compare = make_comparer(sort_fields, def, true);
 
     BinaryHeap<uint8_t *, std::function<bool(uint8_t *, uint8_t *)>> heap(compare);
     HashTable seen(def.keys_size, 0);
@@ -774,15 +626,15 @@ make_top_n(const ViewDefinition &def, std::vector<Aggregator *> &aggregators, si
             if (!merge_index(def, aggregators, idx, threshold.data())) {
                 break;
             }
-/*
+            /*
             printf("\n");
             printf("Threshold:\n");
             TablePrinter(def).print_record(threshold.data());
             printf("Record %u:\n", idx);
             TablePrinter(def).print_record(aggregators[0]->m_items[idx]);
-*/
+            */
             if (compare_records(sort_fields, def, heap.top(), threshold.data()) >= 0) {
-  /*
+            /*
                 printf("Threshold is %u, heap top is %u\n",
                     *(uint64_t *) (threshold.data() + sort_fields[0].field->offset),
                     *(uint64_t *) (heap.top() + sort_fields[0].field->offset));
@@ -792,15 +644,16 @@ make_top_n(const ViewDefinition &def, std::vector<Aggregator *> &aggregators, si
         }
 
         for (auto *aggregator : aggregators) {
-            if (idx >= aggregator->m_items.size()) {
+            if (idx >= aggregator->items().size()) {
                 continue;
             }
 
-            uint8_t *record = aggregator->m_items[idx];
-            uint8_t *throwaway;
-            if (seen.find_or_create(record, throwaway)) {
+            uint8_t *record = aggregator->items()[idx];
+            uint8_t *_;
+            if (seen.find_or_create(record, _)) {
                 continue;
             }
+
 
             for (auto *aggregator_ : aggregators) {
                 if (aggregator == aggregator_) {
@@ -814,10 +667,10 @@ make_top_n(const ViewDefinition &def, std::vector<Aggregator *> &aggregators, si
                     //TODO: free memory
                 }
             }
-/*
+            /*
             printf("Record to push is %u\n",
                 *(uint64_t *) (record + sort_fields[0].field->offset));
-*/
+            */
             if (heap.size() < n) {
                 heap.push(record);
                 //TODO: free memory

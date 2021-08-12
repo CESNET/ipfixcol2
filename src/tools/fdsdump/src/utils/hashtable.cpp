@@ -1,9 +1,9 @@
-#include "hashtable.hpp"
+#include "utils/hashtable.hpp"
 
 #define XXH_INLINE_ALL
 
 #include <xmmintrin.h>
-#include "xxhash.h"
+#include "thirdparty/xxhash.h"
 #include <iostream>
 
 HashTable::HashTable(std::size_t key_size, std::size_t value_size) :

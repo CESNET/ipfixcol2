@@ -1,10 +1,10 @@
 #pragma once
 
-#include "common.hpp"
+#include "ipfix/util.hpp"
 
-class Reader {
+class FDSReader {
 public:
-    Reader(fds_iemgr_t &m_iemgr);
+    FDSReader(fds_iemgr_t *m_iemgr);
 
     void
     set_file(std::string filename);
@@ -16,7 +16,7 @@ public:
     records_count();
 
 private:
-    fds_iemgr_t &m_iemgr;
+    fds_iemgr_t *m_iemgr;
 
     std::string m_filename;
 

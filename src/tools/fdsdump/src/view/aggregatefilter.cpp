@@ -1,4 +1,4 @@
-#include "aggregatefilter.hpp"
+#include "view/aggregatefilter.hpp"
 #include <stdexcept>
 
 int
