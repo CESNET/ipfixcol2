@@ -31,7 +31,7 @@ private:
     std::vector<uint8_t> m_key_buffer;
 
     void
-    aggregate(fds_drec &drec, Direction direction);
+    aggregate(fds_drec &drec, Direction direction, uint16_t drec_find_flags);
 };
 
 std::vector<uint8_t *>

@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstring>
 #include <iostream>
+#include <functional>
 
 #include "thirdparty/xxhash.h"
 
@@ -16,6 +17,8 @@
 
 #include "view/tableprinter.hpp"
 #include "view/sort.hpp"
+
+using DrecFindFn = int(fds_drec *, uint32_t, uint16_t, fds_drec_field *);
 
 static void
 init_value(const ViewField &field, ViewValue &value)
@@ -209,7 +212,7 @@ merge_records(const ViewDefinition &def, uint8_t *record, uint8_t *other_record)
 }
 
 static int
-build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, Direction direction)
+build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, Direction direction, uint16_t drec_find_flags)
 {
     ViewValue *key_value = reinterpret_cast<ViewValue *>(key_buffer);
     fds_drec_field drec_field;
@@ -218,7 +221,7 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
 
         switch (view_field.kind) {
         case ViewFieldKind::VerbatimKey:
-            if (fds_drec_find(&drec, view_field.pen, view_field.id, &drec_field) == FDS_EOC) {
+            if (fds_drec_find(&drec, view_field.pen, view_field.id, drec_find_flags, &drec_field) == FDS_EOC) {
                 return 0;
             }
 
@@ -256,9 +259,9 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
             break;
 
         case ViewFieldKind::SourceIPAddressKey:
-            if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceIPv4Address, &drec_field) != FDS_EOC) {
+            if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceIPv4Address, drec_find_flags, &drec_field) != FDS_EOC) {
                 key_value->ip = make_ipv4_address(drec_field.data);
-            } else if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceIPv6Address, &drec_field) != FDS_EOC) {
+            } else if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceIPv6Address, drec_find_flags, &drec_field) != FDS_EOC) {
                 key_value->ip = make_ipv6_address(drec_field.data);
             } else {
                 return 0;
@@ -266,9 +269,9 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
             break;
 
         case ViewFieldKind::DestinationIPAddressKey:
-            if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationIPv4Address, &drec_field) != FDS_EOC) {
+            if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationIPv4Address, drec_find_flags, &drec_field) != FDS_EOC) {
                 key_value->ip = make_ipv4_address(drec_field.data);
-            } else if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationIPv6Address, &drec_field) != FDS_EOC) {
+            } else if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationIPv6Address, drec_find_flags, &drec_field) != FDS_EOC) {
                 key_value->ip = make_ipv6_address(drec_field.data);
             } else {
                 return 0;
@@ -278,18 +281,18 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
         case ViewFieldKind::BidirectionalIPAddressKey:
             switch (direction) {
             case Direction::Out:
-                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceIPv4Address, &drec_field) != FDS_EOC) {
+                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceIPv4Address, drec_find_flags, &drec_field) != FDS_EOC) {
                     key_value->ip = make_ipv4_address(drec_field.data);
-                } else if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceIPv6Address, &drec_field) != FDS_EOC) {
+                } else if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceIPv6Address, drec_find_flags, &drec_field) != FDS_EOC) {
                     key_value->ip = make_ipv6_address(drec_field.data);
                 } else {
                     return 0;
                 }
                 break;
             case Direction::In:
-                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationIPv4Address, &drec_field) != FDS_EOC) {
+                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationIPv4Address, drec_find_flags, &drec_field) != FDS_EOC) {
                     key_value->ip = make_ipv4_address(drec_field.data);
-                } else if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationIPv6Address, &drec_field) != FDS_EOC) {
+                } else if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationIPv6Address, drec_find_flags, &drec_field) != FDS_EOC) {
                     key_value->ip = make_ipv6_address(drec_field.data);
                 } else {
                     return 0;
@@ -302,14 +305,14 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
         case ViewFieldKind::BidirectionalPortKey:
             switch (direction) {
             case Direction::Out:
-                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceTransportPort, &drec_field) != FDS_EOC) {
+                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceTransportPort, drec_find_flags, &drec_field) != FDS_EOC) {
                     key_value->u16 = get_uint(drec_field);
                 } else {
                     return 0;
                 }
                 break;
             case Direction::In:
-                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationTransportPort, &drec_field) != FDS_EOC) {
+                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationTransportPort, drec_find_flags, &drec_field) != FDS_EOC) {
                     key_value->u16 = get_uint(drec_field);
                 } else {
                     return 0;
@@ -320,14 +323,14 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
             break;
 
         case ViewFieldKind::IPv4SubnetKey:
-            if (fds_drec_find(&drec, view_field.pen, view_field.id, &drec_field) == FDS_EOC) {
+            if (fds_drec_find(&drec, view_field.pen, view_field.id, drec_find_flags, &drec_field) == FDS_EOC) {
                 return 0;
             }
             memcpy_bits(key_value->ipv4, drec_field.data, view_field.extra.prefix_length);
             break;
 
         case ViewFieldKind::IPv6SubnetKey:
-            if (fds_drec_find(&drec, view_field.pen, view_field.id, &drec_field) == FDS_EOC) {
+            if (fds_drec_find(&drec, view_field.pen, view_field.id, drec_find_flags, &drec_field) == FDS_EOC) {
                 return 0;
             }
             memcpy_bits(key_value->ipv6, drec_field.data, view_field.extra.prefix_length);
@@ -336,12 +339,12 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
         case ViewFieldKind::BidirectionalIPv4SubnetKey:
             switch (direction) {
             case Direction::Out:
-                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceIPv4Address, &drec_field) == FDS_EOC) {
+                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceIPv4Address, drec_find_flags, &drec_field) == FDS_EOC) {
                     return 0;
                 }
                 break;
             case Direction::In:
-                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationIPv4Address, &drec_field) == FDS_EOC) {
+                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationIPv4Address, drec_find_flags, &drec_field) == FDS_EOC) {
                     return 0;
                 }
                 break;
@@ -353,18 +356,29 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
         case ViewFieldKind::BidirectionalIPv6SubnetKey:
             switch (direction) {
             case Direction::Out:
-                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceIPv6Address, &drec_field) == FDS_EOC) {
+                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceIPv6Address, drec_find_flags, &drec_field) == FDS_EOC) {
                     return 0;
                 }
                 break;
             case Direction::In:
-                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationIPv6Address, &drec_field) == FDS_EOC) {
+                if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationIPv6Address, drec_find_flags, &drec_field) == FDS_EOC) {
                     return 0;
                 }
                 break;
             default: assert(0);
             }
             memcpy_bits(key_value->ipv6, drec_field.data, view_field.extra.prefix_length);
+            break;
+
+        case ViewFieldKind::BiflowDirectionKey:
+            if (drec_find_flags & FDS_DREC_BIFLOW_FWD) {
+                key_value->u8 = 1;
+            } else if (drec_find_flags & FDS_DREC_BIFLOW_REV) {
+                key_value->u8 = 2;
+            } else {
+                //assert(0);
+                key_value->u8 = 0;
+            }
             break;
 
         default: assert(0);
@@ -378,7 +392,7 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
 
 
 static void
-aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *value, Direction direction)
+aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *value, Direction direction, uint16_t drec_find_flags)
 {
     if (aggregate_field.direction != Direction::Unassigned && direction != aggregate_field.direction) {
         return;
@@ -389,7 +403,7 @@ aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *val
     switch (aggregate_field.kind) {
 
     case ViewFieldKind::SumAggregate:
-        if (fds_drec_find(&drec, aggregate_field.pen, aggregate_field.id, &drec_field) == FDS_EOC) {
+        if (fds_drec_find(&drec, aggregate_field.pen, aggregate_field.id, drec_find_flags, &drec_field) == FDS_EOC) {
             return;
         }
 
@@ -406,7 +420,7 @@ aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *val
         break;
 
     case ViewFieldKind::MinAggregate:
-        if (fds_drec_find(&drec, aggregate_field.pen, aggregate_field.id, &drec_field) == FDS_EOC) {
+        if (fds_drec_find(&drec, aggregate_field.pen, aggregate_field.id, drec_find_flags, &drec_field) == FDS_EOC) {
             return;
         }
 
@@ -444,7 +458,7 @@ aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *val
         break;
 
     case ViewFieldKind::MaxAggregate:
-        if (fds_drec_find(&drec, aggregate_field.pen, aggregate_field.id, &drec_field) == FDS_EOC) {
+        if (fds_drec_find(&drec, aggregate_field.pen, aggregate_field.id, drec_find_flags, &drec_field) == FDS_EOC) {
             return;
         }
 
@@ -500,18 +514,32 @@ Aggregator::Aggregator(ViewDefinition view_def) :
 void
 Aggregator::process_record(fds_drec &drec)
 {
-    if (m_view_def.bidirectional) {
-        aggregate(drec, Direction::In);
-        aggregate(drec, Direction::Out);
+    if (m_view_def.biflow_enabled && (drec.tmplt->flags & FDS_TEMPLATE_BIFLOW)) {
+        if (m_view_def.bidirectional) {
+            aggregate(drec, Direction::In, FDS_DREC_BIFLOW_FWD);
+            aggregate(drec, Direction::Out, FDS_DREC_BIFLOW_FWD);
+            aggregate(drec, Direction::In, FDS_DREC_BIFLOW_REV);
+            aggregate(drec, Direction::Out, FDS_DREC_BIFLOW_REV);
+        } else {
+            aggregate(drec, Direction::Unassigned, FDS_DREC_BIFLOW_FWD);
+            aggregate(drec, Direction::Unassigned, FDS_DREC_BIFLOW_REV);
+        }
+
     } else {
-        aggregate(drec, Direction::Unassigned);
+        if (m_view_def.bidirectional) {
+            aggregate(drec, Direction::In, 0);
+            aggregate(drec, Direction::Out, 0);
+        } else {
+            aggregate(drec, Direction::Unassigned, 0);
+        }
     }
+
 }
 
 void
-Aggregator::aggregate(fds_drec &drec, Direction direction)
+Aggregator::aggregate(fds_drec &drec, Direction direction, uint16_t drec_find_flags)
 {
-    if (!build_key(m_view_def, drec, &m_key_buffer[0], direction)) {
+    if (!build_key(m_view_def, drec, &m_key_buffer[0], direction, drec_find_flags)) {
         return;
     }
 
@@ -523,7 +551,7 @@ Aggregator::aggregate(fds_drec &drec, Direction direction)
 
     ViewValue *value = reinterpret_cast<ViewValue *>(record + m_view_def.keys_size);
     for (const auto &aggregate_field : m_view_def.value_fields) {
-        aggregate_value(aggregate_field, drec, value, direction);
+        aggregate_value(aggregate_field, drec, value, direction, drec_find_flags);
         advance_value_ptr(value, aggregate_field.size);
     }
 }
@@ -616,6 +644,9 @@ make_top_n(const ViewDefinition &def, std::vector<Aggregator *> &aggregators, si
 
     std::vector<uint8_t> empty_record = make_empty_record(def);
 
+    TablePrinter printer(def);
+    printer.m_translate_ip_addrs = false;
+
     for (;;) {
 
         assert(heap.size() <= n);
@@ -626,45 +657,63 @@ make_top_n(const ViewDefinition &def, std::vector<Aggregator *> &aggregators, si
             if (!merge_index(def, aggregators, idx, threshold.data())) {
                 break;
             }
-            /*
-            printf("\n");
-            printf("Threshold:\n");
-            TablePrinter(def).print_record(threshold.data());
-            printf("Record %u:\n", idx);
-            TablePrinter(def).print_record(aggregators[0]->m_items[idx]);
-            */
+
+            //printf("\n");
+
+
+            //printf("Threshold:\n"); printer.print_record(threshold.data());
+            //printf("Heap top:\n"); printer.print_record(heap.top());
+            //printf("Record %u:\n", idx);
+            //printer.print_record(aggregators[0]->items()[idx]);
+
             if (compare_records(sort_fields, def, heap.top(), threshold.data()) >= 0) {
-            /*
-                printf("Threshold is %u, heap top is %u\n",
-                    *(uint64_t *) (threshold.data() + sort_fields[0].field->offset),
-                    *(uint64_t *) (heap.top() + sort_fields[0].field->offset));
-            */
+
+                //printf("Threshold is %u, heap top is %u, done\n",
+                //    *(uint64_t *) (threshold.data() + sort_fields[0].field->offset),
+                //    *(uint64_t *) (heap.top() + sort_fields[0].field->offset));
+
                 break;
             }
         }
 
+        bool any;
+
         for (auto *aggregator : aggregators) {
+            //aggregator->m_table.m_debug = true;
+
             if (idx >= aggregator->items().size()) {
                 continue;
             }
 
+            any = true;
+
             uint8_t *record = aggregator->items()[idx];
             uint8_t *_;
             if (seen.find_or_create(record, _)) {
+                //printf("Record from %p already seen:\n", aggregator); printer.print_record(record);
+                //printf("Trying to lookup the record:\n");
+                aggregator->m_table.find(record, _);
                 continue;
             }
 
 
             for (auto *aggregator_ : aggregators) {
+                //aggregator_->m_table.m_debug = true;
                 if (aggregator == aggregator_) {
                     continue;
                 }
 
                 uint8_t *other_record;
 
+                //printf("Trying to find in %p:\n", aggregator_); printer.print_record(record);
                 if (aggregator_->m_table.find(record, other_record)) {
+                    //printf("Merging records:\n"); printer.print_record(record); printer.print_record(other_record);
                     merge_records(def, record, other_record);
+                    //printf("=\n"); printer.print_record(record);
+
                     //TODO: free memory
+                } else {
+                    //printf("Record from %p not found in %p:\n", aggregator, aggregator_); printer.print_record(record);
                 }
             }
             /*
@@ -677,6 +726,10 @@ make_top_n(const ViewDefinition &def, std::vector<Aggregator *> &aggregators, si
             } else {
                 heap.push_pop(record);
             }
+        }
+
+        if (!any) {
+            break;
         }
 
         idx++;

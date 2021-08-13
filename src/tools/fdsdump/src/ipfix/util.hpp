@@ -57,7 +57,7 @@ get_datetime(fds_drec_field &field)
     return tmp;
 }
 
-static inline unique_fds_iemgr
+static unique_fds_iemgr
 make_iemgr()
 {
     int rc;
@@ -74,4 +74,25 @@ make_iemgr()
     }
 
     return iemgr;
+}
+
+static int
+fds_drec_find(fds_drec *drec, uint32_t pen, uint16_t id, uint16_t flags, fds_drec_field *field)
+{
+    if (flags == 0) {
+        return fds_drec_find(drec, pen, id, field);
+
+    } else {
+        fds_drec_iter iter;
+        fds_drec_iter_init(&iter, drec, flags);
+
+        int ret = fds_drec_iter_find(&iter, pen, id);
+        if (ret != FDS_EOC) {
+            *field = iter.field;
+        }
+
+        assert(ret == FDS_EOC || field->data != nullptr);
+
+        return ret;
+    }
 }

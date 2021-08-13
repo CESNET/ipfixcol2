@@ -175,6 +175,15 @@ configure_keys(const std::string &options, ViewDefinition &view_def, fds_iemgr_t
             view_def.keys_size += sizeof(ViewValue::u16);
             view_def.bidirectional = true;
 
+        } else if (key == "biflowdir") {
+            field.data_type = DataType::Unsigned8;
+            field.kind = ViewFieldKind::BiflowDirectionKey;
+            field.name = "biflowdir";
+            field.size = sizeof(ViewValue::u8);
+            field.offset = view_def.keys_size;
+            view_def.keys_size += sizeof(ViewValue::u8);
+            view_def.biflow_enabled = true;
+
         } else {
             const fds_iemgr_elem *elem = fds_iemgr_elem_find_name(iemgr, key.c_str());
             if (!elem) {

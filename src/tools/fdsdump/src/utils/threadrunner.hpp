@@ -24,8 +24,10 @@ public:
                     //fprintf(stderr, "thread done\n");
                     ts->done = true;
 
+                    //fprintf(stderr, "thread %ull finished", ts->thread.get_id());
+
                 } catch (...) {
-                    //fprintf(stderr, "thread dead\n");
+                    //fprintf(stderr, "caught exception in thread %ull\n", ts->thread.get_id());
                     ts->exception = std::current_exception();
                 }
             });
@@ -38,9 +40,10 @@ public:
         //printf("poll start\n");
         bool done = true;
         
-        for (const auto &ts : m_threads) {
+        for (auto &ts : m_threads) {
             if (ts.exception) {
                 std::rethrow_exception(ts.exception);
+                ts.exception = nullptr;
             }
 
             done &= ts.done;
@@ -54,6 +57,16 @@ public:
     join()
     {
         for (auto &ts : m_threads) {
+            if (ts.exception) {
+                std::rethrow_exception(ts.exception);
+                ts.exception = nullptr;
+            }
+
+            if (!ts.thread.joinable()) {
+                //fprintf(stderr, "thread %ull is not joinable\n", ts.thread.get_id());
+                continue;
+            }
+
             ts.thread.join();
         }
     }
@@ -61,8 +74,8 @@ public:
 private:
     struct ThreadState {
         std::thread thread;
-        bool done;
-        std::exception_ptr exception;
+        bool done = false;
+        std::exception_ptr exception = nullptr;
     };
 
     std::vector<ThreadState> m_threads;

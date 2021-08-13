@@ -108,6 +108,14 @@ print_value(const ViewField &field, ViewValue &value, char *buffer, bool transla
             sprintf(buffer, "%s", proto->p_name);
             return;
         }
+
+    } else if (field.kind == ViewFieldKind::BiflowDirectionKey) {
+        switch (value.u8) {
+        case 0: sprintf(buffer, ""); break;
+        case 1: sprintf(buffer, "->"); break;
+        case 2: sprintf(buffer, "<-"); break;
+        }
+        return;
     }
 
     //TODO: Have a look at the hard coded sizes everywhere...

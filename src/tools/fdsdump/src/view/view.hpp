@@ -59,6 +59,7 @@ enum class ViewFieldKind
     DestinationIPAddressKey,
     BidirectionalIPAddressKey,
     BidirectionalPortKey,
+    BiflowDirectionKey,
     SumAggregate,
     MinAggregate,
     MaxAggregate,
@@ -96,6 +97,7 @@ struct ViewDefinition
     std::vector<ViewField> value_fields;
     size_t keys_size;
     size_t values_size;
+    bool biflow_enabled;
 };
 
 ViewDefinition

@@ -63,7 +63,7 @@ parse_cmd_args(int argc, char **argv)
             args.translate_ip_addrs = true;
             break;
         default:
-            throw ArgError("invalid option -" + std::to_string((char) opt));
+            throw ArgError("invalid option -" + std::string(1, opt));
         }
     }
 

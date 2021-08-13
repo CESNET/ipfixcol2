@@ -106,6 +106,7 @@ run(int argc, char **argv)
 
     for (int i = 0; i < args.num_threads; i++) {
         Worker worker;
+        worker.iemgr = make_iemgr();
         worker.view_def = view_def;
         worker.sort_fields = sort_fields;
         worker.aggregator = std::unique_ptr<Aggregator>(new Aggregator(view_def));
@@ -145,6 +146,8 @@ run(int argc, char **argv)
 
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
+
+    //runner.join();
 
 
     printf("* Aggregating done                                                                     \r");
@@ -198,7 +201,7 @@ main(int argc, char **argv)
     } catch (const std::bad_alloc &ex) {
         fprintf(stderr, "Out of memory error\n");
         return 1;
-
+/*
     } catch (const std::exception &ex) {
         fprintf(stderr, "Caught exception %s\n", ex.what());
         return 1;
@@ -206,6 +209,6 @@ main(int argc, char **argv)
     } catch (...) {
         fprintf(stderr, "Caught general exception\n");
         return 1;
-
+*/
     }
 }

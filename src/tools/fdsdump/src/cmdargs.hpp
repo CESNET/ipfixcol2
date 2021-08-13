@@ -13,6 +13,7 @@ struct CmdArgs {
     unsigned int num_threads;
     unsigned int output_limit;
     bool translate_ip_addrs;
+    bool handle_biflow;
     bool print_help;
 };
 
