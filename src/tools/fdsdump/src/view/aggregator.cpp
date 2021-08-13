@@ -7,7 +7,7 @@
 #include <iostream>
 #include <functional>
 
-#include "thirdparty/xxhash.h"
+#include "3rdparty/xxhash.h"
 
 #include "utils/util.hpp"
 #include "utils/binaryheap.hpp"

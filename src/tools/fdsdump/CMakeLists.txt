@@ -1,14 +1,7 @@
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer")
 
 add_executable(fdsdump
-    src/ipfix/fdsreader.cpp
-    src/ipfix/fdsreader.hpp
-    src/ipfix/ipfixfilter.cpp
-    src/ipfix/ipfixfilter.hpp
-    src/ipfix/informationelements.hpp
-    src/ipfix/util.hpp
-
-    src/thirdparty/xxhash.h
+    src/3rdparty/xxhash.h
 
     src/utils/binaryheap.hpp
     src/utils/filelist.cpp
@@ -16,7 +9,16 @@ add_executable(fdsdump
     src/utils/hashtable.cpp
     src/utils/hashtable.hpp
     src/utils/threadrunner.hpp
+    src/utils/arenaallocator.cpp
+    src/utils/arenaallocator.hpp
     src/utils/util.hpp
+
+    src/ipfix/fdsreader.cpp
+    src/ipfix/fdsreader.hpp
+    src/ipfix/ipfixfilter.cpp
+    src/ipfix/ipfixfilter.hpp
+    src/ipfix/informationelements.hpp
+    src/ipfix/util.hpp
 
     src/view/aggregator.cpp
     src/view/aggregator.hpp

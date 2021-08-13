@@ -19,8 +19,7 @@ public:
             ts->thread = std::thread([ts, runnable]() {
                 try {
                     //fprintf(stderr, "thread start\n");
-                    Runnable &r = *runnable;
-                    r();
+                    (*runnable)();
                     //fprintf(stderr, "thread done\n");
                     ts->done = true;
 

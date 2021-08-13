@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "utils/arenaallocator.hpp"
+
 struct HashTableBlock
 {
     alignas(16) uint8_t tags[16];
@@ -32,6 +34,8 @@ private:
 
     std::vector<HashTableBlock> m_blocks;
     std::vector<uint8_t *> m_items;
+
+    ArenaAllocator m_allocator;
 
     bool
     lookup(uint8_t *key, uint8_t *&item, bool create_if_not_found);

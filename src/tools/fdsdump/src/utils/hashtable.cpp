@@ -2,9 +2,11 @@
 
 #define XXH_INLINE_ALL
 
-#include <xmmintrin.h>
-#include "thirdparty/xxhash.h"
 #include <iostream>
+#include <xmmintrin.h>
+
+#include "3rdparty/xxhash.h"
+
 
 HashTable::HashTable(std::size_t key_size, std::size_t value_size) :
     m_key_size(key_size), m_value_size(value_size)
@@ -79,7 +81,8 @@ HashTable::lookup(uint8_t *key, uint8_t *&item, bool create_if_not_found)
             //std::cout << "Found empty index on " << index << ":" << empty_index << std::endl;
             block.tags[empty_index] = item_tag;
 
-            uint8_t *record = new uint8_t[m_key_size + m_value_size];
+            //uint8_t *record = new uint8_t[m_key_size + m_value_size];
+            uint8_t *record = m_allocator.allocate(m_key_size + m_value_size);
             block.items[empty_index] = record;
             m_items.push_back(record);
             m_record_count++;
