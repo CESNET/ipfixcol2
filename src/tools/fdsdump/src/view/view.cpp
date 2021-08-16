@@ -24,6 +24,80 @@ find_field(ViewDefinition &def, const std::string &name)
     return nullptr;
 }
 
+void
+add_field_verbatim(ViewDefinition &view_def, const fds_iemgr_elem *elem)
+{
+    ViewField field = {};
+
+    switch (elem->data_type) {
+    case FDS_ET_UNSIGNED_8:
+        field.data_type = DataType::Unsigned8;
+        field.size = sizeof(ViewValue::u8);
+        break;
+    case FDS_ET_UNSIGNED_16:
+        field.data_type = DataType::Unsigned16;
+        field.size = sizeof(ViewValue::u16);
+        break;
+    case FDS_ET_UNSIGNED_32:
+        field.data_type = DataType::Unsigned32;
+        field.size = sizeof(ViewValue::u32);
+        break;
+    case FDS_ET_UNSIGNED_64:
+        field.data_type = DataType::Unsigned64;
+        field.size = sizeof(ViewValue::u64);
+        break;
+    case FDS_ET_SIGNED_8:
+        field.data_type = DataType::Signed8;
+        field.size = sizeof(ViewValue::i8);
+        break;
+    case FDS_ET_SIGNED_16:
+        field.data_type = DataType::Signed16;
+        field.size = sizeof(ViewValue::i16);
+        break;
+    case FDS_ET_SIGNED_32:
+        field.data_type = DataType::Signed32;
+        field.size = sizeof(ViewValue::i32);
+        break;
+    case FDS_ET_SIGNED_64:
+        field.data_type = DataType::Signed64;
+        field.size = sizeof(ViewValue::i64);
+        break;
+    case FDS_ET_IPV4_ADDRESS:
+        field.data_type = DataType::IPv4Address;
+        field.size = sizeof(ViewValue::ipv4);
+        break;
+    case FDS_ET_IPV6_ADDRESS:
+        field.data_type = DataType::IPv6Address;
+        field.size = sizeof(ViewValue::ipv6);
+        break;
+    case FDS_ET_STRING:
+        field.data_type = DataType::String128B;
+        field.size = 128;
+        break;
+    case FDS_ET_DATE_TIME_MILLISECONDS:
+    case FDS_ET_DATE_TIME_MICROSECONDS:
+    case FDS_ET_DATE_TIME_NANOSECONDS:
+    case FDS_ET_DATE_TIME_SECONDS:
+        field.data_type = DataType::DateTime;
+        field.size = sizeof(ViewValue::ts_millisecs);
+        break;
+    case FDS_ET_MAC_ADDRESS:
+        field.data_type = DataType::MacAddress;
+        field.size = sizeof(ViewValue::mac);
+        break;
+    default:
+        throw ArgError("Invalid aggregation key \"" + std::string(elem->name) + "\" - data type not supported");
+    }
+
+    field.kind = ViewFieldKind::VerbatimKey;
+    field.pen = elem->scope->pen;
+    field.id = elem->id;
+    field.name = elem->name;
+    field.offset = view_def.keys_size;
+    view_def.keys_size += field.size;
+    view_def.key_fields.push_back(field);
+}
+
 static void
 configure_keys(const std::string &options, ViewDefinition &view_def, fds_iemgr_t *iemgr)
 {
@@ -110,6 +184,7 @@ configure_keys(const std::string &options, ViewDefinition &view_def, fds_iemgr_t
             field.extra.prefix_length = prefix_length;
             field.offset = view_def.keys_size;
             view_def.keys_size += field.size;
+            view_def.key_fields.push_back(field);
 
         } else if (key == "srcip") {
             field.data_type = DataType::IPAddress;
@@ -118,6 +193,7 @@ configure_keys(const std::string &options, ViewDefinition &view_def, fds_iemgr_t
             field.size = sizeof(ViewValue::ip);
             field.offset = view_def.keys_size;
             view_def.keys_size += sizeof(ViewValue::ip);
+            view_def.key_fields.push_back(field);
 
         } else if (key == "dstip") {
             field.data_type = DataType::IPAddress;
@@ -126,6 +202,7 @@ configure_keys(const std::string &options, ViewDefinition &view_def, fds_iemgr_t
             field.size = sizeof(ViewValue::ip);
             field.offset = view_def.keys_size;
             view_def.keys_size += sizeof(ViewValue::ip);
+            view_def.key_fields.push_back(field);
 
         } else if (key == "srcport") {
             field.data_type = DataType::Unsigned16;
@@ -136,6 +213,7 @@ configure_keys(const std::string &options, ViewDefinition &view_def, fds_iemgr_t
             field.size = sizeof(ViewValue::u16);
             field.offset = view_def.keys_size;
             view_def.keys_size += sizeof(ViewValue::u16);
+            view_def.key_fields.push_back(field);
 
         } else if (key == "dstport") {
             field.data_type = DataType::Unsigned16;
@@ -146,6 +224,7 @@ configure_keys(const std::string &options, ViewDefinition &view_def, fds_iemgr_t
             field.size = sizeof(ViewValue::u16);
             field.offset = view_def.keys_size;
             view_def.keys_size += sizeof(ViewValue::u16);
+            view_def.key_fields.push_back(field);
 
         } else if (key == "proto") {
             field.data_type = DataType::Unsigned8;
@@ -156,6 +235,7 @@ configure_keys(const std::string &options, ViewDefinition &view_def, fds_iemgr_t
             field.size = sizeof(ViewValue::u8);
             field.offset = view_def.keys_size;
             view_def.keys_size += sizeof(ViewValue::u8);
+            view_def.key_fields.push_back(field);
 
         } else if (key == "ip") {
             field.data_type = DataType::IPAddress;
@@ -165,6 +245,7 @@ configure_keys(const std::string &options, ViewDefinition &view_def, fds_iemgr_t
             field.offset = view_def.keys_size;
             view_def.keys_size += sizeof(ViewValue::ip);
             view_def.bidirectional = true;
+            view_def.key_fields.push_back(field);
 
         } else if (key == "port") {
             field.data_type = DataType::Unsigned16;
@@ -174,6 +255,7 @@ configure_keys(const std::string &options, ViewDefinition &view_def, fds_iemgr_t
             field.offset = view_def.keys_size;
             view_def.keys_size += sizeof(ViewValue::u16);
             view_def.bidirectional = true;
+            view_def.key_fields.push_back(field);
 
         } else if (key == "biflowdir") {
             field.data_type = DataType::Unsigned8;
@@ -183,6 +265,7 @@ configure_keys(const std::string &options, ViewDefinition &view_def, fds_iemgr_t
             field.offset = view_def.keys_size;
             view_def.keys_size += sizeof(ViewValue::u8);
             view_def.biflow_enabled = true;
+            view_def.key_fields.push_back(field);
 
         } else {
             const fds_iemgr_elem *elem = fds_iemgr_elem_find_name(iemgr, key.c_str());
@@ -190,64 +273,10 @@ configure_keys(const std::string &options, ViewDefinition &view_def, fds_iemgr_t
                 throw ArgError("Invalid aggregation key \"" + key + "\" - element not found");
             }
 
-            switch (elem->data_type) {
-            case FDS_ET_UNSIGNED_8:
-                field.data_type = DataType::Unsigned8;
-                field.size = sizeof(ViewValue::u8);
-                break;
-            case FDS_ET_UNSIGNED_16:
-                field.data_type = DataType::Unsigned16;
-                field.size = sizeof(ViewValue::u16);
-                break;
-            case FDS_ET_UNSIGNED_32:
-                field.data_type = DataType::Unsigned32;
-                field.size = sizeof(ViewValue::u32);
-                break;
-            case FDS_ET_UNSIGNED_64:
-                field.data_type = DataType::Unsigned64;
-                field.size = sizeof(ViewValue::u64);
-                break;
-            case FDS_ET_SIGNED_8:
-                field.data_type = DataType::Signed8;
-                field.size = sizeof(ViewValue::i8);
-                break;
-            case FDS_ET_SIGNED_16:
-                field.data_type = DataType::Signed16;
-                field.size = sizeof(ViewValue::i16);
-                break;
-            case FDS_ET_SIGNED_32:
-                field.data_type = DataType::Signed32;
-                field.size = sizeof(ViewValue::i32);
-                break;
-            case FDS_ET_SIGNED_64:
-                field.data_type = DataType::Signed64;
-                field.size = sizeof(ViewValue::i64);
-                break;
-            case FDS_ET_IPV4_ADDRESS:
-                field.data_type = DataType::IPv4Address;
-                field.size = sizeof(ViewValue::ipv4);
-                break;
-            case FDS_ET_IPV6_ADDRESS:
-                field.data_type = DataType::IPv6Address;
-                field.size = sizeof(ViewValue::ipv6);
-                break;
-            case FDS_ET_STRING:
-                field.data_type = DataType::String128B;
-                field.size = 128;
-                break;
-            default:
-                throw ArgError("Invalid aggregation key \"" + key + "\" - data type not supported");
-            }
-
-            field.kind = ViewFieldKind::VerbatimKey;
-            field.pen = elem->scope->pen;
-            field.id = elem->id;
-            field.name = elem->name;
-            field.offset = view_def.keys_size;
-            view_def.keys_size += field.size;
+            add_field_verbatim(view_def, elem);
         }
 
-        view_def.key_fields.push_back(field);
+
     }
 }
 

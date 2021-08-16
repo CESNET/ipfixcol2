@@ -12,6 +12,8 @@
 #include "view/aggregator.hpp"
 #include "view/aggregatefilter.hpp"
 #include "view/tableprinter.hpp"
+#include "view/print.hpp"
+#include "view/util.hpp"
 #include "utils/filelist.hpp"
 #include "utils/threadrunner.hpp"
 
@@ -51,7 +53,72 @@ struct Worker {
     }
 };
 
+ViewDefinition
+make_view_def(const fds_template *tmplt)
+{
+    ViewDefinition view_def = {};
 
+    for (uint16_t i = 0; i < tmplt->fields_cnt_total; i++) {
+        add_field_verbatim(view_def, tmplt->fields[i].def);
+    }
+
+    return view_def;
+}
+
+void
+print_drec(fds_drec &drec)
+{
+    ViewDefinition view_def = make_view_def(drec.tmplt);
+
+    uint8_t value_buffer[4096] = {0};
+    ViewValue *view_value = (ViewValue *) value_buffer;
+
+    fds_drec_iter iter;
+    fds_drec_iter_init(&iter, &drec, 0);
+
+    int rc;
+
+    for (auto &field : view_def.key_fields) {
+        rc = fds_drec_iter_next(&iter);
+        assert(rc != FDS_EOC);
+
+        load_view_value(field, iter.field, *view_value);
+
+        advance_value_ptr(view_value, field.size);
+    }
+
+    assert(rc == FDS_EOC);
+
+    char print_buffer[4096] = {0};
+    view_value = (ViewValue *) value_buffer;
+    for (auto &field : view_def.key_fields) {
+        print_value(field, *view_value, print_buffer, false);
+        advance_value_ptr(view_value, field.size);
+        printf("%*s ", get_width(field), print_buffer);
+    }
+    printf("\n");
+}
+
+void
+print_drecs(FileList &file_list, fds_iemgr_t *iemgr, IPFIXFilter &input_filter)
+{
+    FDSReader reader(iemgr);
+    fds_drec drec;
+    std::string filename;
+
+    while (file_list.pop(filename)) {
+        reader.set_file(filename);
+
+        while (reader.read_record(drec)) {
+
+            if (!input_filter.record_passes(drec)) {
+                continue;
+            }
+
+            print_drec(drec);
+        }
+    }
+}
 
 void
 run(int argc, char **argv)
@@ -73,13 +140,6 @@ run(int argc, char **argv)
         args.output_filter = "true";
     }
 
-    if (args.num_threads == 0) {
-        throw ArgError("Number of threads cannot be zero");
-    }
-
-    ViewDefinition view_def = make_view_def(args.aggregate_keys, args.aggregate_values, iemgr.get());
-    std::vector<SortField> sort_fields = make_sort_fields(view_def, args.sort_fields);
-
     // Set-up file list
     FileList file_list;
 
@@ -89,6 +149,22 @@ run(int argc, char **argv)
 
     if (file_list.empty()) {
         throw ArgError("No input files matched");
+    }
+
+    if (args.aggregate_keys.empty() && args.aggregate_values.empty() && args.sort_fields.empty()) { //TODO
+        IPFIXFilter input_filter(args.input_filter.c_str(), iemgr.get());
+        print_drecs(file_list, iemgr.get(), input_filter);
+        return;
+    }
+
+
+
+
+    ViewDefinition view_def = make_view_def(args.aggregate_keys, args.aggregate_values, iemgr.get());
+    std::vector<SortField> sort_fields = make_sort_fields(view_def, args.sort_fields);
+
+    if (args.num_threads == 0) {
+        throw ArgError("Number of threads cannot be zero");
     }
 
     FDSReader reader(iemgr.get());

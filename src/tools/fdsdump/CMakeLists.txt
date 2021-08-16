@@ -28,8 +28,12 @@ add_executable(fdsdump
     src/view/sort.hpp
     src/view/view.cpp
     src/view/view.hpp
+    src/view/print.cpp
+    src/view/print.hpp
     src/view/tableprinter.cpp
     src/view/tableprinter.hpp
+    src/view/util.cpp
+    src/view/util.hpp
 
     src/fdsdump.cpp
     src/cmdargs.hpp

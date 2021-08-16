@@ -18,6 +18,7 @@ enum class DataType
     IPAddress,
     IPv4Address,
     IPv6Address,
+    MacAddress,
     Unsigned8,
     Signed8,
     Unsigned16,
@@ -27,7 +28,7 @@ enum class DataType
     Unsigned64,
     Signed64,
     DateTime,
-    String128B
+    String128B,
 };
 
 union ViewValue
@@ -35,6 +36,7 @@ union ViewValue
     IPAddress ip;
     uint8_t ipv4[4];
     uint8_t ipv6[16];
+    uint8_t mac[6];
     uint8_t u8;
     uint16_t u16;
     uint32_t u32;
@@ -105,6 +107,9 @@ make_view_def(const std::string &keys, const std::string &values, fds_iemgr_t *i
 
 ViewField *
 find_field(ViewDefinition &def, const std::string &name);
+
+void
+add_field_verbatim(ViewDefinition &view_def, const fds_iemgr_elem *elem);
 
 static inline void
 advance_value_ptr(ViewValue *&value, size_t value_size)

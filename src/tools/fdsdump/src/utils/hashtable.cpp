@@ -7,6 +7,8 @@
 
 #include "3rdparty/xxhash.h"
 
+static constexpr double EXPAND_WHEN_THIS_FULL = 0.95;
+static constexpr unsigned int EXPAND_WITH_FACTOR_OF = 2;
 
 HashTable::HashTable(std::size_t key_size, std::size_t value_size) :
     m_key_size(key_size), m_value_size(value_size)
@@ -92,7 +94,7 @@ HashTable::lookup(uint8_t *key, uint8_t *&item, bool create_if_not_found)
             //std::cout << "Memcpy done" << std::endl;
             item = record;
 
-            if (double(m_record_count) / (16 * double(m_block_count)) > 0.9) {
+            if (double(m_record_count) / (16 * double(m_block_count)) >= EXPAND_WHEN_THIS_FULL) {
                 expand();
             }
 
@@ -106,7 +108,7 @@ HashTable::lookup(uint8_t *key, uint8_t *&item, bool create_if_not_found)
 void
 HashTable::expand()
 {
-    m_block_count *= 4;
+    m_block_count *= EXPAND_WITH_FACTOR_OF;
     //std::cout << "Expand to " << m_block_count << std::endl;
     init_blocks();
     for (uint8_t *item : m_items) {

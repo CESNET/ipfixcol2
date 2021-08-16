@@ -18,17 +18,6 @@ string_split(const std::string &str, const std::string &delimiter)
     return pieces;
 }
 
-static bool
-is_one_of(const std::string &value, const std::vector<std::string> values)
-{
-    for (const auto &v : values) {
-        if (v == value) {
-            return true;
-        }
-    }
-    return false;
-}
-
 static inline void
 memcpy_bits(uint8_t *dst, uint8_t *src, unsigned int n_bits)
 {

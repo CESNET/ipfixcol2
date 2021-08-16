@@ -17,8 +17,7 @@
 
 #include "view/tableprinter.hpp"
 #include "view/sort.hpp"
-
-using DrecFindFn = int(fds_drec *, uint32_t, uint16_t, fds_drec_field *);
+#include "view/util.hpp"
 
 static void
 init_value(const ViewField &field, ViewValue &value)
@@ -211,7 +210,9 @@ merge_records(const ViewDefinition &def, uint8_t *record, uint8_t *other_record)
     }
 }
 
-static int
+
+
+bool
 build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, Direction direction, uint16_t drec_find_flags)
 {
     ViewValue *key_value = reinterpret_cast<ViewValue *>(key_buffer);
@@ -222,9 +223,11 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
         switch (view_field.kind) {
         case ViewFieldKind::VerbatimKey:
             if (fds_drec_find(&drec, view_field.pen, view_field.id, drec_find_flags, &drec_field) == FDS_EOC) {
-                return 0;
+                return false;
             }
 
+            load_view_value(view_field, drec_field, *key_value);
+/*
             switch (view_field.data_type) {
             case DataType::Unsigned8:
                 key_value->u8 = get_uint(drec_field);
@@ -256,6 +259,7 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
                 break;
             default: assert(0);
             }
+*/
             break;
 
         case ViewFieldKind::SourceIPAddressKey:
@@ -264,7 +268,7 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
             } else if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceIPv6Address, drec_find_flags, &drec_field) != FDS_EOC) {
                 key_value->ip = make_ipv6_address(drec_field.data);
             } else {
-                return 0;
+                return false;
             }
             break;
 
@@ -274,7 +278,7 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
             } else if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationIPv6Address, drec_find_flags, &drec_field) != FDS_EOC) {
                 key_value->ip = make_ipv6_address(drec_field.data);
             } else {
-                return 0;
+                return false;
             }
             break;
 
@@ -286,7 +290,7 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
                 } else if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceIPv6Address, drec_find_flags, &drec_field) != FDS_EOC) {
                     key_value->ip = make_ipv6_address(drec_field.data);
                 } else {
-                    return 0;
+                    return false;
                 }
                 break;
             case Direction::In:
@@ -295,7 +299,7 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
                 } else if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationIPv6Address, drec_find_flags, &drec_field) != FDS_EOC) {
                     key_value->ip = make_ipv6_address(drec_field.data);
                 } else {
-                    return 0;
+                    return false;
                 }
                 break;
             default: assert(0);
@@ -308,14 +312,14 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
                 if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceTransportPort, drec_find_flags, &drec_field) != FDS_EOC) {
                     key_value->u16 = get_uint(drec_field);
                 } else {
-                    return 0;
+                    return false;
                 }
                 break;
             case Direction::In:
                 if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationTransportPort, drec_find_flags, &drec_field) != FDS_EOC) {
                     key_value->u16 = get_uint(drec_field);
                 } else {
-                    return 0;
+                    return false;
                 }
                 break;
             default: assert(0);
@@ -324,14 +328,14 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
 
         case ViewFieldKind::IPv4SubnetKey:
             if (fds_drec_find(&drec, view_field.pen, view_field.id, drec_find_flags, &drec_field) == FDS_EOC) {
-                return 0;
+                return false;
             }
             memcpy_bits(key_value->ipv4, drec_field.data, view_field.extra.prefix_length);
             break;
 
         case ViewFieldKind::IPv6SubnetKey:
             if (fds_drec_find(&drec, view_field.pen, view_field.id, drec_find_flags, &drec_field) == FDS_EOC) {
-                return 0;
+                return false;
             }
             memcpy_bits(key_value->ipv6, drec_field.data, view_field.extra.prefix_length);
             break;
@@ -340,12 +344,12 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
             switch (direction) {
             case Direction::Out:
                 if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceIPv4Address, drec_find_flags, &drec_field) == FDS_EOC) {
-                    return 0;
+                    return false;
                 }
                 break;
             case Direction::In:
                 if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationIPv4Address, drec_find_flags, &drec_field) == FDS_EOC) {
-                    return 0;
+                    return false;
                 }
                 break;
             default: assert(0);
@@ -357,12 +361,12 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
             switch (direction) {
             case Direction::Out:
                 if (fds_drec_find(&drec, IPFIX::iana, IPFIX::sourceIPv6Address, drec_find_flags, &drec_field) == FDS_EOC) {
-                    return 0;
+                    return false;
                 }
                 break;
             case Direction::In:
                 if (fds_drec_find(&drec, IPFIX::iana, IPFIX::destinationIPv6Address, drec_find_flags, &drec_field) == FDS_EOC) {
-                    return 0;
+                    return false;
                 }
                 break;
             default: assert(0);
@@ -387,7 +391,7 @@ build_key(const ViewDefinition &view_def, fds_drec &drec, uint8_t *key_buffer, D
         advance_value_ptr(key_value, view_field.size);
     }
 
-    return 1;
+    return true;
 }
 
 
