@@ -1,3 +1,41 @@
+/**
+ * \file src/view/aggregator.cpp
+ * \author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
+ * \brief Aggregator
+ *
+ * Copyright (C) 2021 CESNET, z.s.p.o.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is, and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
 #define XXH_INLINE_ALL
 
 #include "view/aggregator.hpp"
@@ -17,7 +55,6 @@
 
 #include "view/tableprinter.hpp"
 #include "view/sort.hpp"
-#include "view/util.hpp"
 
 static void
 init_value(const ViewField &field, ViewValue &value)
@@ -99,6 +136,48 @@ init_values(const ViewDefinition &view_def, uint8_t *values)
     for (const auto &field : view_def.value_fields) {
         init_value(field, *value);
         advance_value_ptr(value, field.size);
+    }
+}
+
+static void
+load_view_value(const ViewField &view_field, fds_drec_field &drec_field, ViewValue &value)
+{
+    switch (view_field.data_type) {
+    case DataType::Unsigned8:
+        value.u8 = get_uint(drec_field);
+        break;
+    case DataType::Unsigned16:
+        value.u16 = get_uint(drec_field);
+        break;
+    case DataType::Unsigned32:
+        value.u32 = get_uint(drec_field);
+        break;
+    case DataType::Unsigned64:
+        value.u64 = get_uint(drec_field);
+        break;
+    case DataType::Signed8:
+        value.i8 = get_int(drec_field);
+        break;
+    case DataType::Signed16:
+        value.i16 = get_int(drec_field);
+        break;
+    case DataType::Signed32:
+        value.i32 = get_int(drec_field);
+        break;
+    case DataType::Signed64:
+        value.i64 = get_int(drec_field);
+        break;
+    case DataType::String128B:
+        memset(value.str, 0, 128);
+        memcpy(value.str, drec_field.data, std::min<int>(drec_field.size, 128));
+        break;
+    case DataType::DateTime:
+        value.ts_millisecs = get_datetime(drec_field);
+        break;
+    case DataType::MacAddress:
+        memcpy(value.mac, drec_field.data, 6);
+        break;
+    default: assert(0);
     }
 }
 

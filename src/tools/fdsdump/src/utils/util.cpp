@@ -1,5 +1,5 @@
 /**
- * \file src/utils/util.hpp
+ * \file src/utils/util.cpp
  * \author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
  * \brief General utility functions
  *
@@ -36,27 +36,34 @@
  * if advised of the possibility of such damage.
  *
  */
-#include <vector>
-#include <string>
+#include "utils/util.hpp"
 
-/**
- * \brief      Split string by a delimiter.
- *
- * \param[in]  str        The string
- * \param[in]  delimiter  The delimiter
- *
- * \return     Vector of the string pieces.
- */
+#include <cstring>
+
 std::vector<std::string>
-string_split(const std::string &str, const std::string &delimiter);
+string_split(const std::string &str, const std::string &delimiter)
+{
+    std::vector<std::string> pieces;
+    std::size_t pos = 0;
+    for (;;) {
+        std::size_t next_pos = str.find(delimiter, pos);
+        if (next_pos == std::string::npos) {
+            pieces.emplace_back(str.begin() + pos, str.end());
+            break;
+        }
+        pieces.emplace_back(str.begin() + pos, str.begin() + next_pos);
+        pos = next_pos + 1;
+    }
+    return pieces;
+}
 
-/**
- * \brief      Copy a specified number of bits from source to destination, remaining bits in an
- *             incomplete byte are zeroed
- *
- * \param      dst     The destination
- * \param      src     The source
- * \param[in]  n_bits  The number of bits
- */
 void
-memcpy_bits(uint8_t *dst, uint8_t *src, unsigned int n_bits);
+memcpy_bits(uint8_t *dst, uint8_t *src, unsigned int n_bits)
+{
+    unsigned int n_bytes = (n_bits + 7) / 8;
+    unsigned int rem_bits = 8 - (n_bits % 8);
+    memcpy(dst, src, n_bytes);
+    if (rem_bits != 8) {
+        dst[n_bytes - 1] &= (0xFF >> rem_bits) << rem_bits;
+    }
+}

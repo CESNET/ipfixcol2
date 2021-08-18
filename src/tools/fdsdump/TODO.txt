@@ -11,23 +11,22 @@
 * Terminal output user configurable format
 * [x] Terminal output prints protocols by their names
 * [x] Terminal output translates IP addresses to domain names
-* Multithreading
-    * Refactor code
-    * Parallel merging
+* [x] Multithreading
+    * [x] Refactor code
     * Get rid of unnecessary copying when merging
 * Unit tests (?)
-* Sort by multiple fields
-* Calculated fields (e.g. BPS, PPS, ...)
+* [x] Sort by multiple fields
+* Calculated fields (e.g. BPS, PPS, ...) (?)
 * [x] Glob file loader
-* Biflow
-* Smart Top N merging
+* [x] Biflow
+* [x] Smart Top N merging
 
 
 Refactorings
-* Command line opts parsing should probably use getopt
-* Worker should probably be a class
-* File list may be better as a class
-* Config shouldn't build view, it should parse it into vector of strings and let view build the view def
+* [x] Command line opts parsing should probably use getopt
+* [x] Worker should probably be a class
+* [x] File list may be better as a class
+* [x] Config shouldn't build view, it should parse it into vector of strings and let view build the view def
 
 
 Modes

@@ -1,7 +1,7 @@
 /**
- * \file src/utils/util.hpp
+ * \file src/ipfix/util.cpp
  * \author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
- * \brief General utility functions
+ * \brief IPFIX utility functions
  *
  * Copyright (C) 2021 CESNET, z.s.p.o.
  *
@@ -36,27 +36,71 @@
  * if advised of the possibility of such damage.
  *
  */
-#include <vector>
-#include <string>
+#include "ipfix/util.hpp"
 
-/**
- * \brief      Split string by a delimiter.
- *
- * \param[in]  str        The string
- * \param[in]  delimiter  The delimiter
- *
- * \return     Vector of the string pieces.
- */
-std::vector<std::string>
-string_split(const std::string &str, const std::string &delimiter);
+uint64_t
+get_uint(fds_drec_field &field)
+{
+    uint64_t tmp;
+    int rc = fds_get_uint_be(field.data, field.size, &tmp);
+    assert(rc == FDS_OK);
+    return tmp;
+}
 
-/**
- * \brief      Copy a specified number of bits from source to destination, remaining bits in an
- *             incomplete byte are zeroed
- *
- * \param      dst     The destination
- * \param      src     The source
- * \param[in]  n_bits  The number of bits
- */
-void
-memcpy_bits(uint8_t *dst, uint8_t *src, unsigned int n_bits);
+int64_t
+get_int(fds_drec_field &field)
+{
+    int64_t tmp;
+    int rc = fds_get_int_be(field.data, field.size, &tmp);
+    assert(rc == FDS_OK);
+    return tmp;
+}
+
+uint64_t
+get_datetime(fds_drec_field &field)
+{
+    uint64_t tmp;
+    int rc = fds_get_datetime_lp_be(field.data, field.size, field.info->def->data_type, &tmp);
+    assert(rc == FDS_OK);
+    return tmp;
+}
+
+unique_fds_iemgr
+make_iemgr()
+{
+    int rc;
+
+    unique_fds_iemgr iemgr;
+    iemgr.reset(fds_iemgr_create());
+    if (!iemgr) {
+        throw std::bad_alloc();
+    }
+
+    rc = fds_iemgr_read_dir(iemgr.get(), fds_api_cfg_dir());
+    if (rc != FDS_OK) {
+        throw std::runtime_error("cannot read iemgr definitions");
+    }
+
+    return iemgr;
+}
+
+int
+fds_drec_find(fds_drec *drec, uint32_t pen, uint16_t id, uint16_t flags, fds_drec_field *field)
+{
+    if (flags == 0) {
+        return fds_drec_find(drec, pen, id, field);
+
+    } else {
+        fds_drec_iter iter;
+        fds_drec_iter_init(&iter, drec, flags);
+
+        int ret = fds_drec_iter_find(&iter, pen, id);
+        if (ret != FDS_EOC) {
+            *field = iter.field;
+        }
+
+        assert(ret == FDS_EOC || field->data != nullptr);
+
+        return ret;
+    }
+}

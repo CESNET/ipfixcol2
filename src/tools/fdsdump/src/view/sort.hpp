@@ -1,3 +1,41 @@
+/**
+ * \file src/view/sort.hpp
+ * \author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
+ * \brief View sort functions
+ *
+ * Copyright (C) 2021 CESNET, z.s.p.o.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is, and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
 #pragma once
 
 #include "view/view.hpp"
@@ -6,22 +44,73 @@
 #include <string>
 #include <functional>
 
+/**
+ * \brief      A field to sort on
+ */
 struct SortField {
     ViewField *field;
     bool ascending;
 };
 
+/**
+ * \brief      Parse a sort options string into a sort definition
+ *
+ * \param      def              The view definition
+ * \param[in]  sort_fields_str  The sort options string
+ *
+ * \return     The parsed sort fields
+ */
 std::vector<SortField>
-make_sort_fields(ViewDefinition &def, const std::string &sort_fields_str);
+make_sort_def(ViewDefinition &def, const std::string &sort_fields_str);
 
+/**
+ * \brief      Compare view records
+ *
+ * \param[in]  sort_field    The field to compare on
+ * \param[in]  def           The view definition
+ * \param[in]  record        The record
+ * \param[in]  other_record  The other record
+ *
+ * \return     1 if record should be ordered BEFORE the other record,
+ *             0 if the records are equal,
+ *             -1 if the record should be ordered AFTER the other record
+ */
 int
 compare_records(SortField sort_field, const ViewDefinition &def, uint8_t *record, uint8_t *other_record);
 
-std::function<bool(uint8_t *, uint8_t *)>
-make_comparer(const std::vector<SortField> &sort_fields, const ViewDefinition &def, bool reverse = false);
 
+/**
+ * \brief      Compare view records
+ *
+ * \param[in]  sort_fields   The fields to compare on
+ * \param[in]  def           The view definition
+ * \param[in]  record        The record
+ * \param[in]  other_record  The other record
+ *
+ * \return     1 if record should be ordered BEFORE the other record, 0 if the records are equal, -1
+ *             if the record should be ordered AFTER the other record
+ */
 int
 compare_records(const std::vector<SortField> &sort_fields, const ViewDefinition &def, uint8_t *record, uint8_t *other_record);
 
+/**
+ * \brief      Make a record comparer function
+ *
+ * \param[in]  sort_fields  The sort definition
+ * \param[in]  def          The view definition
+ * \param[in]  reverse      Whether the compare_records output should be reversed
+ *
+ * \return     The comparer function
+ */
+std::function<bool(uint8_t *, uint8_t *)>
+make_comparer(const std::vector<SortField> &sort_fields, const ViewDefinition &def, bool reverse = false);
+
+/**
+ * \brief        Sort view records
+ *
+ * \param[inout] records      The view records
+ * \param[in]    sort_fields  The fields to sort on
+ * \param[in]    def          The view definition
+ */
 void
 sort_records(std::vector<uint8_t *> &records, const std::vector<SortField> &sort_fields, const ViewDefinition &def);

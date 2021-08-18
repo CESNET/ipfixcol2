@@ -11,6 +11,7 @@ add_executable(fdsdump
     src/utils/threadrunner.hpp
     src/utils/arenaallocator.cpp
     src/utils/arenaallocator.hpp
+    src/utils/util.cpp
     src/utils/util.hpp
 
     src/ipfix/fdsreader.cpp
@@ -18,6 +19,7 @@ add_executable(fdsdump
     src/ipfix/ipfixfilter.cpp
     src/ipfix/ipfixfilter.hpp
     src/ipfix/informationelements.hpp
+    src/ipfix/util.cpp
     src/ipfix/util.hpp
 
     src/view/aggregator.cpp
@@ -32,8 +34,6 @@ add_executable(fdsdump
     src/view/print.hpp
     src/view/tableprinter.cpp
     src/view/tableprinter.hpp
-    src/view/util.cpp
-    src/view/util.hpp
 
     src/fdsdump.cpp
     src/cmdargs.hpp
