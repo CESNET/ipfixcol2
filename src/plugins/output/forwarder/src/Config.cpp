@@ -235,7 +235,7 @@ void
 Config::set_defaults()
 {
     this->tmplts_resend_secs = 10 * 60;
-    this->tmplts_resend_pkts = 5 * 1024 * 1024;
+    this->tmplts_resend_pkts = 5000;
     this->reconnect_secs = 10;
 }
 

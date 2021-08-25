@@ -48,17 +48,17 @@ Parameters
     The transport protocol to use.
     [values: TCP/UDP]
 
-:``templateRefreshIntervalSecs``:
+:``templatesResendSecs``:
     Send templates again every N seconds (UDP only).
-    [value: number of seconds, default: 600]
+    [value: number of seconds, default: 600, 0 = never]
 
-:``templateRefreshIntervalBytes``:
-    Send templates again every N bytes (UDP only).
-    [value: number of bytes, default: 5000000]
+:``templatesResendPkts``:
+    Send templates again every N packets (UDP only).
+    [value: number of packets, default: 5000, 0 = never]
 
-:``reconnectIntervalSecs``:
+:``reconnectSecs``:
     Attempt to reconnect every N seconds in case the connection drops (TCP only).
-    [value: number of seconds, default: 10]
+    [value: number of seconds, default: 10, 0 = don't wait]
 
 :``hosts``:
     The receiving hosts.

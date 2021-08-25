@@ -68,11 +68,11 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *xml_config)
 
     } catch (const std::invalid_argument &ex) {
         IPX_CTX_ERROR(ctx, "%s", ex.what());
-        return IPX_ERR_FORMAT;
+        return IPX_ERR_DENIED;
 
     } catch (const std::bad_alloc &ex) {
         IPX_CTX_ERROR(ctx, "Memory error");
-        return IPX_ERR_NOMEM;
+        return IPX_ERR_DENIED;
 
     } catch (const std::runtime_error &ex) {
         IPX_CTX_ERROR(ctx, "%s", ex.what());
@@ -127,12 +127,12 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *priv, ipx_msg_t *msg)
 
     } catch (const std::bad_alloc &ex) {
         IPX_CTX_ERROR(ctx, "Memory error");
-        return IPX_ERR_NOMEM;
+        return IPX_ERR_DENIED;
 
     } catch (const std::runtime_error &ex) {
         IPX_CTX_ERROR(ctx, "%s", ex.what());
         return IPX_ERR_DENIED;
-    
+
     } catch (const std::exception &ex) {
         IPX_CTX_ERROR(ctx, "Caught exception %s", ex.what());
         return IPX_ERR_DENIED;
