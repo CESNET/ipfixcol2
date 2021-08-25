@@ -640,9 +640,14 @@ Aggregator::aggregate(fds_drec &drec, Direction direction, uint16_t drec_find_fl
 }
 
 void
-Aggregator::merge(Aggregator &other)
+Aggregator::merge(Aggregator &other, unsigned int max_num_items)
 {
+    unsigned int n = 0;
     for (uint8_t *other_record : other.items()) {
+        if (max_num_items != 0 && n == max_num_items) {
+            break;
+        }
+
         uint8_t *record;
 
         if (!m_table.find_or_create(other_record, record)) {
@@ -662,8 +667,9 @@ Aggregator::merge(Aggregator &other)
                 advance_value_ptr(other_value, aggregate_field.size);
             }
             */
-
         }
+
+        n++;
     }
 }
 

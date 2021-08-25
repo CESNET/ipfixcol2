@@ -185,15 +185,6 @@ ViewField *
 find_field(ViewDefinition &def, const std::string &name);
 
 /**
- * \brief      Add an IPFIX field to a view definition
- *
- * \param      view_def  The view definition
- * \param[in]  elem      The IPFIX element
- */
-void
-add_field_verbatim(ViewDefinition &view_def, const fds_iemgr_elem *elem);
-
-/**
  * \brief      Advance view value pointer
  *
  * \param      value       The value pointer reference

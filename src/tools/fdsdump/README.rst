@@ -19,21 +19,27 @@ Parameters
     Fields to aggregate on.
 
     Supported values: ``srcipv4``, ``dstipv4``, ``srcipv6``, ``dstipv6``, ``ipv4``, ``ipv6``, ``srcip``, ``dstip``, ``srcport``, ``dstport``, ``proto``, ``ip``, ``port``, ``biflowdir``, or a name of an IPFIX field.
+
     IP address values with a version can also contain a prefix length, e.g. ``ipv4/24`` or ``srcipv6/64``.
 
 :``-s VALUES``:
     Fields to aggregate.
 
     Supported values: ``packets``, ``bytes``, ``flows``, ``inpackets``, ``outpackets``, ``inbytes``, ``outbytes``, ``inflows``, ``outflows``, or a name of an IPFIX field with an aggregation function specified.
+
     Possible aggregation functions are: ``min``, ``max``, ``sum``.
+
     The aggregation function is specified using a suffix, e.g. ``octetDeltaCount:sum`` or ``flowStartMilliseconds:min``.
+
     Fields are seperated by a comma, e.g. ``packes,bytes,flows,flowStartMilliseconds:min,flowStartMilliseconds:max``.
 
 :``-O FIELDS``:
     Fields to order by.
 
     Supported values: field names as specified in ``-s``.
+
     Order is descending by default and can be specified by a ``/asc`` or ``/desc`` suffix, e.g. ``packets/asc``.
+
     Multiple fields can be specified and are seperated by a comma, e.g. ``packets,bytes``.
 
 :``-F FILTER``:

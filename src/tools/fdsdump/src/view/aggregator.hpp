@@ -75,7 +75,7 @@ public:
      * \param      other  The other aggregator
      */
     void
-    merge(Aggregator &other);
+    merge(Aggregator &other, unsigned int max_num_items = 0);
 
     /**
      * The underlying hash table

@@ -49,6 +49,10 @@ make_sort_def(ViewDefinition &def, const std::string &sort_fields_str)
 {
     std::vector<SortField> sort_fields;
 
+    if (sort_fields_str.empty()) {
+        return sort_fields;
+    }
+
     for (const auto &sort_field_str : string_split(sort_fields_str, ",")) {
         SortField sort_field = {};
 

@@ -122,14 +122,6 @@ run(int argc, char **argv)
         return;
     }
 
-    if (args.input_filter.empty()) {
-        args.input_filter = "true";
-    }
-
-    if (args.output_filter.empty()) {
-        args.output_filter = "true";
-    }
-
     // Set-up file list
     FileList file_list;
 
@@ -146,7 +138,7 @@ run(int argc, char **argv)
     std::vector<SortField> sort_fields = make_sort_def(view_def, args.sort_fields);
 
     if (args.num_threads == 0) {
-        throw ArgError("Number of threads cannot be zero");
+        args.num_threads = 1;
     }
 
     FDSReader reader(iemgr.get());
@@ -225,7 +217,29 @@ run(int argc, char **argv)
         aggregators.push_back(worker.aggregator.get());
     }
 
-    auto records = make_top_n(view_def, aggregators, args.output_limit, sort_fields);
+    std::vector<uint8_t *> records;
+    std::vector<uint8_t *> *records_ptr;
+    if (args.output_limit != 0 && !sort_fields.empty()) {
+        records = make_top_n(view_def, aggregators, args.output_limit, sort_fields);
+        records_ptr = &records;
+
+    } else {
+        Aggregator *main_aggregator = aggregators[0];
+
+        for (auto *aggregator : aggregators) {
+            if (aggregator == main_aggregator)  {
+                continue;
+            }
+
+            main_aggregator->merge(*aggregator, args.output_limit);
+        }
+
+        records_ptr = &main_aggregator->items();
+
+        if (!args.sort_fields.empty()) {
+            sort_records(*records_ptr, sort_fields, view_def);
+        }
+    }
 
     std::chrono::steady_clock::time_point end_time = std::chrono::steady_clock::now();
 
@@ -242,7 +256,7 @@ run(int argc, char **argv)
 
     uint64_t output_counter = 0;
     printer->print_prologue();
-    for (uint8_t *record : records) {
+    for (uint8_t *record : *records_ptr) {
         if (aggregate_filter.record_passes(record)) {
             if (args.output_limit > 0 && output_counter == args.output_limit) {
                 break;

@@ -39,6 +39,8 @@
 #include "cmdargs.hpp"
 #include <cstdio>
 #include <unistd.h>
+#include <thread>
+#include <algorithm>
 #include "common.hpp"
 
 void
@@ -61,10 +63,24 @@ print_usage()
     printf("%s", usage);
 }
 
+static CmdArgs
+default_args()
+{
+    CmdArgs args;
+
+    args.aggregate_keys = "srcip,srcport,dstip,dstport,proto";
+    args.aggregate_values = "packets,bytes";
+    args.input_filter = "true";
+    args.output_filter = "true";
+    args.num_threads = std::max<unsigned int>(std::thread::hardware_concurrency(), 1); //TODO
+
+    return args;
+}
+
 CmdArgs
 parse_cmd_args(int argc, char **argv)
 {
-    CmdArgs args = {};
+    CmdArgs args = default_args();
 
     int opt;
 
