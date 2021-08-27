@@ -51,7 +51,7 @@ find_drec_after_set(ipx_msg_ipfix_t *msg, fds_ipfix_set_hdr *set_hdr)
 
     for (uint32_t i = 0; i < drec_cnt; i++) {
         const ipx_ipfix_record *drec = ipx_msg_ipfix_get_drec(msg, i);
-    
+
         if (drec->rec.data > set_end) {
             return i;
         }
@@ -79,7 +79,7 @@ Sender::process_message(ipx_msg_ipfix_t *msg)
     m_message.start(&msg_hdr);
 
     // Get current time
-    time_t now = get_monotonic_time(); 
+    time_t now = get_monotonic_time();
 
     // Send templates update if necessary and possible
     ipx_ipfix_record *drec = ipx_msg_ipfix_get_drec(msg, 0);
@@ -87,7 +87,7 @@ Sender::process_message(ipx_msg_ipfix_t *msg)
     if (drec) {
 
         const fds_tsnapshot_t *tsnap = drec->rec.snap;
-        
+
         // If templates changed or any of the resend intervals elapsed
         if (m_tsnap != tsnap
                 || (m_tmplts_resend_pkts != 0 && m_pkts_since_tmplts_sent >= m_tmplts_resend_pkts)
@@ -103,16 +103,16 @@ Sender::process_message(ipx_msg_ipfix_t *msg)
     ipx_msg_ipfix_get_sets(msg, &sets, &num_sets);
 
     for (size_t i = 0; i < num_sets; i++) {
-        
+
         fds_ipfix_set_hdr *set_hdr = sets[i].ptr;
         uint16_t set_id = ntohs(set_hdr->flowset_id);
-        
+
         // If it's not a template set, add the set as is
         if (set_id != 2 && set_id != 3) {
             m_message.add_set(set_hdr);
             continue;
-        } 
-        
+        }
+
         // It is a template set...
 
         // Find first data record after the template set
@@ -131,13 +131,13 @@ Sender::process_message(ipx_msg_ipfix_t *msg)
         if (m_tsnap == tsnap) {
             continue;
         }
-        
+
         // The next sequence number in case we'll need to start another message
         uint32_t next_seq_num = m_seq_num + drec_idx;
 
         process_templates(tsnap, next_seq_num);
     }
-    
+
 
     if (!m_message.empty()) {
         m_message.finalize();
@@ -189,4 +189,10 @@ void
 Sender::emit_message()
 {
     m_emit_callback(m_message);
+}
+
+void
+Sender::clear_templates()
+{
+    m_tsnap = nullptr;
 }

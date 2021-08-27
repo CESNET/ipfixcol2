@@ -94,7 +94,15 @@ Connection::forward_message(ipx_msg_ipfix_t *msg)
     }
 
     Sender &sender = *m_senders[odid].get();
-    sender.process_message(msg);
+
+    try {
+        sender.process_message(msg);
+
+    } catch (const ConnectionError &err) {
+        // In case connection was lost, we have to resend templates when it reconnects
+        sender.clear_templates();
+        throw err;
+    }
 }
 
 void
@@ -176,7 +184,7 @@ Connection::store_unfinished_transfer(Message &msg, uint16_t offset)
 {
     Transfer transfer = make_transfer(msg.parts(), offset, msg.length());
 
-    IPX_CTX_DEBUG(m_log_ctx, "Storing unfinished transfer of %" PRIu16 " bytes in connection to %s", 
+    IPX_CTX_DEBUG(m_log_ctx, "Storing unfinished transfer of %" PRIu16 " bytes in connection to %s",
                   msg.length() - offset, m_ident.c_str());
 
     m_transfers.push_back(std::move(transfer));
@@ -202,9 +210,9 @@ Connection::send_message(Message &msg)
 
     if (ret < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
         ConnectionError err(strerror(errno));
-        
+
         IPX_CTX_ERROR(m_log_ctx, "A connection to %s lost! (%s)", m_ident.c_str(), strerror(errno));
-        
+
         close(m_sockfd);
         m_sockfd = -1;
 

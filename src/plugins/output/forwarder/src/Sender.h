@@ -69,6 +69,12 @@ public:
     void
     process_message(ipx_msg_ipfix_t *msg);
 
+    /**
+     * \brief Clear the templates state, i.e. force the templates to resend the next round
+     */
+    void
+    clear_templates();
+
 private:
     std::function<void(Message &)> m_emit_callback;
 
@@ -83,7 +89,7 @@ private:
     const fds_tsnapshot_t *m_tsnap = nullptr;
 
     unsigned int m_pkts_since_tmplts_sent = 0;
-    
+
     time_t m_last_tmplts_sent_time = 0;
 
     Message m_message;
