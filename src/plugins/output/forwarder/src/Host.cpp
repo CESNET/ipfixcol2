@@ -72,7 +72,7 @@ Host::setup_connection(const ipx_session *session)
         connection->connect();
 
     } catch (const ConnectionError &err) {
-        IPX_CTX_WARNING(m_log_ctx, "Setting up new connection to %s failed! Will try to reconnect...", 
+        IPX_CTX_WARNING(m_log_ctx, "Setting up new connection to %s failed! Will try to reconnect...",
                         m_ident.c_str());
         m_reconnects.push_back(connection);
     }
@@ -99,7 +99,7 @@ Host::finish_connection(const ipx_session *session)
                       m_ident.c_str(), connection->waiting_transfers_cnt());
 
     } else {
-        m_reconnects.erase(std::remove(m_reconnects.begin(), m_reconnects.end(), connection), 
+        m_reconnects.erase(std::remove(m_reconnects.begin(), m_reconnects.end(), connection),
                            m_reconnects.end());
 
         m_connections.erase(
@@ -118,7 +118,7 @@ Host::forward_message(ipx_msg_ipfix_t *msg)
     Connection *connection = m_session_to_connection[session];
     assert(connection);
 
-    if (!connection->is_connected()) {
+    if (!connection->is_connected() || connection->waiting_transfers_cnt() > 0) {
         return false;
     }
 
