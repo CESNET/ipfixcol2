@@ -137,21 +137,7 @@ Connection::forward_message(ipx_msg_ipfix_t *msg)
     assert(is_connected());
     assert(!m_finished);
 
-    uint32_t odid = ipx_msg_ipfix_get_ctx(msg)->odid;
-
-    if (m_senders.find(odid) == m_senders.end()) {
-        m_senders.emplace(odid,
-            new Sender(
-                [&](Message &msg) {
-                    send_message(msg);
-                },
-                m_con_params.protocol == Protocol::TCP,
-                m_tmplts_resend_pkts,
-                m_tmplts_resend_secs));
-    }
-
-    Sender &sender = *m_senders[odid].get();
-
+    Sender &sender = get_or_create_sender(msg);
     try {
         sender.process_message(msg);
 
@@ -160,6 +146,15 @@ Connection::forward_message(ipx_msg_ipfix_t *msg)
         sender.clear_templates();
         throw err;
     }
+}
+
+void
+Connection::lose_message(ipx_msg_ipfix_t *msg)
+{
+    assert(!m_finished);
+
+    Sender &sender = get_or_create_sender(msg);
+    sender.lose_message(msg);
 }
 
 void
@@ -288,4 +283,25 @@ Connection::send_message(Message &msg)
     if (sent < msg.length()) {
         store_unfinished_transfer(msg, sent);
     }
+}
+
+Sender &
+Connection::get_or_create_sender(ipx_msg_ipfix_t *msg)
+{
+    uint32_t odid = ipx_msg_ipfix_get_ctx(msg)->odid;
+
+    if (m_senders.find(odid) == m_senders.end()) {
+        m_senders.emplace(odid,
+            new Sender(
+                [&](Message &msg) {
+                    send_message(msg);
+                },
+                m_con_params.protocol == Protocol::TCP,
+                m_tmplts_resend_pkts,
+                m_tmplts_resend_secs));
+    }
+
+    Sender &sender = *m_senders[odid].get();
+
+    return sender;
 }

@@ -70,6 +70,14 @@ public:
     process_message(ipx_msg_ipfix_t *msg);
 
     /**
+     * \brief Lose an IPFIX message, i.e. update the internal state as if it has been forwarded
+     *        even though it is not being sent
+     * \param msg  The IPFIX message
+     */
+    void
+    lose_message(ipx_msg_ipfix_t *msg);
+
+    /**
      * \brief Clear the templates state, i.e. force the templates to resend the next round
      */
     void

@@ -124,6 +124,14 @@ public:
     forward_message(ipx_msg_ipfix_t *msg);
 
     /**
+     * \brief Lose an IPFIX message, i.e. update the internal state as if it has been forwarded
+     *        even though it is not being sent
+     * \param msg  The IPFIX message
+     */
+    void
+    lose_message(ipx_msg_ipfix_t *msg);
+
+    /**
      * \brief Advance the unfinished transfers
      */
     void
@@ -168,4 +176,7 @@ private:
 
     void
     send_message(Message &msg);
+
+    Sender &
+    get_or_create_sender(ipx_msg_ipfix_t *msg);
 };

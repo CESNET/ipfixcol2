@@ -148,6 +148,14 @@ Sender::process_message(ipx_msg_ipfix_t *msg)
     m_pkts_since_tmplts_sent++;
 }
 
+
+void
+Sender::lose_message(ipx_msg_ipfix_t *msg)
+{
+    m_seq_num += ipx_msg_ipfix_get_drec_cnt(msg);
+    m_pkts_since_tmplts_sent++;
+}
+
 void
 Sender::process_templates(const fds_tsnapshot_t *tsnap, uint32_t next_seq_num)
 {

@@ -43,12 +43,13 @@
 #include <algorithm>
 
 Host::Host(const std::string &ident, ConnectionParams con_params, ipx_ctx_t *log_ctx,
-           unsigned int tmplts_resend_pkts, unsigned int tmplts_resend_secs) :
+           unsigned int tmplts_resend_pkts, unsigned int tmplts_resend_secs, bool indicate_lost_msgs) :
     m_ident(ident),
     m_con_params(con_params),
     m_log_ctx(log_ctx),
     m_tmplts_resend_pkts(tmplts_resend_pkts),
-    m_tmplts_resend_secs(tmplts_resend_secs)
+    m_tmplts_resend_secs(tmplts_resend_secs),
+    m_indicate_lost_msgs(indicate_lost_msgs)
 {
 }
 
@@ -123,6 +124,9 @@ Host::forward_message(ipx_msg_ipfix_t *msg)
     assert(connection.get());
 
     if (!connection->is_connected()) {
+        if (m_indicate_lost_msgs) {
+            connection->lose_message(msg);
+        }
         return false;
     }
 
@@ -131,6 +135,9 @@ Host::forward_message(ipx_msg_ipfix_t *msg)
 
         if (connection->waiting_transfers_cnt() > 0) {
             IPX_CTX_DEBUG(m_log_ctx, "Message to %s not forwarded because there are unsent transfers\n", m_ident.c_str());
+            if (m_indicate_lost_msgs) {
+                connection->lose_message(msg);
+            }
             return false;
         }
 

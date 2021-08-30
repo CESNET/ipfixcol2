@@ -58,9 +58,11 @@ public:
      * \param log_ctx                    The logging context
      * \param tmplts_resend_pkts         Interval in packets after which templates are resend (UDP only)
      * \param tmplts_resend_secs         Interval in seconds after which templates are resend (UDP only)
+     * \param indicate_lost_msgs         Indicate that the message has been lost if it couldn't be forwarded
+     *                                   by increasing the sequence numbers
      */
     Host(const std::string &ident, ConnectionParams con_params, ipx_ctx_t *log_ctx,
-         unsigned int tmplts_resend_pkts, unsigned int tmplts_resend_secs);
+         unsigned int tmplts_resend_pkts, unsigned int tmplts_resend_secs, bool indicate_lost_msgs);
 
     /**
      * Disable copy and move constructors
@@ -106,6 +108,8 @@ private:
     unsigned int m_tmplts_resend_pkts;
 
     unsigned int m_tmplts_resend_secs;
+
+    bool m_indicate_lost_msgs;
 
     std::unordered_map<const ipx_session *, std::shared_ptr<Connection>> m_session_to_connection;
 };

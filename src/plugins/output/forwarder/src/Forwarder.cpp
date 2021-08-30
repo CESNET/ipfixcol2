@@ -53,7 +53,8 @@ Forwarder::Forwarder(Config config, ipx_ctx_t *log_ctx) :
                      ConnectionParams{host_config.address, host_config.port, m_config.protocol},
                      m_log_ctx,
                      m_config.tmplts_resend_pkts,
-                     m_config.tmplts_resend_secs));
+                     m_config.tmplts_resend_secs,
+                     m_config.forward_mode == ForwardMode::SENDTOALL));
     }
 }
 
