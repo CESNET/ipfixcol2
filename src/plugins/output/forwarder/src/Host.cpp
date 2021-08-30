@@ -59,13 +59,17 @@ Host::setup_connection(const ipx_session *session)
     assert(m_session_to_connection.find(session) == m_session_to_connection.end());
 
     // Create new connection
-    auto connection_holder = std::unique_ptr<Connection>(
-        new Connection(m_ident, m_con_params, m_log_ctx, m_tmplts_resend_pkts, m_tmplts_resend_secs)
-    );
-    Connection *connection = connection_holder.get();
-    m_connections.push_back(std::move(connection_holder));
-
     IPX_CTX_INFO(m_log_ctx, "Setting up new connection to %s", m_ident.c_str());
+
+    m_session_to_connection.emplace(session,
+        std::make_shared<Connection>(
+            m_ident,
+            m_con_params,
+            m_log_ctx,
+            m_tmplts_resend_pkts,
+            m_tmplts_resend_secs));
+
+    std::shared_ptr<Connection> &connection = m_session_to_connection[session];
 
     // Try to connect
     try {
@@ -74,11 +78,8 @@ Host::setup_connection(const ipx_session *session)
     } catch (const ConnectionError &err) {
         IPX_CTX_WARNING(m_log_ctx, "Setting up new connection to %s failed! Will try to reconnect...",
                         m_ident.c_str());
-        m_reconnects.push_back(connection);
+        throw err.with_connection(connection);
     }
-
-    // Set up map from session to connection
-    m_session_to_connection.emplace(session, connection);
 }
 
 void
@@ -87,107 +88,85 @@ Host::finish_connection(const ipx_session *session)
     IPX_CTX_INFO(m_log_ctx, "Finishing a connection to %s", m_ident.c_str());
 
     // Get the corresponding connection and remove it from the session map
-    Connection *connection = m_session_to_connection[session];
+    std::shared_ptr<Connection> &connection = m_session_to_connection[session];
     assert(connection);
-    m_session_to_connection.erase(session);
 
-    // Check if we can close the connection yet or there are still transfers to process
-    if (connection->waiting_transfers_cnt() > 0) {
-        connection->m_finishing_flag = true;
+    // Try to send the waiting transfers if there are any, if the connection is dropped just finish anyway
+    if (connection->is_connected()) {
 
-        IPX_CTX_INFO(m_log_ctx, "Connection %s still has %lu transfers waiting",
-                      m_ident.c_str(), connection->waiting_transfers_cnt());
+        try {
+            connection->advance_transfers();
 
-    } else {
-        m_reconnects.erase(std::remove(m_reconnects.begin(), m_reconnects.end(), connection),
-                           m_reconnects.end());
-
-        m_connections.erase(
-            std::remove_if(m_connections.begin(), m_connections.end(),
-                [=](const std::unique_ptr<Connection> &item) { return item.get() == connection; }),
-            m_connections.end());
-
-        IPX_CTX_INFO(m_log_ctx, "Connection %s closed", m_ident.c_str());
+        } catch (const ConnectionError &) {
+            // Ignore...
+        }
     }
+
+    if (connection->waiting_transfers_cnt() > 0) {
+        IPX_CTX_WARNING(m_log_ctx, "Dropping %zu transfers when finishing connection",
+                        connection->waiting_transfers_cnt());
+    }
+
+    IPX_CTX_INFO(m_log_ctx, "Connection to %s finished", m_ident.c_str());
+
+    // Indicate that the connection is finished to stop reconnector in case the connection is there
+    connection->m_finished = true;
+
+    m_session_to_connection.erase(session);
 }
 
 bool
 Host::forward_message(ipx_msg_ipfix_t *msg)
 {
     const ipx_session *session = ipx_msg_ipfix_get_ctx(msg)->session;
-    Connection *connection = m_session_to_connection[session];
-    assert(connection);
+    std::shared_ptr<Connection> &connection = m_session_to_connection[session];
+    assert(connection.get());
 
-    if (!connection->is_connected() || connection->waiting_transfers_cnt() > 0) {
+    if (!connection->is_connected()) {
         return false;
     }
 
-    IPX_CTX_DEBUG(m_log_ctx, "Forwarding message to %s\n", m_ident.c_str());
-
     try {
+        connection->advance_transfers();
+
+        if (connection->waiting_transfers_cnt() > 0) {
+            IPX_CTX_DEBUG(m_log_ctx, "Message to %s not forwarded because there are unsent transfers\n", m_ident.c_str());
+            return false;
+        }
+
+        IPX_CTX_DEBUG(m_log_ctx, "Forwarding message to %s\n", m_ident.c_str());
+
         connection->forward_message(msg);
 
     } catch (const ConnectionError &err) {
-        IPX_CTX_INFO(m_log_ctx, "Planning reconnection to %s", m_ident.c_str());
-        m_reconnects.push_back(connection);
-        return false;
+        // Rethrow the exception but include the shared_ptr to the connection
+        throw err.with_connection(connection);
     }
 
     return true;
 }
 
-size_t
-Host::process_reconnects()
+Host::~Host()
 {
-    for (auto it = m_reconnects.begin(); it != m_reconnects.end(); ) {
-        Connection *connection = *it;
+    for (auto &p : m_session_to_connection) {
+        std::shared_ptr<Connection> &connection = p.second;
 
-        try {
-            connection->connect();
-            IPX_CTX_WARNING(m_log_ctx, "A connection to %s reconnected", m_ident.c_str());
-            it = m_reconnects.erase(it);
+        // Try to send the waiting transfers if there are any, if the connection is dropped just finish anyway
+        if (connection->is_connected()) {
 
-        } catch (const ConnectionError &err) {
-            it++;
+            try {
+                connection->advance_transfers();
+
+            } catch (const ConnectionError &) {
+                // Ignore...
+            }
+        }
+
+        if (connection->waiting_transfers_cnt() > 0) {
+            IPX_CTX_WARNING(m_log_ctx, "Dropping %zu transfers when closing connection %s",
+                            connection->waiting_transfers_cnt(), connection->ident().c_str());
         }
     }
 
-    return m_reconnects.size();
-}
-
-size_t
-Host::advance_transfers()
-{
-    size_t waiting_transfers_cnt = 0;
-
-    for (auto it = m_connections.begin(); it != m_connections.end(); ) {
-        Connection *connection = it->get();
-
-        if (!connection->is_connected()) {
-            it++;
-            continue;
-        }
-
-        try {
-            connection->advance_transfers();
-
-        } catch (const ConnectionError &err) {
-            IPX_CTX_INFO(m_log_ctx, "Planning reconnection to %s", m_ident.c_str());
-            m_reconnects.push_back(connection);
-        }
-
-        // Remove finished connection
-        if (connection->m_finishing_flag && connection->waiting_transfers_cnt() == 0) {
-            assert(std::find(m_reconnects.begin(), m_reconnects.end(), connection) == m_reconnects.end());
-
-            it = m_connections.erase(it);
-            continue;
-        }
-
-        waiting_transfers_cnt += connection->waiting_transfers_cnt();
-
-        it++;
-    }
-
-    return waiting_transfers_cnt;
+    IPX_CTX_INFO(m_log_ctx, "All connections to %s closed", m_ident.c_str());
 }

@@ -42,13 +42,13 @@
 #pragma once
 
 #include "Config.h"
+
 #include <vector>
 #include <memory>
+
 #include "Host.h"
 #include "common.h"
-
-/// The maximum number of seconds to wait in the finalization phase for all the transfers to finish
-static constexpr unsigned int MAX_FINALIZE_WAIT_SECS = 10;
+#include "Reconnector.h"
 
 /// A class representing the forwarder itself
 class Forwarder {
@@ -59,6 +59,12 @@ public:
      * \param log_ctx  The logging context
      */
     Forwarder(Config config, ipx_ctx_t *log_ctx);
+
+    /**
+     * Disable copy and move constructors
+     */
+    Forwarder(const Forwarder &) = delete;
+    Forwarder(Forwarder &&) = delete;
 
     /**
      * \brief Handle a session message
@@ -75,10 +81,9 @@ public:
     handle_ipfix_message(ipx_msg_ipfix_t *msg);
 
     /**
-     * \brief Finalize the forwarder
+     * \brief The destructor - finalize the forwarder
      */
-    void
-    finalize();
+    ~Forwarder() {}
 
 private:
     Config m_config;
@@ -87,9 +92,9 @@ private:
 
     std::vector<std::unique_ptr<Host>> m_hosts;
 
-    time_t m_last_reconnect_check = 0;
-
     size_t m_rr_index = 0;
+
+    Reconnector m_reconnector;
 
     void
     forward_to_all(ipx_msg_ipfix_t *msg);

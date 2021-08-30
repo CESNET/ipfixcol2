@@ -15,6 +15,8 @@ add_library(forwarder-output MODULE
     src/Message.cpp
     src/Sender.h
     src/Sender.cpp
+    src/Reconnector.h
+    src/Reconnector.cpp
 )
 
 install(

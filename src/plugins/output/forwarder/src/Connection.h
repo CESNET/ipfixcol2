@@ -44,9 +44,34 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
+
 #include <ipfixcol2.h>
+
 #include "common.h"
 #include "Sender.h"
+
+class Connection;
+
+/// An error to be thrown on connection errors
+class ConnectionError {
+public:
+    ConnectionError(std::string message)
+    : m_message(message) {}
+
+    ConnectionError(std::string message, std::shared_ptr<Connection> &connection)
+    : m_message(message), m_connection(&connection) {}
+
+    ConnectionError with_connection(std::shared_ptr<Connection> &connection) const
+    { return ConnectionError(m_message, connection); }
+
+    const char *what() const { return m_message.c_str(); }
+
+    std::shared_ptr<Connection> *connection() const { return m_connection; }
+
+private:
+    std::string m_message;
+    std::shared_ptr<Connection> *m_connection;
+};
 
 /// A transfer to be sent through the connection
 struct Transfer {
@@ -60,9 +85,8 @@ struct Transfer {
 /// Each host opens one connection per session
 class Connection {
 public:
-    /// Indicates that the connection is finishing, no more new messages will be forwarded through
-    /// the connection and only the unfinished transfers will be sent
-    bool m_finishing_flag = false;
+    /// Indicates that the connection is finished
+    bool m_finished = false;
 
     /**
      * \brief The constructor
@@ -116,6 +140,11 @@ public:
      * \return The number of waiting transfers
      */
     size_t waiting_transfers_cnt() const { return m_transfers.size(); }
+
+    /**
+     * \brief The identification of the connection
+     */
+    const std::string &ident() const { return m_ident; }
 
 private:
     const std::string &m_ident;

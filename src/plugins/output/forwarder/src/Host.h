@@ -53,14 +53,25 @@ class Host {
 public:
     /**
      * \brief The constructor
-     * \param ident               The host identification
-     * \param con_params          The connection parameters
-     * \param log_ctx             The logging context
-     * \param tmplts_resend_pkts  Interval in packets after which templates are resend (UDP only)
-     * \param tmplts_resend_secs  Interval in seconds after which templates are resend (UDP only)
+     * \param ident                      The host identification
+     * \param con_params                 The connection parameters
+     * \param log_ctx                    The logging context
+     * \param tmplts_resend_pkts         Interval in packets after which templates are resend (UDP only)
+     * \param tmplts_resend_secs         Interval in seconds after which templates are resend (UDP only)
      */
     Host(const std::string &ident, ConnectionParams con_params, ipx_ctx_t *log_ctx,
          unsigned int tmplts_resend_pkts, unsigned int tmplts_resend_secs);
+
+    /**
+     * Disable copy and move constructors
+     */
+    Host(const Host &) = delete;
+    Host(Host &&) = delete;
+
+    /**
+     * \brief The destructor - finishes all the connections
+     */
+    ~Host();
 
     /**
      * \brief Set up a new connection for the sesison
@@ -78,25 +89,12 @@ public:
 
     /**
      * \brief Forward an IPFIX message to this host
-     * \praram msg  The IPFIX message
+     * \param msg  The IPFIX message
      * \return true on success, false on failure
+     * \throw ConnectionError when the connection fails
      */
     bool
     forward_message(ipx_msg_ipfix_t *msg);
-
-    /**
-     * \brief Try to reconnect all lost connections
-     * \return Number of connections still down
-     */
-    size_t
-    process_reconnects();
-
-    /**
-     * \brief Try to advance the transfers that are still waiting to be sent
-     * \return Number of transfers still waiting
-     */
-    size_t
-    advance_transfers();
 
 private:
     const std::string &m_ident;
@@ -106,12 +104,8 @@ private:
     ipx_ctx_t *m_log_ctx;
 
     unsigned int m_tmplts_resend_pkts;
-    
+
     unsigned int m_tmplts_resend_secs;
 
-    std::vector<std::unique_ptr<Connection>> m_connections;
-
-    std::unordered_map<const ipx_session *, Connection *> m_session_to_connection;
-
-    std::vector<Connection *> m_reconnects;
+    std::unordered_map<const ipx_session *, std::shared_ptr<Connection>> m_session_to_connection;
 };

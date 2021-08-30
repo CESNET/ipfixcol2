@@ -62,22 +62,6 @@ struct ConnectionParams {
     Protocol protocol;
 };
 
-/// An exception to be thrown when a socket operation fails
-class ConnectionError : public std::runtime_error {
-public:
-    ConnectionError(const std::string &str) : std::runtime_error(str) {};
-    ConnectionError(const char *str) : std::runtime_error(str) {};
-};
-
-/**
- * \brief Create and connect a socket
- * \param params  The connection parameters
- * \return The socket
- * \throw ConnectionError on failure
- */
-int
-make_socket(const ConnectionParams &params);
-
 /**
  * \brief A C++ wrapper for the fds_tsnapshot_for function that can handle exceptions
  * \param tsnap     The template snapshot

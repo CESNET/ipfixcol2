@@ -40,67 +40,11 @@
  */
 
 #include "common.h"
-#include <netdb.h>
 #include <unistd.h>
 #include <cerrno>
 #include <cstring>
 #include <cassert>
 
-int
-make_socket(const ConnectionParams &params)
-{
-    addrinfo *ai;
-    addrinfo hints = {};
-    hints.ai_family = AF_UNSPEC;
-
-    switch (params.protocol) {
-    case Protocol::TCP:
-        hints.ai_protocol = IPPROTO_TCP;
-        hints.ai_socktype = SOCK_STREAM;
-        break;
-
-    case Protocol::UDP:
-        hints.ai_protocol = IPPROTO_UDP;
-        hints.ai_socktype = SOCK_DGRAM;
-        break;
-
-    default: assert(0);
-    }
-
-    int ret = getaddrinfo(params.address.c_str(), std::to_string(params.port).c_str(), &hints, &ai);
-    if (ret != 0) {
-        throw ConnectionError(gai_strerror(ret));
-    }
-
-    int sockfd;
-    int last_errno = 0;
-    addrinfo *p;
-
-    for (p = ai; p != NULL; p = p->ai_next) {
-        errno = 0;
-        sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-
-        if (sockfd < 0) {
-            last_errno = errno;
-            continue;
-        }
-
-        if (connect(sockfd, p->ai_addr, p->ai_addrlen) != 0) {
-            close(sockfd);
-            continue;
-        }
-
-        break;
-    }
-
-    freeaddrinfo(ai);
-
-    if (!p) {
-        throw ConnectionError(strerror(last_errno));
-    }
-
-    return sockfd;
-}
 
 void
 tsnapshot_for_each(const fds_tsnapshot_t *tsnap, std::function<void(const fds_template *)> callback)

@@ -99,9 +99,7 @@ ipx_plugin_destroy(ipx_ctx_t *ctx, void *priv)
 {
     (void) ctx;
 
-    Forwarder *forwarder = (Forwarder *)(priv);
-    forwarder->finalize();
-
+    Forwarder *forwarder = (Forwarder *) priv;
     delete forwarder;
 }
 

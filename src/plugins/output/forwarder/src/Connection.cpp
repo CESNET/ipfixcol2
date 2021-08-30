@@ -40,15 +40,20 @@
  */
 
 #include "Connection.h"
+
 #include <stdexcept>
 #include <algorithm>
 #include <cinttypes>
 #include <cerrno>
 #include <cstring>
 #include <ctime>
+
+#include <netdb.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+
 #include <libfds.h>
+
 #include "Message.h"
 
 Connection::Connection(const std::string &ident, ConnectionParams con_params, ipx_ctx_t *log_ctx,
@@ -64,7 +69,59 @@ Connection::Connection(const std::string &ident, ConnectionParams con_params, ip
 void
 Connection::connect()
 {
-    m_sockfd = make_socket(m_con_params);
+    addrinfo *ai;
+    addrinfo hints = {};
+    hints.ai_family = AF_UNSPEC;
+
+    switch (m_con_params.protocol) {
+    case Protocol::TCP:
+        hints.ai_protocol = IPPROTO_TCP;
+        hints.ai_socktype = SOCK_STREAM;
+        break;
+
+    case Protocol::UDP:
+        hints.ai_protocol = IPPROTO_UDP;
+        hints.ai_socktype = SOCK_DGRAM;
+        break;
+
+    default: assert(0);
+    }
+
+    int ret = getaddrinfo(m_con_params.address.c_str(), std::to_string(m_con_params.port).c_str(), &hints, &ai);
+    if (ret != 0) {
+        throw ConnectionError(gai_strerror(ret));
+    }
+
+    int sockfd;
+    int last_errno = 0;
+    addrinfo *p;
+
+    for (p = ai; p != NULL; p = p->ai_next) {
+        errno = 0;
+        sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+
+        if (sockfd < 0) {
+            last_errno = errno;
+            continue;
+        }
+
+        if (::connect(sockfd, p->ai_addr, p->ai_addrlen) != 0) {
+            close(sockfd);
+            continue;
+        }
+
+        break;
+    }
+
+    freeaddrinfo(ai);
+
+    if (!p) {
+        char *errbuf;
+        ipx_strerror(last_errno, errbuf);
+        throw ConnectionError(errbuf);
+    }
+
+    m_sockfd = sockfd;
 }
 
 Connection::~Connection()
@@ -78,19 +135,19 @@ void
 Connection::forward_message(ipx_msg_ipfix_t *msg)
 {
     assert(is_connected());
-    assert(!m_finishing_flag);
+    assert(!m_finished);
 
     uint32_t odid = ipx_msg_ipfix_get_ctx(msg)->odid;
 
     if (m_senders.find(odid) == m_senders.end()) {
-        m_senders[odid] = std::unique_ptr<Sender>(new Sender(
-            [&](Message &msg) {
-                send_message(msg);
-            },
-            m_con_params.protocol == Protocol::TCP,
-            m_tmplts_resend_pkts,
-            m_tmplts_resend_secs
-        ));
+        m_senders.emplace(odid,
+            new Sender(
+                [&](Message &msg) {
+                    send_message(msg);
+                },
+                m_con_params.protocol == Protocol::TCP,
+                m_tmplts_resend_pkts,
+                m_tmplts_resend_secs));
     }
 
     Sender &sender = *m_senders[odid].get();
@@ -122,10 +179,14 @@ Connection::advance_transfers()
                            transfer.data.size() - transfer.offset, MSG_DONTWAIT);
 
         if (ret < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
-            IPX_CTX_ERROR(m_log_ctx, "A connection to %s lost! (%s)", m_ident.c_str(), strerror(errno));
+            char *errbuf;
+            ipx_strerror(errno, errbuf);
+
+            IPX_CTX_ERROR(m_log_ctx, "A connection to %s lost! (%s)", m_ident.c_str(), errbuf);
             close(m_sockfd);
             m_sockfd = -1;
-            throw ConnectionError(strerror(errno));
+
+            throw ConnectionError(errbuf);
         }
 
         size_t sent = std::max<ssize_t>(0, ret);
@@ -209,14 +270,15 @@ Connection::send_message(Message &msg)
     ssize_t ret = sendmsg(m_sockfd, &hdr, MSG_DONTWAIT);
 
     if (ret < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
-        ConnectionError err(strerror(errno));
+        char *errbuf;
+        ipx_strerror(errno, errbuf);
 
-        IPX_CTX_ERROR(m_log_ctx, "A connection to %s lost! (%s)", m_ident.c_str(), strerror(errno));
+        IPX_CTX_ERROR(m_log_ctx, "A connection to %s lost! (%s)", m_ident.c_str(), errbuf);
 
         close(m_sockfd);
         m_sockfd = -1;
 
-        throw err;
+        throw ConnectionError(errbuf);
     }
 
     size_t sent = std::max<ssize_t>(0, ret);

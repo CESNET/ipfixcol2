@@ -43,16 +43,17 @@
 
 Forwarder::Forwarder(Config config, ipx_ctx_t *log_ctx) :
     m_config(config),
-    m_log_ctx(log_ctx)
+    m_log_ctx(log_ctx),
+    m_reconnector(config.reconnect_secs, log_ctx)
 {
     // Set up hosts
     for (const auto &host_config : m_config.hosts) {
-        auto con_params = ConnectionParams{host_config.address, host_config.port, m_config.protocol};
-        auto host = std::unique_ptr<Host>(
-            new Host(host_config.name, std::move(con_params), m_log_ctx,
-                     m_config.tmplts_resend_pkts, m_config.tmplts_resend_secs)
-        );
-        m_hosts.push_back(std::move(host));
+        m_hosts.emplace_back(
+            new Host(host_config.name,
+                     ConnectionParams{host_config.address, host_config.port, m_config.protocol},
+                     m_log_ctx,
+                     m_config.tmplts_resend_pkts,
+                     m_config.tmplts_resend_secs));
     }
 }
 
@@ -64,7 +65,13 @@ void Forwarder::handle_session_message(ipx_msg_session_t *msg)
     case IPX_MSG_SESSION_OPEN:
         IPX_CTX_DEBUG(m_log_ctx, "New session %s", session->ident);
         for (auto &host : m_hosts) {
-            host->setup_connection(session);
+            try {
+                host->setup_connection(session);
+
+            } catch (const ConnectionError &err) {
+                assert(err.connection());
+                m_reconnector.put(*err.connection());
+            }
         }
         break;
 
@@ -79,22 +86,6 @@ void Forwarder::handle_session_message(ipx_msg_session_t *msg)
 
 void Forwarder::handle_ipfix_message(ipx_msg_ipfix_t *msg)
 {
-    // Process reconnects
-    time_t now = get_monotonic_time();
-
-    if (now - m_last_reconnect_check >= m_config.reconnect_secs) {
-        for (auto &host : m_hosts) {
-            host->process_reconnects();
-        }
-
-        m_last_reconnect_check = now;
-    }
-
-    // Advance waiting transfers
-    for (auto &host : m_hosts) {
-        host->advance_transfers();
-    }
-
     // Forward message
     switch (m_config.forward_mode) {
     case ForwardMode::SENDTOALL:
@@ -109,52 +100,17 @@ void Forwarder::handle_ipfix_message(ipx_msg_ipfix_t *msg)
     }
 }
 
-void Forwarder::finalize()
-{
-    IPX_CTX_INFO(m_log_ctx, "Forwarder is finishing...");
-
-    time_t start = get_monotonic_time();
-    time_t then = 0;
-
-    for (;;) {
-        time_t now = get_monotonic_time();
-
-        // Try reconnects every second now
-        if (now - then >= 1) {
-            for (auto &host : m_hosts) {
-                host->process_reconnects();
-            }
-
-            then = now;
-        }
-
-        // Advance transfers and keep track of how many are still waiting
-        size_t waiting_transfers_cnt = 0;
-
-        for (auto &host : m_hosts) {
-            waiting_transfers_cnt += host->advance_transfers();
-        }
-
-        // If there are no more transfers or it's taking too long, finish
-        if (waiting_transfers_cnt == 0 || now - start >= MAX_FINALIZE_WAIT_SECS) {
-
-            if (waiting_transfers_cnt > 0) {
-                IPX_CTX_WARNING(m_log_ctx, "Maximum finalize time reached, %lu transfers will be dropped!",
-                                waiting_transfers_cnt);
-            }
-
-            break;
-        }
-    }
-
-    IPX_CTX_INFO(m_log_ctx, "Forwarder finished");
-}
-
 void
 Forwarder::forward_to_all(ipx_msg_ipfix_t *msg)
 {
     for (auto &host : m_hosts) {
-        host->forward_message(msg);
+        try {
+            host->forward_message(msg);
+
+        } catch (const ConnectionError &err) {
+            assert(err.connection());
+            m_reconnector.put(*err.connection());
+        }
     }
 }
 
@@ -165,7 +121,14 @@ Forwarder::forward_round_robin(ipx_msg_ipfix_t *msg)
 
     for (size_t i = 0; i < m_hosts.size(); i++) {
         auto &host = m_hosts[m_rr_index];
-        ok = host->forward_message(msg);
+
+        try {
+            ok = host->forward_message(msg);
+
+        } catch (const ConnectionError &err) {
+            assert(err.connection());
+            m_reconnector.put(*err.connection());
+        }
 
         m_rr_index = (m_rr_index + 1) % m_hosts.size();
 
