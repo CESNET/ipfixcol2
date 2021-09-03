@@ -48,6 +48,7 @@ struct CmdArgs {
     std::string aggregate_values;
     std::string output_filter;
     std::string sort_fields;
+    std::string output_mode;
     unsigned int num_threads;
     unsigned int output_limit;
     bool translate_ip_addrs;

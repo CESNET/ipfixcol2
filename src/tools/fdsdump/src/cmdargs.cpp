@@ -58,6 +58,7 @@ print_usage()
         "  -n num     Maximum number of records to write\n"
         "  -t num     Number of threads\n"
         "  -d         Translate IP addresses to domain names\n"
+        "  -o mode    Output mode (table, json, csv)\n"
         ;
 
     printf("%s", usage);
@@ -73,6 +74,7 @@ default_args()
     args.input_filter = "true";
     args.output_filter = "true";
     args.num_threads = std::max<unsigned int>(std::thread::hardware_concurrency(), 1); //TODO
+    args.output_mode = "table";
 
     return args;
 }
@@ -84,7 +86,7 @@ parse_cmd_args(int argc, char **argv)
 
     int opt;
 
-    while ((opt = getopt(argc, argv, "hr:f:F:a:s:O:n:t:d")) != -1) {
+    while ((opt = getopt(argc, argv, "hr:f:F:a:s:O:n:t:do:")) != -1) {
         switch (opt) {
         case 'h':
             args.print_help = true;
@@ -115,6 +117,9 @@ parse_cmd_args(int argc, char **argv)
             break;
         case 'd':
             args.translate_ip_addrs = true;
+            break;
+        case 'o':
+            args.output_mode = optarg;
             break;
         default:
             throw ArgError("invalid option -" + std::string(1, opt));

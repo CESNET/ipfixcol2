@@ -34,6 +34,10 @@ add_executable(fdsdump
     src/view/print.hpp
     src/view/tableprinter.cpp
     src/view/tableprinter.hpp
+    src/view/jsonprinter.cpp
+    src/view/jsonprinter.hpp
+    src/view/csvprinter.cpp
+    src/view/csvprinter.hpp
 
     src/fdsdump.cpp
     src/cmdargs.hpp

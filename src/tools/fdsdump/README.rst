@@ -54,6 +54,13 @@ Parameters
 :``-d``:
     Attempt to translate IP addresses to domain names when printing.
 
+:``-o MODE``:
+    Output mode/format.
+
+    Possible values: ``table``, ``json``, ``csv``.
+
+    Default: ``table``.
+
 Examples
 ---------
 

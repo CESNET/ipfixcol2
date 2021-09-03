@@ -52,6 +52,8 @@
 #include "view/aggregator.hpp"
 #include "view/aggregatefilter.hpp"
 #include "view/tableprinter.hpp"
+#include "view/jsonprinter.hpp"
+#include "view/csvprinter.hpp"
 #include "view/print.hpp"
 #include "utils/util.hpp"
 #include "utils/filelist.hpp"
@@ -141,6 +143,28 @@ run(int argc, char **argv)
         args.num_threads = 1;
     }
 
+    // Set up aggregate filter
+    AggregateFilter aggregate_filter(args.output_filter.c_str(), view_def);
+
+    // Set up printer
+    std::unique_ptr<Printer> printer;
+
+    if (args.output_mode == "table") {
+        printer.reset(new TablePrinter(view_def));
+    } else if (args.output_mode == "csv") {
+        printer.reset(new CSVPrinter(view_def));
+    } else if (args.output_mode == "json") {
+        printer.reset(new JSONPrinter(view_def));
+    } else {
+        throw ArgError("invalid output mode \"" + args.output_mode + "\"");
+    }
+
+    if (auto *table_printer = dynamic_cast<TablePrinter *>(printer.get())) {
+        table_printer->m_translate_ip_addrs = args.translate_ip_addrs;
+    }
+
+    ////////////////////////////////////////////
+
     FDSReader reader(iemgr.get());
 
     unsigned long total_records = 0;
@@ -185,21 +209,21 @@ run(int argc, char **argv)
             processed_records += worker.processed_records;
         }
 
-        printf("* Aggregating - processed %lu/%lu files, %lu/%lu records over %d threads",
+        fprintf(stderr, "* Aggregating - processed %lu/%lu files, %lu/%lu records over %d threads",
                processed_files, total_files,
                processed_records, total_records,
                args.num_threads);
 
         switch (i % 4) {
-        case 0: printf("   "); break;
-        case 1: printf(".  "); break;
-        case 2: printf(".. "); break;
-        case 3: printf("..."); break;
+        case 0: fprintf(stderr, "   "); break;
+        case 1: fprintf(stderr, ".  "); break;
+        case 2: fprintf(stderr, ".. "); break;
+        case 3: fprintf(stderr, "..."); break;
         }
 
-        printf("\r");
+        fprintf(stderr, "\r");
 
-        fflush(stdout);
+        fflush(stderr);
         i++;
 
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -208,8 +232,8 @@ run(int argc, char **argv)
     //runner.join();
 
 
-    printf("* Aggregating done                                                                     \r");
-    fflush(stdout);
+    fprintf(stderr, "* Aggregating done                                                                     \r");
+    fflush(stderr);
 
     // Collect aggregators
     std::vector<Aggregator *> aggregators;
@@ -244,14 +268,7 @@ run(int argc, char **argv)
     std::chrono::steady_clock::time_point end_time = std::chrono::steady_clock::now();
 
 
-    AggregateFilter aggregate_filter(args.output_filter.c_str(), view_def);
-
-    std::unique_ptr<Printer> printer(new TablePrinter(view_def));
-    if (auto *table_printer = dynamic_cast<TablePrinter *>(printer.get())) {
-        table_printer->m_translate_ip_addrs = args.translate_ip_addrs;
-    }
-
-    printf("                                                                           \r");
+    fprintf(stderr, "                                                                           \r");
 
 
     uint64_t output_counter = 0;
