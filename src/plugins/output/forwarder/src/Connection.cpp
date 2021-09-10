@@ -177,16 +177,7 @@ Connection::advance_transfers()
         ssize_t ret = send(m_sockfd, &transfer.data[transfer.offset],
                            transfer.data.size() - transfer.offset, MSG_DONTWAIT | MSG_NOSIGNAL);
 
-        if (ret < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
-            char *errbuf;
-            ipx_strerror(errno, errbuf);
-
-            IPX_CTX_ERROR(m_log_ctx, "A connection to %s lost! (%s)", m_ident.c_str(), errbuf);
-            close(m_sockfd);
-            m_sockfd = -1;
-
-            throw ConnectionError(errbuf);
-        }
+        check_socket_error(ret);
 
         size_t sent = std::max<ssize_t>(0, ret);
         IPX_CTX_DEBUG(m_log_ctx, "Sent %zu/%zu B to %s", sent, transfer.data.size(), m_ident.c_str());
@@ -285,17 +276,7 @@ Connection::send_message(Message &msg)
 
     ssize_t ret = sendmsg(m_sockfd, &hdr, MSG_DONTWAIT | MSG_NOSIGNAL);
 
-    if (ret < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
-        char *errbuf;
-        ipx_strerror(errno, errbuf);
-
-        IPX_CTX_ERROR(m_log_ctx, "A connection to %s lost! (%s)", m_ident.c_str(), errbuf);
-
-        close(m_sockfd);
-        m_sockfd = -1;
-
-        throw ConnectionError(errbuf);
-    }
+    check_socket_error(ret);
 
     size_t sent = std::max<ssize_t>(0, ret);
 
@@ -325,4 +306,24 @@ Connection::get_or_create_sender(ipx_msg_ipfix_t *msg)
     Sender &sender = *m_senders[odid].get();
 
     return sender;
+}
+
+void
+Connection::check_socket_error(ssize_t sock_ret)
+{
+    if (sock_ret < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
+        char *errbuf;
+        ipx_strerror(errno, errbuf);
+
+        IPX_CTX_ERROR(m_log_ctx, "A connection to %s lost! (%s)", m_ident.c_str(), errbuf);
+        close(m_sockfd);
+        m_sockfd = -1;
+
+        if (m_con_params.protocol == Protocol::TCP) {
+            // In case of TCP, all state from the previous connection is lost once new one is estabilished
+            m_transfers.clear();
+        }
+
+        throw ConnectionError(errbuf);
+    }
 }

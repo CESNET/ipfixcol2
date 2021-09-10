@@ -183,4 +183,7 @@ private:
 
     Sender &
     get_or_create_sender(ipx_msg_ipfix_t *msg);
+
+    void
+    check_socket_error(ssize_t sock_ret);
 };
