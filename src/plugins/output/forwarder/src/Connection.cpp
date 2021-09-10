@@ -67,7 +67,7 @@ Connection::Connection(const std::string &ident, ConnectionParams con_params, ip
 }
 
 void
-Connection::connect()
+Connection::connect(bool is_main_thread)
 {
     addrinfo *ai;
     addrinfo hints = {};
@@ -121,12 +121,16 @@ Connection::connect()
         throw ConnectionError(errbuf);
     }
 
-    m_sockfd = sockfd;
+    if (is_main_thread) {
+        m_sockfd = sockfd;
+    } else {
+        m_atomic_sockfd = sockfd;
+    }
 }
 
 Connection::~Connection()
 {
-    if (m_sockfd >= 0) {
+    if (check_connected()) {
         close(m_sockfd);
     }
 }
@@ -134,7 +138,7 @@ Connection::~Connection()
 void
 Connection::forward_message(ipx_msg_ipfix_t *msg)
 {
-    assert(is_connected());
+    assert(check_connected());
     assert(!m_finished);
 
     Sender &sender = get_or_create_sender(msg);
@@ -160,7 +164,7 @@ Connection::lose_message(ipx_msg_ipfix_t *msg)
 void
 Connection::advance_transfers()
 {
-    assert(is_connected());
+    assert(check_connected());
 
     IPX_CTX_DEBUG(m_log_ctx, "Waiting transfers on connection %s: %zu", m_ident.c_str(), m_transfers.size());
 
@@ -203,6 +207,23 @@ Connection::advance_transfers()
         }
     }
 }
+
+bool
+Connection::check_connected()
+{
+    if (m_sockfd >= 0) {
+        return true;
+    }
+
+    if (m_atomic_sockfd >= 0) {
+        m_sockfd = m_atomic_sockfd;
+        m_atomic_sockfd = -1;
+        return true;
+    }
+
+    return false;
+}
+
 
 static Transfer
 make_transfer(const std::vector<iovec> &parts, uint16_t offset, uint16_t total_length)

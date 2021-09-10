@@ -55,7 +55,7 @@ Reconnector::run()
 
             try {
                 IPX_CTX_INFO(m_log_ctx, "Attempting to reconnect to %s", connection->ident().c_str());
-                connection->connect();
+                connection->connect(/*is_main_thread = */false);
                 IPX_CTX_WARNING(m_log_ctx, "A connection to %s reconnected", connection->ident().c_str());
                 it = m_connections.erase(it);
 

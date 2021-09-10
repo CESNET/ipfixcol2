@@ -44,6 +44,7 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
+#include <atomic>
 
 #include <ipfixcol2.h>
 
@@ -111,10 +112,11 @@ public:
 
     /**
      * \brief Connect the connection socket
+     * \param is_main_thread  Whether this is being called from the main thread
      * \throw ConnectionError if the socket couldn't be connected
      */
     void
-    connect();
+    connect(bool is_main_thread = true);
 
     /**
      * \brief Forward an IPFIX message
@@ -141,7 +143,7 @@ public:
      * \brief Check if the connection socket is currently connected
      * \return true or false
      */
-    bool is_connected() const { return m_sockfd >= 0; }
+    bool check_connected();
 
     /**
      * \brief Get number of transfers still waiting to be transmitted
@@ -166,6 +168,8 @@ private:
     unsigned int m_tmplts_resend_secs;
 
     int m_sockfd = -1;
+
+    std::atomic<int> m_atomic_sockfd{-1};
 
     std::unordered_map<uint32_t, std::unique_ptr<Sender>> m_senders;
 

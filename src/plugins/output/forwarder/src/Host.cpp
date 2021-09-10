@@ -93,7 +93,7 @@ Host::finish_connection(const ipx_session *session)
     assert(connection);
 
     // Try to send the waiting transfers if there are any, if the connection is dropped just finish anyway
-    if (connection->is_connected()) {
+    if (connection->check_connected()) {
 
         try {
             connection->advance_transfers();
@@ -123,7 +123,7 @@ Host::forward_message(ipx_msg_ipfix_t *msg)
     std::shared_ptr<Connection> &connection = m_session_to_connection[session];
     assert(connection.get());
 
-    if (!connection->is_connected()) {
+    if (!connection->check_connected()) {
         if (m_indicate_lost_msgs) {
             connection->lose_message(msg);
         }
@@ -159,7 +159,7 @@ Host::~Host()
         std::shared_ptr<Connection> &connection = p.second;
 
         // Try to send the waiting transfers if there are any, if the connection is dropped just finish anyway
-        if (connection->is_connected()) {
+        if (connection->check_connected()) {
 
             try {
                 connection->advance_transfers();
