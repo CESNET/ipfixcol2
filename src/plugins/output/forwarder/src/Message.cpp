@@ -42,15 +42,15 @@
 #include "Message.h"
 #include <cassert>
 
-static uint16_t 
+static uint16_t
 get_set_id(fds_template_type template_type)
 {
     switch (template_type) {
     case FDS_TYPE_TEMPLATE:
-        return 2;
+        return FDS_IPFIX_SET_TMPLT;
 
     case FDS_TYPE_TEMPLATE_OPTS:
-        return 3;
+        return FDS_IPFIX_SET_OPTS_TMPLT;
 
     default: assert(0);
     }
@@ -77,34 +77,27 @@ Message::add_template(const fds_template *tmplt)
 }
 
 void
-Message::add_template_withdrawal(const fds_template *tmplt)
-{
-    require_set(get_set_id(tmplt->type));
-    uint16_t wdrl[2] = { htons(tmplt->id), 0 };
-    write(&wdrl);
-    m_current_set_hdr->length += sizeof(wdrl);
-}
-
-void
 Message::add_template_withdrawal_all()
 {
-    require_set(2);
-    uint16_t wdrl2[2] = { htons(2), 0 };
+    finalize_set();
+
+    require_set(FDS_IPFIX_SET_TMPLT);
+    uint16_t wdrl2[2] = { htons(FDS_IPFIX_SET_TMPLT), 0 };
     write(&wdrl2);
     m_current_set_hdr->length += sizeof(wdrl2);
+    finalize_set();
 
-    require_set(3);
-    uint16_t wdrl3[2] = { htons(3), 0 };
+    require_set(FDS_IPFIX_SET_OPTS_TMPLT);
+    uint16_t wdrl3[2] = { htons(FDS_IPFIX_SET_OPTS_TMPLT), 0 };
     write(&wdrl3);
     m_current_set_hdr->length += sizeof(wdrl3);
+    finalize_set();
 }
 
 void
 Message::finalize()
 {
-    if (m_current_set_hdr) {
-        finalize_set();
-    }
+    finalize_set();
     m_msg_hdr->length = htons(m_length);
 
     //fprintf(stderr, "Finalizing message, length = %d\n", m_length);
@@ -169,9 +162,7 @@ void
 Message::require_set(uint16_t set_id)
 {
     if (!m_current_set_hdr || m_current_set_hdr->flowset_id != set_id) {
-        if (m_current_set_hdr) {
-            finalize_set();
-        }
+        finalize_set();
 
         //fprintf(stderr, "Starting new set\n");
 
@@ -185,7 +176,11 @@ Message::require_set(uint16_t set_id)
 void
 Message::finalize_set()
 {
-    assert(m_current_set_hdr);
+    // If there is no set, do nothing
+    if (!m_current_set_hdr) {
+        return;
+    }
+
     assert(m_current_set_hdr->length > sizeof(fds_ipfix_set_hdr));
 
     //fprintf(stderr, "Finalizing set, length = %d\n", m_current_set_hdr->length);

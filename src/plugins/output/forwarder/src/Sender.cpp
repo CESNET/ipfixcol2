@@ -165,7 +165,7 @@ Sender::process_templates(const fds_tsnapshot_t *tsnap, uint32_t next_seq_num)
 
     tsnapshot_for_each(tsnap, [&](const fds_template *tmplt) {
         // Should we start another message?
-        if (m_message.length() + tmplt->raw.length > TMPLTMSG_MAX_LENGTH && !m_message.empty()) {
+        if (m_message.length() + sizeof(fds_ipfix_set_hdr) + tmplt->raw.length > TMPLTMSG_MAX_LENGTH && !m_message.empty()) {
             m_message.finalize();
 
             emit_message();
