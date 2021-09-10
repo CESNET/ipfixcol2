@@ -87,7 +87,7 @@ struct Transfer {
 class Connection {
 public:
     /// Indicates that the connection is finished
-    bool m_finished = false;
+    std::atomic<bool> m_finished{false};
 
     /**
      * \brief The constructor
