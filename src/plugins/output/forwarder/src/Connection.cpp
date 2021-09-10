@@ -171,7 +171,7 @@ Connection::advance_transfers()
         assert(transfer.data.size() <= UINT16_MAX); // The transfer consists of one IPFIX message which cannot be larger
 
         ssize_t ret = send(m_sockfd, &transfer.data[transfer.offset],
-                           transfer.data.size() - transfer.offset, MSG_DONTWAIT);
+                           transfer.data.size() - transfer.offset, MSG_DONTWAIT | MSG_NOSIGNAL);
 
         if (ret < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
             char *errbuf;
@@ -262,7 +262,7 @@ Connection::send_message(Message &msg)
     hdr.msg_iov = &parts[0];
     hdr.msg_iovlen = parts.size();
 
-    ssize_t ret = sendmsg(m_sockfd, &hdr, MSG_DONTWAIT);
+    ssize_t ret = sendmsg(m_sockfd, &hdr, MSG_DONTWAIT | MSG_NOSIGNAL);
 
     if (ret < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
         char *errbuf;
