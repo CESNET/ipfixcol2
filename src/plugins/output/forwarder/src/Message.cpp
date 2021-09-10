@@ -99,8 +99,6 @@ Message::finalize()
 {
     finalize_set();
     m_msg_hdr->length = htons(m_length);
-
-    //fprintf(stderr, "Finalizing message, length = %d\n", m_length);
 }
 
 void
@@ -164,8 +162,6 @@ Message::require_set(uint16_t set_id)
     if (!m_current_set_hdr || m_current_set_hdr->flowset_id != set_id) {
         finalize_set();
 
-        //fprintf(stderr, "Starting new set\n");
-
         fds_ipfix_set_hdr hdr;
         hdr.flowset_id = set_id;
         hdr.length = sizeof(fds_ipfix_set_hdr);
@@ -182,8 +178,6 @@ Message::finalize_set()
     }
 
     assert(m_current_set_hdr->length > sizeof(fds_ipfix_set_hdr));
-
-    //fprintf(stderr, "Finalizing set, length = %d\n", m_current_set_hdr->length);
 
     m_current_set_hdr->flowset_id = htons(m_current_set_hdr->flowset_id);
     m_current_set_hdr->length = htons(m_current_set_hdr->length);
