@@ -162,7 +162,7 @@ Connection::advance_transfers()
 {
     assert(is_connected());
 
-    IPX_CTX_DEBUG(m_log_ctx, "Waiting transfers on connection %s: %lu", m_ident.c_str(), m_transfers.size());
+    IPX_CTX_DEBUG(m_log_ctx, "Waiting transfers on connection %s: %zu", m_ident.c_str(), m_transfers.size());
 
     for (auto it = m_transfers.begin(); it != m_transfers.end(); ) {
 
@@ -185,7 +185,7 @@ Connection::advance_transfers()
         }
 
         size_t sent = std::max<ssize_t>(0, ret);
-        IPX_CTX_DEBUG(m_log_ctx, "Sent %lu/%lu B to %s", sent, transfer.data.size(), m_ident.c_str());
+        IPX_CTX_DEBUG(m_log_ctx, "Sent %zu/%zu B to %s", sent, transfer.data.size(), m_ident.c_str());
 
         // Is the transfer done?
         if (transfer.offset + sent == transfer.data.size()) {
@@ -222,7 +222,7 @@ make_transfer(const std::vector<iovec> &parts, uint16_t offset, uint16_t total_l
     uint16_t buffer_pos = 0;
 
     for (; i < parts.size(); i++) {
-        memcpy(&buffer[buffer_pos], &((uint8_t *) parts[i].iov_base)[offset], parts[i].iov_len - offset);
+        memcpy(buffer.data() + buffer_pos, &((uint8_t *) parts[i].iov_base)[offset], parts[i].iov_len - offset);
         buffer_pos += parts[i].iov_len - offset;
         offset = 0;
     }
@@ -259,7 +259,7 @@ Connection::send_message(Message &msg)
     std::vector<iovec> &parts = msg.parts();
 
     msghdr hdr = {};
-    hdr.msg_iov = &parts[0];
+    hdr.msg_iov = parts.data();
     hdr.msg_iovlen = parts.size();
 
     ssize_t ret = sendmsg(m_sockfd, &hdr, MSG_DONTWAIT | MSG_NOSIGNAL);
@@ -278,7 +278,7 @@ Connection::send_message(Message &msg)
 
     size_t sent = std::max<ssize_t>(0, ret);
 
-    IPX_CTX_DEBUG(m_log_ctx, "Sent %lu/%lu B to %s", sent, msg.length(), m_ident.c_str());
+    IPX_CTX_DEBUG(m_log_ctx, "Sent %zu/" PRIu16 " B to %s", sent, msg.length(), m_ident.c_str());
 
     if (sent < msg.length()) {
         store_unfinished_transfer(msg, sent);

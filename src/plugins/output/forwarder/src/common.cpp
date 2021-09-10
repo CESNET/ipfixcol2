@@ -45,6 +45,7 @@
 #include <cstring>
 #include <cassert>
 
+#include <ipfixcol2.h>
 
 void
 tsnapshot_for_each(const fds_tsnapshot_t *tsnap, std::function<void(const fds_template *)> callback)
@@ -82,8 +83,10 @@ time_t
 get_monotonic_time()
 {
     timespec ts;
-    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
-        throw std::runtime_error("clock_gettime failed: " + std::string(strerror(errno)));
+    if (clock_gettime(CLOCK_MONOTONIC_COARSE, &ts) != 0) {
+        char *errbuf;
+        ipx_strerror(errno, errbuf);
+        throw std::runtime_error("clock_gettime failed: " + std::string(errbuf));
     }
     return ts.tv_sec;
 }

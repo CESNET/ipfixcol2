@@ -108,7 +108,7 @@ Sender::process_message(ipx_msg_ipfix_t *msg)
         uint16_t set_id = ntohs(set_hdr->flowset_id);
 
         // If it's not a template set, add the set as is
-        if (set_id != 2 && set_id != 3) {
+        if (set_id != FDS_IPFIX_SET_TMPLT && set_id != FDS_IPFIX_SET_OPTS_TMPLT) {
             m_message.add_set(set_hdr);
             continue;
         }
@@ -153,7 +153,6 @@ void
 Sender::lose_message(ipx_msg_ipfix_t *msg)
 {
     m_seq_num += ipx_msg_ipfix_get_drec_cnt(msg);
-    m_pkts_since_tmplts_sent++;
 }
 
 void
