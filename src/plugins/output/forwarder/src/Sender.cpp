@@ -42,23 +42,52 @@
 #include "Sender.h"
 #include <libfds.h>
 
-static int32_t
-find_drec_after_set(ipx_msg_ipfix_t *msg, fds_ipfix_set_hdr *set_hdr)
-{
-    uint32_t drec_cnt = ipx_msg_ipfix_get_drec_cnt(msg);
+class DrecsForwardIterator {
+public:
+    DrecsForwardIterator(ipx_msg_ipfix_t *msg) : m_msg(msg) {}
 
-    uint8_t *set_end = (uint8_t *) set_hdr + ntohs(set_hdr->length);
+    ipx_ipfix_record *
+    get_drec_after_set(fds_ipfix_set_hdr *set_hdr)
+    {
+        uint32_t drec_cnt = ipx_msg_ipfix_get_drec_cnt(m_msg);
+        uint8_t *set_end = (uint8_t *) set_hdr + ntohs(set_hdr->length);
 
-    for (uint32_t i = 0; i < drec_cnt; i++) {
-        const ipx_ipfix_record *drec = ipx_msg_ipfix_get_drec(msg, i);
-
-        if (drec->rec.data > set_end) {
-            return i;
+        for (; m_idx < drec_cnt; m_idx++) {
+            ipx_ipfix_record *drec = ipx_msg_ipfix_get_drec(m_msg, m_idx);
+            if (drec->rec.data > set_end) {
+                return drec;
+            }
         }
+
+        return nullptr;
     }
 
-    return -1;
-}
+    ipx_ipfix_record *
+    get_drec_in_set(fds_ipfix_set_hdr *set_hdr)
+    {
+        uint32_t drec_cnt = ipx_msg_ipfix_get_drec_cnt(m_msg);
+        uint8_t *set_start = (uint8_t *) set_hdr;
+        uint8_t *set_end = (uint8_t *) set_hdr + ntohs(set_hdr->length);
+
+        for (; m_idx < drec_cnt; m_idx++) {
+            ipx_ipfix_record *drec = ipx_msg_ipfix_get_drec(m_msg, m_idx);
+            if (drec->rec.data >= set_end) {
+                return nullptr;
+            }
+            if (drec->rec.data >= set_start) {
+                return drec;
+            }
+        }
+
+        return nullptr;
+    }
+
+    uint32_t idx() const { return m_idx; }
+
+private:
+    ipx_msg_ipfix_t *m_msg;
+    uint32_t m_idx = 0;
+};
 
 Sender::Sender(std::function<void(Message &)> emit_callback, bool do_withdrawals,
                unsigned int tmplts_resend_pkts, unsigned int tmplts_resend_secs) :
@@ -102,6 +131,10 @@ Sender::process_message(ipx_msg_ipfix_t *msg)
     size_t num_sets;
     ipx_msg_ipfix_get_sets(msg, &sets, &num_sets);
 
+    // For walking through the parsed ipfix records of the message to get a parsed ipfix record
+    // belonging to a set to retieve e.g. a template snapshot from it
+    DrecsForwardIterator drecs_iter(msg);
+
     for (size_t i = 0; i < num_sets; i++) {
 
         fds_ipfix_set_hdr *set_hdr = sets[i].ptr;
@@ -109,6 +142,15 @@ Sender::process_message(ipx_msg_ipfix_t *msg)
 
         // If it's not a template set, add the set as is
         if (set_id != FDS_IPFIX_SET_TMPLT && set_id != FDS_IPFIX_SET_OPTS_TMPLT) {
+
+            ipx_ipfix_record *drec = drecs_iter.get_drec_in_set(set_hdr);
+
+            if (!drec) {
+                // No parsed data record belonging to the set means we don't have a template
+                // Skip the data set
+                continue;
+            }
+
             m_message.add_set(set_hdr);
             continue;
         }
@@ -116,15 +158,14 @@ Sender::process_message(ipx_msg_ipfix_t *msg)
         // It is a template set...
 
         // Find first data record after the template set
-        int32_t drec_idx = find_drec_after_set(msg, set_hdr);
+        ipx_ipfix_record *drec = drecs_iter.get_drec_after_set(set_hdr);
 
         // The template set is at the end, we'll have to wait for next message to grab the template snapshot
-        if (drec_idx == -1) {
+        if (!drec) {
             break;
         }
 
         // Get template snapshot from the data record after template set
-        ipx_ipfix_record *drec = ipx_msg_ipfix_get_drec(msg, drec_idx);
         const fds_tsnapshot_t *tsnap = drec->rec.snap;
 
         // In case the template set is at the start of the message and we already sent the templates
@@ -133,7 +174,7 @@ Sender::process_message(ipx_msg_ipfix_t *msg)
         }
 
         // The next sequence number in case we'll need to start another message
-        uint32_t next_seq_num = m_seq_num + drec_idx;
+        uint32_t next_seq_num = m_seq_num + drecs_iter.idx();
 
         process_templates(tsnap, next_seq_num);
     }
