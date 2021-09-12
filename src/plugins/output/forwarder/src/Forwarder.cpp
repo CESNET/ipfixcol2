@@ -139,6 +139,6 @@ Forwarder::forward_round_robin(ipx_msg_ipfix_t *msg)
     }
 
     if (!ok) {
-        IPX_CTX_WARNING(m_log_ctx, "Couldn't forward to any of the hosts, dropping message!");
+        IPX_CTX_WARNING(m_log_ctx, "Couldn't forward to any of the hosts, dropping message!", 0);
     }
 }

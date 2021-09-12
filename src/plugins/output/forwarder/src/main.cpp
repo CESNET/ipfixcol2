@@ -71,7 +71,7 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *xml_config)
         return IPX_ERR_DENIED;
 
     } catch (const std::bad_alloc &ex) {
-        IPX_CTX_ERROR(ctx, "Memory error");
+        IPX_CTX_ERROR(ctx, "Memory error", 0);
         return IPX_ERR_DENIED;
 
     } catch (const std::runtime_error &ex) {
@@ -83,7 +83,7 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *xml_config)
         return IPX_ERR_DENIED;
 
     } catch (...) {
-        IPX_CTX_ERROR(ctx, "Caught unknown exception");
+        IPX_CTX_ERROR(ctx, "Caught unknown exception", 0);
         return IPX_ERR_DENIED;
     }
 
@@ -124,7 +124,7 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *priv, ipx_msg_t *msg)
         }
 
     } catch (const std::bad_alloc &ex) {
-        IPX_CTX_ERROR(ctx, "Memory error");
+        IPX_CTX_ERROR(ctx, "Memory error", 0);
         return IPX_ERR_DENIED;
 
     } catch (const std::runtime_error &ex) {
@@ -136,7 +136,7 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *priv, ipx_msg_t *msg)
         return IPX_ERR_DENIED;
 
     } catch (...) {
-        IPX_CTX_ERROR(ctx, "Caught unknown exception");
+        IPX_CTX_ERROR(ctx, "Caught unknown exception", 0);
         return IPX_ERR_DENIED;
     }
 

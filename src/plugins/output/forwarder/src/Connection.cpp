@@ -70,7 +70,8 @@ void
 Connection::connect(bool is_main_thread)
 {
     addrinfo *ai;
-    addrinfo hints = {};
+    addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
 
     switch (m_con_params.protocol) {
@@ -270,7 +271,8 @@ Connection::send_message(Message &msg)
 
     std::vector<iovec> &parts = msg.parts();
 
-    msghdr hdr = {};
+    msghdr hdr;
+    memset(&hdr, 0, sizeof(hdr));
     hdr.msg_iov = parts.data();
     hdr.msg_iovlen = parts.size();
 
@@ -294,13 +296,13 @@ Connection::get_or_create_sender(ipx_msg_ipfix_t *msg)
 
     if (m_senders.find(odid) == m_senders.end()) {
         m_senders.emplace(odid,
-            new Sender(
+            std::unique_ptr<Sender>(new Sender(
                 [&](Message &msg) {
                     send_message(msg);
                 },
                 m_con_params.protocol == Protocol::TCP,
                 m_tmplts_resend_pkts,
-                m_tmplts_resend_secs));
+                m_tmplts_resend_secs)));
     }
 
     Sender &sender = *m_senders[odid].get();

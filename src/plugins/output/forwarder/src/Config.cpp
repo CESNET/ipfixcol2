@@ -270,7 +270,8 @@ Config::can_resolve_host(HostConfig host)
 {
     addrinfo *info;
 
-    addrinfo hints = {};
+    addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
 
     switch (protocol) {
