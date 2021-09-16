@@ -79,6 +79,8 @@ public:
     unsigned int tmplts_resend_secs;
     /// The number of seconds to wait before trying to reconnect when using a TCP connection
     unsigned int reconnect_secs;
+    /// Number of premade connections to keep
+    unsigned int nb_premade_connections;
 
     Config() {};
 

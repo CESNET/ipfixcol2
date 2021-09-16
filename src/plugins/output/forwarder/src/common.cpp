@@ -84,9 +84,15 @@ get_monotonic_time()
 {
     timespec ts;
     if (clock_gettime(CLOCK_MONOTONIC_COARSE, &ts) != 0) {
-        char *errbuf;
-        ipx_strerror(errno, errbuf);
-        throw std::runtime_error("clock_gettime failed: " + std::string(errbuf));
+        throw errno_runtime_error(errno, "clock_gettime");
     }
     return ts.tv_sec;
+}
+
+std::runtime_error
+errno_runtime_error(int errno_, const std::string &func_name)
+{
+    char *errbuf;
+    ipx_strerror(errno_, errbuf);
+    return std::runtime_error(func_name + "() failed: " + std::string(errbuf));
 }

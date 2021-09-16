@@ -47,6 +47,7 @@
 #include <cerrno>
 #include <cstring>
 #include <ctime>
+#include <cassert>
 
 #include <netdb.h>
 #include <unistd.h>
@@ -57,90 +58,28 @@
 #include "Message.h"
 
 Connection::Connection(const std::string &ident, ConnectionParams con_params, ipx_ctx_t *log_ctx,
-                       unsigned int tmplts_resend_pkts, unsigned int tmplts_resend_secs) :
+                       unsigned int tmplts_resend_pkts, unsigned int tmplts_resend_secs,
+                       Connector &connector) :
     m_ident(ident),
     m_con_params(con_params),
     m_log_ctx(log_ctx),
     m_tmplts_resend_pkts(tmplts_resend_pkts),
-    m_tmplts_resend_secs(tmplts_resend_secs)
+    m_tmplts_resend_secs(tmplts_resend_secs),
+    m_connector(connector)
 {
 }
 
 void
-Connection::connect(bool is_main_thread)
+Connection::connect()
 {
-    addrinfo *ai;
-    addrinfo hints;
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
-
-    switch (m_con_params.protocol) {
-    case Protocol::TCP:
-        hints.ai_protocol = IPPROTO_TCP;
-        hints.ai_socktype = SOCK_STREAM;
-        break;
-
-    case Protocol::UDP:
-        hints.ai_protocol = IPPROTO_UDP;
-        hints.ai_socktype = SOCK_DGRAM;
-        break;
-
-    default: assert(0);
-    }
-
-    int ret = getaddrinfo(m_con_params.address.c_str(), std::to_string(m_con_params.port).c_str(), &hints, &ai);
-    if (ret != 0) {
-        throw ConnectionError(gai_strerror(ret));
-    }
-
-    int sockfd;
-    int last_errno = 0;
-    addrinfo *p;
-
-    for (p = ai; p != NULL; p = p->ai_next) {
-        errno = 0;
-        sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-
-        if (sockfd < 0) {
-            last_errno = errno;
-            continue;
-        }
-
-        if (::connect(sockfd, p->ai_addr, p->ai_addrlen) != 0) {
-            close(sockfd);
-            continue;
-        }
-
-        break;
-    }
-
-    freeaddrinfo(ai);
-
-    if (!p) {
-        char *errbuf;
-        ipx_strerror(last_errno, errbuf);
-        throw ConnectionError(errbuf);
-    }
-
-    if (is_main_thread) {
-        m_sockfd = sockfd;
-    } else {
-        m_atomic_sockfd = sockfd;
-    }
-}
-
-Connection::~Connection()
-{
-    if (check_connected()) {
-        close(m_sockfd);
-    }
+    assert(m_sockfd.get() < 0);
+    m_future_socket = m_connector.get(m_con_params);
 }
 
 void
 Connection::forward_message(ipx_msg_ipfix_t *msg)
 {
     assert(check_connected());
-    assert(!m_finished);
 
     Sender &sender = get_or_create_sender(msg);
     try {
@@ -156,8 +95,6 @@ Connection::forward_message(ipx_msg_ipfix_t *msg)
 void
 Connection::lose_message(ipx_msg_ipfix_t *msg)
 {
-    assert(!m_finished);
-
     Sender &sender = get_or_create_sender(msg);
     sender.lose_message(msg);
 }
@@ -175,7 +112,7 @@ Connection::advance_transfers()
 
         assert(transfer.data.size() <= UINT16_MAX); // The transfer consists of one IPFIX message which cannot be larger
 
-        ssize_t ret = send(m_sockfd, &transfer.data[transfer.offset],
+        ssize_t ret = send(m_sockfd.get(), &transfer.data[transfer.offset],
                            transfer.data.size() - transfer.offset, MSG_DONTWAIT | MSG_NOSIGNAL);
 
         check_socket_error(ret);
@@ -203,13 +140,13 @@ Connection::advance_transfers()
 bool
 Connection::check_connected()
 {
-    if (m_sockfd >= 0) {
+    if (m_sockfd.get() >= 0) {
         return true;
     }
 
-    if (m_atomic_sockfd >= 0) {
-        m_sockfd = m_atomic_sockfd;
-        m_atomic_sockfd = -1;
+    if (m_future_socket && m_future_socket->ready()) {
+        m_sockfd = m_future_socket->retrieve();
+        m_future_socket = nullptr;
         return true;
     }
 
@@ -276,7 +213,7 @@ Connection::send_message(Message &msg)
     hdr.msg_iov = parts.data();
     hdr.msg_iovlen = parts.size();
 
-    ssize_t ret = sendmsg(m_sockfd, &hdr, MSG_DONTWAIT | MSG_NOSIGNAL);
+    ssize_t ret = sendmsg(m_sockfd.get(), &hdr, MSG_DONTWAIT | MSG_NOSIGNAL);
 
     check_socket_error(ret);
 
@@ -318,8 +255,7 @@ Connection::check_socket_error(ssize_t sock_ret)
         ipx_strerror(errno, errbuf);
 
         IPX_CTX_ERROR(m_log_ctx, "A connection to %s lost! (%s)", m_ident.c_str(), errbuf);
-        close(m_sockfd);
-        m_sockfd = -1;
+        m_sockfd.reset();
 
         if (m_con_params.protocol == Protocol::TCP) {
             // In case of TCP, all state from the previous connection is lost once new one is estabilished

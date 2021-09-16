@@ -43,13 +43,15 @@
 #include <algorithm>
 
 Host::Host(const std::string &ident, ConnectionParams con_params, ipx_ctx_t *log_ctx,
-           unsigned int tmplts_resend_pkts, unsigned int tmplts_resend_secs, bool indicate_lost_msgs) :
+           unsigned int tmplts_resend_pkts, unsigned int tmplts_resend_secs, bool indicate_lost_msgs,
+           Connector &connector) :
     m_ident(ident),
     m_con_params(con_params),
     m_log_ctx(log_ctx),
     m_tmplts_resend_pkts(tmplts_resend_pkts),
     m_tmplts_resend_secs(tmplts_resend_secs),
-    m_indicate_lost_msgs(indicate_lost_msgs)
+    m_indicate_lost_msgs(indicate_lost_msgs),
+    m_connector(connector)
 {
 }
 
@@ -63,24 +65,14 @@ Host::setup_connection(const ipx_session *session)
     IPX_CTX_INFO(m_log_ctx, "Setting up new connection to %s", m_ident.c_str());
 
     m_session_to_connection.emplace(session,
-        std::make_shared<Connection>(
+        std::unique_ptr<Connection>(new Connection(
             m_ident,
             m_con_params,
             m_log_ctx,
             m_tmplts_resend_pkts,
-            m_tmplts_resend_secs));
-
-    std::shared_ptr<Connection> &connection = m_session_to_connection[session];
-
-    // Try to connect
-    try {
-        connection->connect();
-
-    } catch (const ConnectionError &err) {
-        IPX_CTX_WARNING(m_log_ctx, "Setting up new connection to %s failed! Will try to reconnect...",
-                        m_ident.c_str());
-        throw err.with_connection(connection);
-    }
+            m_tmplts_resend_secs,
+            m_connector)));
+    m_session_to_connection[session]->connect();
 }
 
 void
@@ -89,7 +81,7 @@ Host::finish_connection(const ipx_session *session)
     IPX_CTX_INFO(m_log_ctx, "Finishing a connection to %s", m_ident.c_str());
 
     // Get the corresponding connection and remove it from the session map
-    std::shared_ptr<Connection> &connection = m_session_to_connection[session];
+    std::unique_ptr<Connection> &connection = m_session_to_connection[session];
     assert(connection);
 
     // Try to send the waiting transfers if there are any, if the connection is dropped just finish anyway
@@ -110,9 +102,6 @@ Host::finish_connection(const ipx_session *session)
 
     IPX_CTX_INFO(m_log_ctx, "Connection to %s finished", m_ident.c_str());
 
-    // Indicate that the connection is finished to stop reconnector in case the connection is there
-    connection->m_finished = true;
-
     m_session_to_connection.erase(session);
 }
 
@@ -120,34 +109,34 @@ bool
 Host::forward_message(ipx_msg_ipfix_t *msg)
 {
     const ipx_session *session = ipx_msg_ipfix_get_ctx(msg)->session;
-    std::shared_ptr<Connection> &connection = m_session_to_connection[session];
-    assert(connection.get());
+    Connection &connection = *m_session_to_connection[session].get();
 
-    if (!connection->check_connected()) {
+    if (!connection.check_connected()) {
         if (m_indicate_lost_msgs) {
-            connection->lose_message(msg);
+            connection.lose_message(msg);
         }
         return false;
     }
 
     try {
-        connection->advance_transfers();
+        connection.advance_transfers();
 
-        if (connection->waiting_transfers_cnt() > 0) {
+        if (connection.waiting_transfers_cnt() > 0) {
             IPX_CTX_DEBUG(m_log_ctx, "Message to %s not forwarded because there are unsent transfers\n", m_ident.c_str());
             if (m_indicate_lost_msgs) {
-                connection->lose_message(msg);
+                connection.lose_message(msg);
             }
             return false;
         }
 
         IPX_CTX_DEBUG(m_log_ctx, "Forwarding message to %s\n", m_ident.c_str());
 
-        connection->forward_message(msg);
+        connection.forward_message(msg);
 
     } catch (const ConnectionError &err) {
-        // Rethrow the exception but include the shared_ptr to the connection
-        throw err.with_connection(connection);
+        IPX_CTX_ERROR(m_log_ctx, "Lost connection while forwarding: %s", err.what());
+        connection.connect();
+        return false;
     }
 
     return true;
@@ -156,7 +145,7 @@ Host::forward_message(ipx_msg_ipfix_t *msg)
 Host::~Host()
 {
     for (auto &p : m_session_to_connection) {
-        std::shared_ptr<Connection> &connection = p.second;
+        std::unique_ptr<Connection> &connection = p.second;
 
         // Try to send the waiting transfers if there are any, if the connection is dropped just finish anyway
         if (connection->check_connected()) {

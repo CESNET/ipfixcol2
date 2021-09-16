@@ -60,6 +60,10 @@ Parameters
     Attempt to reconnect every N seconds in case the connection drops (TCP only).
     [value: number of seconds, default: 10, 0 = don't wait]
 
+:``reconnectSecs``:
+    Keep N connections open with each host so there is no delay in connecting once a connection is needed.
+    [value: number of connections, default: 5]
+
 :``hosts``:
     The receiving hosts.
 

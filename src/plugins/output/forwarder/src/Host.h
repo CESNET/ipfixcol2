@@ -62,7 +62,8 @@ public:
      *                                   by increasing the sequence numbers
      */
     Host(const std::string &ident, ConnectionParams con_params, ipx_ctx_t *log_ctx,
-         unsigned int tmplts_resend_pkts, unsigned int tmplts_resend_secs, bool indicate_lost_msgs);
+         unsigned int tmplts_resend_pkts, unsigned int tmplts_resend_secs, bool indicate_lost_msgs,
+         Connector &connector);
 
     /**
      * Disable copy and move constructors
@@ -111,5 +112,7 @@ private:
 
     bool m_indicate_lost_msgs;
 
-    std::unordered_map<const ipx_session *, std::shared_ptr<Connection>> m_session_to_connection;
+    Connector &m_connector;
+
+    std::unordered_map<const ipx_session *, std::unique_ptr<Connection>> m_session_to_connection;
 };

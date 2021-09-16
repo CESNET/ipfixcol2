@@ -49,6 +49,7 @@
 #include <ipfixcol2.h>
 
 #include "common.h"
+#include "Connector.h"
 #include "Sender.h"
 
 class Connection;
@@ -86,9 +87,6 @@ struct Transfer {
 /// Each host opens one connection per session
 class Connection {
 public:
-    /// Indicates that the connection is finished
-    std::atomic<bool> m_finished{false};
-
     /**
      * \brief The constructor
      * \param ident               The host identification
@@ -98,7 +96,8 @@ public:
      * \param tmplts_resend_secs  Interval in seconds after which templates are resend (UDP only)
      */
     Connection(const std::string &ident, ConnectionParams con_params, ipx_ctx_t *log_ctx,
-               unsigned int tmplts_resend_pkts, unsigned int tmplts_resend_secs);
+               unsigned int tmplts_resend_pkts, unsigned int tmplts_resend_secs,
+               Connector &connector);
 
     /// Do not permit copying or moving as the connection holds a raw socket that is closed in the destructor
     /// (we could instead implement proper moving and copying behavior, but we don't really need it at the moment)
@@ -106,17 +105,11 @@ public:
     Connection(Connection &&) = delete;
 
     /**
-     * \brief The destructor
-     */
-    ~Connection();
-
-    /**
      * \brief Connect the connection socket
-     * \param is_main_thread  Whether this is being called from the main thread
      * \throw ConnectionError if the socket couldn't be connected
      */
     void
-    connect(bool is_main_thread = true);
+    connect();
 
     /**
      * \brief Forward an IPFIX message
@@ -167,13 +160,15 @@ private:
 
     unsigned int m_tmplts_resend_secs;
 
-    int m_sockfd = -1;
+    UniqueSockfd m_sockfd;
 
-    std::atomic<int> m_atomic_sockfd{-1};
+    std::shared_ptr<FutureSocket> m_future_socket;
 
     std::unordered_map<uint32_t, std::unique_ptr<Sender>> m_senders;
 
     std::vector<Transfer> m_transfers;
+
+    Connector &m_connector;
 
     void
     store_unfinished_transfer(Message &msg, uint16_t offset);

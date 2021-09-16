@@ -43,9 +43,17 @@
 
 Forwarder::Forwarder(Config config, ipx_ctx_t *log_ctx) :
     m_config(config),
-    m_log_ctx(log_ctx),
-    m_reconnector(config.reconnect_secs, log_ctx)
+    m_log_ctx(log_ctx)
 {
+    // Set up connector
+    std::vector<ConnectionParams> con_params;
+    for (const auto &host_config : m_config.hosts) {
+        con_params.push_back(ConnectionParams{host_config.address, host_config.port, m_config.protocol});
+    }
+
+    m_connector.reset(new Connector(con_params, m_config.nb_premade_connections,
+                                    m_config.reconnect_secs, m_log_ctx));
+
     // Set up hosts
     for (const auto &host_config : m_config.hosts) {
         m_hosts.emplace_back(
@@ -54,7 +62,9 @@ Forwarder::Forwarder(Config config, ipx_ctx_t *log_ctx) :
                      m_log_ctx,
                      m_config.tmplts_resend_pkts,
                      m_config.tmplts_resend_secs,
-                     m_config.forward_mode == ForwardMode::SENDTOALL));
+                     m_config.forward_mode == ForwardMode::SENDTOALL,
+                     *m_connector.get()));
+
     }
 }
 
@@ -66,13 +76,7 @@ void Forwarder::handle_session_message(ipx_msg_session_t *msg)
     case IPX_MSG_SESSION_OPEN:
         IPX_CTX_DEBUG(m_log_ctx, "New session %s", session->ident);
         for (auto &host : m_hosts) {
-            try {
-                host->setup_connection(session);
-
-            } catch (const ConnectionError &err) {
-                assert(err.connection());
-                m_reconnector.put(*err.connection());
-            }
+            host->setup_connection(session);
         }
         break;
 
@@ -105,13 +109,7 @@ void
 Forwarder::forward_to_all(ipx_msg_ipfix_t *msg)
 {
     for (auto &host : m_hosts) {
-        try {
-            host->forward_message(msg);
-
-        } catch (const ConnectionError &err) {
-            assert(err.connection());
-            m_reconnector.put(*err.connection());
-        }
+        host->forward_message(msg);
     }
 }
 
@@ -122,17 +120,8 @@ Forwarder::forward_round_robin(ipx_msg_ipfix_t *msg)
 
     for (size_t i = 0; i < m_hosts.size(); i++) {
         auto &host = m_hosts[m_rr_index];
-
-        try {
-            ok = host->forward_message(msg);
-
-        } catch (const ConnectionError &err) {
-            assert(err.connection());
-            m_reconnector.put(*err.connection());
-        }
-
+        ok = host->forward_message(msg);
         m_rr_index = (m_rr_index + 1) % m_hosts.size();
-
         if (ok) {
             break;
         }

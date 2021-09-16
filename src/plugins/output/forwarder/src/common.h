@@ -44,15 +44,19 @@
 #include <string>
 #include <functional>
 #include <cstdint>
-#include <libfds.h>
 #include <stdexcept>
+#include <unistd.h>
+#include <libfds.h>
 
-enum class Protocol {
+enum class Protocol : uint8_t {
     UNASSIGNED,
     TCP,
     UDP
 };
 
+/**
+ * \brief  Connection parameters
+ */
 struct ConnectionParams {
     /// The IP address or hostname
     std::string address;
@@ -60,6 +64,70 @@ struct ConnectionParams {
     uint16_t port;
     /// The transport protocol
     Protocol protocol;
+
+    struct Hasher {
+        size_t
+        operator()(const ConnectionParams &param) const
+        {
+            return std::hash<std::string>()(param.address)
+                ^ std::hash<uint16_t>()(param.port)
+                ^ std::hash<uint8_t>()(uint8_t(param.protocol));
+        }
+    };
+
+    bool
+    operator==(const ConnectionParams &other) const
+    {
+        return address == other.address && port == other.port && protocol == other.protocol;
+    }
+};
+
+/**
+ * \brief  RAII wrapper for socket file descriptor
+ */
+class UniqueSockfd {
+public:
+    UniqueSockfd() {}
+
+    UniqueSockfd(int sockfd) : m_fd(sockfd) {}
+
+    UniqueSockfd(const UniqueSockfd &) = delete;
+
+    UniqueSockfd &operator=(const UniqueSockfd &) = delete;
+
+    UniqueSockfd(UniqueSockfd &&other) {
+        close();
+        std::swap(m_fd, other.m_fd);
+    }
+
+    UniqueSockfd &operator=(UniqueSockfd &&other) {
+        if (this != &other) {
+            close();
+            std::swap(m_fd, other.m_fd);
+        }
+        return *this;
+    }
+
+    ~UniqueSockfd() {
+        close();
+    }
+
+    void reset(int sockfd = -1) {
+        close();
+        m_fd = sockfd;
+    }
+
+    int get() const { return m_fd; }
+
+private:
+    int m_fd = -1;
+
+    void close() {
+        if (m_fd >= 0) {
+            ::close(m_fd);
+            m_fd = -1;
+        }
+    }
 };
 
 /**
@@ -78,3 +146,12 @@ tsnapshot_for_each(const fds_tsnapshot_t *tsnap, std::function<void(const fds_te
  */
 time_t
 get_monotonic_time();
+
+/**
+ * \brief Create runtime error from errno
+ * \param errno_     The errno
+ * \param func_name  The function name to use in the error message
+ * \return The runtime error
+ */
+std::runtime_error
+errno_runtime_error(int errno_, const std::string &func_name);

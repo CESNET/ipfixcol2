@@ -48,7 +48,7 @@
 
 #include "Host.h"
 #include "common.h"
-#include "Reconnector.h"
+#include "Connector.h"
 
 /// A class representing the forwarder itself
 class Forwarder {
@@ -94,7 +94,7 @@ private:
 
     size_t m_rr_index = 0;
 
-    Reconnector m_reconnector;
+    std::unique_ptr<Connector> m_connector;
 
     void
     forward_to_all(ipx_msg_ipfix_t *msg);

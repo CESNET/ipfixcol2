@@ -62,7 +62,8 @@ enum {
     HOST,
     NAME,
     ADDRESS,
-    PORT
+    PORT,
+    PREMADE_CONNECTIONS
 };
 
 static fds_xml_args host_schema[] = {
@@ -84,6 +85,7 @@ static fds_xml_args params_schema[] = {
     FDS_OPTS_ELEM  (TEMPLATES_RESEND_SECS, "templatesResendSecs", FDS_OPTS_T_UINT  , FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM  (TEMPLATES_RESEND_PKTS, "templatesResendPkts", FDS_OPTS_T_UINT  , FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM  (RECONNECT_SECS       , "reconnectSecs"      , FDS_OPTS_T_UINT  , FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM  (PREMADE_CONNECTIONS  , "premadeConnections" , FDS_OPTS_T_UINT  , FDS_OPTS_P_OPT),
     FDS_OPTS_NESTED(HOSTS                , "hosts"              , hosts_schema     , 0             ),
     FDS_OPTS_END
 };
@@ -175,6 +177,10 @@ Config::parse_params(fds_xml_ctx_t *params_ctx)
             this->reconnect_secs = content->val_uint;
             break;
 
+        case PREMADE_CONNECTIONS:
+            this->nb_premade_connections = content->val_uint;
+            break;
+
         default: assert(0);
         }
     }
@@ -237,6 +243,7 @@ Config::set_defaults()
     this->tmplts_resend_secs = 10 * 60;
     this->tmplts_resend_pkts = 5000;
     this->reconnect_secs = 10;
+    this->nb_premade_connections = 5;
 }
 
 void
