@@ -101,9 +101,16 @@ Sender::Sender(std::function<void(Message &)> emit_callback, bool do_withdrawals
 void
 Sender::process_message(ipx_msg_ipfix_t *msg)
 {
-    // Begin the message, use the original message header with the sequence number replaced
+    // Get current real time
+    timespec realtime_ts;
+    if (clock_gettime(CLOCK_REALTIME_COARSE, &realtime_ts) != 0) {
+        throw errno_runtime_error(errno, "clock_gettime");
+    }
+
+    // Begin the message, use the original message header with the sequence number and time replaced
     fds_ipfix_msg_hdr msg_hdr = *(fds_ipfix_msg_hdr *) ipx_msg_ipfix_get_packet(msg);
     msg_hdr.seq_num = htonl(m_seq_num);
+    msg_hdr.export_time = htonl(realtime_ts.tv_sec);
 
     m_message.start(&msg_hdr);
 

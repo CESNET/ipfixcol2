@@ -60,7 +60,7 @@ Parameters
     Attempt to reconnect every N seconds in case the connection drops (TCP only).
     [value: number of seconds, default: 10, 0 = don't wait]
 
-:``reconnectSecs``:
+:``premadeConnections``:
     Keep N connections open with each host so there is no delay in connecting once a connection is needed.
     [value: number of connections, default: 5]
 
@@ -79,4 +79,10 @@ Parameters
         :``port``:
             The port to connect to.
             [value: port number]
+
+Known limitations
+-----------------
+
+Export time of IPFIX messages is set to the current time when forwarding. This may cause issues with data fields using deltaTime relative to the export time!
+
 
