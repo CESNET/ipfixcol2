@@ -49,7 +49,7 @@
 #include <ipfixcol2.h>
 
 #include "common.h"
-#include "Connector.h"
+#include "connector/Connector.h"
 #include "Sender.h"
 
 class Connection;
@@ -160,7 +160,7 @@ private:
 
     unsigned int m_tmplts_resend_secs;
 
-    UniqueSockfd m_sockfd;
+    UniqueFd m_sockfd;
 
     std::shared_ptr<FutureSocket> m_future_socket;
 

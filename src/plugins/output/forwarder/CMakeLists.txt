@@ -15,9 +15,15 @@ add_library(forwarder-output MODULE
     src/Message.cpp
     src/Sender.h
     src/Sender.cpp
-    src/Connector.h
-    src/Connector.cpp
+    src/connector/Connector.h
+    src/connector/Connector.cpp
+    src/connector/FutureSocket.h
+    src/connector/FutureSocket.cpp
+    src/connector/Pipe.h
+    src/connector/Pipe.cpp
 )
+
+target_include_directories(forwarder-output PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 install(
     TARGETS forwarder-output

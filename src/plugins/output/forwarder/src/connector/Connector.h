@@ -1,7 +1,7 @@
 /**
- * \file src/plugins/output/forwarder/src/Connector.h
+ * \file src/plugins/output/forwarder/src/connector/Connector.h
  * \author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
- * \brief Connector class header
+ * \brief Connector class
  * \date 2021
  */
 
@@ -40,99 +40,29 @@
  */
 
 #pragma once
-#include <unordered_map>
-#include <atomic>
+
 #include <vector>
 #include <memory>
-#include <cstring>
-#include <mutex>
-#include <algorithm>
+#include <unordered_map>
 #include <thread>
-#include <ctime>
-#include <cassert>
-#include <cerrno>
+#include <atomic>
 
+#include <sys/types.h>
+#include <sys/socket.h>
 #include <netdb.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <poll.h>
-#include <fcntl.h>
 
-#include <libfds.h>
 #include <ipfixcol2.h>
 
 #include "common.h"
-
-/**
- * \brief  Class representing a socket that will be connected in the future
- */
-class FutureSocket {
-public:
-    /**
-     * \brief  Check if the socket is ready to be retrieved
-     */
-    bool ready() const { return m_ready; }
-
-    /**
-     * \brief  Retrieve the result, i.e. the socket
-     */
-    UniqueSockfd retrieve() { m_ready = false; return std::move(m_sockfd); }
-
-    /**
-     * \brief  Set the result and make it ready for retrieval
-     */
-    void set_result(UniqueSockfd sockfd) { m_sockfd = std::move(sockfd); m_ready = true; }
-
-private:
-    UniqueSockfd m_sockfd;
-    std::atomic<bool> m_ready{false};
-};
-
-/**
- * \brief  Simple utility class around pipe used for interrupting poll
- */
-class Pipe {
-public:
-    /**
-     * \brief  The constructor
-     */
-    Pipe();
-
-    Pipe(const Pipe &) = delete;
-    Pipe(Pipe &&) = delete;
-
-    /**
-     * \brief  Write to the pipe to trigger its write event
-     * \param ignore_error  Do not throw on write error
-     * \throw std::runtime_erorr on write error if ignore_error is false
-     */
-    void poke(bool ignore_error = false);
-
-    /**
-     * \brief  Read everything from the pipe and throw it away
-     */
-    void clear();
-
-    /**
-     * \brief  Get the read file descriptor
-     */
-    int readfd() const { return m_readfd; }
-
-    /**
-     * \brief  The destructor
-     */
-    ~Pipe();
-
-private:
-    int m_readfd = -1;
-    int m_writefd = -1;
-};
+#include "connector/Pipe.h"
+#include "connector/FutureSocket.h"
 
 /**
  * \brief  A connector class that handles socket connections on a separate thread
  */
 class Connector {
 public:
+
     /**
      * \brief  The constructor
      *
@@ -163,16 +93,26 @@ public:
     ~Connector();
 
 private:
-    struct Task {
-        enum class State { Created, AddrResolved, Connecting, Connected, Completed, Errored };
-
-        Task(ConnectionParams params, time_t start_time = 0) : params(params), start_time(start_time) {}
-
+    struct Request {
+        // The connection parameters
         ConnectionParams params;
-        time_t start_time;
-        State state = State::Created;
-        UniqueSockfd sockfd;
+        // The future also owned by the caller
+        std::shared_ptr<FutureSocket> future;
+    };
+
+    struct Task {
+        enum class State { NotStarted, Connecting, Connected, ToBeDeleted };
+        // The connection parameters
+        ConnectionParams params;
+        // State of the task
+        State state = State::NotStarted;
+        // When should the task start
+        time_t start_time = 0;
+        // The socket
+        UniqueFd sockfd;
+        // The resolved addresses
         std::unique_ptr<struct addrinfo, decltype(&freeaddrinfo)> addrs{nullptr, &freeaddrinfo};
+        // The next address to try
         struct addrinfo *next_addr = nullptr;
     };
 
@@ -180,16 +120,12 @@ private:
     unsigned int m_reconnect_secs;
     // Mutex for shared state
     std::mutex m_mutex;
-    // The possible hosts
-    std::vector<ConnectionParams> m_hosts;
-    // Tasks to be retrieved by the worker thread
-    std::vector<Task> m_incoming_tasks;
-    // The tasks
+    // Requests to be retrieved by the worker thread
+    std::vector<Request> m_new_requests;
+    // The requests - exclusively handled by the worker thread!
+    std::vector<Request> m_requests;
+    // The tasks - exclusively handled by the worker thread!
     std::vector<Task> m_tasks;
-    // Socket requests waiting to be fulfilled
-    std::unordered_map<ConnectionParams, std::vector<std::shared_ptr<FutureSocket>>, ConnectionParams::Hasher> m_requests;
-    // Extra sockets
-    std::unordered_map<ConnectionParams, std::vector<UniqueSockfd>, ConnectionParams::Hasher> m_extra;
     // Pipe to notify for status changes
     Pipe m_statpipe;
     // The worker thread
@@ -200,25 +136,43 @@ private:
     ipx_ctx_t *m_log_ctx;
     // Number of premade connections to keep
     unsigned int m_nb_premade_connections;
+    // The poll fds
+    std::vector<struct pollfd> m_pollfds;
 
     void
-    resubmit_task(ConnectionParams host);
+    wait_for_poll_event();
 
     void
-    task_resolve_addr(Task &task);
+    cleanup_tasks();
 
     void
-    task_check_connected(Task &task);
+    process_requests();
 
     void
-    task_connect(Task &task);
+    setup_pollfds();
 
     void
-    task_complete(Task &task);
+    start_tasks();
 
     void
-    process_task(Task &task);
+    process_poll_events();
 
     void
     main_loop();
+
+    void
+    run();
+
+    void
+    on_task_start(Task &task);
+
+    void
+    on_task_poll_event(Task &task);
+
+    void
+    on_task_connected(Task &task);
+
+    void
+    on_task_failed(Task &task);
+
 };

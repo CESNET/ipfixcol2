@@ -47,6 +47,7 @@
 #include "common.h"
 #include "Config.h"
 #include "Connection.h"
+#include "connector/Connector.h"
 
 /// A class representing one of the subcollectors messages are forwarded to
 class Host {

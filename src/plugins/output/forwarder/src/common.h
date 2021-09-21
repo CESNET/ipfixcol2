@@ -83,24 +83,24 @@ struct ConnectionParams {
 };
 
 /**
- * \brief  RAII wrapper for socket file descriptor
+ * \brief  RAII wrapper for file descriptor such as a socket fd
  */
-class UniqueSockfd {
+class UniqueFd {
 public:
-    UniqueSockfd() {}
+    UniqueFd() {}
 
-    UniqueSockfd(int sockfd) : m_fd(sockfd) {}
+    UniqueFd(int fd) : m_fd(fd) {}
 
-    UniqueSockfd(const UniqueSockfd &) = delete;
+    UniqueFd(const UniqueFd &) = delete;
 
-    UniqueSockfd &operator=(const UniqueSockfd &) = delete;
+    UniqueFd &operator=(const UniqueFd &) = delete;
 
-    UniqueSockfd(UniqueSockfd &&other) {
+    UniqueFd(UniqueFd &&other) {
         close();
         std::swap(m_fd, other.m_fd);
     }
 
-    UniqueSockfd &operator=(UniqueSockfd &&other) {
+    UniqueFd &operator=(UniqueFd &&other) {
         if (this != &other) {
             close();
             std::swap(m_fd, other.m_fd);
@@ -108,13 +108,13 @@ public:
         return *this;
     }
 
-    ~UniqueSockfd() {
+    ~UniqueFd() {
         close();
     }
 
-    void reset(int sockfd = -1) {
+    void reset(int fd = -1) {
         close();
-        m_fd = sockfd;
+        m_fd = fd;
     }
 
     int get() const { return m_fd; }

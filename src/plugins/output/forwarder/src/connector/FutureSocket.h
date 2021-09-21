@@ -1,7 +1,7 @@
 /**
- * \file src/plugins/output/forwarder/src/Forwarder.h
+ * \file src/plugins/output/forwarder/src/connector/Future.h
  * \author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
- * \brief Forwarder class header
+ * \brief Future socket class
  * \date 2021
  */
 
@@ -41,64 +41,37 @@
 
 #pragma once
 
-#include "Config.h"
-
-#include <vector>
+#include <mutex>
+#include <stdexcept>
 #include <memory>
 
-#include "Host.h"
 #include "common.h"
-#include "connector/Connector.h"
 
-/// A class representing the forwarder itself
-class Forwarder {
+/**
+ * \brief  Class representing a value that will be set in the future
+ */
+class FutureSocket {
 public:
     /**
-     * \brief The constructor
-     * \param config   The forwarder configuration
-     * \param log_ctx  The logging context
+     * \brief  Check if the result is ready to be retrieved
      */
-    Forwarder(Config config, ipx_ctx_t *log_ctx);
+    bool
+    ready();
 
     /**
-     * Disable copy and move constructors
+     * \brief  Retrieve the result
      */
-    Forwarder(const Forwarder &) = delete;
-    Forwarder(Forwarder &&) = delete;
+    UniqueFd
+    retrieve();
 
     /**
-     * \brief Handle a session message
-     * \param msg  The session message
+     * \brief  Set the result and make it ready for retrieval
      */
     void
-    handle_session_message(ipx_msg_session_t *msg);
-
-    /**
-     * \brief Handle an IPFIX message
-     * \param msg  The IPFIX message
-     */
-    void
-    handle_ipfix_message(ipx_msg_ipfix_t *msg);
-
-    /**
-     * \brief The destructor - finalize the forwarder
-     */
-    ~Forwarder() {}
+    set(UniqueFd result);
 
 private:
-    Config m_config;
-
-    ipx_ctx_t *m_log_ctx;
-
-    std::vector<std::unique_ptr<Host>> m_hosts;
-
-    size_t m_rr_index = 0;
-
-    std::unique_ptr<Connector> m_connector;
-
-    void
-    forward_to_all(ipx_msg_ipfix_t *msg);
-
-    void
-    forward_round_robin(ipx_msg_ipfix_t *msg);
+    UniqueFd m_result;
+    bool m_ready = false;
+    std::mutex m_mutex;
 };

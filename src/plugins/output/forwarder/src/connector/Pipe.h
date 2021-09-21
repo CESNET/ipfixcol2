@@ -1,7 +1,7 @@
 /**
- * \file src/plugins/output/forwarder/src/Forwarder.h
+ * \file src/plugins/output/forwarder/src/connector/Pipe.h
  * \author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
- * \brief Forwarder class header
+ * \brief Pipe class
  * \date 2021
  */
 
@@ -41,64 +41,41 @@
 
 #pragma once
 
-#include "Config.h"
-
-#include <vector>
-#include <memory>
-
-#include "Host.h"
 #include "common.h"
-#include "connector/Connector.h"
 
-/// A class representing the forwarder itself
-class Forwarder {
+/**
+ * \brief  Simple utility class around pipe used for interrupting poll
+ */
+class Pipe {
 public:
     /**
-     * \brief The constructor
-     * \param config   The forwarder configuration
-     * \param log_ctx  The logging context
+     * \brief  The constructor
      */
-    Forwarder(Config config, ipx_ctx_t *log_ctx);
+    Pipe();
+
+    Pipe(const Pipe &) = delete;
+    Pipe(Pipe &&) = delete;
 
     /**
-     * Disable copy and move constructors
-     */
-    Forwarder(const Forwarder &) = delete;
-    Forwarder(Forwarder &&) = delete;
-
-    /**
-     * \brief Handle a session message
-     * \param msg  The session message
+     * \brief  Write to the pipe to trigger its write event
+     * \param ignore_error  Do not throw on write error
+     * \throw std::runtime_erorr on write error if ignore_error is false
      */
     void
-    handle_session_message(ipx_msg_session_t *msg);
+    poke(bool ignore_error = false);
 
     /**
-     * \brief Handle an IPFIX message
-     * \param msg  The IPFIX message
+     * \brief  Read everything from the pipe and throw it away
      */
     void
-    handle_ipfix_message(ipx_msg_ipfix_t *msg);
+    clear();
 
     /**
-     * \brief The destructor - finalize the forwarder
+     * \brief  Get the read file descriptor
      */
-    ~Forwarder() {}
+    int readfd() const { return m_readfd.get(); }
 
 private:
-    Config m_config;
-
-    ipx_ctx_t *m_log_ctx;
-
-    std::vector<std::unique_ptr<Host>> m_hosts;
-
-    size_t m_rr_index = 0;
-
-    std::unique_ptr<Connector> m_connector;
-
-    void
-    forward_to_all(ipx_msg_ipfix_t *msg);
-
-    void
-    forward_round_robin(ipx_msg_ipfix_t *msg);
+    UniqueFd m_readfd;
+    UniqueFd m_writefd;
 };

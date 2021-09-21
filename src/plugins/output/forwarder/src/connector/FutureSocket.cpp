@@ -1,7 +1,6 @@
 /**
- * \file src/plugins/output/forwarder/src/Forwarder.h
+ * \file src/plugins/output/forwarder/src/connector/FutureSocket.cpp
  * \author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
- * \brief Forwarder class header
  * \date 2021
  */
 
@@ -39,66 +38,33 @@
  *
  */
 
-#pragma once
+#include "FutureSocket.h"
 
-#include "Config.h"
+bool
+FutureSocket::ready()
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_ready;
+}
 
-#include <vector>
-#include <memory>
+UniqueFd
+FutureSocket::retrieve()
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (!m_ready) {
+        throw std::runtime_error("result is not ready to be retrieved");
+    }
+    m_ready = false;
+    return std::move(m_result);
+}
 
-#include "Host.h"
-#include "common.h"
-#include "connector/Connector.h"
-
-/// A class representing the forwarder itself
-class Forwarder {
-public:
-    /**
-     * \brief The constructor
-     * \param config   The forwarder configuration
-     * \param log_ctx  The logging context
-     */
-    Forwarder(Config config, ipx_ctx_t *log_ctx);
-
-    /**
-     * Disable copy and move constructors
-     */
-    Forwarder(const Forwarder &) = delete;
-    Forwarder(Forwarder &&) = delete;
-
-    /**
-     * \brief Handle a session message
-     * \param msg  The session message
-     */
-    void
-    handle_session_message(ipx_msg_session_t *msg);
-
-    /**
-     * \brief Handle an IPFIX message
-     * \param msg  The IPFIX message
-     */
-    void
-    handle_ipfix_message(ipx_msg_ipfix_t *msg);
-
-    /**
-     * \brief The destructor - finalize the forwarder
-     */
-    ~Forwarder() {}
-
-private:
-    Config m_config;
-
-    ipx_ctx_t *m_log_ctx;
-
-    std::vector<std::unique_ptr<Host>> m_hosts;
-
-    size_t m_rr_index = 0;
-
-    std::unique_ptr<Connector> m_connector;
-
-    void
-    forward_to_all(ipx_msg_ipfix_t *msg);
-
-    void
-    forward_round_robin(ipx_msg_ipfix_t *msg);
-};
+void
+FutureSocket::set(UniqueFd result)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (m_ready) {
+        throw std::runtime_error("result is already set");
+    }
+    m_result = std::move(result);
+    m_ready = true;
+}

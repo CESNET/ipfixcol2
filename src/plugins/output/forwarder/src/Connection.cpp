@@ -216,7 +216,7 @@ Connection::send_message(Message &msg)
 
     size_t sent = std::max<ssize_t>(0, ret);
 
-    IPX_CTX_DEBUG(m_log_ctx, "Sent %zu/" PRIu16 " B to %s", sent, msg.length(), m_ident.c_str());
+    IPX_CTX_DEBUG(m_log_ctx, "Sent %zu/%" PRIu16 " B to %s", sent, msg.length(), m_ident.c_str());
 
     if (sent < msg.length()) {
         store_unfinished_transfer(msg, sent);

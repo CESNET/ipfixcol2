@@ -1,7 +1,7 @@
 /**
- * \file src/plugins/output/forwarder/src/Forwarder.h
+ * \file src/plugins/output/forwarder/src/connector/Pipe.cpp
  * \author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
- * \brief Forwarder class header
+ * \brief Pipe class
  * \date 2021
  */
 
@@ -38,67 +38,50 @@
  * if advised of the possibility of such damage.
  *
  */
+#include "connector/Pipe.h"
 
-#pragma once
+#include <unistd.h>
+#include <fcntl.h>
 
-#include "Config.h"
+Pipe::Pipe()
+{
+    int fd[2];
+    if (pipe(fd) != 0) {
+        throw errno_runtime_error(errno, "pipe");
+    }
 
-#include <vector>
-#include <memory>
+    m_readfd.reset(fd[0]);
+    m_writefd.reset(fd[1]);
 
-#include "Host.h"
-#include "common.h"
-#include "connector/Connector.h"
+    int flags;
 
-/// A class representing the forwarder itself
-class Forwarder {
-public:
-    /**
-     * \brief The constructor
-     * \param config   The forwarder configuration
-     * \param log_ctx  The logging context
-     */
-    Forwarder(Config config, ipx_ctx_t *log_ctx);
+    if ((flags = fcntl(m_readfd.get(), F_GETFL)) == -1) {
+        throw errno_runtime_error(errno, "fcntl");
+    }
+    if (fcntl(m_readfd.get(), F_SETFL, flags | O_NONBLOCK) == -1) {
+        throw errno_runtime_error(errno, "fcntl");
+    }
 
-    /**
-     * Disable copy and move constructors
-     */
-    Forwarder(const Forwarder &) = delete;
-    Forwarder(Forwarder &&) = delete;
+    if ((flags = fcntl(m_writefd.get(), F_GETFL)) == -1) {
+        throw errno_runtime_error(errno, "fcntl");
+    }
+    if (fcntl(m_writefd.get(), F_SETFL, flags | O_NONBLOCK) == -1) {
+        throw errno_runtime_error(errno, "fcntl");
+    }
+}
 
-    /**
-     * \brief Handle a session message
-     * \param msg  The session message
-     */
-    void
-    handle_session_message(ipx_msg_session_t *msg);
+void
+Pipe::poke(bool ignore_error)
+{
+    ssize_t ret = write(m_writefd.get(), "\x00", 1);
+    if (ret < 0 && !ignore_error) {
+        throw errno_runtime_error(errno, "write");
+    }
+}
 
-    /**
-     * \brief Handle an IPFIX message
-     * \param msg  The IPFIX message
-     */
-    void
-    handle_ipfix_message(ipx_msg_ipfix_t *msg);
-
-    /**
-     * \brief The destructor - finalize the forwarder
-     */
-    ~Forwarder() {}
-
-private:
-    Config m_config;
-
-    ipx_ctx_t *m_log_ctx;
-
-    std::vector<std::unique_ptr<Host>> m_hosts;
-
-    size_t m_rr_index = 0;
-
-    std::unique_ptr<Connector> m_connector;
-
-    void
-    forward_to_all(ipx_msg_ipfix_t *msg);
-
-    void
-    forward_round_robin(ipx_msg_ipfix_t *msg);
-};
+void
+Pipe::clear()
+{
+    char throwaway[16];
+    while (read(m_readfd.get(), throwaway, 16) > 0) {}
+}
