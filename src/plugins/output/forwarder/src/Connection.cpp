@@ -126,10 +126,7 @@ Connection::advance_transfers()
             // Remove the transfer and continue with the next one
 
         } else {
-            // Advance the transfer if it's TCP, if it's UDP we have to send everything at once
-            if (m_con_params.protocol == Protocol::TCP) {
-                transfer.offset += sent;
-            }
+            transfer.offset += sent;
 
             // Finish, cannot advance next transfer before the one before it is fully sent
             break;
@@ -257,10 +254,8 @@ Connection::check_socket_error(ssize_t sock_ret)
         IPX_CTX_ERROR(m_log_ctx, "A connection to %s lost! (%s)", m_ident.c_str(), errbuf);
         m_sockfd.reset();
 
-        if (m_con_params.protocol == Protocol::TCP) {
-            // In case of TCP, all state from the previous connection is lost once new one is estabilished
-            m_transfers.clear();
-        }
+        // All state from the previous connection is lost once new one is estabilished
+        m_transfers.clear();
 
         throw ConnectionError(errbuf);
     }
