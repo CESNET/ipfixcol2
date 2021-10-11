@@ -167,7 +167,7 @@ private:
     on_task_start(Task &task);
 
     void
-    on_task_poll_event(Task &task);
+    on_task_poll_event(Task &task, int events);
 
     void
     on_task_connected(Task &task);
@@ -175,4 +175,6 @@ private:
     void
     on_task_failed(Task &task);
 
+    bool
+    should_restart(Task &task);
 };

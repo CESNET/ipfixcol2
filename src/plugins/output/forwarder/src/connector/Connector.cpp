@@ -102,9 +102,13 @@ Connector::process_poll_events()
         if (!m_pollfds[i].revents) {
             continue;
         }
-
+        /*
+        const char *statestr[] = {"NotStarted", "Connecting", "Connected", "ToBeDeleted"};
+        IPX_CTX_INFO(m_log_ctx, "[%d] Poll event %u Task %s:%" PRIu16 " State %s", i, m_pollfds[i].revents,
+                     m_tasks[i].params.address.c_str(), m_tasks[i].params.port, statestr[(int)m_tasks[i].state]);
+        */
         try {
-            on_task_poll_event(m_tasks[i]);
+            on_task_poll_event(m_tasks[i], m_pollfds[i].revents);
 
         } catch (const std::runtime_error &err) {
             IPX_CTX_INFO(m_log_ctx, "Connecting to %s:%" PRIu16 " failed - %s",
@@ -255,6 +259,16 @@ Connector::main_loop()
 
         cleanup_tasks();
 
+        /*
+        IPX_CTX_INFO(m_log_ctx, "Tasks: %d, Requests: %d", m_tasks.size(), m_requests.size());
+        int i = 0;
+        for (const auto &task : m_tasks) {
+            i++;
+            const char *statestr[] = {"NotStarted", "Connecting", "Connected", "ToBeDeleted"};
+            IPX_CTX_INFO(m_log_ctx, "[%d] Task %s:%" PRIu16 "  State %s  StartTime %d", i,
+                         task.params.address.c_str(), task.params.port, statestr[(int)task.state], task.start_time);
+        }
+        */
         setup_pollfds();
 
         wait_for_poll_event();
@@ -420,11 +434,18 @@ Connector::on_task_start(Task &task)
  * Handle poll event on the task socket
  */
 void
-Connector::on_task_poll_event(Task &task)
+Connector::on_task_poll_event(Task &task, int events)
 {
     // If the connection is connected and we got a poll event, the connection probably dropped
     if (task.state == Task::State::Connected) {
         throw_if_socket_error(task.sockfd.get());
+
+        if (events & POLLERR) {
+            // Just in case getsockopt(SO_ERROR) didn't return any error but we got an error from the poll event,
+            // not sure if this can happen, but just to be safe
+            throw std::runtime_error("socket error");
+        }
+
         return;
     }
 
@@ -441,6 +462,7 @@ Connector::on_task_poll_event(Task &task)
         }
         task.sockfd = connect_next(task.next_addr);
     }
+
 }
 
 /**
@@ -460,6 +482,14 @@ Connector::on_task_connected(Task &task)
         if (request.params == task.params && request.future.use_count() > 1) {
             request.future->set(std::move(task.sockfd));
             m_requests.erase(it);
+
+            // If this was a premade connection, restart the task
+            if (!should_restart(task)) {
+                task.state = Task::State::ToBeDeleted;
+            } else {
+                task.start_time = 0;
+                task.state = Task::State::NotStarted;
+            }
             return;
         }
     }
@@ -490,7 +520,7 @@ void
 Connector::on_task_failed(Task &task)
 {
     std::unique_lock<std::mutex> lock(m_mutex);
-
+#if 0
     // Count how many connections are required to see if we want to restart the task or throw it away.
     // This is needed because a connection request may be cancelled before it is resolved, in which case we might
     // end up with too many extra connections.
@@ -510,9 +540,9 @@ Connector::on_task_failed(Task &task)
             required--;
         }
     }
-
+#endif
     // Don't restart the task, there is no need
-    if (required < 0) {
+    if (!should_restart(task)) {
         task.state = Task::State::ToBeDeleted;
         return;
     }
@@ -524,4 +554,30 @@ Connector::on_task_failed(Task &task)
 
     IPX_CTX_INFO(m_log_ctx, "Retrying connection to %s:%" PRIu16 " in %u seconds",
              task.params.address.c_str(), task.params.port, m_reconnect_secs);
+}
+
+bool
+Connector::should_restart(Task &task)
+{
+    // Count how many connections are required to see if we want to restart the task or throw it away.
+    // This is needed because a connection request may be cancelled before it is resolved, in which case we might
+    // end up with too many extra connections.
+    long long required = m_nb_premade_connections;
+
+    // Count requests for this host that are still waiting for a socket
+    for (const auto &request : m_requests) {
+        // If the use_count is 1 it's only the Connector holding a reference to it -> the future was cancelled
+        if (task.params == request.params && request.future.use_count() > 1) {
+            required++;
+        }
+    }
+
+    // How many tasks that are connected or might still successfully connect are there
+    for (const auto &task_ : m_tasks) {
+        if (&task != &task_ && task_.state != Task::State::ToBeDeleted && task.params == task_.params) {
+            required--;
+        }
+    }
+
+    return required > 0;
 }
