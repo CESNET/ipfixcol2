@@ -480,9 +480,10 @@ cfg_parse_tcp(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct conf_params *cfg, enum
     // Prepare the TRAP interface specification
     char *res = NULL;
     const char *trap_ifc = (type == SPEC_TCP) ? "t" : "T";
-    if (cfg_str_append(&res, "%s:%" PRIu16 ":%" PRIu64, trap_ifc, port, max_conn) != IPX_OK
+    if (cfg_str_append(&res, "%s:%" PRIu16, trap_ifc, port) != IPX_OK
         || (type == SPEC_TCP_TLS
-            && cfg_str_append(&res, ":%s:%s:%s", file_key, file_cert, file_ca) != IPX_OK)) {
+            && cfg_str_append(&res, ":%s:%s:%s", file_key, file_cert, file_ca) != IPX_OK)
+        || (cfg_str_append(&res, ":max_clients=%" PRIu64, max_conn) != IPX_OK)) {
         IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
         free(file_ca); free(file_cert); free(file_key);
         free(res);
@@ -544,7 +545,7 @@ cfg_parse_unix(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct conf_params *cfg)
 
     // Prepare the TRAP interface specification
     char *res = NULL;
-    if (cfg_str_append(&res, "u:%s:%" PRIu64, name, max_conn) != IPX_OK) {
+    if (cfg_str_append(&res, "u:%s:max_clients=%" PRIu64, name, max_conn) != IPX_OK) {
         IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
         free(name);
         return IPX_ERR_NOMEM;
