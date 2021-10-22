@@ -67,7 +67,7 @@ print_usage()
 static CmdArgs
 default_args()
 {
-    CmdArgs args;
+    CmdArgs args = {};
 
     args.aggregate_keys = "srcip,srcport,dstip,dstport,proto";
     args.aggregate_values = "packets,bytes";

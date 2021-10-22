@@ -765,7 +765,7 @@ make_top_n(const ViewDefinition &def, std::vector<Aggregator *> &aggregators, si
             }
         }
 
-        bool any;
+        bool any = false;
 
         for (auto *aggregator : aggregators) {
             //aggregator->m_table.m_debug = true;
