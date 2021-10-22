@@ -174,6 +174,16 @@ load_view_value(const ViewField &view_field, fds_drec_field &drec_field, ViewVal
     case DataType::DateTime:
         value.ts_millisecs = get_datetime(drec_field);
         break;
+    case DataType::IPv4Address:
+        memcpy(&value.ipv4, drec_field.data, sizeof(value.ipv4));
+        break;
+    case DataType::IPv6Address:
+        memcpy(&value.ipv6, drec_field.data, sizeof(value.ipv6));
+        break;
+    case DataType::IPAddress:
+        value.ip.length = drec_field.size;
+        memcpy(&value.ip.address, drec_field.data, drec_field.size);
+        break;
     case DataType::MacAddress:
         memcpy(value.mac, drec_field.data, 6);
         break;
@@ -588,8 +598,8 @@ aggregate_value(const ViewField &aggregate_field, fds_drec &drec, ViewValue *val
 }
 
 Aggregator::Aggregator(ViewDefinition view_def) :
-    m_view_def(view_def),
     m_table(view_def.keys_size, view_def.values_size),
+    m_view_def(view_def),
     m_key_buffer(view_def.keys_size)
 {
 }

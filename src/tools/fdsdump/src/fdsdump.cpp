@@ -186,7 +186,7 @@ run(int argc, char **argv)
     // Set up and run workers
     std::vector<AggregateWorker> workers;
 
-    for (int i = 0; i < args.num_threads; i++) {
+    for (size_t i = 0; i < args.num_threads; i++) {
         AggregateWorker worker;
         worker.iemgr = make_iemgr();
         worker.view_def = view_def;

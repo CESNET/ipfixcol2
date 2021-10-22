@@ -308,6 +308,70 @@ configure_keys(const std::string &options, ViewDefinition &view_def, fds_iemgr_t
             view_def.biflow_enabled = true;
             view_def.key_fields.push_back(field);
 
+        } else if (key == "srcipv4") {
+            field.pen = IPFIX::iana;
+            field.id = IPFIX::sourceIPv4Address;
+            field.data_type = DataType::IPv4Address;
+            field.name = "srcipv4";
+            field.size = sizeof(ViewValue::ipv4);
+            field.kind = ViewFieldKind::VerbatimKey;
+            field.offset = view_def.keys_size;
+            view_def.keys_size += sizeof(ViewValue::ipv4);
+            view_def.key_fields.push_back(field);
+
+        } else if (key == "dstipv4") {
+            field.pen = IPFIX::iana;
+            field.id = IPFIX::destinationIPv4Address;
+            field.data_type = DataType::IPv4Address;
+            field.name = "dstipv4";
+            field.size = sizeof(ViewValue::ipv4);
+            field.kind = ViewFieldKind::VerbatimKey;
+            field.offset = view_def.keys_size;
+            view_def.keys_size += sizeof(ViewValue::ipv4);
+            view_def.key_fields.push_back(field);
+
+        } else if (key == "srcipv6") {
+            field.pen = IPFIX::iana;
+            field.id = IPFIX::sourceIPv6Address;
+            field.data_type = DataType::IPv6Address;
+            field.size = sizeof(ViewValue::ipv6);
+            field.kind = ViewFieldKind::VerbatimKey;
+            field.name = "srcipv6";
+            field.offset = view_def.keys_size;
+            view_def.keys_size += sizeof(ViewValue::ipv6);
+            view_def.key_fields.push_back(field);
+
+        } else if (key == "dstipv6") {
+            field.pen = IPFIX::iana;
+            field.id = IPFIX::destinationIPv6Address;
+            field.data_type = DataType::IPv6Address;
+            field.name = "dstipv6";
+            field.size = sizeof(ViewValue::ipv6);
+            field.kind = ViewFieldKind::VerbatimKey;
+            field.offset = view_def.keys_size;
+            view_def.keys_size += sizeof(ViewValue::ipv6);
+            view_def.key_fields.push_back(field);
+
+        } else if (key == "ipv4") {
+            field.data_type = DataType::IPv4Address;
+            field.size = sizeof(ViewValue::ipv4);
+            field.kind = ViewFieldKind::BidirectionalIPv4SubnetKey;
+            field.name = "ipv4";
+            view_def.bidirectional = true;
+            field.offset = view_def.keys_size;
+            view_def.keys_size += sizeof(ViewValue::ipv4);
+            view_def.key_fields.push_back(field);
+
+        } else if (key == "ipv6") {
+            field.data_type = DataType::IPv6Address;
+            field.size = sizeof(ViewValue::ipv6);
+            field.kind = ViewFieldKind::BidirectionalIPv6SubnetKey;
+            field.name = "ipv6";
+            view_def.bidirectional = true;
+            field.offset = view_def.keys_size;
+            view_def.keys_size += sizeof(ViewValue::ipv6);
+            view_def.key_fields.push_back(field);
+
         } else {
             const fds_iemgr_elem *elem = fds_iemgr_elem_find_name(iemgr, key.c_str());
             if (!elem) {

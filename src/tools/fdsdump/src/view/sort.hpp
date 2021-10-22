@@ -44,12 +44,17 @@
 #include <string>
 #include <functional>
 
+enum class SortDir {
+    Ascending,
+    Descending
+};
+
 /**
  * \brief      A field to sort on
  */
 struct SortField {
     ViewField *field;
-    bool ascending;
+    SortDir dir;
 };
 
 /**

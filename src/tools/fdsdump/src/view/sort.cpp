@@ -41,8 +41,33 @@
 #include <algorithm>
 
 #include "common.hpp"
+#include "ipfix/informationelements.hpp"
 #include "view/view.hpp"
 #include "utils/util.hpp"
+
+static SortDir
+get_default_sort_dir(ViewField *field)
+{
+    //TODO
+    if (field->kind == ViewFieldKind::VerbatimKey && field->pen == IPFIX::iana && field->id == IPFIX::protocolIdentifier) {
+        return SortDir::Ascending;
+    }
+
+    if (field->kind == ViewFieldKind::BidirectionalPortKey) {
+        return SortDir::Ascending;
+    }
+
+    switch (field->data_type) {
+    case DataType::IPv4Address:
+    case DataType::IPv6Address:
+    case DataType::IPAddress:
+    case DataType::MacAddress:
+        return SortDir::Ascending;
+
+    default:
+        return SortDir::Descending;
+    }
+}
 
 std::vector<SortField>
 make_sort_def(ViewDefinition &def, const std::string &sort_fields_str)
@@ -64,19 +89,21 @@ make_sort_def(ViewDefinition &def, const std::string &sort_fields_str)
 
         const std::string &field_name = pieces[0];
 
-        if (pieces.size() == 2) {
-            if (pieces[1] == "asc") {
-                sort_field.ascending = true;
-            } else if (pieces[1] == "desc") {
-                sort_field.ascending = false;
-            } else {
-                throw ArgError("Invalid sort field \"" + sort_field_str + "\" - invalid ordering");
-            }
-        }
-
         sort_field.field = find_field(def, field_name);
         if (!sort_field.field) {
             throw ArgError("Invalid sort field \"" + sort_field_str + "\" - field not found");
+        }
+
+        if (pieces.size() == 2) {
+            if (pieces[1] == "asc") {
+                sort_field.dir = SortDir::Ascending;
+            } else if (pieces[1] == "desc") {
+                sort_field.dir = SortDir::Descending;
+            } else {
+                throw ArgError("Invalid sort field \"" + sort_field_str + "\" - invalid ordering");
+            }
+        } else {
+            sort_field.dir = get_default_sort_dir(sort_field.field);
         }
 
         sort_fields.push_back(sort_field);
@@ -89,15 +116,44 @@ static int
 compare_values(const ViewField &field, const ViewValue &a, const ViewValue &b)
 {
     switch (field.data_type) {
+    case DataType::Unsigned8:
+        return a.u8 - b.u8;
+
+    case DataType::Signed8:
+        return a.i8 - b.i8;
+
+    case DataType::Unsigned16:
+        return a.u16 - b.u16;
+
+    case DataType::Signed16:
+        return a.i16 - b.i16;
+
+    case DataType::Unsigned32:
+        return a.u32 - b.u32;
+
+    case DataType::Signed32:
+        return a.i32 - b.i32;
+
     case DataType::DateTime:
     case DataType::Unsigned64:
-        return a.u64 > b.u64 ? 1 : (a.u64 < b.u64 ? -1 : 0);
+        return a.u64 - b.u64;
 
     case DataType::Signed64:
-        return a.i64 > b.i64 ? 1 : (a.i64 < b.i64 ? -1 : 0);
+        return a.i64 - b.i64;
+
+    case DataType::IPv4Address:
+        return memcmp(a.ipv4, b.ipv6, sizeof(a.ipv4));
+
+    case DataType::IPv6Address:
+        return memcmp(a.ipv6, b.ipv6, sizeof(a.ipv6));
+
+    case DataType::IPAddress:
+        return a.ip.length != b.ip.length ? a.ip.length - b.ip.length
+            : a.ip.length == 4 ? memcmp(a.ipv4, b.ipv4, sizeof(a.ipv4))
+            : memcmp(a.ipv6, b.ipv6, sizeof(a.ipv6));
 
     default:
-        assert(0);
+        assert(0 && "Comparison not implemented for data type");
     }
 }
 
@@ -108,7 +164,7 @@ compare_records(SortField sort_field, const ViewDefinition &def, uint8_t *record
                                 *(ViewValue *) (record + sort_field.field->offset),
                                 *(ViewValue *) (other_record + sort_field.field->offset));
 
-    if (sort_field.ascending) {
+    if (sort_field.dir == SortDir::Ascending) {
         result = -result;
     }
 
@@ -126,7 +182,7 @@ compare_records(const std::vector<SortField> &sort_fields, const ViewDefinition 
                                 *(ViewValue *) (other_record + sort_field.field->offset));
 
         if (result != 0) {
-            if (sort_field.ascending) {
+            if (sort_field.dir == SortDir::Ascending) {
                 result = -result;
             }
             break;
