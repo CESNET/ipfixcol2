@@ -59,6 +59,7 @@ print_usage()
         "  -t num     Number of threads\n"
         "  -d         Translate IP addresses to domain names\n"
         "  -o mode    Output mode (table, json, csv)\n"
+        "  -I         Collect and print basic stats\n"
         ;
 
     printf("%s", usage);
@@ -86,7 +87,7 @@ parse_cmd_args(int argc, char **argv)
 
     int opt;
 
-    while ((opt = getopt(argc, argv, "hr:f:F:a:s:O:n:t:do:")) != -1) {
+    while ((opt = getopt(argc, argv, "hr:f:F:a:s:O:n:t:do:I")) != -1) {
         switch (opt) {
         case 'h':
             args.print_help = true;
@@ -120,6 +121,9 @@ parse_cmd_args(int argc, char **argv)
             break;
         case 'o':
             args.output_mode = optarg;
+            break;
+        case 'I':
+            args.stats = true;
             break;
         default:
             throw ArgError("invalid option -" + std::string(1, opt));

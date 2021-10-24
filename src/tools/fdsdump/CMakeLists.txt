@@ -21,6 +21,8 @@ add_executable(fdsdump
     src/ipfix/informationelements.hpp
     src/ipfix/util.cpp
     src/ipfix/util.hpp
+    src/ipfix/stats.cpp
+    src/ipfix/stats.hpp
 
     src/view/aggregator.cpp
     src/view/aggregator.hpp

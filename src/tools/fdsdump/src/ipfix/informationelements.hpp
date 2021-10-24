@@ -58,7 +58,15 @@ enum ID : uint16_t
     destinationTransportPort = 11,
     destinationIPv4Address = 12,
     sourceIPv6Address = 27,
-    destinationIPv6Address = 28
+    destinationIPv6Address = 28,
+    flowStartSeconds = 150,
+    flowEndSeconds = 151,
+    flowStartMilliseconds = 152,
+    flowEndMilliseconds = 153,
+    flowStartMicroseconds = 154,
+    flowEndMicroseconds = 155,
+    flowStartNanoseconds = 156,
+    flowEndNanoseconds = 157
 };
 
 };

@@ -49,6 +49,7 @@
 #include "cmdargs.hpp"
 #include "ipfix/fdsreader.hpp"
 #include "ipfix/ipfixfilter.hpp"
+#include "ipfix/stats.hpp"
 #include "view/aggregator.hpp"
 #include "view/aggregatefilter.hpp"
 #include "view/tableprinter.hpp"
@@ -181,6 +182,22 @@ run(int argc, char **argv)
             total_file_bytes += statbuf.st_size;
         }
 
+    }
+
+    if (args.stats) {
+        // Stats only
+        // TODO: Also allow this option to run on multiple threads and also alongside other options
+        Stats stats;
+        for (const auto &file : file_list) {
+            reader.set_file(file);
+            fds_drec drec;
+            while (reader.read_record(drec)) {
+                stats.process_record(drec);
+            }
+        }
+        stats.print();
+
+        return;
     }
 
     // Set up and run workers

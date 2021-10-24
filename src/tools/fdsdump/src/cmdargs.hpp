@@ -53,6 +53,7 @@ struct CmdArgs {
     unsigned int output_limit;
     bool translate_ip_addrs;
     bool print_help;
+    bool stats;
 };
 
 /**
