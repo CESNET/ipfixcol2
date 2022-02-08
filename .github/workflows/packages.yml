@@ -125,11 +125,6 @@ jobs:
         yum -y install git gcc gcc-c++ cmake make libxml2-devel lz4-devel libzstd-devel
         yum -y install zlib-devel pkgconfig rpm-build librdkafka-devel
         yum -y install python3-docutils || yum -y install python-docutils
-    - name: Install depedencies for libfds and IPFIXcol2 (Fedora)
-      if: startsWith(matrix.image, 'fedora')
-      run: |
-        dnf -y install git gcc gcc-c++ cmake make libxml2-devel lz4-devel libzstd-devel
-        dnf -y install python3-docutils zlib-devel pkgconfig rpm-build librdkafka-devel
 
     # Build LIBFDS RPM package ---------------------------------------------------------------
     - name: Checkout libfds library - master branch
