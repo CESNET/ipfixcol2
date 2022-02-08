@@ -1,7 +1,7 @@
 /**
- * \file src/plugins/output/forwarder/src/Forwarder.h
+ * \file src/plugins/output/forwarder/src/Host.h
  * \author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
- * \brief Forwarder class header
+ * \brief Host class header
  * \date 2021
  */
 
@@ -41,64 +41,79 @@
 
 #pragma once
 
-#include "Config.h"
-
-#include <vector>
+#include <unordered_map>
 #include <memory>
-
-#include "Host.h"
+#include <ipfixcol2.h>
 #include "common.h"
+#include "Config.h"
+#include "Connection.h"
 #include "connector/Connector.h"
 
-/// A class representing the forwarder itself
-class Forwarder {
+/// A class representing one of the subcollectors messages are forwarded to
+class Host {
 public:
     /**
      * \brief The constructor
-     * \param config   The forwarder configuration
-     * \param log_ctx  The logging context
+     * \param ident                      The host identification
+     * \param con_params                 The connection parameters
+     * \param log_ctx                    The logging context
+     * \param tmplts_resend_pkts         Interval in packets after which templates are resend (UDP only)
+     * \param tmplts_resend_secs         Interval in seconds after which templates are resend (UDP only)
+     * \param indicate_lost_msgs         Indicate that the message has been lost if it couldn't be forwarded
+     *                                   by increasing the sequence numbers
      */
-    Forwarder(Config config, ipx_ctx_t *log_ctx);
+    Host(const std::string &ident, ConnectionParams con_params, ipx_ctx_t *log_ctx,
+         unsigned int tmplts_resend_pkts, unsigned int tmplts_resend_secs, bool indicate_lost_msgs,
+         Connector &connector);
 
     /**
      * Disable copy and move constructors
      */
-    Forwarder(const Forwarder &) = delete;
-    Forwarder(Forwarder &&) = delete;
+    Host(const Host &) = delete;
+    Host(Host &&) = delete;
 
     /**
-     * \brief Handle a session message
-     * \param msg  The session message
+     * \brief The destructor - finishes all the connections
+     */
+    ~Host();
+
+    /**
+     * \brief Set up a new connection for the sesison
+     * \param session  The session
      */
     void
-    handle_session_message(ipx_msg_session_t *msg);
+    setup_connection(const ipx_session *session);
 
     /**
-     * \brief Handle an IPFIX message
+     * \brief Finish a connection for the sesison
+     * \param session  The session
+     */
+    void
+    finish_connection(const ipx_session *session);
+
+    /**
+     * \brief Forward an IPFIX message to this host
      * \param msg  The IPFIX message
+     * \return true on success, false on failure
+     * \throw ConnectionError when the connection fails
      */
-    void
-    handle_ipfix_message(ipx_msg_ipfix_t *msg);
-
-    /**
-     * \brief The destructor - finalize the forwarder
-     */
-    ~Forwarder() {}
+    bool
+    forward_message(ipx_msg_ipfix_t *msg);
 
 private:
-    Config m_config;
+    const std::string &m_ident;
+
+    ConnectionParams m_con_params;
 
     ipx_ctx_t *m_log_ctx;
 
-    std::vector<std::unique_ptr<Host>> m_hosts;
+    unsigned int m_tmplts_resend_pkts;
 
-    size_t m_rr_index = 0;
+    unsigned int m_tmplts_resend_secs;
 
-    std::unique_ptr<Connector> m_connector;
+    bool m_indicate_lost_msgs;
 
-    void
-    forward_to_all(ipx_msg_ipfix_t *msg);
+    Connector &m_connector;
 
-    void
-    forward_round_robin(ipx_msg_ipfix_t *msg);
+    std::unordered_map<const ipx_session *, std::unique_ptr<Connection>> m_session_to_connection;
 };

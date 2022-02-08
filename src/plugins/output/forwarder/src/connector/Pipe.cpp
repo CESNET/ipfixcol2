@@ -1,7 +1,7 @@
 /**
- * \file src/plugins/output/forwarder/src/SyncPipe.h
+ * \file src/plugins/output/forwarder/src/connector/Pipe.cpp
  * \author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
- * \brief Pipe used for synchronization of threads (when waiting on select)
+ * \brief Pipe class
  * \date 2021
  */
 
@@ -38,55 +38,50 @@
  * if advised of the possibility of such damage.
  *
  */
-
-#pragma once
+#include "connector/Pipe.h"
 
 #include <unistd.h>
 #include <fcntl.h>
 
-#include <string>
-
-class SyncPipe
+Pipe::Pipe()
 {
-public:
-    SyncPipe()
-    {
-        int pipefd[2];
-        if (pipe(pipefd) != 0) {
-            throw std::string("Cannot create pipe");
-        }
-        readfd = pipefd[0];
-        writefd = pipefd[1];
-
-        int flags = fcntl(readfd, F_GETFL, 0);
-        fcntl(readfd, F_SETFL, flags | O_NONBLOCK);
+    int fd[2];
+    if (pipe(fd) != 0) {
+        throw errno_runtime_error(errno, "pipe");
     }
 
-    void
-    notify()
-    {
-        write(writefd, "A", 1);
+    m_readfd.reset(fd[0]);
+    m_writefd.reset(fd[1]);
+
+    int flags;
+
+    if ((flags = fcntl(m_readfd.get(), F_GETFL)) == -1) {
+        throw errno_runtime_error(errno, "fcntl");
+    }
+    if (fcntl(m_readfd.get(), F_SETFL, flags | O_NONBLOCK) == -1) {
+        throw errno_runtime_error(errno, "fcntl");
     }
 
-    void
-    clear()
-    {
-        char discard_buffer[128];
-        while (1) {
-            int n = read(readfd, discard_buffer, 128);
-            if (n < 128) {
-                break;
-            }
-        }
+    if ((flags = fcntl(m_writefd.get(), F_GETFL)) == -1) {
+        throw errno_runtime_error(errno, "fcntl");
     }
-
-    int
-    get_readfd()
-    {
-        return readfd;
+    if (fcntl(m_writefd.get(), F_SETFL, flags | O_NONBLOCK) == -1) {
+        throw errno_runtime_error(errno, "fcntl");
     }
+}
 
-private:
-    int readfd;
-    int writefd;
-};
+void
+Pipe::poke(bool ignore_error)
+{
+    ssize_t ret = write(m_writefd.get(), "\x00", 1);
+    if (ret < 0 && !ignore_error) {
+        throw errno_runtime_error(errno, "write");
+    }
+}
+
+void
+Pipe::clear()
+{
+    char throwaway[16];
+    while (read(m_readfd.get(), throwaway, 16) > 0) {}
+}

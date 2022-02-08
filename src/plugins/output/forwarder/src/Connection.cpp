@@ -1,7 +1,7 @@
 /**
  * \file src/plugins/output/forwarder/src/Connection.cpp
  * \author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
- * \brief Buffered socket connection
+ * \brief Connection class implementation
  * \date 2021
  */
 
@@ -41,90 +41,222 @@
 
 #include "Connection.h"
 
+#include <stdexcept>
+#include <algorithm>
+#include <cinttypes>
+#include <cerrno>
+#include <cstring>
+#include <ctime>
+#include <cassert>
+
+#include <netdb.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+
 #include <libfds.h>
 
-Connection::Connection(ConnectionManager &manager, ConnectionParams params, long buffer_size)
-: manager(manager)
-, params(params)
-, buffer(buffer_size)
+#include "Message.h"
+
+Connection::Connection(const std::string &ident, ConnectionParams con_params, ipx_ctx_t *log_ctx,
+                       unsigned int tmplts_resend_pkts, unsigned int tmplts_resend_secs,
+                       Connector &connector) :
+    m_ident(ident),
+    m_con_params(con_params),
+    m_log_ctx(log_ctx),
+    m_tmplts_resend_pkts(tmplts_resend_pkts),
+    m_tmplts_resend_secs(tmplts_resend_secs),
+    m_connector(connector)
 {
 }
 
-bool
+void
 Connection::connect()
 {
-    if (sockfd >= 0) {
-        ::close(sockfd);
+    assert(m_sockfd.get() < 0);
+    m_future_socket = m_connector.get(m_con_params);
+}
+
+void
+Connection::forward_message(ipx_msg_ipfix_t *msg)
+{
+    assert(check_connected());
+
+    Sender &sender = get_or_create_sender(msg);
+    try {
+        sender.process_message(msg);
+
+    } catch (const ConnectionError &err) {
+        // In case connection was lost, we have to resend templates when it reconnects
+        sender.clear_templates();
+        throw err;
     }
-    sockfd = params.make_socket();
-    return sockfd >= 0;
 }
 
-std::unique_lock<std::mutex> 
-Connection::begin_write()
+void
+Connection::lose_message(ipx_msg_ipfix_t *msg)
 {
-    return std::unique_lock<std::mutex>(buffer_mutex);
+    Sender &sender = get_or_create_sender(msg);
+    sender.lose_message(msg);
 }
 
-bool 
-Connection::write(void *data, long length)
+void
+Connection::advance_transfers()
 {
-    return buffer.write((uint8_t *)data, length);
-}
+    assert(check_connected());
 
-void 
-Connection::rollback_write()
-{
-    buffer.rollback();
-}
+    IPX_CTX_DEBUG(m_log_ctx, "Waiting transfers on connection %s: %zu", m_ident.c_str(), m_transfers.size());
 
-long
-Connection::writeable()
-{
-    return buffer.writeable();
-}
+    for (auto it = m_transfers.begin(); it != m_transfers.end(); ) {
 
-void 
-Connection::commit_write()
-{
-    buffer.commit();
-    manager.pipe.notify();
-    has_data_to_send = buffer.readable();
+        Transfer &transfer = *it;
+
+        assert(transfer.data.size() <= UINT16_MAX); // The transfer consists of one IPFIX message which cannot be larger
+
+        ssize_t ret = send(m_sockfd.get(), &transfer.data[transfer.offset],
+                           transfer.data.size() - transfer.offset, MSG_DONTWAIT | MSG_NOSIGNAL);
+
+        check_socket_error(ret);
+
+        size_t sent = std::max<ssize_t>(0, ret);
+        IPX_CTX_DEBUG(m_log_ctx, "Sent %zu/%zu B to %s", sent, transfer.data.size(), m_ident.c_str());
+
+        // Is the transfer done?
+        if (transfer.offset + sent == transfer.data.size()) {
+            it = m_transfers.erase(it);
+            // Remove the transfer and continue with the next one
+
+        } else {
+            transfer.offset += sent;
+
+            // Finish, cannot advance next transfer before the one before it is fully sent
+            break;
+        }
+    }
 }
 
 bool
-Connection::send_some()
+Connection::check_connected()
 {
-    if (params.protocol == TransProto::Udp) {
-        while (1) {
-            fds_ipfix_msg_hdr ipfix_header;
-            if (!buffer.peek(ipfix_header)) {
-                return true;
-            }
-            auto message_length = ntohs(ipfix_header.length);
-            int ret = buffer.send_data(sockfd, message_length);
-            if (ret == 0 || !buffer.readable()) {
-                return true;
-            } else if (ret < 0) {
-                return false;
-            }
-        }
+    if (m_sockfd.get() >= 0) {
         return true;
-    } else {
-        return buffer.send_data(sockfd) >= 0;
+    }
+
+    if (m_future_socket && m_future_socket->ready()) {
+        m_sockfd = m_future_socket->retrieve();
+        m_future_socket = nullptr;
+        return true;
+    }
+
+    return false;
+}
+
+
+static Transfer
+make_transfer(const std::vector<iovec> &parts, uint16_t offset, uint16_t total_length)
+{
+    uint16_t length = total_length - offset;
+
+    // Find first unfinished part
+    size_t i = 0;
+
+    while (offset >= parts[i].iov_len) {
+        offset -= parts[i].iov_len;
+        i++;
+    }
+
+    // Copy the unfinished portion
+    std::vector<uint8_t> buffer(length); //NOTE: We might want to do this more effectively...
+    uint16_t buffer_pos = 0;
+
+    for (; i < parts.size(); i++) {
+        memcpy(buffer.data() + buffer_pos, &((uint8_t *) parts[i].iov_base)[offset], parts[i].iov_len - offset);
+        buffer_pos += parts[i].iov_len - offset;
+        offset = 0;
+    }
+
+    // Create the transfer
+    Transfer transfer;
+    transfer.data = std::move(buffer);
+    transfer.offset = 0;
+
+    return transfer;
+}
+
+void
+Connection::store_unfinished_transfer(Message &msg, uint16_t offset)
+{
+    Transfer transfer = make_transfer(msg.parts(), offset, msg.length());
+
+    IPX_CTX_DEBUG(m_log_ctx, "Storing unfinished transfer of %" PRIu16 " bytes in connection to %s",
+                  msg.length() - offset, m_ident.c_str());
+
+    m_transfers.push_back(std::move(transfer));
+}
+
+
+void
+Connection::send_message(Message &msg)
+{
+    // All waiting transfers have to be sent first
+    if (!m_transfers.empty()) {
+        store_unfinished_transfer(msg, 0);
+        return;
+    }
+
+    std::vector<iovec> &parts = msg.parts();
+
+    msghdr hdr;
+    memset(&hdr, 0, sizeof(hdr));
+    hdr.msg_iov = parts.data();
+    hdr.msg_iovlen = parts.size();
+
+    ssize_t ret = sendmsg(m_sockfd.get(), &hdr, MSG_DONTWAIT | MSG_NOSIGNAL);
+
+    check_socket_error(ret);
+
+    size_t sent = std::max<ssize_t>(0, ret);
+
+    IPX_CTX_DEBUG(m_log_ctx, "Sent %zu/%" PRIu16 " B to %s", sent, msg.length(), m_ident.c_str());
+
+    if (sent < msg.length()) {
+        store_unfinished_transfer(msg, sent);
     }
 }
 
-void 
-Connection::close()
+Sender &
+Connection::get_or_create_sender(ipx_msg_ipfix_t *msg)
 {
-    close_flag = true;
-    manager.pipe.notify();
+    uint32_t odid = ipx_msg_ipfix_get_ctx(msg)->odid;
+
+    if (m_senders.find(odid) == m_senders.end()) {
+        m_senders.emplace(odid,
+            std::unique_ptr<Sender>(new Sender(
+                [&](Message &msg) {
+                    send_message(msg);
+                },
+                m_con_params.protocol == Protocol::TCP,
+                m_tmplts_resend_pkts,
+                m_tmplts_resend_secs)));
+    }
+
+    Sender &sender = *m_senders[odid].get();
+
+    return sender;
 }
 
-Connection::~Connection()
+void
+Connection::check_socket_error(ssize_t sock_ret)
 {
-    if (sockfd >= 0) {
-        ::close(sockfd);
+    if (sock_ret < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
+        char *errbuf;
+        ipx_strerror(errno, errbuf);
+
+        IPX_CTX_ERROR(m_log_ctx, "A connection to %s lost! (%s)", m_ident.c_str(), errbuf);
+        m_sockfd.reset();
+
+        // All state from the previous connection is lost once new one is estabilished
+        m_transfers.clear();
+
+        throw ConnectionError(errbuf);
     }
 }

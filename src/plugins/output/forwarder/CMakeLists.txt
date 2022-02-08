@@ -1,18 +1,29 @@
 # Create a linkable module
 add_library(forwarder-output MODULE
     src/main.cpp
-    src/config.h
+    src/Config.h
+    src/Config.cpp
     src/Forwarder.h
-    src/ConnectionManager.h
-    src/ConnectionManager.cpp
-    src/ConnectionParams.h
+    src/Forwarder.cpp
     src/Connection.h
     src/Connection.cpp
-    src/ConnectionBuffer.h
-    src/SyncPipe.h
-    src/IPFIXMessage.h
-    src/MessageBuilder.h
+    src/Host.cpp
+    src/Host.h
+    src/common.h
+    src/common.cpp
+    src/Message.h
+    src/Message.cpp
+    src/Sender.h
+    src/Sender.cpp
+    src/connector/Connector.h
+    src/connector/Connector.cpp
+    src/connector/FutureSocket.h
+    src/connector/FutureSocket.cpp
+    src/connector/Pipe.h
+    src/connector/Pipe.cpp
 )
+
+target_include_directories(forwarder-output PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 install(
     TARGETS forwarder-output

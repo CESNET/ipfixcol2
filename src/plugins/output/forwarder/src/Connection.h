@@ -1,7 +1,7 @@
 /**
  * \file src/plugins/output/forwarder/src/Connection.h
  * \author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
- * \brief Buffered socket connection
+ * \brief Connection class header
  * \date 2021
  */
 
@@ -41,77 +41,144 @@
 
 #pragma once
 
-#include "ConnectionManager.h"
-#include "ConnectionParams.h"
-#include "ConnectionBuffer.h"
-
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-
+#include <vector>
+#include <unordered_map>
+#include <memory>
 #include <atomic>
-#include <mutex>
-#include <cstdint>
 
-class ConnectionManager;
+#include <ipfixcol2.h>
 
-class Connection
-{
-friend class ConnectionManager;
+#include "common.h"
+#include "connector/Connector.h"
+#include "Sender.h"
 
+class Connection;
+
+/// An error to be thrown on connection errors
+class ConnectionError {
 public:
-    /// Flag indicating that the connection was lost and the forwarder needs to resend templates etc.
-    /// The flag won't be reset when the connection is reestablished!
-    std::atomic<bool> connection_lost_flag { false };
+    ConnectionError(std::string message)
+    : m_message(message) {}
 
-    Connection(ConnectionManager &manager, ConnectionParams params, long buffer_size);
-    
-    bool
-    connect();
+    ConnectionError(std::string message, std::shared_ptr<Connection> &connection)
+    : m_message(message), m_connection(&connection) {}
 
-    std::unique_lock<std::mutex> 
-    begin_write();
+    ConnectionError with_connection(std::shared_ptr<Connection> &connection) const
+    { return ConnectionError(m_message, connection); }
 
-    bool 
-    write(void *data, long length);
+    const char *what() const { return m_message.c_str(); }
 
-    bool
-    send_some();
-
-    void 
-    commit_write();
-
-    void 
-    rollback_write();
-
-    long
-    writeable();
-
-    void 
-    close();
-
-    ~Connection();
+    std::shared_ptr<Connection> *connection() const { return m_connection; }
 
 private:
-    /// The manager managing this connection
-    ConnectionManager &manager;
+    std::string m_message;
+    std::shared_ptr<Connection> *m_connection;
+};
 
-    /// The parameters to estabilish the connection
-    ConnectionParams params;
+/// A transfer to be sent through the connection
+struct Transfer {
+    /// The data to send
+    std::vector<uint8_t> data;
+    /// The offset to send from, i.e. the amount of data that was already sent
+    uint16_t offset;
+};
 
-    /// The connection socket
-    int sockfd = -1;
+/// A class representing one of the connections to the subcollector
+/// Each host opens one connection per session
+class Connection {
+public:
+    /**
+     * \brief The constructor
+     * \param ident               The host identification
+     * \param con_params          The connection parameters
+     * \param log_ctx             The logging context
+     * \param tmplts_resend_pkts  Interval in packets after which templates are resend (UDP only)
+     * \param tmplts_resend_secs  Interval in seconds after which templates are resend (UDP only)
+     */
+    Connection(const std::string &ident, ConnectionParams con_params, ipx_ctx_t *log_ctx,
+               unsigned int tmplts_resend_pkts, unsigned int tmplts_resend_secs,
+               Connector &connector);
 
-    /// Buffer for the data to send and a mutex guarding it
-    /// (buffer will be accessed from sender thread and writer thread)
-    std::mutex buffer_mutex;
-    ConnectionBuffer buffer;
+    /// Do not permit copying or moving as the connection holds a raw socket that is closed in the destructor
+    /// (we could instead implement proper moving and copying behavior, but we don't really need it at the moment)
+    Connection(const Connection &) = delete;
+    Connection(Connection &&) = delete;
 
-    /// Flag indicating whether the buffer has any data to send so we don't have to lock the mutex every time
-    /// (doesn't need to be atomic because we only set it while holding the mutex)
-    bool has_data_to_send = false; 
+    /**
+     * \brief Connect the connection socket
+     * \throw ConnectionError if the socket couldn't be connected
+     */
+    void
+    connect();
 
-    /// Flag indicating that the connection has been closed and can be disposed of after the data is sent
-    std::atomic<bool> close_flag { false };
+    /**
+     * \brief Forward an IPFIX message
+     * \param msg  The IPFIX message
+     */
+    void
+    forward_message(ipx_msg_ipfix_t *msg);
+
+    /**
+     * \brief Lose an IPFIX message, i.e. update the internal state as if it has been forwarded
+     *        even though it is not being sent
+     * \param msg  The IPFIX message
+     */
+    void
+    lose_message(ipx_msg_ipfix_t *msg);
+
+    /**
+     * \brief Advance the unfinished transfers
+     */
+    void
+    advance_transfers();
+
+    /**
+     * \brief Check if the connection socket is currently connected
+     * \return true or false
+     */
+    bool check_connected();
+
+    /**
+     * \brief Get number of transfers still waiting to be transmitted
+     * \return The number of waiting transfers
+     */
+    size_t waiting_transfers_cnt() const { return m_transfers.size(); }
+
+    /**
+     * \brief The identification of the connection
+     */
+    const std::string &ident() const { return m_ident; }
+
+private:
+    const std::string &m_ident;
+
+    ConnectionParams m_con_params;
+
+    ipx_ctx_t *m_log_ctx;
+
+    unsigned int m_tmplts_resend_pkts;
+
+    unsigned int m_tmplts_resend_secs;
+
+    UniqueFd m_sockfd;
+
+    std::shared_ptr<FutureSocket> m_future_socket;
+
+    std::unordered_map<uint32_t, std::unique_ptr<Sender>> m_senders;
+
+    std::vector<Transfer> m_transfers;
+
+    Connector &m_connector;
+
+    void
+    store_unfinished_transfer(Message &msg, uint16_t offset);
+
+    void
+    send_message(Message &msg);
+
+    Sender &
+    get_or_create_sender(ipx_msg_ipfix_t *msg);
+
+    void
+    check_socket_error(ssize_t sock_ret);
 };

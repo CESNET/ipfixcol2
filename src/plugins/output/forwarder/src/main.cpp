@@ -40,7 +40,7 @@
  */
 
 #include "Forwarder.h"
-#include "config.h"
+#include "Config.h"
 
 #include <ipfixcol2.h>
 
@@ -60,14 +60,32 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
 int
 ipx_plugin_init(ipx_ctx_t *ctx, const char *xml_config)
 {
-    auto forwarder = std::unique_ptr<Forwarder>(new Forwarder(ctx));
+    std::unique_ptr<Forwarder> forwarder;
+
     try {
-        parse_and_configure(ctx, xml_config, *forwarder);
-    } catch (std::string &error_message) {
-        IPX_CTX_ERROR(ctx, "%s", error_message.c_str());
-        return IPX_ERR_FORMAT;
+        Config config(xml_config);
+        forwarder.reset(new Forwarder(config, ctx));
+
+    } catch (const std::invalid_argument &ex) {
+        IPX_CTX_ERROR(ctx, "%s", ex.what());
+        return IPX_ERR_DENIED;
+
+    } catch (const std::bad_alloc &ex) {
+        IPX_CTX_ERROR(ctx, "Memory error", 0);
+        return IPX_ERR_DENIED;
+
+    } catch (const std::runtime_error &ex) {
+        IPX_CTX_ERROR(ctx, "%s", ex.what());
+        return IPX_ERR_DENIED;
+
+    } catch (const std::exception &ex) {
+        IPX_CTX_ERROR(ctx, "Caught exception %s", ex.what());
+        return IPX_ERR_DENIED;
+
+    } catch (...) {
+        IPX_CTX_ERROR(ctx, "Caught unknown exception", 0);
+        return IPX_ERR_DENIED;
     }
-    forwarder->start();
 
     ipx_msg_mask_t mask = IPX_MSG_IPFIX | IPX_MSG_SESSION;
     ipx_ctx_subscribe(ctx, &mask, NULL);
@@ -79,32 +97,48 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *xml_config)
 void
 ipx_plugin_destroy(ipx_ctx_t *ctx, void *priv)
 {
-    (void)ctx;
-    Forwarder *forwarder = (Forwarder *)(priv);
-    forwarder->stop();
+    (void) ctx;
+
+    Forwarder *forwarder = (Forwarder *) priv;
     delete forwarder;
 }
 
 int
 ipx_plugin_process(ipx_ctx_t *ctx, void *priv, ipx_msg_t *msg)
 {
-    Forwarder *forwarder = (Forwarder *)(priv);
+    Forwarder &forwarder = *(Forwarder *) priv;
+
     try {
+
         switch (ipx_msg_get_type(msg)) {
+
         case IPX_MSG_IPFIX:
-            forwarder->on_ipfix_message(ipx_msg_base2ipfix(msg));
+            forwarder.handle_ipfix_message(ipx_msg_base2ipfix(msg));
             break;
+
         case IPX_MSG_SESSION:
-            forwarder->on_session_message(ipx_msg_base2session(msg));
+            forwarder.handle_session_message(ipx_msg_base2session(msg));
             break;
+
         default: assert(0);
         }
-    } catch (std::string &error_message) {
-        IPX_CTX_ERROR(ctx, "%s", error_message.c_str());
+
+    } catch (const std::bad_alloc &ex) {
+        IPX_CTX_ERROR(ctx, "Memory error", 0);
         return IPX_ERR_DENIED;
-    } catch (std::bad_alloc &ex) {
-        IPX_CTX_ERROR(ctx, "Memory error");
-        return IPX_ERR_NOMEM;
+
+    } catch (const std::runtime_error &ex) {
+        IPX_CTX_ERROR(ctx, "%s", ex.what());
+        return IPX_ERR_DENIED;
+
+    } catch (const std::exception &ex) {
+        IPX_CTX_ERROR(ctx, "Caught exception %s", ex.what());
+        return IPX_ERR_DENIED;
+
+    } catch (...) {
+        IPX_CTX_ERROR(ctx, "Caught unknown exception", 0);
+        return IPX_ERR_DENIED;
     }
+
     return IPX_OK;
 }
