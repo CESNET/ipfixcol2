@@ -23,12 +23,18 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Define global variables
-      run: echo "::set-output name=zip_file::ipfixcol2-${IMAGE//:/}-$GITHUB_SHA.zip"
-      shell: bash
-      env:
-        IMAGE: ${{ matrix.image }}
-      id: vars
+    - name: Define variables
+      uses: actions/github-script@v5
+      with:
+        script: |
+          const sha = context.sha.substring(0, 8);
+          const image = `${{ matrix.image }}`
+          const distro = image.split('/').pop().replace(/:/g,'_');
+          const zip = `ipfixcol2-${distro}-${sha}`;
+          core.exportVariable('ZIP_FILE', zip);
+    - name: Prepare environment
+      run: |
+        mkdir -p build/libfds_repo
 
     # Dependencies ---------------------------------------------------------------------------
     - name: Install dependencies for libfds and IPFIXcol2 (Ubuntu/Debian)
@@ -71,7 +77,7 @@ jobs:
       if: github.event_name == 'push'
       uses: actions/upload-artifact@v2
       with:
-        name: ${{ steps.vars.outputs.zip_file }}
+        name: ${{ env.ZIP_FILE }}
         path: |
           build/pkg/deb/debbuild/*.deb
           build/pkg/deb/debbuild/*.ddeb
@@ -91,13 +97,18 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Prepare environment and variables
+    - name: Define variables
+      uses: actions/github-script@v5
+      with:
+        script: |
+          const sha = context.sha.substring(0, 8);
+          const image = `${{ matrix.image }}`
+          const distro = image.split('/').pop().replace(/:/g,'_');
+          const zip = `ipfixcol2-${distro}-${sha}`;
+          core.exportVariable('ZIP_FILE', zip);
+    - name: Prepare environment
       run: |
-        echo "::set-output name=zip_file::ipfixcol2-${IMAGE//:/}-$GITHUB_SHA.zip"
         mkdir -p build/libfds_repo
-      env:
-        IMAGE: ${{ matrix.image }}
-      id: vars
 
     # Dependencies ---------------------------------------------------------------------------
     - name: Enable additional repositories (CentOS 8)
@@ -149,7 +160,7 @@ jobs:
       if: github.event_name == 'push'
       uses: actions/upload-artifact@v2
       with:
-        name: ${{ steps.vars.outputs.zip_file }}
+        name: ${{ env.ZIP_FILE }}
         path: |
           build/pkg/rpm/rpmbuild/RPMS/
           build/pkg/rpm/rpmbuild/SRPMS/
