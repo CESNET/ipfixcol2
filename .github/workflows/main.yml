@@ -20,7 +20,7 @@ jobs:
     name: Build on ${{ matrix.image }}
     container: ${{ matrix.image }}
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
 
     # Dependencies ---------------------------------------------------------------------------
     - name: Install dependencies for libfds and IPFIXcol2 (Ubuntu/Debian)
