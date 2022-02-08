@@ -15,12 +15,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: ['ubuntu:18.04', 'ubuntu:20.04', 'debian:stretch', 'debian:buster', 'debian:bullseye', 'centos:7', 'centos:8']
+        image:
+          - 'ubuntu:18.04'
+          - 'ubuntu:20.04'
+          - 'debian:stretch'
+          - 'debian:buster'
+          - 'debian:bullseye'
+          - 'centos:7'
+          - 'quay.io/centos/centos:stream8'
+          - 'oraclelinux:8'
 
     name: Build on ${{ matrix.image }}
     container: ${{ matrix.image }}
     steps:
-    - uses: actions/checkout@v1
 
     # Dependencies ---------------------------------------------------------------------------
     - name: Install dependencies for libfds and IPFIXcol2 (Ubuntu/Debian)
@@ -32,23 +39,33 @@ jobs:
         apt-get -y install librdkafka-dev
       env:
         DEBIAN_FRONTEND: noninteractive
-    - name: Enable additional repositories (CentOS 8)
-      if: startsWith(matrix.image, 'centos:8')
+    - name: Enable additional repositories (CentOS Steam)
+      if: contains(matrix.image, 'centos:stream')
       run: |
         dnf -y install 'dnf-command(config-manager)'
         dnf config-manager --set-enabled appstream powertools
-    - name: Install dependencies  for libfds and IPFIXcol2 (CentOS)
-      if: startsWith(matrix.image, 'centos')
+    - name: Enable additional repositories (Oracle Linux)
+      if: contains(matrix.image, 'oraclelinux')
+      run: |
+        dnf -y install 'dnf-command(config-manager)'
+        dnf config-manager --set-enabled ol8_appstream ol8_codeready_builder
+    - name: Enable EPEL (CentOS)
+      if: contains(matrix.image, 'centos')
       run: |
         yum -y install epel-release
+    - name: Enable EPEL (OracleLinux)
+      if: contains(matrix.image, 'oraclelinux')
+      run: |
+        dnf -y install oracle-epel-release-el8
+    - name: Install dependencies for libfds and IPFIXcol2 (CentOS, Oracle Linux)
+      if: contains(matrix.image, 'centos') || contains(matrix.image, 'oraclelinux')
+      run: |
         yum -y install git gcc gcc-c++ cmake make libxml2-devel lz4-devel libzstd-devel
         yum -y install zlib-devel pkgconfig librdkafka-devel
         yum -y install python3-docutils || yum -y install python-docutils
-    - name: Install dependencies  for libfds and IPFIXcol2 (Fedora)
-      if: startsWith(matrix.image, 'fedora')
-      run: |
-        dnf -y install git gcc gcc-c++ cmake make libxml2-devel lz4-devel libzstd-devel
-        dnf -y install python3-docutils zlib-devel pkgconfig librdkafka-devel
+
+    # Checkout repository --------------------------------------------------------------------
+    - uses: actions/checkout@v2
 
     # Build libfds library  ------------------------------------------------------------------
     # Note: Master against master branch. Otherwise against debug branch.
