@@ -1,5 +1,5 @@
-Forwarder (output plugin) [Preview]
-===================================
+Forwarder (output plugin)
+=========================
 
 This plugin allows forwarding incoming flow records in IPFIX form to other collector in various modes.
 
