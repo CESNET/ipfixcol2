@@ -93,12 +93,12 @@ jobs:
         image:
           - 'centos:7'
           - 'quay.io/centos/centos:stream8'
+          - 'oraclelinux:8'
 
     name: Build RPMs on ${{ matrix.image }}
     container: ${{ matrix.image }}
 
     steps:
-    - uses: actions/checkout@v2
     - name: Define variables
       uses: actions/github-script@v5
       with:
@@ -118,13 +118,28 @@ jobs:
       run: |
         dnf -y install 'dnf-command(config-manager)'
         dnf config-manager --set-enabled appstream powertools
-    - name: Install dependencies for libfds and IPFIXcol2 (CentOS)
+    - name: Enable additional repositories (Oracle Linux)
+      if: contains(matrix.image, 'oraclelinux')
+      run: |
+        dnf -y install 'dnf-command(config-manager)'
+        dnf config-manager --set-enabled ol8_appstream ol8_codeready_builder
+    - name: Enable EPEL (CentOS)
       if: contains(matrix.image, 'centos')
       run: |
         yum -y install epel-release
+    - name: Enable EPEL (OracleLinux)
+      if: contains(matrix.image, 'oraclelinux')
+      run: |
+        dnf -y install oracle-epel-release-el8
+    - name: Install dependencies for libfds and IPFIXcol2 (CentOS, Oracle Linux)
+      if: contains(matrix.image, 'centos') || contains(matrix.image, 'oraclelinux')
+      run: |
         yum -y install git gcc gcc-c++ cmake make libxml2-devel lz4-devel libzstd-devel
         yum -y install zlib-devel pkgconfig rpm-build librdkafka-devel
         yum -y install python3-docutils || yum -y install python-docutils
+
+    # Checkout repository --------------------------------------------------------------------
+    - uses: actions/checkout@v2
 
     # Build LIBFDS RPM package ---------------------------------------------------------------
     - name: Checkout libfds library - master branch
