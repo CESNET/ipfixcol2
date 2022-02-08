@@ -67,17 +67,16 @@ jobs:
         ipfixcol2 -V
         ipfixcol2 -h
         ipfixcol2 -L
-    - name: Pack IPFIXcol2 DEB packages
-      working-directory: 'build/pkg/deb/debbuild/'
-      run: zip "$GITHUB_WORKSPACE/$ZIP_FILE" *.deb *.ddeb *.tar.gz *.dsc
-      env:
-        ZIP_FILE: ${{ steps.vars.outputs.zip_file }}
     - name: Archive DEB packages
       if: github.event_name == 'push'
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v2
       with:
         name: ${{ steps.vars.outputs.zip_file }}
-        path: ${{ steps.vars.outputs.zip_file }}
+        path: |
+          build/pkg/deb/debbuild/*.deb
+          build/pkg/deb/debbuild/*.ddeb
+          build/pkg/deb/debbuild/*.tar.gz
+          build/pkg/deb/debbuild/*.dsc
 
   rpm:
     # Try to build RPM packages
@@ -146,14 +145,11 @@ jobs:
         ipfixcol2 -V
         ipfixcol2 -h
         ipfixcol2 -L -v
-    - name: Pack IPFIXcol2 RPM packages
-      working-directory: 'build/pkg/rpm/rpmbuild'
-      run: zip -r "$GITHUB_WORKSPACE/$ZIP_FILE" RPMS SRPMS
-      env:
-        ZIP_FILE: ${{ steps.vars.outputs.zip_file }}
     - name: Archive RPM packages
       if: github.event_name == 'push'
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v2
       with:
         name: ${{ steps.vars.outputs.zip_file }}
-        path: ${{ steps.vars.outputs.zip_file }}
+        path: |
+          build/pkg/rpm/rpmbuild/RPMS/
+          build/pkg/rpm/rpmbuild/SRPMS/
