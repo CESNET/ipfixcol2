@@ -90,7 +90,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: ['centos:7', 'centos:8']
+        image:
+          - 'centos:7'
+          - 'quay.io/centos/centos:stream8'
 
     name: Build RPMs on ${{ matrix.image }}
     container: ${{ matrix.image }}
@@ -111,13 +113,13 @@ jobs:
         mkdir -p build/libfds_repo
 
     # Dependencies ---------------------------------------------------------------------------
-    - name: Enable additional repositories (CentOS 8)
-      if: startsWith(matrix.image, 'centos:8')
+    - name: Enable additional repositories (CentOS Stream)
+      if: contains(matrix.image, 'centos:stream')
       run: |
         dnf -y install 'dnf-command(config-manager)'
         dnf config-manager --set-enabled appstream powertools
     - name: Install dependencies for libfds and IPFIXcol2 (CentOS)
-      if: startsWith(matrix.image, 'centos')
+      if: contains(matrix.image, 'centos')
       run: |
         yum -y install epel-release
         yum -y install git gcc gcc-c++ cmake make libxml2-devel lz4-devel libzstd-devel
