@@ -179,7 +179,7 @@ FME_TLS_PUBLIC_KEYALG          uint16        flowmon:tlsPublicKeyAlg            
 FME_TLS_PUBLIC_KEYLENGTH       int32         flowmon:tlsPublicKeyLength         # tlsPublicKeyLength
 
 TLS_SNI                        string        cesnet:TLSSNI                      # Server Name Indication https://en.wikipedia.org/wiki/Server_Name_Indication
-TLS_JA3_FINGERPRINT            bytes         cesnet:tlsJa3Fingerprint,flowmon:tlsJa3Fingerprint           # tlsJa3Fingerprint
+TLS_JA3_FINGERPRINT            bytes         flowmon:tlsJa3Fingerprint          # tlsJa3Fingerprint
 
 QUIC_SNI                       string        cesnet:quicSNI                     # Server Name Indication from QUIC
 
