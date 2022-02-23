@@ -40,6 +40,8 @@ LINK_BIT_FIELD                 uint64        _internal_lbf_                     
 SRC_MAC                        macaddr       e0id56
 DST_MAC                        macaddr       e0id80
 
+FLOW_END_REASON                uint8         iana:flowEndReason                 # Reason of exporting the flow record, see https://www.iana.org/assignments/ipfix/ipfix.xhtml#ipfix-flow-end-reason
+
 # --- Additional biflow fields ---
 BYTES_REV                      uint64        e29305id1
 PACKETS_REV                    uint32        e29305id2
