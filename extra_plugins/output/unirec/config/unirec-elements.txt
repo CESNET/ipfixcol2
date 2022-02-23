@@ -182,6 +182,8 @@ TLS_SNI                        string        cesnet:TLSSNI                      
 TLS_JA3_FINGERPRINT            bytes         flowmon:tlsJa3Fingerprint          # tlsJa3Fingerprint
 
 QUIC_SNI                       string        cesnet:quicSNI                     # Server Name Indication from QUIC
+QUIC_USER_AGENT                string        cesnet:quicUserAgent               # User-Agent value extracted from decrypted QUIC header
+QUIC_VERSION                   uint32        cesnet:quicVersion                 # Version of QUIC protocol extracted from decrypted QUIC header
 
 # --- Per-Packet Information elements ---
 PPI_PKT_LENGTHS                uint16*       e0id291/cesnet:packetLength         # basicList of packet lengths
