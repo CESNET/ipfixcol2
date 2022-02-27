@@ -54,8 +54,15 @@ target_link_libraries(fdsdump
 )
 
 find_package(Threads REQUIRED)
+if(THREADS_HAVE_PTHREAD_ARG)
+  set_property(TARGET fdsdump PROPERTY COMPILE_OPTIONS "-pthread")
+  set_property(TARGET fdsdump PROPERTY INTERFACE_COMPILE_OPTIONS "-pthread")
+endif()
+if(CMAKE_THREAD_LIBS_INIT)
+  target_link_libraries(fdsdump "${CMAKE_THREAD_LIBS_INIT}")
+endif()
+
 target_include_directories(fdsdump PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(fdsdump PRIVATE Threads::Threads)
 
 install(
     TARGETS fdsdump

@@ -124,7 +124,7 @@ private:
     struct ThreadState {
         std::thread thread;
         bool done = false;
-        std::exception_ptr exception = nullptr;
+        std::exception_ptr exception; // Default constructed exception_ptr is nullptr
     };
 
     std::vector<ThreadState> m_threads;
