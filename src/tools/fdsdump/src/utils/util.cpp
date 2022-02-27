@@ -57,6 +57,33 @@ string_split(const std::string &str, const std::string &delimiter)
     return pieces;
 }
 
+std::vector<std::string>
+string_split_right(const std::string &str, const std::string &delimiter, unsigned int max_pieces)
+{
+    std::vector<std::string> pieces;
+    std::size_t pos = str.size() - 1;
+    for (;;) {
+        if (max_pieces > 0 && pieces.size() == max_pieces - 1) {
+            pieces.emplace(pieces.begin(), str.begin(), str.begin() + pos + 1);
+            break;
+        }
+
+        std::size_t next_pos = str.rfind(delimiter, pos);
+        if (next_pos == std::string::npos) {
+            pieces.emplace(pieces.begin(), str.begin(), str.begin() + pos + 1);
+            break;
+        }
+        pieces.emplace(pieces.begin(), str.begin() + next_pos + delimiter.size(), str.begin() + pos + 1);
+
+        if (next_pos == 0) {
+            pieces.emplace(pieces.begin(), "");
+            break;
+        }
+        pos = next_pos - 1;
+    }
+    return pieces;
+}
+
 void
 memcpy_bits(uint8_t *dst, uint8_t *src, unsigned int n_bits)
 {

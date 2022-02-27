@@ -51,6 +51,18 @@ std::vector<std::string>
 string_split(const std::string &str, const std::string &delimiter);
 
 /**
+ * \brief      Split string by a delimiter from right.
+ *
+ * \param[in]  str         The string
+ * \param[in]  delimiter   The delimiter
+ * \param[in]  max_pieces  The maximum number of pieces (0 = no limit)
+ *
+ * \return     Vector of the string pieces.
+ */
+std::vector<std::string>
+string_split_right(const std::string &str, const std::string &delimiter, unsigned int max_pieces = 0);
+
+/**
  * \brief      Copy a specified number of bits from source to destination, remaining bits in an
  *             incomplete byte are zeroed
  *

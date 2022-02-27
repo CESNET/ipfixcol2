@@ -38,8 +38,6 @@
  */
 #include "view.hpp"
 
-#include <regex>
-
 #include "common.hpp"
 #include "utils/util.hpp"
 #include "ipfix/informationelements.hpp"
@@ -145,55 +143,57 @@ configure_keys(const std::string &options, ViewDefinition &view_def, fds_iemgr_t
     for (const auto &key : string_split(options, ",")) {
         ViewField field = {};
 
-        std::regex subnet_regex{"([a-zA-Z0-9:]+)/(\\d+)"};
-        std::smatch m;
+        //std::regex subnet_regex{"([a-zA-Z0-9:]+)/(\\d+)"};
+        //std::smatch m;
+        std::vector<std::string> pieces = string_split_right(key, "/", 2);
 
-        if (std::regex_match(key, m, subnet_regex)) {
+        if (pieces.size() == 2) {
             field.name = key;
-            auto prefix_length = std::stoul(m[2].str());
+            auto elem_name = pieces[0];
+            auto prefix_length = std::stoul(pieces[1]);
 
-            if (m[1] == "srcipv4") {
+            if (elem_name == "srcipv4") {
                 field.pen = IPFIX::iana;
                 field.id = IPFIX::sourceIPv4Address;
                 field.data_type = DataType::IPv4Address;
                 field.size = sizeof(ViewValue::ipv4);
                 field.kind = ViewFieldKind::IPv4SubnetKey;
 
-            } else if (m[1] == "dstipv4") {
+            } else if (elem_name == "dstipv4") {
                 field.pen = IPFIX::iana;
                 field.id = IPFIX::destinationIPv4Address;
                 field.data_type = DataType::IPv4Address;
                 field.size = sizeof(ViewValue::ipv4);
                 field.kind = ViewFieldKind::IPv4SubnetKey;
 
-            } else if (m[1] == "srcipv6") {
+            } else if (elem_name == "srcipv6") {
                 field.pen = IPFIX::iana;
                 field.id = IPFIX::sourceIPv6Address;
                 field.data_type = DataType::IPv6Address;
                 field.size = sizeof(ViewValue::ipv6);
                 field.kind = ViewFieldKind::IPv6SubnetKey;
 
-            } else if (m[1] == "dstipv6") {
+            } else if (elem_name == "dstipv6") {
                 field.pen = IPFIX::iana;
                 field.id = IPFIX::destinationIPv6Address;
                 field.data_type = DataType::IPv6Address;
                 field.size = sizeof(ViewValue::ipv6);
                 field.kind = ViewFieldKind::IPv6SubnetKey;
 
-            } else if (m[1] == "ipv4") {
+            } else if (elem_name == "ipv4") {
                 field.data_type = DataType::IPv4Address;
                 field.size = sizeof(ViewValue::ipv4);
                 field.kind = ViewFieldKind::BidirectionalIPv4SubnetKey;
                 view_def.bidirectional = true;
 
-            } else if (m[1] == "ipv6") {
+            } else if (elem_name == "ipv6") {
                 field.data_type = DataType::IPv6Address;
                 field.size = sizeof(ViewValue::ipv6);
                 field.kind = ViewFieldKind::BidirectionalIPv6SubnetKey;
                 view_def.bidirectional = true;
 
             } else {
-                const fds_iemgr_elem *elem = fds_iemgr_elem_find_name(iemgr, m[1].str().c_str());
+                const fds_iemgr_elem *elem = fds_iemgr_elem_find_name(iemgr, elem_name.c_str());
 
                 if (!elem) {
                     throw ArgError("Invalid aggregation key \"" + key + "\" - element not found");
@@ -397,14 +397,15 @@ configure_values(const std::string &options, ViewDefinition &view_def, fds_iemgr
         ViewField field = {};
 
         //std::regex aggregate_regex{"(.+)\\((.+)\\)"};
-        std::regex aggregate_regex{"(.+):(min|max|sum)"};
-        std::smatch m;
+        //std::regex aggregate_regex{"(.+):(min|max|sum)"};
+        //std::smatch m;
+        std::vector<std::string> pieces = string_split_right(value, ":", 2);
 
-        if (std::regex_match(value, m, aggregate_regex)) {
+        if (pieces.size() == 2 && (pieces[1] == "min" || pieces[1] == "max" || pieces[1] == "sum")) {
             //const std::string &func = m[1].str();
             //const std::string &field_name = m[2].str();
-            const std::string &field_name = m[1].str();
-            const std::string &func = m[2].str();
+            const std::string &field_name = pieces[0];
+            const std::string &func = pieces[1];
 
             if (func == "min") {
                 field.kind = ViewFieldKind::MinAggregate;
