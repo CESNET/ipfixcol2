@@ -229,7 +229,10 @@ make_comparer(const std::vector<SortField> &sort_fields, const ViewDefinition &d
 void
 sort_records(std::vector<uint8_t *> &records, const std::vector<SortField> &sort_fields, const ViewDefinition &def)
 {
-    std::function<bool(uint8_t *, uint8_t *)> compare = make_comparer(sort_fields, def);
+    if (sort_fields.empty()) {
+        return;
+    }
 
+    std::function<bool(uint8_t *, uint8_t *)> compare = make_comparer(sort_fields, def);
     std::sort(records.begin(), records.end(), compare);
 }
