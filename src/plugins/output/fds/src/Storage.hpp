@@ -36,7 +36,7 @@ public:
      * @throw FDS_exception if @p path directory doesn't exist in the system
      */
     Storage(ipx_ctx_t *ctx, const Config &cfg);
-    virtual ~Storage() = default;
+    virtual ~Storage();
 
     // Disable copy constructors
     Storage(const Storage &other) = delete;
@@ -105,6 +105,8 @@ private:
 
     /// Output FDS file
     std::unique_ptr<fds_file_t, decltype(&fds_file_close)> m_file = {nullptr, &fds_file_close};
+    /// Output FDS file name
+    std::string m_file_name;
     /// Mapping of Transport Sessions to FDS specific parameters
     std::map<const struct ipx_session *, struct session_ctx> m_session2params;
 
