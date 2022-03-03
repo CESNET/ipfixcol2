@@ -86,9 +86,10 @@ Storage::window_new(time_t ts)
 void
 Storage::window_close()
 {
+    bool file_opened = (m_file.get() != nullptr);
     m_file.reset();
     m_session2params.clear();
-    if (!m_file_name.empty()) {
+    if (file_opened) {
         std::string new_file_name(m_file_name.begin(), m_file_name.end() - std::string(".tmp").size());
         std::rename(m_file_name.c_str(), new_file_name.c_str());
         m_file_name.clear();
