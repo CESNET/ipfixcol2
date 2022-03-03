@@ -61,7 +61,12 @@ FDSReader::set_file(std::string filename)
 
     rc = fds_file_open(m_file.get(), m_filename.c_str(), FDS_FILE_READ);
     if (rc != FDS_OK) {
-        throw std::runtime_error("cannot open file \"" + m_filename + "\"");
+        std::string error_msg = "cannot open file \"" + m_filename + "\"";
+        const char *fds_error = fds_file_error(m_file.get());
+        if (fds_error) {
+            error_msg += " - " + std::string(fds_error);
+        }
+        throw std::runtime_error(error_msg);
     }
 
     rc = fds_file_set_iemgr(m_file.get(), m_iemgr);
@@ -86,7 +91,12 @@ FDSReader::read_record(fds_drec &drec)
         return false;
 
     } else {
-        throw std::runtime_error("error reading record from file " + m_filename);
+        std::string error_msg = "error reading record from file  \"" + m_filename + "\"";
+        const char *fds_error = fds_file_error(m_file.get());
+        if (fds_error) {
+            error_msg += " - " + std::string(fds_error);
+        }
+        throw std::runtime_error(error_msg);
     }
 }
 
