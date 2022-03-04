@@ -123,6 +123,10 @@ Parameters
     Specification of interface type and its parameters. For more details, see section
     "Output interface types".
 
+:``mappingFile``:
+    Path to configuration file with mapping IPFIX fields to UniRec fields. If the parameter is
+    not defined, the default configuration file is used. See section "UniRec configuration file".
+
 Output interface types
 ----------------------
 Exactly one of the following output type must be defined in the instance configuration of this
