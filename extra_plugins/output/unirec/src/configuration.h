@@ -46,7 +46,9 @@
  * \brief Structure for a configuration parsed from XML
  */
 struct conf_params {
-    /** Prepared TRAP interface specification string                                             */
+    /** Path to IPFIX-to-UniRec mapping file                                                 */
+    char *mapping_file;
+    /** Prepared TRAP interface specification string                                         */
     char *trap_ifc_spec;
     /**
      * TRAP interface UniRec template
