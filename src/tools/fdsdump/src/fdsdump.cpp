@@ -92,9 +92,24 @@ struct AggregateWorker {
         std::string filename;
 
         while (file_list->pop(filename)) {
-            reader.set_file(filename);
+            try {
+                reader.set_file(filename);
+            } catch (const std::runtime_error &err) {
+                fprintf(stderr, "%s\n", err.what());
+                processed_files++;
+                continue;
+            }
 
-            while (reader.read_record(drec)) {
+            for (;;) {
+                try {
+                    if (!reader.read_record(drec)) {
+                        break;
+                    }
+                } catch (const std::runtime_error &err) {
+                    fprintf(stderr, "%s\n", err.what());
+                    processed_records++;
+                    continue;
+                }
                 processed_records++;
 
                 if (!input_filter->record_passes(drec)) {
@@ -189,9 +204,22 @@ run(int argc, char **argv)
         // TODO: Also allow this option to run on multiple threads and also alongside other options
         Stats stats;
         for (const auto &file : file_list) {
-            reader.set_file(file);
+            try {
+                reader.set_file(file);
+            } catch (const std::runtime_error &err) {
+                fprintf(stderr, "%s\n", err.what());
+            }
+
             fds_drec drec;
-            while (reader.read_record(drec)) {
+            for (;;) {
+                try {
+                    if (!reader.read_record(drec)) {
+                        break;
+                    }
+                } catch (const std::runtime_error &err) {
+                    fprintf(stderr, "%s\n", err.what());
+                    continue;
+                }
                 stats.process_record(drec);
             }
         }
