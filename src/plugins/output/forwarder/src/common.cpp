@@ -1,7 +1,7 @@
 /**
- * \file src/plugins/output/forwarder/src/ConnectionManager.h
+ * \file src/plugins/output/forwarder/src/common.cpp
  * \author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
- * \brief Connection manager
+ * \brief Common use functions and structures
  * \date 2021
  */
 
@@ -39,60 +39,60 @@
  *
  */
 
-#pragma once
+#include "common.h"
+#include <unistd.h>
+#include <cerrno>
+#include <cstring>
+#include <cassert>
 
-#include "ConnectionParams.h"
-#include "Connection.h"
-#include "SyncPipe.h"
+#include <ipfixcol2.h>
 
-#include <vector>
-#include <mutex>
-#include <atomic>
-#include <condition_variable>
-#include <memory>
-#include <thread>
-#include <cstdint>
-
-class Connection;
-
-static constexpr long DEFAULT_BUFFER_SIZE = 4 * 1024 * 1024;
-static constexpr int DEFAULT_RECONNECT_INTERVAL_SECS = 5;
-
-class ConnectionManager
+void
+tsnapshot_for_each(const fds_tsnapshot_t *tsnap, std::function<void(const fds_template *)> callback)
 {
-friend class Connection;
+    struct CallbackData {
+        std::function<void(const fds_template *)> callback;
+        std::exception_ptr ex;
+    };
 
-public:
-    Connection &
-    add_client(ConnectionParams params);
+    CallbackData cb_data;
+    cb_data.callback = callback;
+    cb_data.ex = nullptr;
 
-    void
-    start();
+    fds_tsnapshot_for(tsnap,
+        [](const fds_template *tmplt, void *data) -> bool {
+            CallbackData &cb_data = *(CallbackData *) data;
 
-    void 
-    stop();
+            try {
+                cb_data.callback(tmplt);
+                return true;
 
-    void
-    set_reconnect_interval(int number_of_seconds);
+            } catch (...) {
+                cb_data.ex = std::current_exception();
+                return false;
+            }
 
-    void
-    set_connection_buffer_size(long number_of_bytes);
-    
-private:
-    long connection_buffer_size = DEFAULT_BUFFER_SIZE;
-    int reconnect_interval_secs = DEFAULT_RECONNECT_INTERVAL_SECS;
-    std::mutex mutex;
-    std::vector<std::unique_ptr<Connection>> active_connections;
-    std::vector<std::unique_ptr<Connection>> reconnect_connections;
-    std::thread send_thread;
-    std::thread reconnect_thread;
-    std::condition_variable reconnect_cv;
-    std::atomic<bool> exit_flag { false };
-    SyncPipe pipe;
+        }, &cb_data);
 
-    void
-    send_loop();
+    if (cb_data.ex) {
+        std::rethrow_exception(cb_data.ex);
+    }
+}
 
-    void 
-    reconnect_loop();
-};
+time_t
+get_monotonic_time()
+{
+    timespec ts;
+    if (clock_gettime(CLOCK_MONOTONIC_COARSE, &ts) != 0) {
+        throw errno_runtime_error(errno, "clock_gettime");
+    }
+    return ts.tv_sec;
+}
+
+std::runtime_error
+errno_runtime_error(int errno_, const std::string &func_name)
+{
+    char *errbuf;
+    ipx_strerror(errno_, errbuf);
+    return std::runtime_error(func_name + "() failed: " + std::string(errbuf));
+}

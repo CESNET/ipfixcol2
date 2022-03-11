@@ -46,6 +46,11 @@
 
 #include "config.h"
 
+#define IANA_PEN     0
+#define IANA_PEN_REV 29305
+#define IE_ID_BYTES  1
+#define IE_ID_PKTS   2
+
 /** Plugin description */
 IPX_API struct ipx_plugin_info ipx_plugin_info = {
     // Plugin type
@@ -57,7 +62,7 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
     // Configuration flags (reserved for future use)
     .flags = 0,
     // Plugin version string (like "1.2.3")
-    .version = "2.1.0",
+    .version = "2.2.0",
     // Minimal IPFIXcol version string (like "1.2.3")
     .ipx_min = "2.0.0"
 };
@@ -91,7 +96,8 @@ stats_update(struct instance_data *inst, ipx_msg_ipfix_t *msg)
     // For each IPFIX Data Record
     for (uint32_t i = 0; i < rec_cnt; ++i) {
         struct ipx_ipfix_record *rec_ptr = ipx_msg_ipfix_get_drec(msg, i);
-        enum fds_template_type ttype = rec_ptr->rec.tmplt->type;
+        const struct fds_template *tmplt = rec_ptr->rec.tmplt;
+        const enum fds_template_type ttype = tmplt->type;
 
         struct fds_drec_field field;
         uint64_t value;
@@ -105,13 +111,30 @@ stats_update(struct instance_data *inst, ipx_msg_ipfix_t *msg)
         }
 
         // Get octetDeltaCount
-        if (fds_drec_find(&rec_ptr->rec, 0, 1, &field) != FDS_EOC
+        if (fds_drec_find(&rec_ptr->rec, IANA_PEN, IE_ID_BYTES, &field) != FDS_EOC
                 && fds_get_uint_be(field.data, field.size, &value) == FDS_OK) {
             inst->cnt_bytes += value;
         }
 
         // Get packetDeltaCount
-        if (fds_drec_find(&rec_ptr->rec, 0, 2, &field) != FDS_EOC
+        if (fds_drec_find(&rec_ptr->rec, IANA_PEN, IE_ID_PKTS, &field) != FDS_EOC
+                && fds_get_uint_be(field.data, field.size, &value) == FDS_OK) {
+            inst->cnt_pkts += value;
+        }
+
+        if ((tmplt->flags & FDS_TEMPLATE_BIFLOW) == 0) {
+            // Not a biflow record
+            continue;
+        }
+
+        // Get octetDeltaCount (reverse)
+        if (fds_drec_find(&rec_ptr->rec, IANA_PEN_REV, IE_ID_BYTES, &field) != FDS_EOC
+                && fds_get_uint_be(field.data, field.size, &value) == FDS_OK) {
+            inst->cnt_bytes += value;
+        }
+
+        // Get packetDeltaCount (reverse)
+        if (fds_drec_find(&rec_ptr->rec, IANA_PEN_REV, IE_ID_PKTS, &field) != FDS_EOC
                 && fds_get_uint_be(field.data, field.size, &value) == FDS_OK) {
             inst->cnt_pkts += value;
         }

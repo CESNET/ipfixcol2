@@ -24,34 +24,42 @@
 SRC_IP                         ipaddr        e0id8,e0id27                       # IPv4 or IPv6 source address
 DST_IP                         ipaddr        e0id12,e0id28                      # IPv4 or IPv6 destination address
 SRC_PORT                       uint16        e0id7                              # Transport protocol source port
-DST_PORT                       uint16        e0id11                             # Transport protocol destination port
+DST_PORT                       uint16        e0id11,e0id32                      # Transport protocol destination port or ICMP type/code
 PROTOCOL                       uint8         e0id4                              # Transport protocol
 TCP_FLAGS                      uint8         e0id6                              # TCP flags
 BYTES                          uint64        e0id1                              # Number of bytes in flow
 PACKETS                        uint32        e0id2                              # Number of packets in flow
 TTL                            uint8         e0id192                            # IP time to live
+TTL_REV                        uint8         e29305id192                        # IP time to live rev
 TOS                            uint8         e0id5                              # IP type of service
 TIME_FIRST                     time          e0id150,e0id152,e0id154,e0id156    # Time of the first packet of a flow
 TIME_LAST                      time          e0id151,e0id153,e0id155,e0id157    # Time of the last packet of a flow
 DIR_BIT_FIELD                  uint8         _internal_dbf_                     # Bit field used for determining incoming/outgoing flow (1 => Incoming, 0 => Outgoing)
 LINK_BIT_FIELD                 uint64        _internal_lbf_                     # Bit field of links on which was flow seen
+
 SRC_MAC                        macaddr       e0id56
 DST_MAC                        macaddr       e0id80
+
+FLOW_END_REASON                uint8         iana:flowEndReason                 # Reason of exporting the flow record, see https://www.iana.org/assignments/ipfix/ipfix.xhtml#ipfix-flow-end-reason
 
 # --- Additional biflow fields ---
 BYTES_REV                      uint64        e29305id1
 PACKETS_REV                    uint32        e29305id2
 TCP_FLAGS_REV                  uint8         e29305id6
 
+# --- Additional TCP fields  ---
+TCP_SYN_SIZE                   uint8         flowmon:tcpSynSize
+TCP_SYN_TTL                    uint8         flowmon:tcpSynTtl
+
 # --- DNS specific fields ---
 DNS_ANSWERS                    uint16        cesnet:DNSAnswers                  # DNS answers
 DNS_RCODE                      uint8         cesnet:DNSRCode                    # DNS rcode
-DNS_NAME                       string        cesnet:DNSName                     # DNS name
-DNS_QTYPE                      uint16        cesnet:DNSQType                    # DNS qtype
-DNS_CLASS                      uint16        cesnet:DNSClass                    # DNS class
+DNS_Q_NAME                     string        cesnet:DNSName                     # DNS name
+DNS_Q_TYPE                     uint16        cesnet:DNSQType                    # DNS qtype
+DNS_Q_CLASS                    uint16        cesnet:DNSClass                    # DNS class
 DNS_RR_TTL                     uint32        cesnet:DNSRRTTL                    # DNS rr ttl
-DNS_RLENGTH                    uint16        cesnet:DNSRDataLength              # DNS rlenght
-DNS_RDATA                      bytes         cesnet:DNSRData                    # DNS rdata
+DNS_RR_RLENGTH                 uint16        cesnet:DNSRDataLength              # DNS rlenght
+DNS_RR_RDATA                   bytes         cesnet:DNSRData                    # DNS rdata
 DNS_PSIZE                      uint16        cesnet:DNSPSize                    # DNS payload size
 DNS_DO                         uint8         cesnet:DNSRDO                      # DNS DNSSEC OK bit
 DNS_ID                         uint16        cesnet:DNSTransactionID            # DNS transaction id
@@ -118,14 +126,7 @@ FME_SIP_CALLED_PARTY           string        flowmon:sipCalledParty             
 FME_SIP_VIA                    string        flowmon:sipVia                     # SIP VIA
 
 # --- HTTP elements ---
-HTTP_REQUEST_METHOD_ID         uint32        e16982id500                        # HTTP request method id
-HTTP_REQUEST_HOST              string        e16982id501                        # HTTP(S) request host
-HTTP_REQUEST_URL               string        e16982id502                        # HTTP request url
-HTTP_REQUEST_AGENT_ID          uint32        e16982id503                        # HTTP request agent id
-HTTP_REQUEST_AGENT             string        e16982id504                        # HTTP request agent
-HTTP_REQUEST_REFERER           string        e16982id505                        # HTTP referer
-HTTP_RESPONSE_STATUS_CODE      uint32        e16982id506                        # HTTP response status code
-HTTP_RESPONSE_CONTENT_TYPE     string        e16982id507                        # HTTP response content type
+HTTP_REQUEST_METHOD_ID         string        cesnet:httpMethod                  # HTTP request method
 
 FME_HTTP_UA_OS                 uint16        flowmon:httpUaOs
 FME_HTTP_UA_OS_MAJ             uint16        flowmon:httpUaOsMaj
@@ -135,11 +136,14 @@ FME_HTTP_UA_APP                uint16        flowmon:httpUaApp
 FME_HTTP_UA_APP_MAJ            uint16        flowmon:httpUaAppMaj
 FME_HTTP_UA_APP_MIN            uint16        flowmon:httpUaAppMin
 FME_HTTP_UA_APP_BLD            uint16        flowmon:httpUaAppBld
+HTTP_REQUEST_REFERER           string        flowmon:httpReferer
+HTTP_RESPONSE_CONTENT_TYPE     string        flowmon:httpContentType
 FME_HTTP_METHOD_MASK           uint16        flowmon:httpMethodMask
-FME_HTTP_REQUEST_HOST          string        flowmon:httpHost                   # HTTP(S) request host
-FME_HTTP_REQUEST_URL           string        flowmon:httpUrl                    # HTTP request url
-FME_HTTP_RESPONSE_STATUS_CODE  uint32        flowmon:httpStatusCode             # HTTP response status code
-FME_HTTP_REQUEST_USER_AGENT    string        flowmon:httpUserAgent
+HTTP_REQUEST_HOST              string        flowmon:httpHost                   # HTTP(S) request host
+HTTP_REQUEST_URL               string        flowmon:httpUrl                    # HTTP request url
+HTTP_RESPONSE_STATUS_CODE      uint32        flowmon:httpStatusCode             # HTTP response status code
+HTTP_REQUEST_AGENT             string        flowmon:httpUserAgent
+
 
 # --- Other fields ---
 IPV6_TUN_TYPE                  uint8         e16982id405                        # IPv6 tunnel type
@@ -173,10 +177,13 @@ FME_TLS_VALIDITY_NOTAFTER      int64         flowmon:tlsValidityNotAfter        
 FME_TLS_SIGNATURE_ALG          uint16        flowmon:tlsSignatureAlg            # tlsSignatureAlg
 FME_TLS_PUBLIC_KEYALG          uint16        flowmon:tlsPublicKeyAlg            # tlsPublicKeyAlg
 FME_TLS_PUBLIC_KEYLENGTH       int32         flowmon:tlsPublicKeyLength         # tlsPublicKeyLength
-FME_TLS_JA_3FINGERPRINT        bytes         flowmon:tlsJa3Fingerprint          # tlsJa3Fingerprint
 
 TLS_SNI                        string        cesnet:TLSSNI                      # Server Name Indication https://en.wikipedia.org/wiki/Server_Name_Indication
-TLS_JA_3FINGERPRINT            bytes         cesnet:tlsJa3Fingerprint           # tlsJa3Fingerprint
+TLS_JA3_FINGERPRINT            bytes         flowmon:tlsJa3Fingerprint          # tlsJa3Fingerprint
+
+QUIC_SNI                       string        cesnet:quicSNI                     # Server Name Indication from QUIC
+QUIC_USER_AGENT                string        cesnet:quicUserAgent               # User-Agent value extracted from decrypted QUIC header
+QUIC_VERSION                   uint32        cesnet:quicVersion                 # Version of QUIC protocol extracted from decrypted QUIC header
 
 # --- Per-Packet Information elements ---
 PPI_PKT_LENGTHS                uint16*       e0id291/cesnet:packetLength         # basicList of packet lengths
@@ -185,15 +192,15 @@ PPI_PKT_FLAGS                  uint8*        e0id291/cesnet:packetFlag          
 PPI_PKT_DIRECTIONS             int8*         e0id291/cesnet:packetDirection      # basicList of packet directions
 
 # --- SSDP Information elements ---
-SSDP_LOCATION_PORT             uint16        cesnet:SSDPLocationPort
-SSDP_SERVER                    string        cesnet:SSDPServer
-SSDP_USER_AGENT                string        cesnet:SSDPUserAgent
-SSDP_NT                        string        cesnet:SSDPNT
-SSDP_ST                        string        cesnet:SSDPST
+SSDP_LOCATION_PORT             uint16        cesnet:SSDPLocationPort,flowmon:SSDPLocationPort
+SSDP_SERVER                    string        cesnet:SSDPServer,flowmon:SSDPServer
+SSDP_USER_AGENT                string        cesnet:SSDPUserAgent,flowmon:SSDPUserAgent
+SSDP_NT                        string        cesnet:SSDPNT,flowmon:SSDPNT
+SSDP_ST                        string        cesnet:SSDPST,flowmon:SSDPST
 
 # --- DNSDD Information elements ---
-DNSSD_QUERIES                  string        cesnet:DNSSDQueries
-DNSSD_RESPONSES                string        cesnet:DNSSDResponses
+DNSSD_QUERIES                  string        cesnet:DNSSDQueries,flowmon:DNSSDQuery
+DNSSD_RESPONSES                string        cesnet:DNSSDResponses,flowmon:DNSSDResponse
 
 # --- OVPN Information elements ---
 OVPN_CONF_LEVEL                 uint8        cesnet:OVPNConfLevel
@@ -229,3 +236,51 @@ NB_SUFFIX                       uint8       cesnet:NBSuffix
 # --- IDPContent Information elements  ---
 IDP_CONTENT                     bytes       cesnet:IDPContent
 IDP_CONTENT_REV                 bytes       cesnet:IDPContentRev
+
+# --- Hists ---
+S_PHISTS_SIZES                  uint32*     e0id291/cesnet:phistSrcSizes
+S_PHISTS_IPT                    uint32*     e0id291/cesnet:phistSrcInterPacketTime
+D_PHISTS_SIZES                  uint32*     e0id291/cesnet:phistDstSizes
+D_PHISTS_IPT                    uint32*     e0id291/cesnet:phistDstInterPacketTime
+
+# --- Bursts ---
+
+SBI_BRST_BYTES                  uint32*      e0id291/cesnet:burstSrcBytes
+SBI_BRST_PACKETS                uint32*      e0id291/cesnet:burstSrcPackets
+SBI_BRST_TIME_START             time*        e0id291/cesnet:burstSrcTimeStart
+SBI_BRST_TIME_STOP              time*        e0id291/cesnet:burstSrcTimeStop
+DBI_BRST_PACKETS                uint32*      e0id291/cesnet:burstDstPackets
+DBI_BRST_BYTES                  uint32*      e0id291/cesnet:burstDstBytes
+DBI_BRST_TIME_START             time*        e0id291/cesnet:burstDstTimeStart
+DBI_BRST_TIME_STOP              time*        e0id291/cesnet:burstDstTimeStop
+
+# --- BasicPlus ---
+L4_TCP_MSS                      uint32       cesnet:tcpMss
+L4_TCP_MSS_REV                  uint32       cesnet:tcpMssRev
+L4_TCP_SYN_SIZE                 uint16       cesnet:tcpSynSize
+
+L4_TCP_WIN                      uint16       e0id186
+L4_TCP_WIN_REV                  uint16       e29305id186
+L4_TCP_OPTIONS                  uint64       e0id209
+L4_TCP_OPTIONS_REV              uint64       e29305id209
+L3_FLAGS                        uint8        e0id197
+L3_FLAGS_REV                    uint8        e29305id197
+
+# --- wireguard ---
+WG_CONF_LEVEL                   uint8        cesnet:WGConfLevel
+WG_SRC_PEER                     uint32       cesnet:WGSrcPeer
+WG_DST_PEER                     uint32       cesnet:WGDstPeer
+
+# --- OSQuery ---
+OSQUERY_PROGRAM_NAME            string       cesnet:OSQueryProgramName
+OSQUERY_USERNAME                string       cesnet:OSQueryUsername
+OSQUERY_OS_NAME                 string       cesnet:OSQueryOSName
+OSQUERY_OS_MAJOR                uint16       cesnet:OSQueryOSMajor
+OSQUERY_OS_MINOR                uint16       cesnet:OSQueryOSMinor
+OSQUERY_OS_BUILD                string       cesnet:OSQueryOSBuild
+OSQUERY_OS_PLATFORM             string       cesnet:OSQueryOSPlatform
+OSQUERY_OS_PLATFORM_LIKE        string       cesnet:OSQueryOSPlatformLike
+OSQUERY_OS_ARCH                 string       cesnet:OSQueryOSArch
+OSQUERY_KERNEL_VERSION          string       cesnet:OSQueryKernelVersion
+OSQUERY_SYSTEM_HOSTNAME         string       cesnet:OSQuerySystemHostname
+

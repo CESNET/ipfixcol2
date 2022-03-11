@@ -1,4 +1,4 @@
-ipfixcol2 (2.2.0-1) unstable; urgency=low
+ipfixcol2 (@CPACK_PACKAGE_VERSION@-@CPACK_PACKAGE_RELEASE@) unstable; urgency=low
 
   * Initial release.
 

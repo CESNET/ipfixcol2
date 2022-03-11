@@ -48,8 +48,6 @@
 #include "configuration.h"
 #include "map.h"
 
-/** Filename of IPFIX-to-UniRec                                */
-#define CONF_FILENAME "unirec-elements.txt"
 /** Name of TRAP context that belongs to the plugin            */
 #define PLUGIN_TRAP_NAME "IPFIXcol2-UniRec"
 /** Description of the TRAP context that belongs to the plugin */
@@ -100,41 +98,26 @@ struct conf_unirec {
 /**
  * \brief Get the IPFIX-to-UniRec conversion database
  * \param ctx Plugin context
+ * \param file Path to a file with IPFIX-to-UniRec mapping
  * \return Conversion table or NULL (an error has occurred)
  */
 static map_t *
-ipfix2unirec_db(ipx_ctx_t *ctx)
+ipfix2unirec_db(ipx_ctx_t *ctx, const char *file)
 {
-    const char *path = ipx_api_cfg_dir();
-    const size_t full_size = strlen(path) + strlen(CONF_FILENAME) + 2; // 2 = '/' + '\0'
-    char *full_path = malloc(full_size * sizeof(char));
-    if (!full_path) {
-        IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
-        return NULL;
-    }
-
-    int ret_val = snprintf(full_path, full_size, "%s/%s", path, CONF_FILENAME);
-    if (ret_val < 0 || ((size_t) ret_val) >= full_size) {
-        IPX_CTX_ERROR(ctx, "Failed to generate a configuration path (internal error)", '\0');
-        free(full_path);
-        return NULL;
-    }
-
     map_t *map = map_init(ipx_ctx_iemgr_get(ctx));
     if (!map) {
         IPX_CTX_ERROR(ctx, "Failed to initialize conversion map! (%s:%d)", __FILE__, __LINE__);
-        free(full_path);
         return NULL;
     }
 
-    if (map_load(map, full_path) != IPX_OK) {
+    IPX_CTX_INFO(ctx, "Loading IPFIX-to-UniRec mapping file '%s'", file);
+
+    if (map_load(map, file) != IPX_OK) {
         IPX_CTX_ERROR(ctx, "Failed to initialize conversion database: %s", map_last_error(map));
         map_destroy(map);
-        free(full_path);
         return NULL;
     }
 
-    free(full_path);
     return map;
 }
 
@@ -317,7 +300,7 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
     conf->params = parsed_params;
 
     // Load IPFIX-to-UniRec conversion database
-    map_t *conv_db = ipfix2unirec_db(ctx);
+    map_t *conv_db = ipfix2unirec_db(ctx, parsed_params->mapping_file);
     if (!conv_db) {
         configuration_free(parsed_params);
         free(conf);

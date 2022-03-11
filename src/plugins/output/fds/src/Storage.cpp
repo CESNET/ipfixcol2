@@ -17,6 +17,8 @@
 #include <libgen.h>
 #include "Storage.hpp"
 
+const std::string TMP_SUFFIX = ".tmp";
+
 Storage::Storage(ipx_ctx_t *ctx, const Config &cfg) : m_ctx(ctx), m_path(cfg.m_path)
 {
     // Check if the directory exists
@@ -46,6 +48,11 @@ Storage::Storage(ipx_ctx_t *ctx, const Config &cfg) : m_ctx(ctx), m_path(cfg.m_p
     m_flags |= FDS_FILE_APPEND;
 }
 
+Storage::~Storage()
+{
+    window_close();
+}
+
 void
 Storage::window_new(time_t ts)
 {
@@ -53,7 +60,8 @@ Storage::window_new(time_t ts)
     window_close();
 
     // Open new file
-    const std::string new_file = filename_gen(ts);
+    const std::string new_file = filename_gen(ts) + TMP_SUFFIX;
+    m_file_name = new_file;
     std::unique_ptr<char, decltype(&free)> new_file_cpy(strdup(new_file.c_str()), &free);
 
     char *dir2create;
@@ -80,8 +88,14 @@ Storage::window_new(time_t ts)
 void
 Storage::window_close()
 {
+    bool file_opened = (m_file.get() != nullptr);
     m_file.reset();
     m_session2params.clear();
+    if (file_opened) {
+        std::string new_file_name(m_file_name.begin(), m_file_name.end() - TMP_SUFFIX.size());
+        std::rename(m_file_name.c_str(), new_file_name.c_str());
+        m_file_name.clear();
+    }
 }
 
 void

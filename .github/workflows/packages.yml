@@ -22,13 +22,19 @@ jobs:
     container: ${{ matrix.image }}
 
     steps:
-    - uses: actions/checkout@v1
-    - name: Define global variables
-      run: echo "::set-output name=zip_file::ipfixcol2-${IMAGE//:/}-$GITHUB_SHA.zip"
-      shell: bash
-      env:
-        IMAGE: ${{ matrix.image }}
-      id: vars
+    - uses: actions/checkout@v2
+    - name: Define variables
+      uses: actions/github-script@v5
+      with:
+        script: |
+          const sha = context.sha.substring(0, 8);
+          const image = `${{ matrix.image }}`
+          const distro = image.split('/').pop().replace(/:/g,'_');
+          const zip = `ipfixcol2-${distro}-${sha}`;
+          core.exportVariable('ZIP_FILE', zip);
+    - name: Prepare environment
+      run: |
+        mkdir -p build/libfds_repo
 
     # Dependencies ---------------------------------------------------------------------------
     - name: Install dependencies for libfds and IPFIXcol2 (Ubuntu/Debian)
@@ -67,17 +73,16 @@ jobs:
         ipfixcol2 -V
         ipfixcol2 -h
         ipfixcol2 -L
-    - name: Pack IPFIXcol2 DEB packages
-      working-directory: 'build/pkg/deb/debbuild/'
-      run: zip "$GITHUB_WORKSPACE/$ZIP_FILE" *.deb *.ddeb *.tar.gz *.dsc
-      env:
-        ZIP_FILE: ${{ steps.vars.outputs.zip_file }}
     - name: Archive DEB packages
       if: github.event_name == 'push'
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v2
       with:
-        name: ${{ steps.vars.outputs.zip_file }}
-        path: ${{ steps.vars.outputs.zip_file }}
+        name: ${{ env.ZIP_FILE }}
+        path: |
+          build/pkg/deb/debbuild/*.deb
+          build/pkg/deb/debbuild/*.ddeb
+          build/pkg/deb/debbuild/*.tar.gz
+          build/pkg/deb/debbuild/*.dsc
 
   rpm:
     # Try to build RPM packages
@@ -85,39 +90,56 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: ['centos:7', 'centos:8']
+        image:
+          - 'centos:7'
+          - 'quay.io/centos/centos:stream8'
+          - 'oraclelinux:8'
 
     name: Build RPMs on ${{ matrix.image }}
     container: ${{ matrix.image }}
 
     steps:
-    - uses: actions/checkout@v1
-    - name: Prepare environment and variables
+    - name: Define variables
+      uses: actions/github-script@v5
+      with:
+        script: |
+          const sha = context.sha.substring(0, 8);
+          const image = `${{ matrix.image }}`
+          const distro = image.split('/').pop().replace(/:/g,'_');
+          const zip = `ipfixcol2-${distro}-${sha}`;
+          core.exportVariable('ZIP_FILE', zip);
+    - name: Prepare environment
       run: |
-        echo "::set-output name=zip_file::ipfixcol2-${IMAGE//:/}-$GITHUB_SHA.zip"
         mkdir -p build/libfds_repo
-      env:
-        IMAGE: ${{ matrix.image }}
-      id: vars
 
     # Dependencies ---------------------------------------------------------------------------
-    - name: Enable additional repositories (CentOS 8)
-      if: startsWith(matrix.image, 'centos:8')
+    - name: Enable additional repositories (CentOS Stream)
+      if: contains(matrix.image, 'centos:stream')
       run: |
         dnf -y install 'dnf-command(config-manager)'
         dnf config-manager --set-enabled appstream powertools
-    - name: Install dependencies for libfds and IPFIXcol2 (CentOS)
-      if: startsWith(matrix.image, 'centos')
+    - name: Enable additional repositories (Oracle Linux)
+      if: contains(matrix.image, 'oraclelinux')
+      run: |
+        dnf -y install 'dnf-command(config-manager)'
+        dnf config-manager --set-enabled ol8_appstream ol8_codeready_builder
+    - name: Enable EPEL (CentOS)
+      if: contains(matrix.image, 'centos')
       run: |
         yum -y install epel-release
+    - name: Enable EPEL (OracleLinux)
+      if: contains(matrix.image, 'oraclelinux')
+      run: |
+        dnf -y install oracle-epel-release-el8
+    - name: Install dependencies for libfds and IPFIXcol2 (CentOS, Oracle Linux)
+      if: contains(matrix.image, 'centos') || contains(matrix.image, 'oraclelinux')
+      run: |
         yum -y install git gcc gcc-c++ cmake make libxml2-devel lz4-devel libzstd-devel
         yum -y install zlib-devel pkgconfig rpm-build librdkafka-devel
         yum -y install python3-docutils || yum -y install python-docutils
-    - name: Install depedencies for libfds and IPFIXcol2 (Fedora)
-      if: startsWith(matrix.image, 'fedora')
-      run: |
-        dnf -y install git gcc gcc-c++ cmake make libxml2-devel lz4-devel libzstd-devel
-        dnf -y install python3-docutils zlib-devel pkgconfig rpm-build librdkafka-devel
+
+    # Checkout repository --------------------------------------------------------------------
+    - uses: actions/checkout@v2
 
     # Build LIBFDS RPM package ---------------------------------------------------------------
     - name: Checkout libfds library - master branch
@@ -146,14 +168,11 @@ jobs:
         ipfixcol2 -V
         ipfixcol2 -h
         ipfixcol2 -L -v
-    - name: Pack IPFIXcol2 RPM packages
-      working-directory: 'build/pkg/rpm/rpmbuild'
-      run: zip -r "$GITHUB_WORKSPACE/$ZIP_FILE" RPMS SRPMS
-      env:
-        ZIP_FILE: ${{ steps.vars.outputs.zip_file }}
     - name: Archive RPM packages
       if: github.event_name == 'push'
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v2
       with:
-        name: ${{ steps.vars.outputs.zip_file }}
-        path: ${{ steps.vars.outputs.zip_file }}
+        name: ${{ env.ZIP_FILE }}
+        path: |
+          build/pkg/rpm/rpmbuild/RPMS/
+          build/pkg/rpm/rpmbuild/SRPMS/

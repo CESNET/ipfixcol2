@@ -47,6 +47,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include <stdlib.h>
 #include <pthread.h>
@@ -62,10 +63,6 @@
 #define GETTER_TIMEOUT    (10)
 /** Max sockets events processed in the getter - i.e. epoll_wait array size                      */
 #define GETTER_MAX_EVENTS (16)
-/** Timeout to read whole IPFIX Message after at least part has been received (in microseconds)  */
-#define GETTER_RECV_TIMEOUT (500000)
-/** Default size of a buffer prepared for new IPFIX/NetFlow message (bytes)                      */
-#define DEF_MSG_SIZE      (4096)
 
 /** Plugin description */
 IPX_API struct ipx_plugin_info ipx_plugin_info = {
@@ -91,6 +88,13 @@ struct tcp_pair {
     struct ipx_session *session;
     /** No message has been received from the Session yet                                        */
     bool new_connection;
+
+    /** Partly received message that waits for completition                                      */
+    uint8_t *msg;
+    /** Allocated size of the partly received <em>msg</em> message                               */
+    uint16_t msg_size;
+    /** Already receive part of the <em>msg</em> message                                         */
+    uint16_t msg_offset;
 };
 
 /** Instance data                                                                                */
@@ -143,7 +147,7 @@ static int
 active_session_add(struct tcp_data *data, int sd, struct ipx_session *session)
 {
     // Create a new pair
-    struct tcp_pair *pair = malloc(sizeof(*pair));
+    struct tcp_pair *pair = calloc(1, sizeof(*pair));
     if (!pair) {
         IPX_CTX_ERROR(data->ctx, "Memory allocation failed! (%s:%d)", __FILE__, __LINE__);
         return IPX_ERR_NOMEM;
@@ -242,7 +246,11 @@ active_session_remove_aux(struct tcp_data *data, size_t idx)
         }
     }
 
-    // Close internal structures an remove it from the list (do NOT free SESSION)
+    // Free internal structures and remove the pair from the list (do NOT free SESSION)
+    if (pair->msg) {
+        free(pair->msg);
+    }
+
     close(pair->fd);
     free(pair);
 
@@ -309,14 +317,21 @@ listener_add_connection(struct tcp_data *data, int sd)
     assert(sd >= 0);
     const char *err_str;
 
-    // Set receive timeout (after data on the socket is ready)
-    struct timeval rcv_timeout;
-    rcv_timeout.tv_sec = GETTER_RECV_TIMEOUT / 1000000;
-    rcv_timeout.tv_usec = GETTER_RECV_TIMEOUT % 1000000;
-    if (setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, &rcv_timeout, sizeof(rcv_timeout)) == -1) {
+    // Set non-blocking mode on the socket
+    int flags = fcntl(sd, F_GETFL, 0);
+    if (flags == -1) {
         ipx_strerror(errno, err_str);
-        IPX_CTX_WARNING(data->ctx, "Listener: Failed to specify receiving timeout of a socket: %s",
+        IPX_CTX_WARNING(data->ctx, "Listener: Failed to set non-blocking mode: fcntl() failed: %s",
             err_str);
+        return IPX_ERR_DENIED;
+    }
+
+    flags |= O_NONBLOCK;
+    if (fcntl(sd, F_SETFL, flags) == -1) {
+        ipx_strerror(errno, err_str);
+        IPX_CTX_WARNING(data->ctx, "Listener: Failed to set non-blocking mode: fcntl() failed: %s",
+            err_str);
+        return IPX_ERR_DENIED;
     }
 
     // Get the description of the remove address
@@ -810,6 +825,225 @@ active_destroy(ipx_ctx_t *ctx, struct tcp_data *instance)
 }
 
 /**
+ * \brief Try to read an IPFIX Message header
+ *
+ * The whole header might not be available right now. In that case, the function
+ * will only read and store available part and it will successfully return. When
+ * this happens, the allocated message is smaller that IPFIX Message header. The
+ * next call of this function will tried to read the rest.
+ *
+ * If the whole header is available, the function will allocate message buffer
+ * sufficient for the rest of the message.
+ *
+ * \param[in] ctx  Instance data (necessary for passing messages)
+ * \param[in] pair Connection pair (socket descriptor and session) to receive from
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_EOF if the socket has been closed
+ * \return #IPX_ERR_FORMAT if the message (or stream) is malformed and the connection MUST be closed
+ * \return #IPX_ERR_NOMEM on a memory allocation error and the connection MUST be closed
+ */
+static int
+socket_process_receive_header(ipx_ctx_t *ctx, struct tcp_pair *pair)
+{
+    struct fds_ipfix_msg_hdr hdr = {0};
+    uint8_t *hdr_raw = (uint8_t *) &hdr;
+
+    uint16_t remains = FDS_IPFIX_MSG_HDR_LEN;
+    uint16_t offset = 0;
+    ssize_t len;
+
+    uint8_t *msg_buffer;
+    uint16_t msg_version;
+    uint16_t msg_size;
+
+    assert(!pair->msg || pair->msg_offset < FDS_IPFIX_MSG_HDR_LEN);
+
+    if (pair->msg) {
+        // Fill the header with previously received data
+        offset = pair->msg_offset;
+        remains = FDS_IPFIX_MSG_HDR_LEN - offset;
+
+        memcpy(hdr_raw, pair->msg, offset);
+    }
+
+    len = recv(pair->fd, &hdr_raw[offset], remains, 0);
+    if (len == 0) {
+        // Connection has been closed
+        if (offset > 0) {
+            IPX_CTX_WARNING(ctx, "Connection with '%s' has been unexpectly closed",
+                pair->session->ident);
+            return IPX_ERR_FORMAT;
+        } else {
+            IPX_CTX_INFO(ctx, "Connection with '%s' closed.", pair->session->ident);
+            return IPX_ERR_EOF;
+        }
+    }
+
+    if (len < 0) {
+        // Something went wrong
+        const char *err_str;
+
+        if (errno == EWOULDBLOCK || errno == EAGAIN) {
+            return IPX_OK;
+        }
+
+        ipx_strerror(errno, err_str);
+        IPX_CTX_WARNING(ctx, "Connection with '%s' failed: %s",
+            pair->session->ident, err_str);
+        return IPX_ERR_FORMAT;
+    }
+
+    offset += len;
+
+    if (offset < FDS_IPFIX_MSG_HDR_LEN) {
+        // We don't have whole IPFIX Message header
+        uint8_t *ptr = realloc(pair->msg, offset);
+        if (!ptr) {
+            IPX_CTX_ERROR(ctx,
+                "Connection with '%s' closed due to memory allocation failure! (%s:%d).",
+                pair->session->ident, __FILE__, __LINE__);
+            return IPX_ERR_NOMEM;
+        }
+
+        memcpy(ptr, hdr_raw, offset);
+        pair->msg = ptr;
+        pair->msg_offset = offset;
+        pair->msg_size = offset;
+
+        return IPX_OK;
+    }
+
+    // Check the IPFIX Message header
+    msg_version = ntohs(hdr.version);
+    msg_size = ntohs(hdr.length);
+
+    if (msg_version != FDS_IPFIX_VERSION || msg_size < FDS_IPFIX_MSG_HDR_LEN) {
+        // Invalid header version
+        IPX_CTX_WARNING(ctx,
+            "Connection with '%s' closed due to invalid IPFIX Message header.",
+            pair->session->ident);
+        return IPX_ERR_FORMAT;
+    }
+
+    // Preallocated buffer for the rest of the IPFIX Message body
+    msg_buffer = realloc(pair->msg, msg_size);
+    if (!msg_buffer) {
+        IPX_CTX_ERROR(ctx,
+            "Connection with '%s' closed due to memory allocation failure! (%s:%d).",
+            pair->session->ident, __FILE__, __LINE__);
+        return IPX_ERR_NOMEM;
+    }
+
+    memcpy(msg_buffer, hdr_raw, FDS_IPFIX_MSG_HDR_LEN);
+    pair->msg = msg_buffer;
+    pair->msg_offset = FDS_IPFIX_MSG_HDR_LEN;
+    pair->msg_size = msg_size;
+
+    return IPX_OK;
+}
+
+/**
+ * \brief Try to read an IPFIX Message body
+ *
+ * The whole body might not be available right now. In that case, the function
+ * will only read and store available part and it will successfully return. When
+ * this happens, the message offset is smaller that the message size. The next call
+ * of this function will tried to read the rest.
+ *
+ * \param[in] ctx  Instance data (necessary for passing messages)
+ * \param[in] pair Connection pair (socket descriptor and session) to receive from
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_FORMAT if the message (or stream) is malformed and the connection MUST be closed
+ * \return #IPX_ERR_NOMEM on a memory allocation error and the connection MUST be closed
+ */
+static int
+socket_process_receive_body(ipx_ctx_t *ctx, struct tcp_pair *pair)
+{
+    const uint16_t remains = pair->msg_size - pair->msg_offset;
+    assert(pair->msg && pair->msg_offset >= FDS_IPFIX_MSG_HDR_LEN);
+
+    if (remains == 0) {
+        // This is an IPFIX Message without body...
+        return IPX_OK;
+    }
+
+    ssize_t len = recv(pair->fd, &pair->msg[pair->msg_offset], remains, 0);
+    if (len == 0) {
+        // Connection closed
+        IPX_CTX_WARNING(ctx, "Connection from '%s' has been unexpectly closed",
+            pair->session->ident);
+        return IPX_ERR_FORMAT;
+    }
+
+    if (len < 0) {
+        // Something went wrong
+        const char *err_str;
+
+        if (errno == EWOULDBLOCK || errno == EAGAIN) {
+            return IPX_OK;
+        }
+
+        ipx_strerror(errno, err_str);
+        IPX_CTX_WARNING(ctx, "Connection with '%s' failed: %s",
+            pair->session->ident, err_str);
+        return IPX_ERR_FORMAT;
+    }
+
+    pair->msg_offset += (uint16_t) len;
+    return IPX_OK;
+}
+
+/**
+ * \brief Try to pass fully received IPFIX Message to the collector.
+ *
+ * \param[in] ctx  Instance data (necessary for passing messages)
+ * \param[in] pair Connection pair (socket descriptor and session)
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_NOMEM on a memory allocation error and the connection MUST be closed
+ */
+static int
+socket_process_pass_msg(ipx_ctx_t *ctx, struct tcp_pair *pair)
+{
+    assert(pair->msg && pair->msg_offset == pair->msg_size && "Partly received message");
+
+    if (pair->new_connection) {
+        // Send information about the new Transport Session
+        ipx_msg_session_t *msg = ipx_msg_session_create(pair->session, IPX_MSG_SESSION_OPEN);
+        if (!msg) {
+            IPX_CTX_ERROR(ctx,
+                "Connection with '%s' closed due to memory allocation failure! (%s:%d).",
+                pair->session->ident, __FILE__, __LINE__);
+            return IPX_ERR_NOMEM;
+        }
+
+        ipx_ctx_msg_pass(ctx, ipx_msg_session2base(msg));
+        pair->new_connection = false;
+    }
+
+    // Create a message wrapper and pass the message
+    struct ipx_msg_ctx msg_ctx;
+    msg_ctx.session = pair->session;
+    msg_ctx.odid = ntohl(((struct fds_ipfix_msg_hdr *) pair->msg)->odid);
+    msg_ctx.stream = 0; // Streams are not supported over TCP
+
+    ipx_msg_ipfix_t *msg = ipx_msg_ipfix_create(ctx, &msg_ctx, pair->msg, pair->msg_size);
+    if (!msg) {
+        IPX_CTX_ERROR(ctx,
+            "Connection with '%s' closed due to memory allocation failure! (%s:%d).",
+            pair->session->ident, __FILE__, __LINE__);
+        return IPX_ERR_NOMEM;
+    }
+
+    ipx_ctx_msg_pass(ctx, ipx_msg_ipfix2base(msg));
+
+    pair->msg = NULL;
+    pair->msg_offset = 0;
+    pair->msg_size = 0;
+
+    return IPX_OK;
+}
+
+/**
  * \brief Get an IPFIX message from a socket and pass it
  *
  * \param[in] ctx  Instance data (necessary for passing messages)
@@ -822,88 +1056,34 @@ active_destroy(ipx_ctx_t *ctx, struct tcp_data *instance)
 static int
 socket_process(ipx_ctx_t *ctx, struct tcp_pair *pair)
 {
-    const char *err_str;
-    struct fds_ipfix_msg_hdr hdr;
-    static_assert(sizeof(hdr) == FDS_IPFIX_MSG_HDR_LEN, "Invalid size of IPFIX Message header");
+    int ret;
 
-    // Get the message header (do not move pointer)
-    ssize_t len = recv(pair->fd, &hdr, FDS_IPFIX_MSG_HDR_LEN, MSG_WAITALL | MSG_PEEK);
-    if (len == 0) {
-        // Connection terminated
-        IPX_CTX_INFO(ctx, "Connection from '%s' closed.", pair->session->ident);
-        return IPX_ERR_EOF;
-    }
-
-    if (len == -1 || len < FDS_IPFIX_MSG_HDR_LEN) {
-        // Failed to read header -> close
-        int error_code = (len == -1) ? errno : EINTR;
-        ipx_strerror(error_code, err_str);
-        IPX_CTX_WARNING(ctx, "Connection from '%s' closed due to failure to receive "
-            "an IPFIX Message header: %s", pair->session->ident, err_str);
-        return IPX_ERR_FORMAT;
-    }
-    assert(len == FDS_IPFIX_MSG_HDR_LEN);
-
-    // Check the header (version, size)
-    uint16_t msg_version = ntohs(hdr.version);
-    uint16_t msg_size = ntohs(hdr.length);
-    uint32_t msg_odid = ntohl(hdr.odid);
-
-    if (msg_version != FDS_IPFIX_VERSION || msg_size < FDS_IPFIX_MSG_HDR_LEN) {
-        // Unsupported header version
-        IPX_CTX_WARNING(ctx, "Connection from '%s' closed due to the unsupported version of "
-            "IPFIX/NetFlow.", pair->session->ident);
-        return IPX_ERR_FORMAT;
-    }
-
-    // Read the whole message
-    uint8_t *buffer = malloc(msg_size * sizeof(uint8_t));
-    if (!buffer) {
-        IPX_CTX_ERROR(ctx, "Connection from '%s' closed due to memory allocation failure! (%s:%d).",
-            pair->session->ident, __FILE__, __LINE__);
-        return IPX_ERR_NOMEM;
-    }
-
-    len = recv(pair->fd, buffer, msg_size, MSG_WAITALL);
-    if (len != msg_size) {
-        int error_code = (len == -1) ? errno : ETIMEDOUT;
-        ipx_strerror(error_code, err_str);
-        IPX_CTX_ERROR(ctx, "Connection from '%s' closed due to failure while reading from "
-            "its socket: %s.", pair->session->ident, err_str);
-        free(buffer);
-        return IPX_ERR_FORMAT;
-    }
-
-    if (pair->new_connection) {
-        // Send information about the new Transport Session
-        pair->new_connection = false;
-        ipx_msg_session_t *msg = ipx_msg_session_create(pair->session, IPX_MSG_SESSION_OPEN);
-        if (!msg) {
-            IPX_CTX_ERROR(ctx, "Connection from '%s' closed due to memory allocation "
-                "failure! (%s:%d).", pair->session->ident, __FILE__, __LINE__);
-            free(buffer);
-            return IPX_ERR_NOMEM;
+    if (!pair->msg || pair->msg_offset < FDS_IPFIX_MSG_HDR_LEN) {
+        // Try to receive IPFIX Message header first
+        ret = socket_process_receive_header(ctx, pair);
+        if (ret != IPX_OK) {
+            return ret;
         }
 
-        ipx_ctx_msg_pass(ctx, ipx_msg_session2base(msg));
+        if (pair->msg_offset < FDS_IPFIX_MSG_HDR_LEN) {
+            // Incomplete IPFIX Message header, read the rest later...
+            return IPX_OK;
+        }
     }
 
-    // Create a message wrapper and pass the message
-    struct ipx_msg_ctx msg_ctx;
-    msg_ctx.session = pair->session;
-    msg_ctx.odid = msg_odid;
-    msg_ctx.stream = 0; // Streams are not supported over TCP
-
-    ipx_msg_ipfix_t *msg = ipx_msg_ipfix_create(ctx, &msg_ctx, buffer, msg_size);
-    if (!msg) {
-        IPX_CTX_ERROR(ctx, "Connection from '%s' closed due to memory allocation "
-            "failure! (%s:%d).", pair->session->ident, __FILE__, __LINE__);
-        free(buffer);
-        return IPX_ERR_NOMEM;
+    // Receive rest of the message body
+    ret = socket_process_receive_body(ctx, pair);
+    if (ret != IPX_OK) {
+        return ret;
     }
 
-    ipx_ctx_msg_pass(ctx, ipx_msg_ipfix2base(msg));
-    return IPX_OK;
+    if (pair->msg_offset < pair->msg_size) {
+        // Incomplete IPFIX Message body, read the rest later...
+        return IPX_OK;
+    }
+
+    // Pass the message
+    return socket_process_pass_msg(ctx, pair);
 }
 
 // -------------------------------------------------------------------------------------------------

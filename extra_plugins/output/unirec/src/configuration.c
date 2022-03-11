@@ -63,6 +63,8 @@ enum cfg_timeout_mode {
     CFG_TIMEOUT_HALF_WAIT = -3  /**< Block only if some client is connected */
 };
 
+/** Filename of IPFIX-to-UniRec                                */
+#define DEF_CONF_FILENAME "unirec-elements.txt"
 /** Default maximum number of connections over TCP/TCP-TLS/Unix */
 #define DEF_MAX_CONNECTIONS 64
 /** Default output interface timeout                            */
@@ -84,6 +86,7 @@ struct ifc_common {
 
 /*
  *  <params>
+ *      <mappingFile>/etc/ipfixcol2/unirec-elements.txt</mappingFile>
  *      <uniRecFormat>DST_IP,SRC_IP,BYTES,DST_PORT,?TCP_FLAGS,SRC_PORT,PROTOCOL</uniRecFormat>
  *      <splitBiflow>true</splitBiflow>
  *      <trapIfcCommon>                                                           <!-- optional -->
@@ -123,6 +126,7 @@ enum params_xml_nodes {
     // Main parameters
     NODE_UNIREC_FMT = 1,
     NODE_BIFLOW_SPLIT,
+    NODE_MAPPING_FILE,
     NODE_TRAP_COMMON,
     NODE_TRAP_SPEC,
     // TRAP common parameters
@@ -208,6 +212,7 @@ static const struct fds_xml_args args_params[] = {
     FDS_OPTS_ROOT("params"),
     FDS_OPTS_ELEM(NODE_UNIREC_FMT,     "uniRecFormat",  FDS_OPTS_T_STRING, 0),
     FDS_OPTS_ELEM(NODE_BIFLOW_SPLIT,   "splitBiflow",   FDS_OPTS_T_BOOL,   FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(NODE_MAPPING_FILE,   "mappingFile",   FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
     FDS_OPTS_NESTED(NODE_TRAP_COMMON,  "trapIfcCommon", args_trap_common,  FDS_OPTS_P_OPT),
     FDS_OPTS_NESTED(NODE_TRAP_SPEC,    "trapIfcSpec",   args_trap_spec,    0),
     FDS_OPTS_END
@@ -480,9 +485,10 @@ cfg_parse_tcp(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct conf_params *cfg, enum
     // Prepare the TRAP interface specification
     char *res = NULL;
     const char *trap_ifc = (type == SPEC_TCP) ? "t" : "T";
-    if (cfg_str_append(&res, "%s:%" PRIu16 ":%" PRIu64, trap_ifc, port, max_conn) != IPX_OK
+    if (cfg_str_append(&res, "%s:%" PRIu16, trap_ifc, port) != IPX_OK
         || (type == SPEC_TCP_TLS
-            && cfg_str_append(&res, ":%s:%s:%s", file_key, file_cert, file_ca) != IPX_OK)) {
+            && cfg_str_append(&res, ":%s:%s:%s", file_key, file_cert, file_ca) != IPX_OK)
+        || (cfg_str_append(&res, ":max_clients=%" PRIu64, max_conn) != IPX_OK)) {
         IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
         free(file_ca); free(file_cert); free(file_key);
         free(res);
@@ -544,7 +550,7 @@ cfg_parse_unix(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct conf_params *cfg)
 
     // Prepare the TRAP interface specification
     char *res = NULL;
-    if (cfg_str_append(&res, "u:%s:%" PRIu64, name, max_conn) != IPX_OK) {
+    if (cfg_str_append(&res, "u:%s:max_clients=%" PRIu64, name, max_conn) != IPX_OK) {
         IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
         free(name);
         return IPX_ERR_NOMEM;
@@ -780,6 +786,13 @@ cfg_parse_params(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct conf_params *cfg)
 
     // Set default values
     cfg->biflow_split = true;
+    cfg->mapping_file = NULL;
+
+    rc = cfg_str_append(&cfg->mapping_file, "%s/%s", ipx_api_cfg_dir(), DEF_CONF_FILENAME);
+    if (rc != FDS_OK) {
+        IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+        return rc;
+    }
 
     // Set default TRAP common parameters
     struct ifc_common common;
@@ -805,6 +818,16 @@ cfg_parse_params(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct conf_params *cfg)
             // Split biflow
             assert(content->type == FDS_OPTS_T_BOOL);
             cfg->biflow_split = content->val_bool;
+            break;
+        case NODE_MAPPING_FILE:
+            // Mapping file
+            assert(content->type == FDS_OPTS_T_STRING);
+            free(cfg->mapping_file);
+            cfg->mapping_file = strdup(content->ptr_string);
+            if (cfg->mapping_file == NULL) {
+                IPX_CTX_ERROR(ctx, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+                return IPX_ERR_NOMEM;
+            }
             break;
         case NODE_TRAP_SPEC:
             // TRAP output interface specifier
@@ -919,6 +942,7 @@ configuration_free(struct conf_params *cfg)
         return;
     }
 
+    free(cfg->mapping_file);
     free(cfg->trap_ifc_spec);
     free(cfg->unirec_fmt);
     free(cfg->unirec_spec);

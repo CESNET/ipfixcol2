@@ -86,14 +86,22 @@ Second, install build dependencies of the collector
     yum install gcc gcc-c++ cmake make python3-docutils zlib-devel librdkafka-devel
     # Optionally: doxygen pkgconfig
 
-* Note: latest systems (e.g. Fedora/CentOS 8) use ``dnf`` instead of ``yum``.
+* Note: latest systems (e.g. Fedora/CentOS Stream 8) use ``dnf`` instead of ``yum``.
 * Note: package ``python3-docutils`` may by also named as ``python-docutils`` or ``python2-docutils``
 * Note: package ``pkgconfig`` may by also named as ``pkg-config``
-* Note: CentOS 8 requires additional system repositories (``appstream`` and ``powertools``) to be enabled:
+* Note: CentOS Stream 8 usually requires additional system repositories to be enabled:
 
 .. code-block::
 
+    dnf -y install epel-release
     dnf config-manager --set-enabled appstream powertools
+
+* Note: Oracle Linux 8 usually requires additional system repositories to be enabled:
+
+.. code-block::
+
+    dnf -y install oracle-epel-release-el8
+    dnf config-manager --set-enabled ol8_appstream ol8_codeready_builder
 
 **Debian/Ubuntu:**
 

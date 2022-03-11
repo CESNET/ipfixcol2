@@ -1,7 +1,7 @@
 /**
- * \file src/plugins/output/forwarder/src/IPFIXMessage.h
+ * \file src/plugins/output/forwarder/src/connector/Future.h
  * \author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
- * \brief Simple IPFIX message wrapper
+ * \brief Future socket class
  * \date 2021
  */
 
@@ -41,67 +41,37 @@
 
 #pragma once
 
-#include <ipfixcol2.h>
+#include <mutex>
+#include <stdexcept>
+#include <memory>
 
-class IPFIXMessage
-{
+#include "common.h"
+
+/**
+ * \brief  Class representing a value that will be set in the future
+ */
+class FutureSocket {
 public:
-    IPFIXMessage(ipx_msg_ipfix_t *msg)
-    : msg(msg)
-    {}
-    
-    const ipx_session *
-    session()
-    {
-        ipx_msg_ctx *msg_ctx = ipx_msg_ipfix_get_ctx(msg);
-        return msg_ctx->session;
-    }
+    /**
+     * \brief  Check if the result is ready to be retrieved
+     */
+    bool
+    ready();
 
-    uint8_t *
-    data()
-    {
-        return ipx_msg_ipfix_get_packet(msg);
-    }
+    /**
+     * \brief  Retrieve the result
+     */
+    UniqueFd
+    retrieve();
 
-    fds_ipfix_msg_hdr *
-    header()
-    {
-        return (fds_ipfix_msg_hdr *)data();
-    }
-
-    uint16_t 
-    length()
-    {
-        return ntohs(header()->length);
-    }
-
-    uint32_t 
-    seq_num()
-    {
-        return ntohl(header()->seq_num);
-    }
-
-    int 
-    drec_count()
-    {
-        return ipx_msg_ipfix_get_drec_cnt(msg);
-    }
-
-    uint32_t 
-    odid()
-    {
-        return ntohl(header()->odid);
-    }
-
-    const fds_tsnapshot_t *
-    get_templates_snapshot()
-    {
-        if (drec_count() == 0) {
-            return NULL;
-        }
-        return ipx_msg_ipfix_get_drec(msg, 0)->rec.snap;
-    }
+    /**
+     * \brief  Set the result and make it ready for retrieval
+     */
+    void
+    set(UniqueFd result);
 
 private:
-    ipx_msg_ipfix_t *msg;
+    UniqueFd m_result;
+    bool m_ready = false;
+    std::mutex m_mutex;
 };

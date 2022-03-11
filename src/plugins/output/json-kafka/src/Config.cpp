@@ -43,6 +43,7 @@
 #include <memory>
 #include <set>
 #include <sstream>
+#include <stdexcept>
 
 #include <libfds.h>
 #include <inttypes.h>

@@ -48,7 +48,6 @@ file(MAKE_DIRECTORY
 
 # Copy and create configuration files
 file(COPY
-    "templates/changelog"
     "templates/rules"
     "templates/compat"
     "templates/ipfixcol2.install"
@@ -59,6 +58,12 @@ file(COPY
 file(COPY
     "templates/source/format"
     DESTINATION "${DEB_CFG_DIR}/source"
+)
+
+configure_file(
+    "templates/changelog.in"
+    "${DEB_CFG_DIR}/changelog"
+    @ONLY
 )
 
 configure_file(
