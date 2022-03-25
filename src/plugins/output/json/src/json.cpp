@@ -49,6 +49,7 @@
 #include "File.hpp"
 #include "Server.hpp"
 #include "Sender.hpp"
+#include "Pipe.hpp"
 #include "Kafka.hpp"
 
 /** Plugin description */
@@ -101,6 +102,10 @@ outputs_initialize(ipx_ctx_t *ctx, Storage *storage, Config *cfg)
 
     for (const auto &send : cfg->outputs.sends) {
         storage->output_add(new Sender(send, ctx));
+    }
+
+    for (const auto &pipe : cfg->outputs.pipes) {
+        storage->output_add(new Pipe(pipe, ctx));
     }
 
     for (const auto &kafka : cfg->outputs.kafkas) {

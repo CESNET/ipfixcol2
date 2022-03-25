@@ -42,6 +42,9 @@
 #ifndef JSON_CONFIG_H
 #define JSON_CONFIG_H
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include <map>
 #include <string>
 #include <vector>
@@ -107,6 +110,16 @@ struct cfg_server : cfg_output {
     bool blocking;
 };
 
+/** Configuration of named pipe                                                                  */
+struct cfg_pipe : cfg_output {
+    /** Pathname of the pipe                                                                     */
+    std::string path;
+    /** File permissions of the pipe                                                             */
+    mode_t permissions;
+    /** Blocking communication                                                                   */
+    bool blocking;
+};
+
 enum class calg {
     NONE, ///< Do not use compression
     GZIP  ///< GZIP compression
@@ -156,6 +169,7 @@ private:
     void parse_print(fds_xml_ctx_t *print);
     void parse_server(fds_xml_ctx_t *server);
     void parse_send(fds_xml_ctx_t *send);
+    void parse_pipe(fds_xml_ctx_t *pipe);
     void parse_file(fds_xml_ctx_t *file);
     void parse_kafka(fds_xml_ctx_t *kafka);
     void parse_kafka_property(struct cfg_kafka &kafka, fds_xml_ctx_t *property);
@@ -171,6 +185,8 @@ public:
         std::vector<struct cfg_print> prints;
         /** Senders                                                                              */
         std::vector<struct cfg_send> sends;
+        /** Pipes                                                                                */
+        std::vector<struct cfg_pipe> pipes;
         /** File writers                                                                         */
         std::vector<struct cfg_file> files;
         /** Servers                                                                              */

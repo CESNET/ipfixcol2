@@ -71,6 +71,7 @@ enum params_xml_nodes {
     OUTPUT_PRINT,      /**< Print to standard output        */
     OUTPUT_SEND,       /**< Send over network               */
     OUTPUT_SERVER,     /**< Provide as server               */
+    OUTPUT_PIPE,       /**< Named pipe                      */
     OUTPUT_FILE,       /**< Store to file                   */
     OUTPUT_KAFKA,      /**< Store to Kafka                  */
     // Standard output
@@ -85,6 +86,11 @@ enum params_xml_nodes {
     SERVER_NAME,       /**< Server name                     */
     SERVER_PORT,       /**< Server port                     */
     SERVER_BLOCK,      /**< Blocking connection             */
+    // Named pipe output
+    PIPE_NAME,         /**< Pipe name                       */
+    PIPE_PATH,         /**< Pathname                        */
+    PIPE_PERMISSIONS,  /**< File permissions of the pipe    */
+    PIPE_BLOCK,        /**< Blocking connection             */
     // FIle output
     FILE_NAME,         /**< File storage name               */
     FILE_PATH,         /**< Path specification format       */
@@ -129,6 +135,15 @@ static const struct fds_xml_args args_send[] = {
     FDS_OPTS_END
 };
 
+/** Definition of the \<pipe\> node  */
+static const struct fds_xml_args args_pipe[] = {
+    FDS_OPTS_ELEM(PIPE_NAME,        "name",        FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_ELEM(PIPE_PATH,        "path",        FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_ELEM(PIPE_PERMISSIONS, "permissions", FDS_OPTS_T_UINT,   FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(PIPE_BLOCK,       "blocking",    FDS_OPTS_T_BOOL,   FDS_OPTS_P_OPT),
+    FDS_OPTS_END
+};
+
 /** Definition of the \<file\> node  */
 static const struct fds_xml_args args_file[] = {
     FDS_OPTS_ELEM(FILE_NAME,   "name",          FDS_OPTS_T_STRING, 0),
@@ -165,6 +180,7 @@ static const struct fds_xml_args args_outputs[] = {
     FDS_OPTS_NESTED(OUTPUT_PRINT,  "print",  args_print,  FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
     FDS_OPTS_NESTED(OUTPUT_SERVER, "server", args_server, FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
     FDS_OPTS_NESTED(OUTPUT_SEND,   "send",   args_send,   FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
+    FDS_OPTS_NESTED(OUTPUT_PIPE,   "pipe",   args_pipe,   FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
     FDS_OPTS_NESTED(OUTPUT_FILE,   "file",   args_file,   FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
     FDS_OPTS_NESTED(OUTPUT_KAFKA,  "kafka",  args_kafka,  FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
     FDS_OPTS_END
@@ -364,6 +380,58 @@ Config::parse_send(fds_xml_ctx_t *send)
     }
 
     outputs.sends.push_back(output);
+}
+
+/**
+ * \brief Parse "pipe" output parameters
+ *
+ * Successfully parsed output is added to the vector of outputs
+ * \param[in] send Parsed XML context
+ * \throw invalid_argument or runtime_error
+ */
+void
+Config::parse_pipe(fds_xml_ctx_t *pipe)
+{
+    // Set defaults
+    struct cfg_pipe output;
+    output.permissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
+    output.blocking = false;
+
+    const struct fds_xml_cont *content;
+
+    while (fds_xml_next(pipe, &content) != FDS_EOC) {
+        switch (content->id) {
+        case PIPE_NAME:
+            assert(content->type == FDS_OPTS_T_STRING);
+            output.name = content->ptr_string;
+            break;
+        case PIPE_PATH:
+            assert(content->type == FDS_OPTS_T_STRING);
+            output.path = content->ptr_string;
+            break;
+        case PIPE_PERMISSIONS:
+            assert(content->type == FDS_OPTS_T_UINT);
+            output.permissions = content->val_uint;
+            break;
+        case PIPE_BLOCK:
+            assert(content->type == FDS_OPTS_T_BOOL);
+            output.blocking = content->val_bool;
+            break;
+        default:
+            throw std::invalid_argument("Unexpected element within <pipe>!");
+        }
+    }
+
+    if (output.name.empty()) {
+        throw std::runtime_error("Name of a <pipe> output must be defined!");
+    }
+
+    if (output.path.empty()) {
+        throw std::runtime_error("Element <path> of the output '" + output.name
+            + "' must be defined!");
+    }
+
+    outputs.pipes.push_back(output);
 }
 
 /**
@@ -578,6 +646,9 @@ Config::parse_outputs(fds_xml_ctx_t *outputs)
         case OUTPUT_SEND:
             parse_send(content->ptr_ctx);
             break;
+        case OUTPUT_PIPE:
+            parse_pipe(content->ptr_ctx);
+            break;
         case OUTPUT_FILE:
             parse_file(content->ptr_ctx);
             break;
@@ -683,6 +754,7 @@ Config::default_set()
     outputs.files.clear();
     outputs.servers.clear();
     outputs.sends.clear();
+    outputs.pipes.clear();
     outputs.kafkas.clear();
 }
 
@@ -697,6 +769,7 @@ Config::check_validity()
     output_cnt += outputs.prints.size();
     output_cnt += outputs.servers.size();
     output_cnt += outputs.sends.size();
+    output_cnt += outputs.pipes.size();
     output_cnt += outputs.files.size();
     output_cnt += outputs.kafkas.size();
     if (output_cnt == 0) {
@@ -720,6 +793,9 @@ Config::check_validity()
     }
     for (const auto &send : outputs.sends) {
         check_and_add(send.name);
+    }
+    for (const auto &pipe : outputs.pipes) {
+        check_and_add(pipe.name);
     }
     for (const auto &server : outputs.servers) {
         check_and_add(server.name);
