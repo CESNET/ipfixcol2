@@ -1,5 +1,6 @@
 # Create a lister "object" library
 set(LISTER_SRC
+    lister.cpp
     printer.cpp
     jsonPrinter.cpp
     jsonRawPrinter.cpp
