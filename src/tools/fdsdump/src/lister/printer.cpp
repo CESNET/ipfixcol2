@@ -5,7 +5,8 @@
 #include <stdexcept>
 #include <vector>
 
-#include "common.hpp"
+#include <common/common.hpp>
+
 #include "printer.hpp"
 #include "jsonPrinter.hpp"
 #include "jsonRawPrinter.hpp"

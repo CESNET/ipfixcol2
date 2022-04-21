@@ -5,7 +5,8 @@
 #include <stdexcept>
 #include <vector>
 
-#include "common.hpp"
+#include <common/common.hpp>
+
 #include "jsonRawPrinter.hpp"
 
 JsonRawPrinter::JsonRawPrinter(const shared_iemgr &iemgr, const std::string &args)

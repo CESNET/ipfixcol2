@@ -1,19 +1,15 @@
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
+
+# Subdirectories with components
+add_subdirectory(common)
+add_subdirectory(lister)
+
 add_executable(fdsdump
-    common.cpp
     main.cpp
-    printer.cpp
-    jsonPrinter.cpp
-    jsonRawPrinter.cpp
-    tablePrinter.cpp
-    flowProvider.cpp
-    filelist.cpp
-    field.cpp
-    fieldView.cpp
     options.cpp
-    ipaddr.cpp
-    storageRecord.cpp
-    storageSorter.cpp
-    storageSorted.cpp)
+    $<TARGET_OBJECTS:common_obj>
+	$<TARGET_OBJECTS:lister_obj>
+)
 
 target_include_directories(fdsdump
     PUBLIC
@@ -27,4 +23,3 @@ target_link_libraries(fdsdump
 install(
     TARGETS fdsdump
     DESTINATION bin)
-

@@ -3,9 +3,10 @@
 
 #include <vector>
 
-#include "field.hpp"
-#include "flow.hpp"
-#include "ipaddr.hpp"
+#include <common/field.hpp>
+#include <common/flow.hpp>
+#include <common/ipaddr.hpp>
+
 #include "storageRecord.hpp"
 
 class StorageSorter {

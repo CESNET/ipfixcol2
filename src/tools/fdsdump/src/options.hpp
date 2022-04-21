@@ -3,7 +3,7 @@
 #include <string>
 #include <stdexcept>
 
-#include "filelist.hpp"
+#include <common/filelist.hpp>
 
 class OptionsException : public std::invalid_argument {
 public:

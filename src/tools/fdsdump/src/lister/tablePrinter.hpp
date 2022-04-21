@@ -4,8 +4,9 @@
 #include <string>
 #include <vector>
 
-#include "common.hpp"
-#include "field.hpp"
+#include <common/common.hpp>
+#include <common/field.hpp>
+
 #include "printer.hpp"
 
 class TablePrinter : public Printer {

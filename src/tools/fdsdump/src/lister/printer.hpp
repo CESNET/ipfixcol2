@@ -7,8 +7,8 @@
 
 #include <libfds.h>
 
-#include "common.hpp"
-#include "flow.hpp"
+#include <common/common.hpp>
+#include <common/flow.hpp>
 
 /**
  * @brief Interface of an output printer for flow records.

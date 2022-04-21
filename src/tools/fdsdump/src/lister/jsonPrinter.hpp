@@ -3,7 +3,8 @@
 
 #include <string>
 
-#include "field.hpp"
+#include <common/field.hpp>
+
 #include "printer.hpp"
 
 class JsonPrinter : public Printer {

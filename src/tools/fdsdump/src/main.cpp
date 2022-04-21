@@ -6,12 +6,13 @@
 
 #include <libfds.h>
 
-#include "common.hpp"
-#include "filelist.hpp"
-#include "flowProvider.hpp"
+#include <common/common.hpp>
+#include <common/filelist.hpp>
+#include <common/flowProvider.hpp>
+#include <lister/printer.hpp>
+#include <lister/storageSorted.hpp>
+
 #include "options.hpp"
-#include "printer.hpp"
-#include "storageSorted.hpp"
 
 
 static unique_iemgr iemgr_prepare(const std::string &path)

@@ -4,7 +4,8 @@
 #include <stdexcept>
 #include <string>
 
-#include "common.hpp"
+#include <common/common.hpp>
+
 #include "jsonPrinter.hpp"
 
 JsonPrinter::JsonPrinter(const shared_iemgr &iemgr, const std::string &args)

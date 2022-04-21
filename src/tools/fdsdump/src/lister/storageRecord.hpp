@@ -4,8 +4,8 @@
 #include <libfds.h>
 #include <memory>
 
-#include "common.hpp"
-#include "flow.hpp"
+#include <common/common.hpp>
+#include <common/flow.hpp>
 
 /**
  * @brief Flow storage record.
