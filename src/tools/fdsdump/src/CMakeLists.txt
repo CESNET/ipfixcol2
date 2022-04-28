@@ -3,12 +3,14 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 # Subdirectories with components
 add_subdirectory(common)
 add_subdirectory(lister)
+add_subdirectory(aggregator)
 
 add_executable(fdsdump
     main.cpp
     options.cpp
     $<TARGET_OBJECTS:common_obj>
 	$<TARGET_OBJECTS:lister_obj>
+    $<TARGET_OBJECTS:aggregator_obj>
 )
 
 target_include_directories(fdsdump

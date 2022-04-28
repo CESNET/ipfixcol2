@@ -8,6 +8,7 @@ string_split(const std::string &str, const std::string &delimiter)
 {
     std::vector<std::string> pieces;
     std::size_t pos = 0;
+
     for (;;) {
         std::size_t next_pos = str.find(delimiter, pos);
         if (next_pos == std::string::npos) {
@@ -17,6 +18,38 @@ string_split(const std::string &str, const std::string &delimiter)
         pieces.emplace_back(str.begin() + pos, str.begin() + next_pos);
         pos = next_pos + 1;
     }
+    return pieces;
+}
+
+std::vector<std::string>
+string_split_right(
+    const std::string &str,
+    const std::string &delimiter,
+    unsigned int max_pieces)
+{
+    std::vector<std::string> pieces;
+    std::size_t pos = str.size() - 1;
+
+    for (;;) {
+        if (max_pieces > 0 && pieces.size() == max_pieces - 1) {
+            pieces.emplace(pieces.begin(), str.begin(), str.begin() + pos + 1);
+            break;
+        }
+
+        std::size_t next_pos = str.rfind(delimiter, pos);
+        if (next_pos == std::string::npos) {
+            pieces.emplace(pieces.begin(), str.begin(), str.begin() + pos + 1);
+            break;
+        }
+        pieces.emplace(pieces.begin(), str.begin() + next_pos + delimiter.size(), str.begin() + pos + 1);
+
+        if (next_pos == 0) {
+            pieces.emplace(pieces.begin(), "");
+            break;
+        }
+        pos = next_pos - 1;
+    }
+
     return pieces;
 }
 
@@ -54,4 +87,20 @@ string_trim_copy(std::string str)
 {
     string_trim(str);
     return str;
+}
+
+void
+memcpy_bits(uint8_t *dst, uint8_t *src, unsigned int n_bits)
+{
+    unsigned int n_bytes = (n_bits + 7) / 8;
+    unsigned int rem_bits = 8 - (n_bits % 8);
+
+    if (n_bits == 0)
+        return;
+
+    memcpy(dst, src, n_bytes);
+
+    if (rem_bits != 8) {
+        dst[n_bytes - 1] &= (0xFF >> rem_bits) << rem_bits;
+    }
 }

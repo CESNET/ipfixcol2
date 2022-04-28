@@ -60,6 +60,11 @@ public:
     /** @brief Get output format specifier.              */
     const std::string &get_output_specifier() const { return m_output_specifier; };
 
+    /** @brief Get aggregation keys */
+    const std::string &get_aggregation_keys() const { return m_aggregation_keys; };
+    /** @brief Get aggregation values */
+    const std::string &get_aggregation_values() const { return m_aggregation_fields; };
+
     /** @brief Whether to ignore biflow direction with zero bytes and packets counter */
     bool get_biflow_autoignore() const { return m_biflow_autoignore; };
 
@@ -76,6 +81,9 @@ private:
     std::string m_output_specifier;
 
     std::string m_order_by;
+
+    std::string m_aggregation_keys;
+    std::string m_aggregation_fields;
 
     bool        m_biflow_autoignore;
 

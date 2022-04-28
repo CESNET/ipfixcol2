@@ -1,3 +1,9 @@
+/**
+ * @file
+ * @author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
+ * @author Lukas Hutak <hutaklukas@fit.vut.cz>
+ * @brief General utility functions
+ */
 
 #pragma once
 
@@ -24,6 +30,19 @@ using shared_tsnapshot = std::shared_ptr<fds_tsnapshot_t>;
 std::vector<std::string>
 string_split(const std::string &str, const std::string &delimiter);
 
+/**
+ * @brief Split string by a delimiter from right.
+ * @param str The string to be splitted
+ * @param delimiter String delimeter
+ * @param max_pieces The maximum number of pieces (0 = no limit)
+ * @return Vector of the string pieces.
+ */
+std::vector<std::string>
+string_split_right(
+    const std::string &str,
+    const std::string &delimiter,
+    unsigned int max_pieces = 0);
+
 void
 string_ltrim(std::string &str);
 
@@ -35,3 +54,13 @@ string_trim(std::string &str);
 
 std::string
 string_trim_copy(std::string str);
+
+/**
+ * @brief Copy a specified number of bits from source to destination,
+ *   remaining bits in an incomplete byte are zeroed.
+ * @param dst The destination
+ * @param src The source
+ * @param n_bits The number of bits
+ */
+void
+memcpy_bits(uint8_t *dst, uint8_t *src, unsigned int n_bits);
