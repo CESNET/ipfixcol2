@@ -17,6 +17,7 @@ public:
     double as_float() const;
     bool as_bool() const;
     struct timespec as_datetime() const;
+    uint64_t as_datetime_ms() const;
     IPAddr as_ipaddr() const;
 
 private:

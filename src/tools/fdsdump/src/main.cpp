@@ -9,7 +9,7 @@
 #include <common/common.hpp>
 #include <common/filelist.hpp>
 #include <lister/lister.hpp>
-#include <aggregator/aggregator.hpp>
+#include <aggregator/mode.hpp>
 
 #include "options.hpp"
 

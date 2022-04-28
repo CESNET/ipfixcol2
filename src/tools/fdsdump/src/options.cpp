@@ -24,7 +24,7 @@ void Options::reset()
     m_input_filter.clear();
 
     m_output_limit = 0;
-    m_output_specifier = "JSON-RAW";
+    m_output_specifier.clear();
 
     m_aggregation_keys.clear();
     m_aggregation_fields = "packets,bytes,flows";
@@ -100,8 +100,19 @@ void Options::parse(int argc, char *argv[])
 void Options::validate()
 {
     if (!m_aggregation_keys.empty()) {
+        // Record aggregation
         m_mode = Mode::aggregate;
+
+        if (m_output_specifier.empty()) {
+            m_output_specifier = "json";
+        }
+
     } else {
+        // Record listing
         m_mode = Mode::list;
+
+        if (m_output_specifier.empty()) {
+            m_output_specifier = "JSON-RAW";
+        }
     }
 }

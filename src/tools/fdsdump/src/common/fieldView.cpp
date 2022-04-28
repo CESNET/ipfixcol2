@@ -79,6 +79,25 @@ FieldView::as_datetime() const
     return result;
 }
 
+uint64_t
+FieldView::as_datetime_ms() const
+{
+    const struct fds_iemgr_elem *elem = m_field.info->def;
+    uint64_t result;
+    int ret;
+
+    if (!elem) {
+        throw std::invalid_argument("Conversion error (undefined datetime type)");
+    }
+
+    ret = fds_get_datetime_lp_be(m_field.data, m_field.size, elem->data_type, &result);
+    if (ret != FDS_OK) {
+        throw std::invalid_argument("Conversion error (datetime)");
+    }
+
+    return result;
+}
+
 IPAddr
 FieldView::as_ipaddr() const
 {
