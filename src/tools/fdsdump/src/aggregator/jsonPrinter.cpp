@@ -3,6 +3,9 @@
 #include "jsonPrinter.hpp"
 #include "print.hpp"
 
+namespace fdsdump {
+namespace aggregator {
+
 JSONPrinter::JSONPrinter(ViewDefinition view_def)
     : m_view_def(view_def)
 {
@@ -99,3 +102,6 @@ JSONPrinter::append_value(const ViewField &field, ViewValue *value)
         return;
     }
 }
+
+} // aggregator
+} // fdsdump

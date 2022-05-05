@@ -10,6 +10,9 @@
 #include "informationElements.hpp"
 #include "view.hpp"
 
+namespace fdsdump {
+namespace aggregator {
+
 ViewField *
 find_field(ViewDefinition &def, const std::string &name)
 {
@@ -567,3 +570,6 @@ make_view_def(const std::string &keys, const std::string &values, fds_iemgr_t *i
 
     return def;
 }
+
+} // aggregator
+} // fdsdump

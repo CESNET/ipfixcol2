@@ -12,6 +12,9 @@
 
 #include <libfds.h>
 
+namespace fdsdump {
+namespace aggregator {
+
 /**
  * @brief A representation of an IP address that can hold both an IPv4 or
  * an IPv6 address.
@@ -168,3 +171,6 @@ make_ipv6_address(uint8_t *address)
     memcpy(ip.address, address, 16);
     return ip;
 }
+
+} // aggregator
+} // fdsdump

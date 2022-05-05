@@ -9,6 +9,9 @@
 #include "view.hpp"
 #include "sort.hpp"
 
+namespace fdsdump {
+namespace aggregator {
+
 void
 mode_aggregate(const shared_iemgr &iemgr, const Options &opts)
 {
@@ -63,3 +66,6 @@ mode_aggregate(const shared_iemgr &iemgr, const Options &opts)
 
     printer->print_epilogue();
 }
+
+} // aggregator
+} // fdsdump

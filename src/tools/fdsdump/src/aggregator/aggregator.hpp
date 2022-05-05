@@ -15,6 +15,9 @@
 #include "hashTable.hpp"
 #include "sort.hpp"
 
+namespace fdsdump {
+namespace aggregator {
+
 /**
  * @brief A class performing aggregation of fds data records based on a view definition.
  */
@@ -64,3 +67,5 @@ private:
     aggregate(fds_drec &drec, ViewDirection direction, uint16_t drec_find_flags);
 };
 
+} // aggregator
+} // fdsdump

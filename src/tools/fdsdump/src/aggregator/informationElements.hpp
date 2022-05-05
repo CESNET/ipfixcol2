@@ -7,6 +7,9 @@
 
 #include <cstdint>
 
+namespace fdsdump {
+namespace aggregator {
+
 namespace IPFIX {
 
 enum PEN : uint32_t
@@ -37,3 +40,6 @@ enum ID : uint16_t
 };
 
 }
+
+} // aggregator
+} // fdsdump

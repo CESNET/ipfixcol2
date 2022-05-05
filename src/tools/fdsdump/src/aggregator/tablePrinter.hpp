@@ -9,6 +9,9 @@
 
 #include "printer.hpp"
 
+namespace fdsdump {
+namespace aggregator {
+
 class TABLEPrinter : public Printer
 {
 public:
@@ -31,3 +34,6 @@ private:
     ViewDefinition m_view_def;
     std::string m_buffer;
 };
+
+} // aggregator
+} // fdsdump

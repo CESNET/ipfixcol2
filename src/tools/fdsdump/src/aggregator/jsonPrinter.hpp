@@ -4,6 +4,9 @@
 
 #include "printer.hpp"
 
+namespace fdsdump {
+namespace aggregator {
+
 class JSONPrinter : public Printer
 {
 public:
@@ -28,3 +31,6 @@ private:
     std::string m_buffer;
     size_t m_rec_printed = 0;
 };
+
+} // aggregator
+} // fdsdump

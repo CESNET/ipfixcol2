@@ -11,6 +11,9 @@
 #include "informationElements.hpp"
 #include "print.hpp"
 
+namespace fdsdump {
+namespace aggregator {
+
 TABLEPrinter::TABLEPrinter(ViewDefinition view_def)
     : m_view_def(view_def)
 {
@@ -108,3 +111,6 @@ void
 TABLEPrinter::print_epilogue()
 {
 }
+
+} // aggregator
+} // fdsdump

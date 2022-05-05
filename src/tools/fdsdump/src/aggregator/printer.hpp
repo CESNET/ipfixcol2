@@ -11,6 +11,9 @@
 #include "common/common.hpp"
 #include "view.hpp"
 
+namespace fdsdump {
+namespace aggregator {
+
 /**
  * @brief Printer interface
  */
@@ -32,3 +35,6 @@ public:
 
 std::unique_ptr<Printer>
 printer_factory(ViewDefinition view_def, const std::string &manual);
+
+} // aggregator
+} // fdsdump

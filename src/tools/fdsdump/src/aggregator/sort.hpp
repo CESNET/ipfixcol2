@@ -11,6 +11,9 @@
 #include <string>
 #include <functional>
 
+namespace fdsdump {
+namespace aggregator {
+
 enum class SortDir {
     Ascending,
     Descending
@@ -95,3 +98,6 @@ sort_records(
     std::vector<uint8_t *> &records,
     const std::vector<SortField> &sort_fields,
     const ViewDefinition &def);
+
+} // aggregator
+} // fdsdump

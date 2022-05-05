@@ -10,6 +10,9 @@
 
 #include "arenaAllocator.hpp"
 
+namespace fdsdump {
+namespace aggregator {
+
 /**
  * @brief A struct representing a hash table block.
  */
@@ -81,3 +84,6 @@ private:
     void
     expand();
 };
+
+} // aggregator
+} // fdsdump

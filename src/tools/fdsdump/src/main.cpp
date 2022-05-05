@@ -51,7 +51,7 @@ main(int argc, char *argv[])
             fdsdump::lister::mode_list(iemgr, options);
             break;
         case Options::Mode::aggregate:
-            mode_aggregate(iemgr, options);
+            fdsdump::aggregator::mode_aggregate(iemgr, options);
             break;
         default:
             throw std::runtime_error("Invalid mode");

@@ -10,6 +10,9 @@
 
 #include "informationElements.hpp"
 
+namespace fdsdump {
+namespace aggregator {
+
 int
 get_width(const ViewField &field)
 {
@@ -179,3 +182,6 @@ print_value(const ViewField &field, ViewValue &value, char *buffer, bool transla
     default: assert(0);
     }
 }
+
+} // aggregator
+} // fdsdump

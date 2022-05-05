@@ -20,6 +20,9 @@
 #include "informationElements.hpp"
 #include "sort.hpp"
 
+namespace fdsdump {
+namespace aggregator {
+
 static int
 fds_drec_find(
     fds_drec *drec,
@@ -622,3 +625,6 @@ Aggregator::merge(Aggregator &other, unsigned int max_num_items)
         n++;
     }
 }
+
+} // aggregator
+} // fdsdump

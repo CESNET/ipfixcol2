@@ -11,6 +11,9 @@
 #include "hashTable.hpp"
 #include "3rd_party/xxhash/xxhash.h"
 
+namespace fdsdump {
+namespace aggregator {
+
 static constexpr double EXPAND_WHEN_THIS_FULL = 0.95;
 static constexpr unsigned int EXPAND_WITH_FACTOR_OF = 2;
 static constexpr uint8_t EMPTY_BIT = 0x80;
@@ -151,3 +154,6 @@ HashTable::find_or_create(uint8_t *key, uint8_t *&item)
 {
     return lookup(key, item, true);
 }
+
+} // aggregator
+} // fdsdump

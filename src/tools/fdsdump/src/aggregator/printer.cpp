@@ -8,6 +8,9 @@
 #include "jsonPrinter.hpp"
 #include "tablePrinter.hpp"
 
+namespace fdsdump {
+namespace aggregator {
+
 struct PrinterFactory {
     const char *name;
     std::function<Printer *(ViewDefinition view_def)> create_fn;
@@ -40,3 +43,6 @@ printer_factory(ViewDefinition view_def, const std::string &manual)
 
     throw std::invalid_argument("Unsupported output type '" + type + "'");
 }
+
+} // aggregator
+} // fdsdump

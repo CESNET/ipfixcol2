@@ -8,6 +8,9 @@
 #include <vector>
 #include <algorithm>
 
+namespace fdsdump {
+namespace aggregator {
+
 /**
  * @brief A generic binary heap implementation. It can be used for example
  *   as a priority queue.
@@ -122,3 +125,6 @@ private:
         }
     }
 };
+
+} // aggregator
+} // fdsdump

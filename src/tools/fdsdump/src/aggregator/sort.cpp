@@ -13,6 +13,9 @@
 #include "sort.hpp"
 #include "view.hpp"
 
+namespace fdsdump {
+namespace aggregator {
+
 static SortDir
 get_default_sort_dir(ViewField *field)
 {
@@ -221,3 +224,6 @@ sort_records(
     std::function<bool(uint8_t *, uint8_t *)> compare = make_comparer(sort_fields, def);
     std::sort(records.begin(), records.end(), compare);
 }
+
+} // aggregator
+} // fdsdump

@@ -7,6 +7,9 @@
 
 #include "view.hpp"
 
+namespace fdsdump {
+namespace aggregator {
+
 /**
  * @brief Get a width the field should have in a text form.
  * @param field  The field
@@ -55,3 +58,6 @@ print_value(
     ViewValue &value,
     char *buffer,
     bool translate_ip_addrs);
+
+} // aggregator
+} // fdsdump

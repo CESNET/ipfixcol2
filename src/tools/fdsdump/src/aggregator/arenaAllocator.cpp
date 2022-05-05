@@ -7,6 +7,9 @@
 
 #include <cassert>
 
+namespace fdsdump {
+namespace aggregator {
+
 uint8_t *
 ArenaAllocator::allocate(size_t size)
 {
@@ -21,3 +24,6 @@ ArenaAllocator::allocate(size_t size)
     m_offset += size;
     return mem;
 }
+
+} // aggregator
+} // fdsdump
