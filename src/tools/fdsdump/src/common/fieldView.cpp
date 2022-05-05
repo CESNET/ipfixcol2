@@ -4,6 +4,8 @@
 
 #include "fieldView.hpp"
 
+namespace fdsdump {
+
 uint64_t
 FieldView::as_uint() const
 {
@@ -112,3 +114,5 @@ FieldView::as_ipaddr() const
 
     throw std::invalid_argument("Conversion error (ipaddr)");
 }
+
+} // fdsdump

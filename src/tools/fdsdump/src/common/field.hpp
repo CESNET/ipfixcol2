@@ -8,6 +8,8 @@
 
 #include "common.hpp"
 
+namespace fdsdump {
+
 /**
  * @brief Data type of a record field.
  */
@@ -112,3 +114,5 @@ private:
     FieldType get_type_of_element(const struct fds_iemgr_elem *elem) const;
     FieldType get_type_of_alias(const struct fds_iemgr_alias *alias) const;
 };
+
+} // fdsdump

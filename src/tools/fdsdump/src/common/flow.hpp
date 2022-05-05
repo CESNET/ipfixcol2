@@ -1,5 +1,7 @@
 #pragma once
 
+namespace fdsdump {
+
 /**
  * @brief Direction of flow record to be considered when processing.
  *
@@ -30,3 +32,5 @@ struct Flow {
     /** @brief Flow Data record                                    */
     struct fds_drec rec;
 };
+
+} // fdsdump

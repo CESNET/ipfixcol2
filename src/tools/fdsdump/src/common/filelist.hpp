@@ -42,6 +42,8 @@
 #include <mutex>
 #include <vector>
 
+namespace fdsdump {
+
 /**
  * \brief  A file list that allows thread safe retrieval of items;
  */
@@ -97,3 +99,5 @@ private:
     std::mutex m_mutex;
 	std::vector<std::string> m_files;
 };
+
+} // fdsdump

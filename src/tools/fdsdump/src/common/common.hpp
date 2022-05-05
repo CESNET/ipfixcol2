@@ -13,6 +13,8 @@
 
 #include <libfds.h>
 
+namespace fdsdump {
+
 using unique_file = std::unique_ptr<fds_file_t, decltype(&fds_file_close)>;
 using unique_iemgr = std::unique_ptr<fds_iemgr_t, decltype(&fds_iemgr_destroy)>;
 using unique_filter = std::unique_ptr<fds_ipfix_filter, decltype(&fds_ipfix_filter_destroy)>;
@@ -64,3 +66,5 @@ string_trim_copy(std::string str);
  */
 void
 memcpy_bits(uint8_t *dst, uint8_t *src, unsigned int n_bits);
+
+} // fdsdump

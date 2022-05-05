@@ -10,6 +10,8 @@
 #include "common.hpp" // unique_file, unique_iemgr
 #include "flow.hpp"
 
+namespace fdsdump {
+
 class FlowProvider {
 public:
     FlowProvider(const shared_iemgr &iemgr);
@@ -71,3 +73,5 @@ private:
 
     Flow m_flow;
 };
+
+} // fdsdump

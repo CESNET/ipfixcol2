@@ -6,6 +6,8 @@
 #include "fieldView.hpp"
 #include "flowProvider.hpp"
 
+namespace fdsdump {
+
 FlowProvider::FlowProvider(const shared_iemgr &iemgr)
     : m_iemgr(iemgr)
 {
@@ -225,3 +227,5 @@ FlowProvider::next_record()
         return &m_flow;
     }
 }
+
+} // fdsdump

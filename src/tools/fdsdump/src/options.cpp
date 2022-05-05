@@ -4,6 +4,8 @@
 
 #include "options.hpp"
 
+namespace fdsdump {
+
 Options::Options()
 {
     reset();
@@ -116,3 +118,5 @@ void Options::validate()
         }
     }
 }
+
+} // fdsdump

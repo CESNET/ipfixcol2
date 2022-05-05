@@ -8,6 +8,8 @@
 #include <string>
 #include <iostream>
 
+namespace fdsdump {
+
 /**
  * @brief IPv4/IPv6 address representation
  */
@@ -144,3 +146,4 @@ union IPAddr {
 
 static_assert(sizeof(IPAddr) == 16U, "Unexpected union size!");
 
+} // fdsdump

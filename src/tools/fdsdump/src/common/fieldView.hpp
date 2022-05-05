@@ -7,6 +7,8 @@
 
 #include "ipaddr.hpp"
 
+namespace fdsdump {
+
 class FieldView {
 public:
     FieldView(const struct fds_drec_field &field)
@@ -23,3 +25,5 @@ public:
 private:
     const struct fds_drec_field &m_field;
 };
+
+} // fdsdump

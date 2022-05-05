@@ -44,6 +44,8 @@
 
 #include "filelist.hpp"
 
+namespace fdsdump {
+
 void
 FileList::add_files(const std::string &pattern)
 {
@@ -104,3 +106,5 @@ FileList::clear()
 
     m_files.clear();
 }
+
+} // fdsdump

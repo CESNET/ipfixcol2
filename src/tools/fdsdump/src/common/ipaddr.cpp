@@ -2,6 +2,8 @@
 #include <stdexcept>
 #include "ipaddr.hpp"
 
+namespace fdsdump {
+
 IPAddr::IPAddr(const std::string &str)
 {
     struct in_addr ip4;
@@ -34,3 +36,4 @@ IPAddr::to_string() const
     return std::string(buffer);
 }
 
+} // fdsdump

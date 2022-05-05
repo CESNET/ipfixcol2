@@ -13,6 +13,8 @@
 
 #include "options.hpp"
 
+using namespace fdsdump;
+
 static unique_iemgr iemgr_prepare(const std::string &path)
 {
     unique_iemgr iemgr {fds_iemgr_create(), &fds_iemgr_destroy};
@@ -48,10 +50,10 @@ main(int argc, char *argv[])
 
         switch (options.get_mode()) {
         case Options::Mode::list:
-            fdsdump::lister::mode_list(iemgr, options);
+            lister::mode_list(iemgr, options);
             break;
         case Options::Mode::aggregate:
-            fdsdump::aggregator::mode_aggregate(iemgr, options);
+            aggregator::mode_aggregate(iemgr, options);
             break;
         default:
             throw std::runtime_error("Invalid mode");

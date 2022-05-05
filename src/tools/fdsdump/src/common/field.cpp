@@ -4,6 +4,8 @@
 
 #include "field.hpp"
 
+namespace fdsdump {
+
 Field::Field(std::string name, const shared_iemgr &iemgr)
     : m_name(name), m_iemgr(iemgr)
 {
@@ -172,3 +174,5 @@ Field::for_each_element(
 
     return count;
 }
+
+} // fdsdump

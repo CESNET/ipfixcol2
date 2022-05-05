@@ -3,6 +3,8 @@
 
 #include "common.hpp"
 
+namespace fdsdump {
+
 std::vector<std::string>
 string_split(const std::string &str, const std::string &delimiter)
 {
@@ -104,3 +106,5 @@ memcpy_bits(uint8_t *dst, uint8_t *src, unsigned int n_bits)
         dst[n_bytes - 1] &= (0xFF >> rem_bits) << rem_bits;
     }
 }
+
+} // fdsdump

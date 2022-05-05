@@ -7,6 +7,8 @@
 
 #include <common/filelist.hpp>
 
+namespace fdsdump {
+
 class OptionsException : public std::invalid_argument {
 public:
     OptionsException(const std::string &what_arg)
@@ -90,3 +92,5 @@ private:
     void parse(int argc, char *argv[]);
     void validate();
 };
+
+} // fdsdump
