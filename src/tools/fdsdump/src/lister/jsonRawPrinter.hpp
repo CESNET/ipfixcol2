@@ -5,6 +5,9 @@
 
 #include "printer.hpp"
 
+namespace fdsdump {
+namespace lister {
+
 class JsonRawPrinter : public Printer {
 public:
     JsonRawPrinter(const shared_iemgr &iemgr, const std::string &args);
@@ -31,3 +34,6 @@ private:
     bool m_biflow_split = false;
     bool m_biflow_hide_reverse = false;
 };
+
+} // lister
+} // fdsdump

@@ -9,6 +9,9 @@
 
 #include "storageSorter.hpp"
 
+namespace fdsdump {
+namespace lister {
+
 StorageSorter::StorageSorter(const std::string desc, const shared_iemgr &iemgr)
 {
     std::vector<std::string> fields = string_split(desc, ",");
@@ -423,3 +426,6 @@ StorageSorter::cmp_ip_asc(
         return (lhs_min < rhs_min) ? -1 : 1;
     }
 }
+
+} // lister
+} // fdsdump

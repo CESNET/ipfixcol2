@@ -10,6 +10,9 @@
 #include <common/common.hpp>
 #include <common/flow.hpp>
 
+namespace fdsdump {
+namespace lister {
+
 /**
  * @brief Interface of an output printer for flow records.
  *
@@ -31,3 +34,6 @@ public:
 
 std::unique_ptr<Printer>
 printer_factory(const shared_iemgr &iemgr, const std::string &manual);
+
+} // lister
+} // fdsdump

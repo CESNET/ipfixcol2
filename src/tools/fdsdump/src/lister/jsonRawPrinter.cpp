@@ -9,6 +9,9 @@
 
 #include "jsonRawPrinter.hpp"
 
+namespace fdsdump {
+namespace lister {
+
 JsonRawPrinter::JsonRawPrinter(const shared_iemgr &iemgr, const std::string &args)
 {
     const std::vector<std::string> args_vec = string_split(args, ",");
@@ -94,3 +97,6 @@ JsonRawPrinter::print_record(Flow *flow)
 
     return 0;
 }
+
+} // lister
+} // fdsdump

@@ -7,6 +7,9 @@
 
 #include "printer.hpp"
 
+namespace fdsdump {
+namespace lister {
+
 class JsonPrinter : public Printer {
 public:
     JsonPrinter(const shared_iemgr &iemgr, const std::string &args);
@@ -51,3 +54,6 @@ private:
     unsigned int m_rec_printed = 0;
     bool m_biflow_split = true;
 };
+
+} // lister
+} // fdsdump

@@ -9,6 +9,9 @@
 
 #include "printer.hpp"
 
+namespace fdsdump {
+namespace lister {
+
 class TablePrinter : public Printer {
 public:
     TablePrinter(const shared_iemgr &iemgr, const std::string &args);
@@ -48,3 +51,6 @@ private:
     std::string m_buffer;
     bool m_biflow_split = true;
 };
+
+} // lister
+} // fdsdump

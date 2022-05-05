@@ -5,6 +5,9 @@
 
 #include "storageRecord.hpp"
 
+namespace fdsdump {
+namespace lister {
+
 StorageRecord::StorageRecord(
         const struct fds_drec &rec,
         enum Direction dir,
@@ -26,3 +29,6 @@ StorageRecord::StorageRecord(
     m_flow.rec.tmplt = tmplt;
     m_flow.rec.snap = m_snapshot.get();
 }
+
+} // lister
+} // fdsdump

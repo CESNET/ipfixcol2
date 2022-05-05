@@ -7,6 +7,9 @@
 #include <common/common.hpp>
 #include <common/flow.hpp>
 
+namespace fdsdump {
+namespace lister {
+
 /**
  * @brief Flow storage record.
  *
@@ -40,3 +43,6 @@ private:
     shared_tsnapshot m_snapshot;
     Flow m_flow;
 };
+
+} // lister
+} // fdsdump

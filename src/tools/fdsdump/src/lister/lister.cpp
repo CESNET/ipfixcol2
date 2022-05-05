@@ -2,6 +2,9 @@
 #include "printer.hpp"
 #include "storageSorted.hpp"
 
+namespace fdsdump {
+namespace lister {
+
 static void
 mode_list_unordered(const shared_iemgr &iemgr, const Options &opts, FlowProvider &flows)
 {
@@ -72,3 +75,6 @@ mode_list(const shared_iemgr &iemgr, const Options &opts)
         mode_list_ordered(iemgr, opts, flows);
     }
 }
+
+} // lister
+} // fdsdump

@@ -9,6 +9,9 @@
 
 #include "storageRecord.hpp"
 
+namespace fdsdump {
+namespace lister {
+
 class StorageSorter {
 public:
 
@@ -46,4 +49,5 @@ private:
     static int cmp_ip_asc(Field &field, const Flow &lhs, const Flow &rhs);
 };
 
-
+} // lister
+} // fdsdump

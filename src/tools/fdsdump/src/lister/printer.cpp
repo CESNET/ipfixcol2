@@ -12,6 +12,9 @@
 #include "jsonRawPrinter.hpp"
 #include "tablePrinter.hpp"
 
+namespace fdsdump {
+namespace lister {
+
 struct PrinterFactory {
     const char *name;
     std::function<Printer *(const shared_iemgr &iemgr, const std::string &)> create_fn;
@@ -55,3 +58,6 @@ printer_factory(const shared_iemgr &iemgr, const std::string &manual)
 
     throw std::invalid_argument("Unsupported output type '" + type + "'");
 }
+
+} // lister
+} // fdsdump

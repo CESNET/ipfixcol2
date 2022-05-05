@@ -6,6 +6,10 @@
 #include "storageRecord.hpp"
 #include "storageSorter.hpp"
 
+namespace fdsdump {
+namespace lister {
+
+
 /**
  * @brief Sorted storage of flow records
  */
@@ -54,3 +58,6 @@ private:
     void insert_single_direction(struct Flow *flow);
     void insert_storage_record(struct Flow *flow);
 };
+
+} // lister
+} // fdsdump

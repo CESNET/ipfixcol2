@@ -4,6 +4,9 @@
 
 #include "storageSorted.hpp"
 
+namespace fdsdump {
+namespace lister {
+
 StorageSorted::StorageSorted(StorageSorter sorter, size_t capacity)
     : m_sorter{sorter}, m_records{m_sorter}, m_capacity{capacity}
 {
@@ -63,3 +66,6 @@ StorageSorted::insert_storage_record(struct Flow *flow)
 
     m_records.emplace(flow->rec, flow->dir, snapshot);
 }
+
+} // lister
+} // fdsdump

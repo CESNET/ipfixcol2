@@ -8,6 +8,9 @@
 
 #include "jsonPrinter.hpp"
 
+namespace fdsdump {
+namespace lister {
+
 JsonPrinter::JsonPrinter(const shared_iemgr &iemgr, const std::string &args)
 {
     std::string args_fields;
@@ -418,3 +421,6 @@ JsonPrinter::append_unsupported()
 {
     m_buffer.append("\"<unsupported>\"");
 }
+
+} // lister
+} // fdsdump

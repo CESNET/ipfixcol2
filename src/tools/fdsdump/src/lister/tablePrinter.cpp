@@ -10,6 +10,9 @@
 
 #include "tablePrinter.hpp"
 
+namespace fdsdump {
+namespace lister {
+
 TablePrinter::TablePrinter(const shared_iemgr &iemgr, const std::string &args)
 {
     std::string args_fields;
@@ -271,3 +274,6 @@ TablePrinter::buffer_append(const struct fds_drec_field &field)
         break;
     }
 }
+
+} // lister
+} // fdsdump
