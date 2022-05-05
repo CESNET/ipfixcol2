@@ -10,6 +10,7 @@
 #include <common/filelist.hpp>
 #include <lister/lister.hpp>
 #include <aggregator/mode.hpp>
+#include <statistics/mode.hpp>
 
 #include "options.hpp"
 
@@ -54,6 +55,9 @@ main(int argc, char *argv[])
             break;
         case Options::Mode::aggregate:
             aggregator::mode_aggregate(iemgr, options);
+            break;
+        case Options::Mode::stats:
+            statistics::mode_statistics(iemgr, options);
             break;
         default:
             throw std::runtime_error("Invalid mode");

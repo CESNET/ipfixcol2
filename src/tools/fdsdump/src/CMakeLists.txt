@@ -4,6 +4,7 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 add_subdirectory(common)
 add_subdirectory(lister)
 add_subdirectory(aggregator)
+add_subdirectory(statistics)
 
 add_executable(fdsdump
     main.cpp
@@ -11,6 +12,7 @@ add_executable(fdsdump
     $<TARGET_OBJECTS:common_obj>
 	$<TARGET_OBJECTS:lister_obj>
     $<TARGET_OBJECTS:aggregator_obj>
+    $<TARGET_OBJECTS:statistics_obj>
 )
 
 target_include_directories(fdsdump

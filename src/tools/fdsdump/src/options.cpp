@@ -57,7 +57,7 @@ void Options::parse(int argc, char *argv[])
         {"no-biflow-autoignore", no_argument,       NULL, OPT_BIFLOW_AUTOIGNORE_OFF},
         {0, 0, 0, 0},
     };
-    const char *short_opts = "r:c:o:O:F:A:S:";
+    const char *short_opts = "r:c:o:O:F:A:S:I";
     int opt;
 
     while ((opt = getopt_long(argc, argv, short_opts, long_opts, NULL)) != -1) {
@@ -80,6 +80,9 @@ void Options::parse(int argc, char *argv[])
         case 'A':
             m_aggregation_keys = optarg;
             break;
+        case 'I':
+            m_mode = Mode::stats;
+            break;
         case 'S':
             m_aggregation_fields = optarg;
             break;
@@ -101,7 +104,13 @@ void Options::parse(int argc, char *argv[])
 
 void Options::validate()
 {
-    if (!m_aggregation_keys.empty()) {
+    if (m_mode == Mode::stats) {
+        // File statistics
+        if (m_output_specifier.empty()) {
+            m_output_specifier = "table";
+        }
+
+    } else if (!m_aggregation_keys.empty()) {
         // Record aggregation
         m_mode = Mode::aggregate;
 

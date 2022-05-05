@@ -31,6 +31,7 @@ public:
         undefined,
         list,
         aggregate,
+        stats,
     };
 
     /**
