@@ -41,6 +41,7 @@ enum class DataType {
     Signed64,
     DateTime,
     String128B,
+    Octets128B,
 };
 
 /** @brief The possible view value forms. */

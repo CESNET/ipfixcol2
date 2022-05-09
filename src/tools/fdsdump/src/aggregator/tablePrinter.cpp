@@ -75,7 +75,7 @@ void
 TABLEPrinter::print_record(uint8_t *record)
 {
     ViewValue *value = (ViewValue *) record;
-    char buffer[1024] = {};
+    std::string buffer;
     bool is_first = true;
 
     for (const auto &field : m_view_def.key_fields) {
@@ -84,7 +84,8 @@ TABLEPrinter::print_record(uint8_t *record)
         }
 
         is_first = false;
-        print_value(field, *value, buffer, 0);
+        buffer.clear();
+        print_value(field, *value, buffer);
         advance_value_ptr(value, field.size);
 
         std::cout << std::setw(get_width(field)) << std::right;
@@ -97,7 +98,8 @@ TABLEPrinter::print_record(uint8_t *record)
         }
 
         is_first = false;
-        print_value(field, *value, buffer, 0);
+        buffer.clear();
+        print_value(field, *value, buffer);
         advance_value_ptr(value, field.size);
 
         std::cout << std::setw(get_width(field)) << std::right;

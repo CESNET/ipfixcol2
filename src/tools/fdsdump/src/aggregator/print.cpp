@@ -4,11 +4,12 @@
  * @brief View print functions
  */
 #include "print.hpp"
+#include "informationElements.hpp"
 
 #include <arpa/inet.h>
 #include <netdb.h>
 
-#include "informationElements.hpp"
+#include <cctype>
 
 namespace fdsdump {
 namespace aggregator {
@@ -37,6 +38,8 @@ get_width(const ViewField &field)
         return 15;
     case DataType::String128B:
         return 40;
+    case DataType::Octets128B:
+        return 40;
     case DataType::DateTime:
         return 30;
     case DataType::MacAddress:
@@ -46,9 +49,10 @@ get_width(const ViewField &field)
     }
 }
 
-void
-datetime_to_str(char *buffer, uint64_t ts_millisecs)
+static std::string
+datetime_to_str(uint64_t ts_millisecs)
 {
+    char buffer[128];
     static_assert(sizeof(uint64_t) == sizeof(time_t), "Assumed that time_t is uint64_t, but it's not");
 
     uint64_t secs = ts_millisecs / 1000;
@@ -63,122 +67,186 @@ datetime_to_str(char *buffer, uint64_t ts_millisecs)
     localtime_r(reinterpret_cast<time_t *>(&secs), &tm);
     //TODO: The format should probably be configrable
     //TODO: Have a look at the hard coded buffer size
-    std::size_t n = strftime(buffer, 64, "%Y-%m-%d %H:%M:%S", &tm);
+    std::size_t n = strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm);
     assert(n > 0);
-    sprintf(&buffer[n], ".%03lu", msecs_part);
+    snprintf(&buffer[n], sizeof(buffer) - n, ".%03lu", msecs_part);
+
+    return buffer;
 }
 
-bool
-translate_ipv4_address(uint8_t *address, char *buffer)
+std::string
+char2hex(const char byte)
 {
-    sockaddr_in sa = {};
-    sa.sin_family = AF_INET;
-    memcpy((void *) &sa.sin_addr, address, 4);
+    const uint8_t nibble_high = (byte & 0xF0) >> 4;
+    const uint8_t nibble_low = (byte & 0x0F);
+    const char char_high = (nibble_high < 10) ? ('0' + nibble_high) : ('A' - 10 + nibble_high);
+    const char char_low = (nibble_low < 10) ? ('0' + nibble_low) : ('A' - 10 + nibble_low);
 
-    //TODO: Have a look at the hard coded buffer size
-    int ret = getnameinfo((sockaddr *) &sa, sizeof(sa), buffer, 64, NULL, 0, NI_NAMEREQD);
+    return std::string().append(1, char_high).append(1, char_low);
+}
 
-    if (ret == 0) {
-        return true;
+static std::string
+ipv4_to_str(const uint8_t addr[4])
+{
+    char tmp[INET_ADDRSTRLEN];
+
+    if (!inet_ntop(AF_INET, addr, tmp, sizeof(tmp))) {
+        return "<invalid>";
     } else {
-        return false;
+        return tmp;
     }
 }
 
-bool
-translate_ipv6_address(uint8_t *address, char *buffer)
+static std::string
+ipv6_to_str(const uint8_t addr[16])
 {
-    sockaddr_in6 sa = {};
-    sa.sin6_family = AF_INET6;
-    memcpy((void *) &sa.sin6_addr, address, 16);
+    char tmp[INET6_ADDRSTRLEN];
 
-    //TODO: Have a look at the hard coded buffer size
-    int ret = getnameinfo((sockaddr *) &sa, sizeof(sa), buffer, 64, NULL, 0, NI_NAMEREQD);
-
-    if (ret == 0) {
-        return true;
+    if (!inet_ntop(AF_INET6, addr, tmp, sizeof(tmp))) {
+        return "<invalid>";
     } else {
-        return false;
+        return tmp;
     }
+}
+
+static std::string
+ip_to_str(const uint8_t *addr, size_t addr_size)
+{
+    if (addr_size == 4) {
+        return ipv4_to_str(addr);
+    } else if (addr_size == 16) {
+        return ipv6_to_str(addr);
+    } else {
+        return "<invalid>";
+    }
+}
+
+static std::string
+mac_to_str(const uint8_t addr[6])
+{
+    char buffer[sizeof("XX:XX:XX:XX:XX:XX")];
+
+    snprintf(
+        buffer, sizeof(buffer),
+        "%02x:%02x:%02x:%02x:%02x:%02x",
+        addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+
+    return buffer;
+}
+
+static std::string
+octetarray_to_str(const char array[128])
+{
+    std::string result {"0x"};
+    size_t last_byte;
+
+    // Find first non-zero byte from the end (at least one byte must be printed)
+    for (last_byte = 128; last_byte > 1; --last_byte) {
+        if (array[last_byte - 1] != 0) {
+            break;
+        }
+    }
+
+    for (size_t i = 0; i < last_byte; ++i) {
+        const char byte = array[i];
+        result.append(char2hex(byte));
+    }
+
+    return result;
+}
+
+static std::string
+string_to_str(const char array[128])
+{
+    std::string result;
+    size_t last_byte;
+
+    for (last_byte = 128; last_byte > 0; --last_byte) {
+        if (array[last_byte - 1] != 0) {
+            break;
+        }
+    }
+
+    for (size_t i = 0; i < last_byte; ++i) {
+        const char byte = array[i];
+
+        if (std::isprint(byte)) {
+            result.append(1, byte);
+        } else {
+            result.append("\\x");
+            result.append(char2hex(byte));
+        }
+    }
+
+    return result;
 }
 
 void
-print_value(const ViewField &field, ViewValue &value, char *buffer, bool translate_ip_addrs)
+print_value(const ViewField &field, ViewValue &value, std::string &buffer)
 {
     // Print protocol name
     if (field.kind == ViewFieldKind::VerbatimKey && field.pen == IPFIX::iana && field.id == IPFIX::protocolIdentifier) {
         protoent *proto = getprotobynumber(value.u8);
         if (proto) {
-            sprintf(buffer, "%s", proto->p_name);
+            buffer.append(proto->p_name);
             return;
         }
 
     } else if (field.kind == ViewFieldKind::BiflowDirectionKey) {
         switch (value.u8) {
-        case 0: sprintf(buffer, " "); break;
-        case 1: sprintf(buffer, "->"); break;
-        case 2: sprintf(buffer, "<-"); break;
+        case 0: buffer.append(" "); break;
+        case 1: buffer.append("->"); break;
+        case 2: buffer.append("<-"); break;
         }
         return;
     }
 
-    //TODO: Have a look at the hard coded sizes everywhere...
     switch (field.data_type) {
     case DataType::Unsigned8:
-        sprintf(buffer, "%hhu", value.u8);
+        buffer.append(std::to_string(static_cast<unsigned int>(value.u8)));
         break;
     case DataType::Unsigned16:
-        sprintf(buffer, "%hu", value.u16);
+        buffer.append(std::to_string(value.u16));
         break;
     case DataType::Unsigned32:
-        sprintf(buffer, "%u", value.u32);
+        buffer.append(std::to_string(value.u32));
         break;
     case DataType::Unsigned64:
-        sprintf(buffer, "%lu", value.u64);
+        buffer.append(std::to_string(value.u64));
         break;
     case DataType::Signed8:
-        sprintf(buffer, "%hhd", value.i8);
+        buffer.append(std::to_string(static_cast<int>(value.i8)));
         break;
     case DataType::Signed16:
-        sprintf(buffer, "%hd", value.i16);
+        buffer.append(std::to_string(value.i16));
         break;
     case DataType::Signed32:
-        sprintf(buffer, "%d", value.i32);
+        buffer.append(std::to_string(value.i32));
         break;
     case DataType::Signed64:
-        sprintf(buffer, "%ld", value.i64);
+        buffer.append(std::to_string(value.i64));
         break;
     case DataType::IPAddress:
-        if (value.ip.length == 4) {
-            if (!translate_ip_addrs || !translate_ipv4_address(value.ip.address, buffer)) {
-                inet_ntop(AF_INET, value.ip.address, buffer, 64);
-            }
-        } else if (value.ip.length == 16) {
-            if (!translate_ip_addrs || !translate_ipv6_address(value.ip.address, buffer)) {
-                inet_ntop(AF_INET6, value.ip.address, buffer, 64);
-            }
-        }
+        buffer.append(ip_to_str(value.ip.address, value.ip.length));
         break;
     case DataType::IPv4Address:
-        if (!translate_ip_addrs || !translate_ipv4_address(value.ipv4, buffer)) {
-            inet_ntop(AF_INET, value.ipv4, buffer, 64);
-        }
+        buffer.append(ipv4_to_str(value.ipv4));
         break;
     case DataType::IPv6Address:
-        if (!translate_ip_addrs || !translate_ipv6_address(value.ipv6, buffer)) {
-            inet_ntop(AF_INET6, value.ipv6, buffer, 64);
-        }
+        buffer.append(ipv6_to_str(value.ipv6));
         break;
     case DataType::MacAddress:
-        sprintf(buffer, "%02x:%02x:%02x:%02x:%02x:%02x", value.mac[0], value.mac[1], value.mac[2], value.mac[3], value.mac[4], value.mac[5]);
+        buffer.append(mac_to_str(value.mac));
         break;
     case DataType::String128B:
-        sprintf(buffer, "%.128s", value.str);
+        buffer.append(string_to_str(value.str));
+        break;
+    case DataType::Octets128B:
+        buffer.append(octetarray_to_str(value.str));
         break;
     case DataType::DateTime:
-        datetime_to_str(buffer, value.ts_millisecs);
+        buffer.append(datetime_to_str(value.ts_millisecs));
         break;
-
     default: assert(0);
     }
 }

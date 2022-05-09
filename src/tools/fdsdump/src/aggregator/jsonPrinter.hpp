@@ -26,6 +26,8 @@ public:
 private:
     void append_field(const ViewField &field, ViewValue *value);
     void append_value(const ViewField &field, ViewValue *value);
+    void append_string_value(const ViewValue *value);
+    void append_octet_value(const ViewValue *value);
 
     ViewDefinition m_view_def;
     std::string m_buffer;

@@ -81,6 +81,10 @@ add_ipfix_field(ViewDefinition &view_def, const fds_iemgr_elem *elem)
         field.data_type = DataType::String128B;
         field.size = 128;
         break;
+    case FDS_ET_OCTET_ARRAY:
+        field.data_type = DataType::Octets128B;
+        field.size = 128;
+        break;
     case FDS_ET_DATE_TIME_MILLISECONDS:
     case FDS_ET_DATE_TIME_MICROSECONDS:
     case FDS_ET_DATE_TIME_NANOSECONDS:

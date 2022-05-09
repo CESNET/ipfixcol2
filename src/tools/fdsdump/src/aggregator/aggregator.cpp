@@ -161,6 +161,7 @@ load_view_value(const ViewField &view_field, fds_drec_field &drec_field, ViewVal
         value.i64 = FieldView(drec_field).as_int();
         break;
     case DataType::String128B:
+    case DataType::Octets128B:
         memset(value.str, 0, 128);
         memcpy(value.str, drec_field.data, std::min<int>(drec_field.size, 128));
         break;
