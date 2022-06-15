@@ -30,7 +30,7 @@ StorageSorter::StorageSorter(const std::string desc, const shared_iemgr &iemgr)
 StorageSorter::Item
 StorageSorter::determine_item(const std::string &name, const shared_iemgr &iemgr) const
 {
-    const size_t delim_pos = name.find_last_of(':');
+    const size_t delim_pos = name.find_last_of('/');
 
     Field field {std::string{name, 0, delim_pos}, iemgr};
     Order order {Order::descending};
