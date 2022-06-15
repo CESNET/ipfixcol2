@@ -31,7 +31,7 @@ private:
     char *m_buffer = nullptr;
     size_t m_buffer_size = 0;
 
-    bool m_biflow_split = false;
+    bool m_biflow_split = true;
     bool m_biflow_hide_reverse = false;
 };
 

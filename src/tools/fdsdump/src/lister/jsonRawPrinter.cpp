@@ -25,8 +25,8 @@ JsonRawPrinter::JsonRawPrinter(const shared_iemgr &iemgr, const std::string &arg
     for (const std::string &arg_raw : args_vec) {
         const std::string arg = string_trim_copy(arg_raw);
 
-        if (strcasecmp(arg.c_str(), "biflow-split") == 0) {
-            m_biflow_split = true;
+        if (strcasecmp(arg.c_str(), "no-biflow-split") == 0) {
+            m_biflow_split = false;
         } else if (strcasecmp(arg.c_str(), "hide-reverse") == 0) {
             m_biflow_hide_reverse = true;
         } else {
