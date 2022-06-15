@@ -36,7 +36,7 @@ JsonRawPrinter::JsonRawPrinter(const shared_iemgr &iemgr, const std::string &arg
 
     if (m_biflow_hide_reverse && !m_biflow_split) {
         throw std::invalid_argument(
-            "JSON output: reverse field hidding requires enabled biflow splitting");
+            "JSON output: reverse field hiding requires enabled biflow splitting");
     }
 }
 
@@ -68,8 +68,6 @@ unsigned int
 JsonRawPrinter::print_record(Flow *flow)
 {
     uint32_t flags = 0;
-    int printed = 0;
-    int ret;
 
     if (m_biflow_hide_reverse) {
         flags |= FDS_CD2J_REVERSE_SKIP;
