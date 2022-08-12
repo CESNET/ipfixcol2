@@ -45,6 +45,7 @@ IPFIX Collector (ipfixcol).
 
 # Build source code
 %build
+%global _vpath_builddir .
 %cmake .
 make %{?_smp_mflags}
 
