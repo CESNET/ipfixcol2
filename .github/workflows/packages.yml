@@ -94,6 +94,7 @@ jobs:
           - 'centos:7'
           - 'quay.io/centos/centos:stream8'
           - 'oraclelinux:8'
+          - 'oraclelinux:9'
 
     name: Build RPMs on ${{ matrix.image }}
     container: ${{ matrix.image }}
@@ -118,19 +119,28 @@ jobs:
       run: |
         dnf -y install 'dnf-command(config-manager)'
         dnf config-manager --set-enabled appstream powertools
-    - name: Enable additional repositories (Oracle Linux)
-      if: contains(matrix.image, 'oraclelinux')
+    - name: Enable additional repositories (Oracle Linux 8)
+      if: contains(matrix.image, 'oraclelinux:8')
       run: |
         dnf -y install 'dnf-command(config-manager)'
         dnf config-manager --set-enabled ol8_appstream ol8_codeready_builder
+    - name: Enable additional repositories (Oracle Linux 9)
+      if: contains(matrix.image, 'oraclelinux:9')
+      run: |
+        dnf -y install 'dnf-command(config-manager)'
+        dnf config-manager --set-enabled ol9_appstream ol9_codeready_builder
     - name: Enable EPEL (CentOS)
       if: contains(matrix.image, 'centos')
       run: |
         yum -y install epel-release
-    - name: Enable EPEL (OracleLinux)
-      if: contains(matrix.image, 'oraclelinux')
+    - name: Enable EPEL (Oracle Linux 8)
+      if: contains(matrix.image, 'oraclelinux:8')
       run: |
         dnf -y install oracle-epel-release-el8
+    - name: Enable EPEL (Oracle Linux 9)
+      if: contains(matrix.image, 'oraclelinux:9')
+      run: |
+        dnf -y install oracle-epel-release-el9
     - name: Install dependencies for libfds and IPFIXcol2 (CentOS, Oracle Linux)
       if: contains(matrix.image, 'centos') || contains(matrix.image, 'oraclelinux')
       run: |
