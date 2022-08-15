@@ -14,6 +14,7 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}
 BuildRequires:  gcc >= 4.8, gcc-c++ >= 4.8, cmake >= 2.8.8, make
 BuildRequires:  libfds-devel, /usr/bin/rst2man, zlib-devel
 BuildRequires:  librdkafka-devel
+BuildRequires:  systemd-rpm-macros
 Requires:       libfds >= 0.2.0, zlib, librdkafka >= 0.9.3
 
 %description
@@ -52,6 +53,7 @@ make %{?_smp_mflags}
 # Perform installation into build directory
 %install
 make install DESTDIR=%{buildroot}
+install -D -m 644 doc/systemd/ipfixcol2@.service %{buildroot}%{_unitdir}/ipfixcol2@.service
 
 # Temporarily disabled
 # TODO: %check
@@ -64,6 +66,7 @@ make install DESTDIR=%{buildroot}
 %{_bindir}/ipfixsend2
 %{_libdir}/ipfixcol2/*.so*
 %{_mandir}/man7/*.7.gz
+%{_unitdir}/ipfixcol2@.service
 
 %files devel
 %{_includedir}/ipfixcol2.h

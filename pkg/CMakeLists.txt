@@ -79,4 +79,3 @@ endif()
 if (PACKAGE_BUILDER_DEB)
     add_subdirectory(deb)
 endif()
-
