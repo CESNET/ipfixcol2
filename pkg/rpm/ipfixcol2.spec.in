@@ -64,6 +64,7 @@ make install DESTDIR=%{buildroot}
 %{_bindir}/ipfixsend2
 %{_libdir}/ipfixcol2/*.so*
 %{_mandir}/man7/*.7.gz
+/usr/lib/systemd/system/ipfixcol2@.service
 
 %files devel
 %{_includedir}/ipfixcol2.h

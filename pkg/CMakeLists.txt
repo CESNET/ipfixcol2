@@ -69,6 +69,10 @@ if (PKG_CONFIG_FOUND)
         DESTINATION "${INSTALL_DIR_LIB}/pkgconfig/")
 endif()
 
+install(
+    FILES "${CMAKE_SOURCE_DIR}/doc/systemd/ipfixcol2@.service"
+    DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/systemd/system/")
+
 # Package builders
 add_subdirectory(tgz)
 
@@ -79,4 +83,3 @@ endif()
 if (PACKAGE_BUILDER_DEB)
     add_subdirectory(deb)
 endif()
-

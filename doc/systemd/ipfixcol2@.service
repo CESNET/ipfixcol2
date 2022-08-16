@@ -1,0 +1,13 @@
+[Unit]
+Description=IPFIXcol2 service
+Documentation=https://github.com/CESNET/ipfixcol2
+Requires=network.target remote-fs.target
+After=network.target remote-fs.target
+
+[Service]
+Type=simple
+ExecStart=ipfixcol2 -c /etc/ipfixcol2/%i
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
