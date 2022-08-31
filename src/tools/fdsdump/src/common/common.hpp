@@ -27,10 +27,14 @@ using shared_tsnapshot = std::shared_ptr<fds_tsnapshot_t>;
  * If no delimeter is found, the result contains only the original string.
  * @param str String to be splitted
  * @param delimiter String delimeter
+ * @param max_pieces The maximum number of pieces (0 = no limit)
  * @return Vector of piecies.
  */
 std::vector<std::string>
-string_split(const std::string &str, const std::string &delimiter);
+string_split(
+    const std::string &str,
+    const std::string &delimiter,
+    unsigned int max_pieces = 0);
 
 /**
  * @brief Split string by a delimiter from right.

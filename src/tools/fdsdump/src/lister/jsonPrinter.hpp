@@ -53,6 +53,7 @@ private:
     std::string m_buffer;
     unsigned int m_rec_printed = 0;
     bool m_biflow_split = true;
+    bool m_format_timestamp = true;
 };
 
 } // lister
