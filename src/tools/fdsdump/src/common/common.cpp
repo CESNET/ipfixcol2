@@ -6,19 +6,27 @@
 namespace fdsdump {
 
 std::vector<std::string>
-string_split(const std::string &str, const std::string &delimiter)
+string_split(
+    const std::string &str,
+    const std::string &delimiter,
+    unsigned int max_pieces)
 {
     std::vector<std::string> pieces;
     std::size_t pos = 0;
 
     for (;;) {
+        if (max_pieces > 0 && pieces.size() == max_pieces - 1) {
+            pieces.emplace_back(str.begin() + pos, str.end());
+            break;
+        }
+
         std::size_t next_pos = str.find(delimiter, pos);
         if (next_pos == std::string::npos) {
             pieces.emplace_back(str.begin() + pos, str.end());
             break;
         }
         pieces.emplace_back(str.begin() + pos, str.begin() + next_pos);
-        pos = next_pos + 1;
+        pos = next_pos + delimiter.size();
     }
     return pieces;
 }
