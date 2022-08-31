@@ -52,19 +52,40 @@ JsonPrinter::parse_fields(const std::string &str, const shared_iemgr &iemgr)
 void
 JsonPrinter::parse_opts(const std::string &str)
 {
-    std::vector<std::string> opt_names;
+    std::vector<std::string> opts;
 
     if (str.empty()) {
         return;
     }
 
-    opt_names = string_split(str, ",");
+    opts = string_split(str, ",");
 
-    for (const std::string &opt_raw : opt_names) {
+    for (const std::string &opt_raw : opts) {
         std::string opt = string_trim_copy(opt_raw);
+        std::vector<std::string> opt_parts = string_split(opt, "=", 2);
+        const std::string &opt_name = (opt_parts.size() >= 1) ? opt_parts[0] : "";
+        const std::string &opt_value = (opt_parts.size() >= 2) ? opt_parts[1] : "";
 
         if (strcasecmp(opt.c_str(), "no-biflow-split") == 0) {
             m_biflow_split = false;
+
+        } else if (strcasecmp(opt_name.c_str(), "timestamp") == 0) {
+            if (opt_value.empty()) {
+                throw std::invalid_argument(
+                    "JSON output: timestamp option is missing value"
+                    ", use 'timestamp=unix' or 'timestamp=formatted'");
+            }
+
+            if (opt_value == "unix") {
+                m_format_timestamp = false;
+            } else if (opt_value == "formatted") {
+                m_format_timestamp = true;
+            } else {
+                throw std::invalid_argument(
+                    "JSON output: invalid timestamp option '" + opt_value + "'"
+                    ", use 'timestamp=unix' or 'timestamp=formatted'");
+            }
+
         } else {
             throw std::invalid_argument("JSON output: unknown option '" + opt + "'");
         }
@@ -306,24 +327,45 @@ JsonPrinter::append_boolean(const fds_drec_field &field)
 void
 JsonPrinter::append_timestamp(const fds_drec_field &field)
 {
-    char buffer[FDS_CONVERT_STRLEN_DATE];
-    int ret;
+    if (m_format_timestamp) {
+        // Convert to formatted string
+        char buffer[FDS_CONVERT_STRLEN_DATE];
+        int ret;
 
-    ret = fds_datetime2str_be(
-        field.data,
-        field.size,
-        field.info->def->data_type,
-        buffer,
-        sizeof(buffer),
-        FDS_CONVERT_TF_MSEC_UTC);
-    if (ret < 0) {
-        append_invalid();
-        return;
+        ret = fds_datetime2str_be(
+            field.data,
+            field.size,
+            field.info->def->data_type,
+            buffer,
+            sizeof(buffer),
+            FDS_CONVERT_TF_MSEC_UTC);
+        if (ret < 0) {
+            append_invalid();
+            return;
+        }
+
+        m_buffer.push_back('"');
+        m_buffer.append(buffer);
+        m_buffer.push_back('"');
+
+
+    } else {
+        // Convert to UNIX timestamp (in milliseconds)
+        uint64_t time;
+        if (fds_get_datetime_lp_be(field.data, field.size, field.info->def->data_type, &time) != FDS_OK) {
+            append_invalid();
+            return;
+        }
+
+        time = htobe64(time); // Convert to network byte order and use fast libfds converter
+        char buffer[32];
+        if (fds_uint2str_be(&time, sizeof(time), buffer, sizeof(buffer)) < 0) {
+            append_invalid();
+            return;
+        }
+
+        m_buffer.append(buffer);
     }
-
-    m_buffer.push_back('"');
-    m_buffer.append(buffer);
-    m_buffer.push_back('"');
 }
 
 void
