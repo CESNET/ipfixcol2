@@ -4,11 +4,13 @@
  * @brief Efficient hash table implementation
  */
 
+#ifdef __SSE2__
+
 #define XXH_INLINE_ALL
 
 #include <xmmintrin.h>
 
-#include "hashTable.hpp"
+#include "fastHashTable.hpp"
 #include "3rd_party/xxhash/xxhash.h"
 
 namespace fdsdump {
@@ -18,14 +20,14 @@ static constexpr double EXPAND_WHEN_THIS_FULL = 0.95;
 static constexpr unsigned int EXPAND_WITH_FACTOR_OF = 2;
 static constexpr uint8_t EMPTY_BIT = 0x80;
 
-HashTable::HashTable(std::size_t key_size, std::size_t value_size) :
+FastHashTable::FastHashTable(std::size_t key_size, std::size_t value_size) :
     m_key_size(key_size), m_value_size(value_size)
 {
     init_blocks();
 }
 
 void
-HashTable::init_blocks()
+FastHashTable::init_blocks()
 {
     HashTableBlock zeroed_block;
 
@@ -41,7 +43,7 @@ HashTable::init_blocks()
 }
 
 bool
-HashTable::lookup(uint8_t *key, uint8_t *&item, bool create_if_not_found)
+FastHashTable::lookup(uint8_t *key, uint8_t *&item, bool create_if_not_found)
 {
     uint64_t hash = XXH3_64bits(key, m_key_size); // The hash of the key
     uint64_t index = (hash >> 7) & (m_block_count - 1); // The starting block index
@@ -109,7 +111,7 @@ HashTable::lookup(uint8_t *key, uint8_t *&item, bool create_if_not_found)
 }
 
 void
-HashTable::expand()
+FastHashTable::expand()
 {
     // Grow the amount of blocks by a specified factor
     m_block_count *= EXPAND_WITH_FACTOR_OF;
@@ -144,16 +146,18 @@ HashTable::expand()
 }
 
 bool
-HashTable::find(uint8_t *key, uint8_t *&item)
+FastHashTable::find(uint8_t *key, uint8_t *&item)
 {
     return lookup(key, item, false);
 }
 
 bool
-HashTable::find_or_create(uint8_t *key, uint8_t *&item)
+FastHashTable::find_or_create(uint8_t *key, uint8_t *&item)
 {
     return lookup(key, item, true);
 }
 
 } // aggregator
 } // fdsdump
+
+#endif // ifdef __SSE2__
