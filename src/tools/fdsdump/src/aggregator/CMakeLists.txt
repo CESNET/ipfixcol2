@@ -3,7 +3,7 @@ set(AGGREGATOR_SRC
     mode.cpp
     aggregator.cpp
     arenaAllocator.cpp
-    hashTable.cpp
+    fastHashTable.cpp
     view.cpp
     sort.cpp
     print.cpp
