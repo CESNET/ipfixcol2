@@ -44,6 +44,8 @@ set(CORE_SOURCE
     message_session.c
     message_terminate.c
     message_terminate.h
+    modifier.c
+    modifier.h
     odid_range.c
     odid_range.h
     parser.c

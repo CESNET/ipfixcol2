@@ -61,6 +61,7 @@
 #include <ipfixcol2/message_session.h>
 #include <ipfixcol2/message_ipfix.h>
 
+#include <ipfixcol2/modifier.h>
 #include <ipfixcol2/plugins.h>
 #include <ipfixcol2/session.h>
 #include <ipfixcol2/utils.h>
