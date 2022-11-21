@@ -3,23 +3,25 @@
  * @author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
  * @brief View print functions
  */
-#include "print.hpp"
-#include "informationElements.hpp"
+
+#include <aggregator/print.hpp>
+#include <aggregator/view.hpp>
 
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/socket.h>
 
 #include <cctype>
+#include <iostream>
 
 namespace fdsdump {
 namespace aggregator {
 
 int
-get_width(const ViewField &field)
+get_width(const Field &field)
 {
     //TODO: These are just randomly choosen numbers so the output looks somewhat nice for now
-    switch (field.data_type) {
+    switch (field.data_type()) {
     case DataType::Unsigned8:
     case DataType::Signed8:
         return 5;
@@ -50,7 +52,7 @@ get_width(const ViewField &field)
     }
 }
 
-static std::string
+std::string
 datetime_to_str(uint64_t ts_millisecs)
 {
     char buffer[128];
@@ -107,18 +109,6 @@ ipv6_to_str(const uint8_t addr[16])
         return "<invalid>";
     } else {
         return tmp;
-    }
-}
-
-static std::string
-ip_to_str(const uint8_t *addr, size_t addr_size)
-{
-    if (addr_size == 4) {
-        return ipv4_to_str(addr);
-    } else if (addr_size == 16) {
-        return ipv6_to_str(addr);
-    } else {
-        return "<invalid>";
     }
 }
 
@@ -183,26 +173,26 @@ string_to_str(const char array[128])
 }
 
 void
-print_value(const ViewField &field, ViewValue &value, std::string &buffer)
+print_value(const Field &field, Value &value, std::string &buffer)
 {
     // Print protocol name
-    if (field.kind == ViewFieldKind::VerbatimKey && field.pen == IPFIX::iana && field.id == IPFIX::protocolIdentifier) {
-        protoent *proto = getprotobynumber(value.u8);
-        if (proto) {
-            buffer.append(proto->p_name);
-            return;
-        }
+    // if (field.kind == ViewFieldKind::VerbatimKey && field.pen == IPFIX::iana && field.id == IPFIX::protocolIdentifier) {
+    //     protoent *proto = getprotobynumber(value.u8);
+    //     if (proto) {
+    //         buffer.append(proto->p_name);
+    //         return;
+    //     }
 
-    } else if (field.kind == ViewFieldKind::BiflowDirectionKey) {
-        switch (value.u8) {
-        case 0: buffer.append(" "); break;
-        case 1: buffer.append("->"); break;
-        case 2: buffer.append("<-"); break;
-        }
-        return;
-    }
+    // } else if (field.kind == ViewFieldKind::BiflowDirectionKey) {
+    //     switch (value.u8) {
+    //     case 0: buffer.append(" "); break;
+    //     case 1: buffer.append("->"); break;
+    //     case 2: buffer.append("<-"); break;
+    //     }
+    //     return;
+    // }
 
-    switch (field.data_type) {
+    switch (field.data_type()) {
     case DataType::Unsigned8:
         buffer.append(std::to_string(static_cast<unsigned int>(value.u8)));
         break;
@@ -228,7 +218,7 @@ print_value(const ViewField &field, ViewValue &value, std::string &buffer)
         buffer.append(std::to_string(value.i64));
         break;
     case DataType::IPAddress:
-        buffer.append(ip_to_str(value.ip.address, value.ip.length));
+        buffer.append(value.ip.to_string());
         break;
     case DataType::IPv4Address:
         buffer.append(ipv4_to_str(value.ipv4));
@@ -251,6 +241,21 @@ print_value(const ViewField &field, ViewValue &value, std::string &buffer)
     default: assert(0);
     }
 }
+
+void
+debug_print_record(const View &view, uint8_t *record)
+{
+    for (const auto &pair : view.iter_fields(record)) {
+        std::string value;
+        print_value(pair.field, pair.value, value);
+        std::cerr << pair.field.name()
+            << "[size=" << pair.field.size()
+            << ", offset=" << pair.field.offset()
+            << "] = "
+            << value << "\n";
+    }
+}
+
 
 } // aggregator
 } // fdsdump

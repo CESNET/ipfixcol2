@@ -1,14 +1,17 @@
-
-#include <vector>
+/**
+ * @file
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief Aggregator main
+ */
 
 #include <common/flowProvider.hpp>
-#include <common/ieMgr.hpp>
-
 #include <aggregator/aggregator.hpp>
 #include <aggregator/mode.hpp>
 #include <aggregator/printer.hpp>
-#include <aggregator/viewOld.hpp>
-#include <aggregator/sort.hpp>
+#include <aggregator/view.hpp>
+#include <aggregator/viewFactory.hpp>
+
+#include <memory>
 
 namespace fdsdump {
 namespace aggregator {
@@ -16,18 +19,16 @@ namespace aggregator {
 void
 mode_aggregate(const Options &opts)
 {
-    ViewDefinition view_def = make_view_def(
-            opts.get_aggregation_keys(),
-            opts.get_aggregation_values(),
-            IEMgr::instance().ptr());
-    std::vector<SortField> sort_fields = make_sort_def(
-            view_def,
+    std::shared_ptr<View> view = ViewFactory::create_view(
+            opts.get_aggregation_keys(), 
+            opts.get_aggregation_values(), 
             opts.get_order_by());
+
     std::unique_ptr<Printer> printer = printer_factory(
-            view_def,
+            view,
             opts.get_output_specifier());
     FlowProvider flows;
-    Aggregator aggr(view_def);
+    Aggregator aggr(*view.get());
 
     const size_t rec_limit = opts.get_output_limit();
     size_t rec_printed = 0;
@@ -52,8 +53,7 @@ mode_aggregate(const Options &opts)
         aggr.process_record(*flow);
     }
 
-    sort_records(aggr.items(), sort_fields, view_def);
-
+    aggr.sort_items();
     printer->print_prologue();
 
     for (uint8_t *record : aggr.items()) {

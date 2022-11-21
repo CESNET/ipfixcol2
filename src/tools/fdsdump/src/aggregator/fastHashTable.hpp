@@ -8,6 +8,7 @@
 #ifdef __SSE2__
 
 #include <aggregator/allocator.hpp>
+#include <aggregator/view.hpp>
 
 #include <cstdint>
 #include <vector>

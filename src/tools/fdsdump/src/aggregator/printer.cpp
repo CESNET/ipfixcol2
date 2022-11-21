@@ -4,29 +4,29 @@
 #include <vector>
 #include <stdexcept>
 
-#include "printer.hpp"
-#include "jsonPrinter.hpp"
-#include "tablePrinter.hpp"
+#include <aggregator/printer.hpp>
+#include <aggregator/jsonPrinter.hpp>
+#include <aggregator/tablePrinter.hpp>
 
 namespace fdsdump {
 namespace aggregator {
 
 struct PrinterFactory {
     const char *name;
-    std::function<Printer *(ViewDefinition view_def)> create_fn;
+    std::function<Printer *(std::shared_ptr<View> view)> create_fn;
 };
 
 static const std::vector<struct PrinterFactory> g_printers {
-    {"json", [](ViewDefinition view_def) {
-        return new JSONPrinter(view_def); }
+    {"json", [](std::shared_ptr<View> view) {
+        return new JSONPrinter(view); }
     },
-    {"table", [](ViewDefinition view_def){
-        return new TABLEPrinter(view_def); }
+    {"table", [](std::shared_ptr<View> view){
+        return new TABLEPrinter(view); }
     },
 };
 
 std::unique_ptr<Printer>
-printer_factory(ViewDefinition view_def, const std::string &manual)
+printer_factory(std::shared_ptr<View> view, const std::string &manual)
 {
     std::string type = manual;
 
@@ -38,7 +38,7 @@ printer_factory(ViewDefinition view_def, const std::string &manual)
             continue;
         }
 
-        return std::unique_ptr<Printer>(it.create_fn(view_def));
+        return std::unique_ptr<Printer>(it.create_fn(view));
     }
 
     throw std::invalid_argument("Unsupported output type '" + type + "'");

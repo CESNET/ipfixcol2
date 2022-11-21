@@ -1,8 +1,17 @@
+/**
+ * @file
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief JSON printer
+ */
+
 #pragma once
 
 #include <string>
 
-#include "printer.hpp"
+#include <aggregator/field.hpp>
+#include <aggregator/printer.hpp>
+#include <aggregator/value.hpp>
+#include <aggregator/view.hpp>
 
 namespace fdsdump {
 namespace aggregator {
@@ -10,7 +19,7 @@ namespace aggregator {
 class JSONPrinter : public Printer
 {
 public:
-    JSONPrinter(ViewDefinition view_def);
+    JSONPrinter(std::shared_ptr<View> view);
 
     ~JSONPrinter() override;
 
@@ -24,12 +33,12 @@ public:
     print_epilogue() override;
 
 private:
-    void append_field(const ViewField &field, ViewValue *value);
-    void append_value(const ViewField &field, ViewValue *value);
-    void append_string_value(const ViewValue *value);
-    void append_octet_value(const ViewValue *value);
+    void append_field(const Field &field, Value *value);
+    void append_value(const Field &field, Value *value);
+    void append_string_value(const Value *value);
+    void append_octet_value(const Value *value);
 
-    ViewDefinition m_view_def;
+    std::shared_ptr<View> m_view;
     std::string m_buffer;
     size_t m_rec_printed = 0;
 };
