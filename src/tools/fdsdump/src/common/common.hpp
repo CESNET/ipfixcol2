@@ -61,6 +61,17 @@ string_trim(std::string &str);
 std::string
 string_trim_copy(std::string str);
 
+
+/**
+ * @brief Convert a string to lowercase
+ *
+ * @param The string to convert
+ *
+ * @return The supplied string converted to lowercase
+ */
+std::string
+string_to_lower(std::string str);
+
 /**
  * @brief Copy a specified number of bits from source to destination,
  *   remaining bits in an incomplete byte are zeroed.

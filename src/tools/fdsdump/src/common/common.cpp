@@ -99,6 +99,13 @@ string_trim_copy(std::string str)
     return str;
 }
 
+std::string
+string_to_lower(std::string str)
+{
+    std::for_each(str.begin(), str.end(), [](char &c) { c = std::tolower(c); });
+    return str;
+}
+
 void
 memcpy_bits(uint8_t *dst, uint8_t *src, unsigned int n_bits)
 {
