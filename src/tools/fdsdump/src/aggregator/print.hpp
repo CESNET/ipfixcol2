@@ -5,10 +5,15 @@
  */
 #pragma once
 
-#include "viewOld.hpp"
+#include <aggregator/field.hpp>
+#include <aggregator/value.hpp>
+#include <aggregator/view.hpp>
 
 namespace fdsdump {
 namespace aggregator {
+
+std::string
+datetime_to_str(uint64_t ts_millisecs);
 
 /**
  * @brief Get a width the field should have in a text form.
@@ -16,7 +21,7 @@ namespace aggregator {
  * @return The width.
  */
 int
-get_width(const ViewField &field);
+get_width(const Field &field);
 
 /**
  * @brief Convert a byte value to hexadecimal value.
@@ -33,9 +38,14 @@ char2hex(const char byte);
  */
 void
 print_value(
-    const ViewField &field,
-    ViewValue &value,
+    const Field &field,
+    Value &value,
     std::string &buffer);
+
+void
+debug_print_record(const View &view, uint8_t *record);
+
+
 
 } // aggregator
 } // fdsdump

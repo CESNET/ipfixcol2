@@ -1,3 +1,9 @@
+/**
+ * @file
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief Aggregator main
+ */
+
 #pragma once
 
 #include <common/common.hpp>

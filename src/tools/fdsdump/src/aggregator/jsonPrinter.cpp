@@ -1,13 +1,19 @@
+/**
+ * @file
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief JSON printer
+ */
+
 #include <iostream>
 
-#include "jsonPrinter.hpp"
-#include "print.hpp"
+#include <aggregator/jsonPrinter.hpp>
+#include <aggregator/print.hpp>
 
 namespace fdsdump {
 namespace aggregator {
 
-JSONPrinter::JSONPrinter(ViewDefinition view_def)
-    : m_view_def(view_def)
+JSONPrinter::JSONPrinter(std::shared_ptr<View> view)
+    : m_view(view)
 {
     m_buffer.reserve(1024);
 }
@@ -25,28 +31,16 @@ JSONPrinter::print_prologue()
 void
 JSONPrinter::print_record(uint8_t *record)
 {
-    ViewValue *value = (ViewValue *) record;
-    size_t field_cnt = 0;
-
     m_buffer.clear();
     m_buffer.push_back('{');
 
-    for (const auto &field : m_view_def.key_fields) {
+    size_t field_cnt = 0;
+
+    for (const auto &pair : m_view->iter_fields(record)) {
         if (field_cnt++ > 0) {
             m_buffer.push_back(',');
         }
-
-        append_field(field, value);
-        advance_value_ptr(value, field.size);
-    }
-
-    for (const auto &field : m_view_def.value_fields) {
-        if (field_cnt++ > 0) {
-            m_buffer.push_back(',');
-        }
-
-        append_field(field, value);
-        advance_value_ptr(value, field.size);
+        append_field(pair.field, &pair.value);
     }
 
     m_buffer.push_back('}');
@@ -61,10 +55,10 @@ JSONPrinter::print_epilogue()
 }
 
 void
-JSONPrinter::append_field(const ViewField &field, ViewValue *value)
+JSONPrinter::append_field(const Field &field, Value *value)
 {
     m_buffer.push_back('"');
-    m_buffer.append(field.name);
+    m_buffer.append(field.name());
     m_buffer.push_back('"');
 
     m_buffer.push_back(':');
@@ -73,9 +67,9 @@ JSONPrinter::append_field(const ViewField &field, ViewValue *value)
 }
 
 void
-JSONPrinter::append_value(const ViewField &field, ViewValue *value)
+JSONPrinter::append_value(const Field &field, Value *value)
 {
-    switch (field.data_type) {
+    switch (field.data_type()) {
     case DataType::IPAddress:
     case DataType::IPv4Address:
     case DataType::IPv6Address:
@@ -112,7 +106,7 @@ JSONPrinter::append_value(const ViewField &field, ViewValue *value)
 }
 
 void
-JSONPrinter::append_string_value(const ViewValue *value)
+JSONPrinter::append_string_value(const Value *value)
 {
     size_t last_byte;
 
@@ -164,7 +158,7 @@ JSONPrinter::append_string_value(const ViewValue *value)
 }
 
 void
-JSONPrinter::append_octet_value(const ViewValue *value)
+JSONPrinter::append_octet_value(const Value *value)
 {
     size_t last_byte;
 
