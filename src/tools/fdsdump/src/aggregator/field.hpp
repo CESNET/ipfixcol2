@@ -35,7 +35,6 @@ enum class CmpResult {
  * @brief The base class for all aggregator fields
  */
 class Field {
-
 public:
     /**
      * @brief Get the size of the field in bytes
