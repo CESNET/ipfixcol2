@@ -36,6 +36,7 @@ enum class DataType {
     DateTime,
     String128B,
     Octets128B,
+    VarString,
 };
 
 /**
@@ -43,6 +44,40 @@ enum class DataType {
  */
 std::string
 data_type_to_str(DataType data_type);
+
+/**
+ * @brief Representation of a variable-length string
+ */
+struct __attribute__((packed)) VarString {
+    uint32_t len;
+    char text[1];
+
+    friend bool operator==(const VarString& a, const VarString& b) {
+        return a.len == b.len && std::memcmp(a.text, b.text, a.len);
+    }
+
+    friend bool operator<(const VarString& a, const VarString& b) {
+        int res = std::memcmp(a.text, b.text, std::min(a.len, b.len));
+        if (res < 0) {
+            return true;
+        } else if (res > 0) {
+            return false;
+        } else {
+            return a.len < b.len;
+        }
+    }
+
+    friend bool operator>(const VarString& a, const VarString& b) {
+        int res = std::memcmp(a.text, b.text, std::min(a.len, b.len));
+        if (res > 0) {
+            return true;
+        } else if (res < 0) {
+            return false;
+        } else {
+            return a.len > b.len;
+        }
+    }
+};
 
 /** @brief The possible view value forms. */
 union Value {
@@ -60,6 +95,7 @@ union Value {
     int32_t i32;
     int64_t i64;
     char str[128];
+    VarString varstr;
 };
 
 /**

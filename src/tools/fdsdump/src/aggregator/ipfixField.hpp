@@ -61,6 +61,11 @@ public:
      */
     bool operator==(const Field &other) const override;
 
+    /**
+     * @brief Get the size the value of this field occupies in the aggregation record
+     */
+    size_t size(const Value* value = nullptr) const override;
+
 private:
     uint32_t m_pen;
     uint16_t m_id;

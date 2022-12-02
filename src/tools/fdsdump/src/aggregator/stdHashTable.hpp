@@ -5,7 +5,8 @@
  */
 #pragma once
 
-#include "allocator.hpp"
+#include <aggregator/allocator.hpp>
+#include <aggregator/view.hpp>
 
 #include <cstdint>
 #include <functional>
@@ -27,7 +28,7 @@ public:
      * @param[in]  key_size    Number of bytes of the key portion of the record
      * @param[in]  value_size  Number of bytes of the value portion of the record
      */
-    StdHashTable(std::size_t key_size, std::size_t value_size);
+    StdHashTable(const View &view);
 
     /**
      * @brief Find a record corresponding to the provided key
@@ -63,8 +64,7 @@ private:
         std::function<std::size_t(const uint8_t *)>,
         std::function<bool(const uint8_t *, const uint8_t *)>>;
 
-    std::size_t m_key_size;
-    std::size_t m_value_size;
+    const View& m_view;
     std::vector<uint8_t *> m_items;
     Allocator m_allocator;
     Map m_map;

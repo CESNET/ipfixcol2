@@ -67,6 +67,9 @@ Field::set_data_type(DataType data_type)
     case DataType::Octets128B:
         m_size = sizeof(Value::str);
         break;
+    case DataType::VarString:
+        m_size = 0;
+        break;
     case DataType::Unassigned:
         throw std::logic_error("unexpected field data type");
     }
@@ -174,6 +177,8 @@ Field::compare(const Value &a, const Value &b) const
     case DataType::String128B:
     case DataType::Octets128B:
         return cmp(reinterpret_cast<const uint8_t *>(a.str), reinterpret_cast<const uint8_t *>(b.str), sizeof(a.str));
+    case DataType::VarString:
+        return cmp(a.varstr, b.varstr);
     case DataType::Unassigned:
         throw std::logic_error("cannot compare fields with unassigned data type");
     }

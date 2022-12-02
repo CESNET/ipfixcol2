@@ -37,6 +37,7 @@ private:
     void append_value(const Field &field, Value *value);
     void append_string_value(const Value *value);
     void append_octet_value(const Value *value);
+    void append_varstring_value(const Value *value);
 
     std::shared_ptr<View> m_view;
     std::string m_buffer;
