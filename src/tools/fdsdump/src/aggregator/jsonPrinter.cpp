@@ -99,6 +99,11 @@ JSONPrinter::append_value(const Field &field, Value *value)
         append_octet_value(value);
         m_buffer.push_back('"');
         return;
+    case DataType::VarString:
+        m_buffer.push_back('"');
+        append_varstring_value(value);
+        m_buffer.push_back('"');
+        return;
     case DataType::Unassigned:
         m_buffer.append("null");
         return;
@@ -118,6 +123,50 @@ JSONPrinter::append_string_value(const Value *value)
 
     for (size_t i = 0; i < last_byte; ++i) {
         const char byte = value->str[i];
+
+        // Escape characters
+        switch (byte) {
+        case '"':
+            m_buffer.append("\\\"");
+            continue;
+        case '\'':
+            m_buffer.append("\\\\");
+            continue;
+        case '/':
+            m_buffer.append("\\/");
+            continue;;
+        case '\b':
+            m_buffer.append("\\b");
+            continue;
+        case '\f':
+            m_buffer.append("\\f");
+            continue;
+        case '\n':
+            m_buffer.append("\\n");
+            continue;
+        case '\r':
+            m_buffer.append("\\r");
+            continue;
+        case '\t':
+            m_buffer.append("\\t");
+            continue;
+        default:
+            break;
+        }
+
+        if (byte >= '\x00' && byte <= '\x1F') {
+            m_buffer.append(char2hex(byte));
+        } else {
+            m_buffer.append(1, byte);
+        }
+    }
+}
+
+void
+JSONPrinter::append_varstring_value(const Value *value)
+{
+    for (uint32_t i = 0; i < value->varstr.len; ++i) {
+        const char byte = value->varstr.text[i];
 
         // Escape characters
         switch (byte) {

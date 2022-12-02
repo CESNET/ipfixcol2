@@ -190,5 +190,15 @@ IpfixField::operator==(const Field &other) const
     return false;
 }
 
+size_t
+IpfixField::size(const Value* value) const
+{
+    if (data_type() == DataType::VarString && value != nullptr) {
+        return sizeof(value->varstr.len) + value->varstr.len;
+    } else {
+        return Field::size(value);
+    }
+}
+
 } // aggregator
 } // fdsdump

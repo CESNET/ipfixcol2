@@ -305,6 +305,9 @@ ViewFactory::create_view(
     for (auto def : split_args(key_def)) {
         string_trim(def);
         auto field = create_key_field(def);
+        if (field->data_type() == DataType::VarString) {
+            view.m_is_fixed_size = false;
+        }
         field->set_offset(view.m_key_size);
         view.m_key_size += field->size();
         view.m_key_count++;

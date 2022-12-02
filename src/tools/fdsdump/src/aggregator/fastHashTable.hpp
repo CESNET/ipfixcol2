@@ -36,7 +36,7 @@ public:
      * @param[in]  key_size    Number of bytes of the key portion of the record
      * @param[in]  value_size  Number of bytes of the value portion of the record
      */
-    FastHashTable(std::size_t key_size, std::size_t value_size);
+    FastHashTable(const View &view);
 
     /**
      * @brief Find a record corresponding to the provided key
@@ -70,8 +70,7 @@ public:
 private:
     std::size_t m_block_count = 4096;
     std::size_t m_record_count = 0;
-    std::size_t m_key_size;
-    std::size_t m_value_size;
+    const View &m_view;
 
     std::vector<HashTableBlock> m_blocks;
     std::vector<uint8_t *> m_items;

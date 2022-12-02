@@ -11,6 +11,7 @@
 
 #include <aggregator/field.hpp>
 
+#include <cstddef>
 #include <memory>
 #include <vector>
 
@@ -68,7 +69,7 @@ public:
         operator++()
         {
             if (m_iter != m_end) {
-                m_ptr += (*m_iter)->size();
+                m_ptr += (*m_iter)->size(reinterpret_cast<const Value *>(m_ptr));
                 ++m_iter;
             }
         }
@@ -164,8 +165,8 @@ public:
         operator++()
         {
             if (m_iter != m_end) {
-                m_ptr1 += (*m_iter)->size();
-                m_ptr2 += (*m_iter)->size();
+                m_ptr1 += (*m_iter)->size(reinterpret_cast<const Value *>(m_ptr1));
+                m_ptr2 += (*m_iter)->size(reinterpret_cast<const Value *>(m_ptr2));
                 ++m_iter;
             }
         }
@@ -303,10 +304,22 @@ public:
 
     /**
      * @brief Get the number of bytes the key portion of the aggregation record occupies
+     *        including the uint32_t size at the beginning of the record if the view is
+     *        not fixed size
+     *
+     * @param ptr  Pointer to the beginning of the record
      *
      * @return The number of bytes
      */
-    size_t key_size() const { return m_key_size; }
+    size_t
+    key_size(const uint8_t *ptr) const
+    {
+        if (m_is_fixed_size) {
+            return m_key_size;
+        } else {
+            return *reinterpret_cast<const uint32_t *>(ptr);
+        }
+    }
 
     /**
      * @brief Get the number of bytes the value portion of the aggregation record occupies
@@ -376,6 +389,11 @@ public:
     const Value &
     access_field(const Field &field, const uint8_t *record_ptr) const;
 
+    /**
+     * @brief Check whether the records of this view have a fixed size (as opposed to variable size)
+     */
+    bool is_fixed_size() const { return m_is_fixed_size; }
+
 private:
     View() = default;
 
@@ -386,6 +404,7 @@ private:
     size_t m_value_size = 0;
     std::vector<OrderField> m_order_fields;
     bool m_has_inout_fields = false;
+    bool m_is_fixed_size = true;
 };
 
 } // aggregator

@@ -13,15 +13,17 @@
 namespace fdsdump {
 namespace aggregator {
 
-StdHashTable::StdHashTable(std::size_t key_size, std::size_t value_size) :
-    m_key_size(key_size),
-    m_value_size(value_size)
+StdHashTable::StdHashTable(const View& view) :
+    m_view(view)
 {
-    auto hash = [=](const uint8_t *key) {
-        return XXH3_64bits(key, m_key_size);
+    auto hash = [this](const uint8_t *key) {
+        auto key_size = m_view.key_size(key);
+        return XXH3_64bits(key, key_size);
     };
-    auto equals = [=](const uint8_t *a, const uint8_t *b) {
-        return std::memcmp(a, b, m_key_size) == 0;
+    auto equals = [this](const uint8_t *a, const uint8_t *b) {
+        auto key_size = m_view.key_size(a);
+        auto key_size2 = m_view.key_size(b);
+        return key_size == key_size2 && std::memcmp(a, b, key_size) == 0;
     };
     m_map = Map(1, hash, equals);
 }
@@ -46,8 +48,9 @@ StdHashTable::find_or_create(uint8_t *key, uint8_t *&item)
         item = it->second;
         return true;
     } else {
-        uint8_t *data = m_allocator.allocate(m_key_size + m_value_size);
-        std::memcpy(data, key, m_key_size);
+        auto key_size = m_view.key_size(key);
+        uint8_t *data = m_allocator.allocate(key_size + m_view.value_size());
+        std::memcpy(data, key, key_size);
         m_map.insert({data, data});
         m_items.push_back(data);
         item = data;

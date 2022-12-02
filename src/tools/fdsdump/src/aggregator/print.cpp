@@ -46,6 +46,8 @@ get_width(const Field &field)
         return 30;
     case DataType::MacAddress:
         return 17;
+    case DataType::VarString:
+        return 40;
     default:
         assert(0);
     }
@@ -171,6 +173,26 @@ string_to_str(const char array[128])
     return result;
 }
 
+static std::string
+varstring_to_str(const char *text, uint32_t len)
+{
+    std::string result;
+    result.reserve(len);
+
+    for (uint32_t i = 0; i < len; ++i) {
+        const char byte = text[i];
+
+        if (std::isprint(byte)) {
+            result.append(1, byte);
+        } else {
+            result.append("\\x");
+            result.append(char2hex(byte));
+        }
+    }
+
+    return result;
+}
+
 void
 print_value(const Field &field, Value &value, std::string &buffer)
 {
@@ -236,6 +258,9 @@ print_value(const Field &field, Value &value, std::string &buffer)
         break;
     case DataType::DateTime:
         buffer.append(datetime_to_str(value.ts_millisecs));
+        break;
+    case DataType::VarString:
+        buffer.append(varstring_to_str(value.varstr.text, value.varstr.len));
         break;
     default: assert(0);
     }

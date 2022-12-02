@@ -25,8 +25,8 @@ namespace fdsdump {
 namespace aggregator {
 
 Aggregator::Aggregator(const View &view) :
-    m_table(view.key_size(), view.value_size()),
-    m_key_buffer(view.key_size()),
+    m_table(view),
+    m_key_buffer(65535),
     m_view(view)
 {
 }
@@ -65,23 +65,34 @@ void
 Aggregator::aggregate(FlowContext &ctx)
 {
     // build key
-    for (const auto &pair : m_view.iter_keys(m_key_buffer.data())) {
+    uint32_t size = 0;
+    uint8_t *ptr = m_key_buffer.data();
+    if (!m_view.is_fixed_size()) {
+        size += sizeof(uint32_t);
+    }
+    for (const auto &pair : m_view.iter_keys(ptr)) {
         if (!pair.field.load(ctx, pair.value)) {
             return;
         }
+        if (!m_view.is_fixed_size()) {
+            size += pair.field.size(&pair.value);
+        }
+    }
+    if (!m_view.is_fixed_size()) {
+        *reinterpret_cast<uint32_t *>(m_key_buffer.data()) = size;
     }
 
     // find in hash table
     uint8_t *rec;
     if (!m_table.find_or_create(m_key_buffer.data(), rec)) {
         // init fields
-        for (const auto &pair : m_view.iter_values(rec + m_view.key_size())) {
+        for (const auto &pair : m_view.iter_values(rec)) {
             pair.field.init(pair.value);
         }
     }
 
     // aggregate
-    for (const auto &pair : m_view.iter_values(rec + m_view.key_size())) {
+    for (const auto &pair : m_view.iter_values(rec)) {
         pair.field.aggregate(ctx, pair.value);
     }
 }

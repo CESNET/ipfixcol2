@@ -41,7 +41,7 @@ public:
     /**
      * @brief Get the size of the field in bytes
      */
-    size_t size() const { return m_size; }
+    virtual size_t size(const Value *value = nullptr) const { (void) value; return m_size; }
 
     /**
      * @brief Get the offset of the field from the beginning of the aggregation record
