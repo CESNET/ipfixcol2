@@ -43,9 +43,12 @@
 #define JSON_CONFIG_H
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 #include <ipfixcol2.h>
+
+#include "SyslogSocket.hpp"
 
 /** Configuration of output format                                                               */
 struct cfg_format {
@@ -145,12 +148,39 @@ struct cfg_kafka : cfg_output {
     std::map<std::string, std::string> properties;
 };
 
+/** Configuration of syslog hostname                                                             */
+enum class syslog_hostname {
+    NONE,
+    LOCAL,
+};
+
+/** Configuration of syslog prority                                                              */
+struct syslog_prority {
+    uint8_t facility;
+    uint8_t severity;
+};
+
+/** Configuration of syslog output                                                               */
+struct cfg_syslog : cfg_output {
+    /// Reported message priority
+    syslog_prority priority;
+    /// Type of reported hostname
+    syslog_hostname hostname;
+    /// Reported application name
+    std::string program;
+    /// Whether or not report process ID
+    bool proc_id;
+    /// Transport configuration
+    std::unique_ptr<SyslogSocket> transport;
+};
+
 /** Parsed configuration of an instance                                                          */
 class Config {
 private:
     bool check_ip(const std::string &ip_addr);
     bool check_or(const std::string &elem, const char *value, const std::string &val_true,
         const std::string &val_false);
+    bool is_syslog_ascii(const std::string &str);
     void check_validity();
     void default_set();
     void parse_print(fds_xml_ctx_t *print);
@@ -159,6 +189,11 @@ private:
     void parse_file(fds_xml_ctx_t *file);
     void parse_kafka(fds_xml_ctx_t *kafka);
     void parse_kafka_property(struct cfg_kafka &kafka, fds_xml_ctx_t *property);
+    void parse_syslog(fds_xml_ctx_t *syslog);
+    void parse_syslog_priority(struct cfg_syslog &syslog, fds_xml_ctx_t *priority);
+    void parse_syslog_transport(struct cfg_syslog &syslog, fds_xml_ctx_t *transport);
+    std::unique_ptr<TcpSyslogSocket> parse_syslog_tcp(fds_xml_ctx_t *socket);
+    std::unique_ptr<UdpSyslogSocket> parse_syslog_udp(fds_xml_ctx_t *socket);
     void parse_outputs(fds_xml_ctx_t *outputs);
     void parse_params(fds_xml_ctx_t *params);
 
@@ -177,6 +212,8 @@ public:
         std::vector<struct cfg_server> servers;
         /** Kafkas                                                                                */
         std::vector<struct cfg_kafka> kafkas;
+        /** Syslogs                                                                              */
+        std::vector<struct cfg_syslog> syslogs;
     } outputs; /**< Outputs                                                                      */
 
     /**

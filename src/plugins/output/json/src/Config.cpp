@@ -39,6 +39,7 @@
  *
  */
 
+#include <algorithm>
 #include <cstdio>
 #include <memory>
 #include <set>
@@ -51,6 +52,16 @@
 #include <librdkafka/rdkafka.h>
 
 #include "Config.hpp"
+
+#define SYSLOG_FACILITY_MIN 0
+#define SYSLOG_FACILITY_MAX 23
+#define SYSLOG_FACILITY_DEF 16
+
+#define SYSLOG_SEVERITY_MIN 0
+#define SYSLOG_SEVERITY_MAX 7
+#define SYSLOG_SEVERITY_DEF 6
+
+#define SYSLOG_APPNAME_MAX_LEN 48
 
 /** XML nodes */
 enum params_xml_nodes {
@@ -73,6 +84,7 @@ enum params_xml_nodes {
     OUTPUT_SERVER,     /**< Provide as server               */
     OUTPUT_FILE,       /**< Store to file                   */
     OUTPUT_KAFKA,      /**< Store to Kafka                  */
+    OUTPUT_SYSLOG,     /**< Store to syslog                 */
     // Standard output
     PRINT_NAME,        /**< Printer name                    */
     // Send output
@@ -103,6 +115,22 @@ enum params_xml_nodes {
     KAFKA_PROPERTY,    /**< Additional librdkafka property  */
     KAFKA_PROP_KEY,    /**< Property key                    */
     KAFKA_PROP_VALUE,  /**< Property value                  */
+    // Syslog output
+    SYSLOG_NAME,       /**< Name of the output              */
+    SYSLOG_PRI,        /**< Priority                        */
+    SYSLOG_PRI_FACILITY,   /**< Priority facility           */
+    SYSLOG_PRI_SEVERITY,   /**< Priority severity           */
+    SYSLOG_HOSTNAME,   /**< Hostname                        */
+    SYSLOG_PROGRAM,    /**< Application name                */
+    SYSLOG_PROCID,     /**< Application PID                 */
+    SYSLOG_TRANSPORT,  /**< Transport configuration         */
+    SYSLOG_TCP,        /**< TCP socket configuration        */
+    SYSLOG_TCP_HOST,   /**< Destination host (TCP)          */
+    SYSLOG_TCP_PORT,   /**< Destination port (TCP)          */
+    SYSLOG_TCP_BLOCK,  /**< Blocking connection (TCP)       */
+    SYSLOG_UDP,        /**< UDP socket configuration        */
+    SYSLOG_UDP_HOST,   /**< Destination host (UDP)          */
+    SYSLOG_UDP_PORT,   /**< Destination port (UDP)          */
 };
 
 /** Definition of the \<print\> node  */
@@ -160,6 +188,46 @@ static const struct fds_xml_args args_kafka[] = {
     FDS_OPTS_END
 };
 
+/** Definition of \<priority\> of \<syslog> node */
+static const struct fds_xml_args args_syslog_priority[] = {
+    FDS_OPTS_ELEM(SYSLOG_PRI_FACILITY, "facility", FDS_OPTS_T_UINT, 0),
+    FDS_OPTS_ELEM(SYSLOG_PRI_SEVERITY, "severity", FDS_OPTS_T_UINT, 0),
+    FDS_OPTS_END
+};
+
+/** Definition of \<udp\> of \<syslog>\<transport> node */
+static const struct fds_xml_args args_syslog_udp[] = {
+    FDS_OPTS_ELEM(SYSLOG_UDP_HOST, "hostname", FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_ELEM(SYSLOG_UDP_PORT, "port",     FDS_OPTS_T_UINT,   0),
+    FDS_OPTS_END
+};
+
+/** Definition of \<tcp\> of \<syslog>\<transport> node */
+static const struct fds_xml_args args_syslog_tcp[] = {
+    FDS_OPTS_ELEM(SYSLOG_TCP_HOST,  "hostname", FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_ELEM(SYSLOG_TCP_PORT,  "port",     FDS_OPTS_T_UINT,   0),
+    FDS_OPTS_ELEM(SYSLOG_TCP_BLOCK, "blocking", FDS_OPTS_T_BOOL,   0),
+    FDS_OPTS_END
+};
+
+/** Definition of \<transport\> of \<syslog> node */
+static const struct fds_xml_args args_syslog_transport[] = {
+    FDS_OPTS_NESTED(SYSLOG_TCP,    "tcp",  args_syslog_tcp,  FDS_OPTS_P_OPT),
+    FDS_OPTS_NESTED(SYSLOG_UDP,    "udp",  args_syslog_udp,  FDS_OPTS_P_OPT),
+    FDS_OPTS_END
+};
+
+/** Definition of the \<syslog\> node  */
+static const struct fds_xml_args args_syslog[] = {
+    FDS_OPTS_ELEM(SYSLOG_NAME,        "name",      FDS_OPTS_T_STRING,     0),
+    FDS_OPTS_ELEM(SYSLOG_HOSTNAME,    "hostname",  FDS_OPTS_T_STRING,     FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(SYSLOG_PROGRAM,     "program",   FDS_OPTS_T_STRING,     FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(SYSLOG_PROCID,      "procId",    FDS_OPTS_T_BOOL,       FDS_OPTS_P_OPT),
+    FDS_OPTS_NESTED(SYSLOG_PRI,       "priority",  args_syslog_priority,  FDS_OPTS_P_OPT),
+    FDS_OPTS_NESTED(SYSLOG_TRANSPORT, "transport", args_syslog_transport, 0),
+    FDS_OPTS_END
+};
+
 /** Definition of the \<outputs\> node  */
 static const struct fds_xml_args args_outputs[] = {
     FDS_OPTS_NESTED(OUTPUT_PRINT,  "print",  args_print,  FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
@@ -167,6 +235,7 @@ static const struct fds_xml_args args_outputs[] = {
     FDS_OPTS_NESTED(OUTPUT_SEND,   "send",   args_send,   FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
     FDS_OPTS_NESTED(OUTPUT_FILE,   "file",   args_file,   FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
     FDS_OPTS_NESTED(OUTPUT_KAFKA,  "kafka",  args_kafka,  FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
+    FDS_OPTS_NESTED(OUTPUT_SYSLOG, "syslog", args_syslog, FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
     FDS_OPTS_END
 };
 
@@ -228,6 +297,15 @@ Config::check_or(const std::string &elem, const char *value, const std::string &
     // Error
     throw std::invalid_argument("Unexpected parameter of the element <" + elem + "> (expected '"
         + val_true + "' or '" + val_false + "')");
+}
+
+bool
+Config::is_syslog_ascii(const std::string &str)
+{
+    // Only printable characters as mentioned in RFC 5424, Section 6.
+    const auto isValid = [](char ch){ return ch >= 33 && ch <= 126; };
+    const auto result = std::find_if_not(str.begin(), str.end(), isValid);
+    return result == str.end();
 }
 
 /**
@@ -560,6 +638,214 @@ Config::parse_kafka(fds_xml_ctx_t *kafka)
     outputs.kafkas.push_back(output);
 }
 
+std::unique_ptr<UdpSyslogSocket>
+Config::parse_syslog_udp(fds_xml_ctx_t *socket)
+{
+    std::string hostname;
+    uint16_t port;
+
+    const struct fds_xml_cont *content;
+    while (fds_xml_next(socket, &content) != FDS_EOC) {
+        switch (content->id) {
+        case SYSLOG_UDP_HOST:
+            assert(content->type == FDS_OPTS_T_STRING);
+            hostname = content->ptr_string;
+            break;
+        case SYSLOG_UDP_PORT:
+            assert(content->type == FDS_OPTS_T_UINT);
+            if (content->val_uint > UINT16_MAX || content->val_uint == 0) {
+                throw std::invalid_argument("Invalid port number of a <udp> syslog!");
+            }
+
+            port = static_cast<uint16_t>(content->val_uint);
+            break;
+        default:
+            throw std::invalid_argument("Unexpected element within <udp> syslog!");
+        }
+    }
+
+    return std::unique_ptr<UdpSyslogSocket>(new UdpSyslogSocket(hostname, port));
+}
+
+std::unique_ptr<TcpSyslogSocket>
+Config::parse_syslog_tcp(fds_xml_ctx_t *socket)
+{
+    std::string hostname;
+    uint16_t port;
+    bool blocking;
+
+    const struct fds_xml_cont *content;
+    while (fds_xml_next(socket, &content) != FDS_EOC) {
+        switch (content->id) {
+        case SYSLOG_TCP_HOST:
+            assert(content->type == FDS_OPTS_T_STRING);
+            hostname = content->ptr_string;
+            break;
+        case SYSLOG_TCP_PORT:
+            assert(content->type == FDS_OPTS_T_UINT);
+            if (content->val_uint > UINT16_MAX || content->val_uint == 0) {
+                throw std::invalid_argument("Invalid port number of a <tcp> syslog!");
+            }
+
+            port = static_cast<uint16_t>(content->val_uint);
+            break;
+        case SYSLOG_TCP_BLOCK:
+            assert(content->type == FDS_OPTS_T_BOOL);
+            blocking = content->val_bool;
+            break;
+        default:
+            throw std::invalid_argument("Unexpected element within <tcp> syslog!");
+        }
+    }
+
+    return std::unique_ptr<TcpSyslogSocket>(new TcpSyslogSocket(hostname, port, blocking));
+}
+
+void
+Config::parse_syslog_transport(struct cfg_syslog &syslog, fds_xml_ctx_t *transport)
+{
+    std::unique_ptr<SyslogSocket> socket;
+
+    const struct fds_xml_cont *content;
+    while (fds_xml_next(transport, &content) != FDS_EOC) {
+        if (socket != nullptr) {
+            throw std::invalid_argument("Multiple syslog transport types are not allowed!");
+        }
+
+        switch (content->id) {
+        case SYSLOG_TCP:
+            assert(content->type == FDS_OPTS_T_CONTEXT);
+            socket = parse_syslog_tcp(content->ptr_ctx);
+            break;
+        case SYSLOG_UDP:
+            assert(content->type == FDS_OPTS_T_CONTEXT);
+            socket = parse_syslog_udp(content->ptr_ctx);
+            break;
+        default:
+            throw std::invalid_argument("Unexpected element within <transport>!");
+        }
+    }
+
+    syslog.transport = std::move(socket);
+}
+
+void
+Config::parse_syslog_priority(struct cfg_syslog &syslog, fds_xml_ctx_t *priority)
+{
+    struct syslog_prority values;
+    bool isFacilitySet = false;
+    bool isSeveritySet = false;
+
+    const struct fds_xml_cont *content;
+    while (fds_xml_next(priority, &content) != FDS_EOC) {
+        switch (content->id) {
+        case SYSLOG_PRI_FACILITY:
+            assert(content->type == FDS_OPTS_T_UINT);
+            values.facility = content->val_uint;
+            isFacilitySet = true;
+            break;
+        case SYSLOG_PRI_SEVERITY:
+            assert(content->type == FDS_OPTS_T_UINT);
+            values.severity= content->val_uint;
+            isSeveritySet = true;
+            break;
+        default:
+            throw std::invalid_argument("Unexpected element within <priority>!");
+        }
+    }
+
+    if (!isFacilitySet || !isSeveritySet) {
+        throw std::invalid_argument("Both syslog facility and severity must be set!");
+    }
+
+    if (values.facility > SYSLOG_FACILITY_MAX) {
+        std::string str_min = std::to_string(SYSLOG_FACILITY_MIN);
+        std::string str_max = std::to_string(SYSLOG_FACILITY_MAX);
+        std::string range = "[" + str_min + ".." + str_max + "]";
+        throw std::invalid_argument("Syslog facility is out of range " + range);
+    }
+
+    if (values.severity > SYSLOG_SEVERITY_MAX) {
+        std::string str_min = std::to_string(SYSLOG_SEVERITY_MIN);
+        std::string str_max = std::to_string(SYSLOG_SEVERITY_MAX);
+        std::string range = "[" + str_min + ".." + str_max + "]";
+        throw std::invalid_argument("Syslog severity is out of range " + range);
+    }
+
+    syslog.priority = values;
+}
+
+/**
+ * \brief Parse "syslog" output parameters
+ *
+ * Successfully parsed output is added to the vector of outputs
+ * \param[in] syslog Parsed XML context
+ * \throw invalid_argument or runtime_error
+ */
+void
+Config::parse_syslog(fds_xml_ctx_t *syslog)
+{
+    // Prepare default values
+    struct cfg_syslog output;
+    output.priority.facility = SYSLOG_FACILITY_DEF;
+    output.priority.severity = SYSLOG_SEVERITY_DEF;
+    output.hostname = syslog_hostname::NONE;
+    output.proc_id = false;
+
+    const struct fds_xml_cont *content;
+    while (fds_xml_next(syslog, &content) != FDS_EOC) {
+        switch (content->id) {
+        case SYSLOG_NAME:
+            assert(content->type == FDS_OPTS_T_STRING);
+            output.name = content->ptr_string;
+            break;
+        case SYSLOG_HOSTNAME:
+            assert(content->type == FDS_OPTS_T_STRING);
+            if (strcasecmp(content->ptr_string, "none") == 0) {
+                output.hostname = syslog_hostname::NONE;
+            } else if (strcasecmp(content->ptr_string, "local") == 0) {
+                output.hostname = syslog_hostname::LOCAL;
+            } else {
+                const std::string inv_str = content->ptr_string;
+                throw std::invalid_argument("Unknown syslog hostname type '" + inv_str + "'");
+            }
+            break;
+        case SYSLOG_PROGRAM:
+            assert(content->type == FDS_OPTS_T_STRING);
+            output.program = content->ptr_string;
+            break;
+        case SYSLOG_PROCID:
+            assert(content->type == FDS_OPTS_T_BOOL);
+            output.proc_id = content->val_bool;
+            break;
+        case SYSLOG_PRI:
+            assert(content->type == FDS_OPTS_T_CONTEXT);
+            parse_syslog_priority(output, content->ptr_ctx);
+            break;
+        case SYSLOG_TRANSPORT:
+            assert(content->type == FDS_OPTS_T_CONTEXT);
+            parse_syslog_transport(output, content->ptr_ctx);
+            break;
+        default:
+            throw std::invalid_argument("Unexpected element within <syslog>!");
+        }
+    }
+
+    if (!output.transport) {
+        throw std::invalid_argument("Syslog transport type must be defined!");
+    }
+
+    if (!is_syslog_ascii(output.program)) {
+        throw std::invalid_argument("Invalid syslog identifier '" + output.name + "'");
+    }
+
+    if (output.program.size() > SYSLOG_APPNAME_MAX_LEN) {
+        throw std::invalid_argument("Too long syslog identifier '" + output.name + "'");
+    }
+
+    outputs.syslogs.emplace_back(std::move(output));
+}
+
 /**
  * \brief Parse list of outputs
  * \param[in] outputs Parsed XML context
@@ -586,6 +872,9 @@ Config::parse_outputs(fds_xml_ctx_t *outputs)
             break;
         case OUTPUT_KAFKA:
             parse_kafka(content->ptr_ctx);
+            break;
+        case OUTPUT_SYSLOG:
+            parse_syslog(content->ptr_ctx);
             break;
         default:
             throw std::invalid_argument("Unexpected element within <outputs>!");
@@ -684,6 +973,7 @@ Config::default_set()
     outputs.servers.clear();
     outputs.sends.clear();
     outputs.kafkas.clear();
+    outputs.syslogs.clear();
 }
 
 /**
@@ -699,6 +989,7 @@ Config::check_validity()
     output_cnt += outputs.sends.size();
     output_cnt += outputs.files.size();
     output_cnt += outputs.kafkas.size();
+    output_cnt += outputs.syslogs.size();
     if (output_cnt == 0) {
         throw std::invalid_argument("At least one output must be defined!");
     }
@@ -729,6 +1020,9 @@ Config::check_validity()
     }
     for (const auto &kafka : outputs.kafkas) {
         check_and_add(kafka.name);
+    }
+    for (const auto &syslog : outputs.syslogs) {
+        check_and_add(syslog.name);
     }
 }
 
