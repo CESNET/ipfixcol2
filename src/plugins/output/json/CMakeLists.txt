@@ -15,6 +15,10 @@ add_library(json-output MODULE
     src/Server.hpp
     src/Sender.cpp
     src/Server.hpp
+    src/Syslog.cpp
+    src/Syslog.hpp
+    src/SyslogSocket.cpp
+    src/SyslogSocket.hpp
 )
 
 find_package(LibRDKafka 0.9.3 REQUIRED)

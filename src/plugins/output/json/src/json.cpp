@@ -50,6 +50,7 @@
 #include "Server.hpp"
 #include "Sender.hpp"
 #include "Kafka.hpp"
+#include "Syslog.hpp"
 
 /** Plugin description */
 IPX_API struct ipx_plugin_info ipx_plugin_info = {
@@ -105,6 +106,10 @@ outputs_initialize(ipx_ctx_t *ctx, Storage *storage, Config *cfg)
 
     for (const auto &kafka : cfg->outputs.kafkas) {
         storage->output_add(new Kafka(kafka, ctx));
+    }
+
+    for (auto &syslog : cfg->outputs.syslogs) {
+        storage->output_add(new Syslog(syslog, ctx));
     }
 }
 
