@@ -86,7 +86,7 @@ protected:
 };
 
 // Define parameters of parametrized test
-INSTANTIATE_TEST_CASE_P(Parser, Common, ::testing::Values(FDS_SESSION_UDP,
+INSTANTIATE_TEST_SUITE_P(Parser, Common, ::testing::Values(FDS_SESSION_UDP,
     FDS_SESSION_TCP, FDS_SESSION_SCTP, FDS_SESSION_FILE));
 
 // Just create and destroy parser
@@ -147,7 +147,7 @@ TEST_P(Common, simple)
     ipx_msg_garbage *garbage;
     ASSERT_EQ(ipx_parser_process(parser, &ipfix_msg, &garbage), IPX_OK);
 
-    EXPECT_EQ(ipx_msg_ipfix_get_drec_cnt(ipfix_msg), 1);
+    EXPECT_EQ(ipx_msg_ipfix_get_drec_cnt(ipfix_msg), 1u);
     ipx_ipfix_record *rec = ipx_msg_ipfix_get_drec(ipfix_msg, 0);
     ASSERT_NE(rec, nullptr);
 

@@ -1,9 +1,9 @@
 # Add header files of the IPFIX Message generator
-include_directories(tools)
+include_directories(../../tools)
 
 set(AUX_TOOLS
-    "tools/MsgGen.cpp"
-    "tools/MsgGen.h"
+    "../../tools/MsgGen.cpp"
+    "../../tools/MsgGen.h"
 )
 
 # Copy auxiliary files for tests
