@@ -14,6 +14,7 @@ set(SUB_HEADERS
     ipfixcol2/message_garbage.h
     ipfixcol2/message_ipfix.h
     ipfixcol2/message_session.h
+    ipfixcol2/message_builder.h
     ipfixcol2/modifier.h
     ipfixcol2/plugins.h
     ipfixcol2/session.h
