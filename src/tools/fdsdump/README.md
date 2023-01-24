@@ -1,4 +1,4 @@
-# fdsdump
+# fdsdump [preview]
 
 Reads flow data stored in fdsdump format and displays them in a specified way.
 
@@ -27,9 +27,9 @@ Supports sorting, filtering, aggregation, and selection of fields to display. Di
 ## Modes
 ### Statistics mode
 
-Selected using the -I flag
+Selected using the `-I` flag
 
-Prints basic information about the flows contained in the fds files, such as packet counts, byte counts, flow counts in either directions in case of biflow.
+Prints basic information about the flows contained in the FDS files, such as packet counts, byte counts, flow counts in either directions in case of biflow.
 
 
 ### Lister mode
@@ -43,7 +43,7 @@ TBD
 
 ## Output formats
 
-- `JSON-RAW` — prints flow records in the json format with all their fields
+- `json-raw` — prints flow records in the json format with all their fields
 - `json` — json output of selected fields
 - `table` — table output of selected fields
 
@@ -106,7 +106,7 @@ Example usage
 
 - Write out all the flow records in JSON format
     ```
-    fdsdump -r ./flows.fds -o 'JSON-RAW'
+    fdsdump -r ./flows.fds -o 'json-raw'
     ```
 
 - Write out the source IP, source port, destination IP, destination port, number of packets and number of bytes of each flow in JSON format.
