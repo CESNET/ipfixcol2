@@ -62,6 +62,7 @@ make install DESTDIR=%{buildroot}
 # %doc add-docs-here
 %{_bindir}/ipfixcol2
 %{_bindir}/ipfixsend2
+%{_bindir}/fdsdump
 %{_libdir}/ipfixcol2/*.so*
 %{_mandir}/man7/*.7.gz
 
