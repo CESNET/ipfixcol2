@@ -40,9 +40,7 @@
  */
 
 #include <ipfixcol2.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <inttypes.h>
+#include <maxminddb.h>
 
 #include "config.h"
 
@@ -64,10 +62,24 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
 
 /** Instance */
 struct instance_data {
-    /** Parsed configuration of the instance  */
+    /** Parsed configuration of the instance    */
     struct asn_config *config;
+    /** Modifier instance                       */
+    ipx_modifier_t *modifier;
+    /** Message builder instance                */
+    ipx_msg_builder_t *builder;
+    /** MaxMindDB database instance             */
+    MMDB_s database;
 };
 
+/** Type of AS number */
+enum asn_type {ASN_SRC, ASN_DST};
+
+/** Fields defining new possible elements in enriched messages */
+struct ipx_modifier_field asn_fields[] = {
+    [ASN_SRC] = {.id = 16, .length = 4, .en = 0},   // bgpSourceASNumber
+    [ASN_DST] = {.id = 17, .length = 4, .en = 0}    // bgpDestinationASNumber
+};
 
 // -------------------------------------------------------------------------------------------------
 
@@ -80,12 +92,51 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
         return IPX_ERR_DENIED;
     }
 
+    // Parse XML configuration
     if ((data->config = config_parse(ctx, params)) == NULL) {
         free(data);
         return IPX_ERR_DENIED;
     }
 
+    // Setup ASN database
+    if (MMDB_open(data->config->db_path, MMDB_MODE_MMAP, &(data->database)) != MMDB_SUCCESS) {
+        config_destroy(data->config);
+        free(data);
+        return IPX_ERR_DENIED;
+    }
+
+    // Create modifier
+    enum ipx_verb_level verb = ipx_ctx_verb_get(ctx);
+    const fds_iemgr_t *iemgr = ipx_ctx_iemgr_get(ctx);
+    const char *ident        = ipx_ctx_name_get(ctx);
+    size_t fsize             = sizeof(asn_fields) / sizeof(*asn_fields);
+
+    data->modifier = ipx_modifier_create(asn_fields, fsize, NULL, iemgr, &verb, ident);
+    if (!data->modifier) {
+        config_destroy(data->config);
+        MMDB_close(&(data->database));
+        free(data);
+        return IPX_ERR_DENIED;
+    }
+
+    // Create message builder
+    data->builder = ipx_msg_builder_create();
+    if (!data->builder) {
+        config_destroy(data->config);
+        MMDB_close(&(data->database));
+        ipx_modifier_destroy(data->modifier);
+        free(data);
+        return IPX_ERR_DENIED;
+    }
+
     ipx_ctx_private_set(ctx, data);
+
+    // Subscribe to session messages
+    const ipx_msg_mask_t new_mask = IPX_MSG_SESSION | IPX_MSG_IPFIX;
+    if (ipx_ctx_subscribe(ctx, &new_mask, NULL) != IPX_OK) {
+        return IPX_ERR_DENIED;
+    }
+
     return IPX_OK;
 }
 
@@ -95,6 +146,22 @@ ipx_plugin_destroy(ipx_ctx_t *ctx, void *cfg)
     (void) ctx; // Suppress warnings
     struct instance_data *data = (struct instance_data *) cfg;
 
+    /* Create garbage message when destroying modifier because orher plugins might be
+       referencing templates in modifier */
+
+    ipx_msg_garbage_cb cb = (ipx_msg_garbage_cb) &ipx_modifier_destroy;
+    ipx_msg_garbage_t *gb_msg = ipx_msg_garbage_create(data->modifier, cb);
+    if (gb_msg) {
+        ipx_ctx_msg_pass(ctx, ipx_msg_garbage2base(gb_msg));
+    } else {
+        /* If creating garbage message fails, don't destroy modifier (memory leak) because
+        of possible segfault */
+        IPX_CTX_WARNING(ctx, "Could not destroy modifier (%s)", ipx_ctx_name_get(ctx));
+    }
+
+    ipx_msg_builder_destroy(data->builder);
+    config_destroy(data->config);
+    MMDB_close(&(data->database));
     free(data);
 }
 

@@ -5,6 +5,14 @@ add_library(asn-intermediate MODULE
     config.h
 )
 
+# Try to find maxmind library
+find_library(MAXMIND maxminddb)
+if(NOT MAXMIND)
+  message(FATAL_ERROR "MaxMind database not found")
+endif()
+
+target_link_libraries(asn-intermediate maxminddb)
+
 install(
     TARGETS asn-intermediate
     LIBRARY DESTINATION "${INSTALL_DIR_LIB}/ipfixcol2/"
