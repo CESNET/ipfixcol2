@@ -513,6 +513,7 @@ TEST_F(ErrorSession, deleteNonExisting) {
     Session *sessions = createSessions("deleteEmpty");
     ipx_msg_garbage_t *gb_msg;
     EXPECT_EQ(ipx_modifier_remove_session(mod, sessions->getSession(FDS_SESSION_FILE), &gb_msg), IPX_ERR_NOTFOUND);
+    delete sessions;
 }
 
 /** Attempt to delete non existing session */
@@ -520,6 +521,7 @@ TEST_F(ErrorSession, TCPSetTimeInHistory) {
     Session *sessions = createSessions("test");
 
     ipx_session *session = sessions->getSession(FDS_SESSION_TCP);
-    addSession(session, 0 ,100);
+    addSession(session, 0 , 100);
     addSession(session, 0, 10, IPX_ERR_FORMAT);
+    delete sessions;
 }

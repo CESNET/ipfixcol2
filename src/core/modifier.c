@@ -886,51 +886,6 @@ template_cmp(const struct fds_template *t1, void *data)
 }
 
 /**
- * \brief Search for template in manager, add new if it does not exist
- *
- * Iterate through all templates in current snapshot and
- * compare them with given template (without IDs). If template
- * DOES exist, do not do anything. If template DOES NOT exist, add
- * new template to manager.
- *
- * \param[in] mgr       Template manager
- * \param[in] template  Template to store
- *
- * \return Template ID if template was successfully added
- * \return #FDS_OK if template already exists
- * \return #FDS_ERR_DENIED for invalid combination of session and template
- * \return #FDS_ERR_ARG if time context of manager is not set
- * \return #FDS_ERR_NOMEM for memory allocation error
- */
-static int
-template_store(fds_tmgr_t *mgr, struct fds_template *template)
-{
-    int rc;
-
-    // Check if template exists
-    const fds_tsnapshot_t *snapshot;
-    rc = fds_tmgr_snapshot_get(mgr, &snapshot);
-    if (rc != FDS_OK) {
-        return rc;
-    }
-    struct tmplt_cmp_data cdata = { .t2 = template, .id = 0 };
-    fds_tsnapshot_for(snapshot, &template_cmp, &cdata);
-
-    // Template already exists
-    if (cdata.id != 0) {
-        return IPX_OK;
-    }
-
-    // Try to add template
-    rc = fds_tmgr_template_add(mgr, template);
-    if (rc != FDS_OK) {
-        return rc;
-    }
-
-    return template->id;
-}
-
-/**
  * \brief Generate and set new ID for template
  *
  * \param[in] mod   Modifier
@@ -954,6 +909,61 @@ template_set_new_id(ipx_modifier_t *mod, struct fds_template *tmplt)
     *raw_id = htons(new_id);
     mod->curr_ctx->next_id = ++new_id;
     return IPX_OK;
+}
+
+/**
+ * \brief Search for template in manager, add new if it does not exist
+ *
+ * Iterate through all templates in current snapshot and
+ * compare them with given template (without IDs). If template
+ * DOES exist, do not do anything. If template DOES NOT exist, add
+ * new template to manager.
+ *
+ * \param[in] mgr       Template manager
+ * \param[in] template  Template to store
+ *
+ * \return Template ID if template was successfully added
+ * \return #FDS_OK if template already exists
+ * \return #FDS_ERR_DENIED for invalid combination of session and template
+ * \return #FDS_ERR_ARG if time context of manager is not set
+ * \return #FDS_ERR_NOMEM for memory allocation error
+ */
+static int
+template_store(ipx_modifier_t *mod, struct fds_template *template, ipx_msg_garbage_t **garbage)
+{
+    int rc;
+
+    // Check if template exists
+    const fds_tsnapshot_t *snapshot;
+    rc = fds_tmgr_snapshot_get(mod->curr_ctx->mgr, &snapshot);
+    if (rc != FDS_OK) {
+        return rc;
+    }
+    struct tmplt_cmp_data cdata = { .t2 = template, .id = 0 };
+    fds_tsnapshot_for(snapshot, &template_cmp, &cdata);
+
+    // Template already exists
+    if (cdata.id != 0) {
+        return IPX_OK;
+    }
+
+    // Try to create new ID for template
+    rc = template_set_new_id(mod, template);
+    if (rc == IPX_ERR_LIMIT) {
+        // No more IDs available, restart context
+        modifier_ctx_restart(mod, garbage);
+        // Need to set new ID again
+        rc = template_set_new_id(mod, template);
+        assert(rc == IPX_OK);
+    }
+
+    // Try to add template
+    rc = fds_tmgr_template_add(mod->curr_ctx->mgr, template);
+    if (rc != FDS_OK) {
+        return rc;
+    }
+
+    return template->id;
 }
 
 struct fds_drec *
@@ -1008,18 +1018,7 @@ ipx_modifier_modify(ipx_modifier_t *mod, const struct fds_drec *rec, ipx_msg_gar
     }
 
     new_tmplt = (struct fds_template *) new_rec->tmplt;
-
-    // Try to create new ID for template
-    rc = template_set_new_id(mod, new_tmplt);
-    if (rc == IPX_ERR_LIMIT) {
-        // No more IDs available, restart context
-        modifier_ctx_restart(mod, garbage);
-        // Need to set new ID again
-        rc = template_set_new_id(mod, new_tmplt);
-        assert(rc == IPX_OK);
-    }
-
-    rc = template_store(mod->curr_ctx->mgr, new_tmplt);
+    rc = template_store(mod, new_tmplt, garbage);
 
     if (rc < FDS_OK) {
         // Something bad happened
