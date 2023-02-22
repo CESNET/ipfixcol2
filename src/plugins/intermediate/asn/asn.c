@@ -99,7 +99,8 @@ mmdb_lookup(MMDB_s *db, struct sockaddr *address, int *err)
 {
     assert(db != NULL && address != NULL && err != NULL);
 
-    int rc = MMDB_SUCCESS;
+    int rc;
+    *err = MMDB_SUCCESS;
     MMDB_lookup_result_s result;
 
     // Search for address
@@ -166,15 +167,21 @@ get_asn(MMDB_s *db, struct ipx_modifier_output *out, uint8_t *address, size_t le
         return IPX_ERR_ARG;
     }
 
-    asn = mmdb_lookup(db, addr, &rc);
+    asn = htonl(mmdb_lookup(db, addr, &rc));
     if (rc) {
         // MMDB error
         return IPX_ERR_DENIED;
     }
 
+    if (asn == 0) {
+        // Not found
+        return IPX_OK;
+    }
+
     int len = 4;
     memcpy(out->raw, &asn, len);
     out->length = len;
+    return IPX_OK;
 }
 
 
@@ -224,6 +231,8 @@ modifier_asn_callback(const struct fds_drec *rec, struct ipx_modifier_output out
     if (rc) {
         return rc;
     }
+
+    return IPX_OK;
 }
 
 /**
@@ -280,6 +289,120 @@ process_session(ipx_ctx_t *ctx, ipx_modifier_t *modifier, ipx_msg_session_t *msg
 }
 
 /**
+ * \brief Free modified record
+ *
+ * \param[in] rec Data record
+ */
+void
+free_modified_record(struct fds_drec *rec)
+{
+    free(rec->data);
+    free(rec);
+}
+
+/**
+ * \brief Estimate size of new message based on old message
+ *
+ * Estimation counts with worst case scenario, which is that in new message,
+ * for each data record new set is created and both AS numbers are added
+ * \param[in] msg IPFIX message
+ * \return Estimated size
+ */
+int
+estimate_new_length(ipx_msg_ipfix_t *msg)
+{
+    const struct fds_ipfix_msg_hdr *hdr = (struct fds_ipfix_msg_hdr *) ipx_msg_ipfix_get_packet(msg);
+    uint32_t rec_cnt = ipx_msg_ipfix_get_drec_cnt(msg);
+    uint32_t msg_size = ntohs(hdr->length);
+
+    if (rec_cnt == 0) {
+        return msg_size;
+    }
+
+    //for each record * (size of new header + 2x ASN + size of single record)
+    return rec_cnt * (FDS_IPFIX_SET_HDR_LEN + 8 + msg_size / rec_cnt);
+}
+
+/**
+ * \brief Add new session context from current message to modifier
+ *
+ * \param[in] ctx       Plugin context
+ * \param[in] modifier  Modifier
+ * \param[in] msg       IPFIX message
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_ARG on invalid arguments
+ * \return #IPX_ERR_NOMEM on memory allocation error
+ */
+int
+ipfix_add_session(ipx_ctx_t *ctx, ipx_modifier_t *modifier, ipx_msg_ipfix_t *msg)
+{
+    int rc;
+
+    // Update modifier session context
+    ipx_msg_garbage_t *session_garbage;
+    rc = ipx_modifier_add_session(modifier, msg, &session_garbage);
+    if (session_garbage) {
+        ipx_ctx_msg_pass(ctx, ipx_msg_garbage2base(session_garbage));
+    }
+
+    if (rc) {
+        switch (rc) {
+            case IPX_ERR_ARG:
+                IPX_CTX_ERROR(ctx, "Invalid arguments passed to ipx_modifier_add_session (%s:%d)",
+                    __FILE__, __LINE__);
+                return rc;
+            case IPX_ERR_FORMAT:
+                // Setting time in history for TCP should be blocked by parser
+                assert(false);
+            case IPX_ERR_NOMEM:
+                IPX_CTX_ERROR(ctx, "Memory allocation error (%s:%d)", __FILE__, __LINE__);
+                return rc;
+            default:
+                IPX_CTX_ERROR(ctx, "Unexpected error from ipx_modifier_add_session (%s:%d)",
+                    __FILE__, __LINE__);
+                return rc;
+        }
+    }
+
+    return IPX_OK;
+}
+
+/**
+ * \brief Start building new message
+ *
+ * \param[in] ctx       Plugin context
+ * \param[in] modifier  Modifier
+ * \param[in] msg       IPFIX message
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_ARG on invalid arguments
+ * \return #IPX_ERR_NOMEM on memory allocation error
+ */
+int
+ipfix_start_builder(ipx_ctx_t *ctx, ipx_msg_builder_t *builder,
+    const struct fds_ipfix_msg_hdr *hdr, const size_t maxsize)
+{
+    int rc = ipx_msg_builder_start(builder, hdr, maxsize, 0);
+
+    if (rc) {
+        switch(rc) {
+            case IPX_ERR_ARG:
+                IPX_CTX_ERROR(ctx, "Invalid arguments passed to ipx_modifier_add_session (%s:%d)",
+                    __FILE__, __LINE__);
+                return rc;
+            case IPX_ERR_NOMEM:
+                IPX_CTX_ERROR(ctx, "Memory allocation error (%s:%d)", __FILE__, __LINE__);
+                return rc;
+            default:
+                IPX_CTX_ERROR(ctx, "Unexpected error from ipx_modifier_add_session (%s:%d)",
+                    __FILE__, __LINE__);
+                return rc;
+        }
+    }
+
+    return IPX_OK;
+}
+
+/**
  * \brief Process IPFIX message
  *
  * Iterate through all data records in message and modify them, store modified records
@@ -288,26 +411,81 @@ process_session(ipx_ctx_t *ctx, ipx_modifier_t *modifier, ipx_msg_session_t *msg
  * \param[in] modifier  Modifier component
  * \param[in] builder   Message builder
  * \param[in] msg       IPFIX message
- * \return
+ * \return #IPX_OK on success
+ * \return #IPX_ERR_DENIED on any error
  */
 static int
 process_ipfix(ipx_ctx_t *ctx, ipx_modifier_t *modifier, ipx_msg_builder_t *builder,
     ipx_msg_ipfix_t *msg)
 {
+    int rc;
 
-    ipx_msg_garbage_t *session_garbage;
-    ipx_modifier_add_session(modifier, msg, &session_garbage);
+    // Add session
+    rc = ipfix_add_session(ctx, modifier, msg);
+    if (rc) {
+        return rc;
+    }
 
+    // Estimate size of new message
+    size_t new_msg_size = estimate_new_length(msg);
+
+    // Start builder
+    const struct fds_ipfix_msg_hdr *hdr = (struct fds_ipfix_msg_hdr *) ipx_msg_ipfix_get_packet(msg);
+    rc = ipfix_start_builder(ctx, builder, hdr, new_msg_size);
+    if (rc) {
+        return rc;
+    }
+
+    // Modify each record in IPFIX message and store modified record in builder
     uint32_t rec_cnt = ipx_msg_ipfix_get_drec_cnt(msg);
-
     struct ipx_ipfix_record *rec;
+    struct fds_drec *modified_rec;
     ipx_msg_garbage_t *ipfix_garbage;
     for (uint32_t i = 0; i < rec_cnt; i++) {
         rec = ipx_msg_ipfix_get_drec(msg, i);
 
-        ipx_modifier_modify(modifier, &(rec->rec), &ipfix_garbage);
+        // Modify record
+        modified_rec = ipx_modifier_modify(modifier, &(rec->rec), &ipfix_garbage);
+        if (ipfix_garbage) {
+            ipx_ctx_msg_pass(ctx, ipx_msg_garbage2base(ipfix_garbage));
+        }
+        if (!modified_rec) {
+            // Proper message has been already printed
+            return rc;
+        }
+
+        // Store modified record in builder
+        rc = ipx_msg_builder_add_drec(builder, modified_rec);
+
+        if (rc) {
+            free_modified_record(modified_rec);
+            switch(rc) {
+                case IPX_ERR_DENIED:
+                    // Exceeded builder limit
+                    IPX_CTX_ERROR(ctx, "Exceeded message builder limit", __FILE__, __LINE__);
+                    return rc;
+                case IPX_ERR_NOMEM:
+                    IPX_CTX_ERROR(ctx, "Memory allocation error (%s:%d)", __FILE__, __LINE__);
+                    return rc;
+                default:
+                    IPX_CTX_ERROR(ctx, "Unexpected error from ipx_modifier_add_session (%s:%d)",
+                        __FILE__, __LINE__);
+                    return rc;
+            }
+        }
+
+        free_modified_record(modified_rec);
     }
 
+    // Create new message with modified records
+    const struct ipx_msg_ctx *msg_ctx = ipx_msg_ipfix_get_ctx(msg);
+    ipx_msg_ipfix_t *new_msg = ipx_msg_builder_end(builder, ctx, msg_ctx);
+    if (!new_msg) {
+        return IPX_ERR_DENIED;
+    }
+
+    ipx_msg_ipfix_destroy(msg);
+    ipx_ctx_msg_pass(ctx, ipx_msg_ipfix2base(new_msg));
     return IPX_OK;
 }
 
@@ -419,8 +597,10 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
     }
 
     if (rc) {
-        // Any problem occured in processing message
-        return IPX_ERR_DENIED;
+        // Any problem occured when modifying message
+        // pass original message
+        ipx_ctx_msg_pass(ctx, msg);
+        return IPX_OK;
     }
 
     return IPX_OK;
