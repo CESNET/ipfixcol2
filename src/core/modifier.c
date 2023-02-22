@@ -857,7 +857,9 @@ ipx_modifier_append(struct fds_drec *rec,
  */
 struct tmplt_cmp_data {
     /** Template to compare with                        */
-    struct fds_template *t2;
+    const struct fds_template *t1;
+    /** Template to compare with                        */
+    const struct fds_template *t2;
     /** ID of matched template (or 0 if none matched)   */
     int id;
 };
@@ -878,11 +880,12 @@ template_cmp(const struct fds_template *t1, void *data)
 
     // +- 2 to skip first field (ID)
     if (!memcmp(t1->raw.data+2, cmp->t2->raw.data+2, cmp->t2->raw.length-2)) {
-        // Templates are equal, return id in cmp_data structure and stop iteration
+        // Templates are equal
         cmp->id = t1->id;
-        return false;
+        cmp->t1 = t1;
+        return false; // stop iteration
     }
-    return true;
+    return true; // continue iteration
 }
 
 /**
@@ -929,9 +932,10 @@ template_set_new_id(ipx_modifier_t *mod, struct fds_template *tmplt)
  * \return #FDS_ERR_NOMEM for memory allocation error
  */
 static int
-template_store(ipx_modifier_t *mod, struct fds_template *template, ipx_msg_garbage_t **garbage)
+template_store(ipx_modifier_t *mod, struct fds_drec *rec, ipx_msg_garbage_t **garbage)
 {
     int rc;
+    struct fds_template *template = (struct fds_template *) rec->tmplt;
 
     // Check if template exists
     const fds_tsnapshot_t *snapshot;
@@ -939,11 +943,12 @@ template_store(ipx_modifier_t *mod, struct fds_template *template, ipx_msg_garba
     if (rc != FDS_OK) {
         return rc;
     }
-    struct tmplt_cmp_data cdata = { .t2 = template, .id = 0 };
+    struct tmplt_cmp_data cdata = { .t2 = rec->tmplt, .id = 0 };
     fds_tsnapshot_for(snapshot, &template_cmp, &cdata);
 
     // Template already exists
     if (cdata.id != 0) {
+        rec->tmplt = cdata.t1;
         return IPX_OK;
     }
 
@@ -962,6 +967,17 @@ template_store(ipx_modifier_t *mod, struct fds_template *template, ipx_msg_garba
     if (rc != FDS_OK) {
         return rc;
     }
+
+    // Update record snapshot
+    const fds_tsnapshot_t *snap;
+    rc = fds_tmgr_snapshot_get(mod->curr_ctx->mgr, &snap);
+    if (rc) {
+        return rc;
+    }
+    rec->snap = snap;
+
+    // Set definitions to new fields (preserve == true)
+    fds_template_ies_define(template, mod->iemgr, true);
 
     return template->id;
 }
@@ -1018,7 +1034,7 @@ ipx_modifier_modify(ipx_modifier_t *mod, const struct fds_drec *rec, ipx_msg_gar
     }
 
     new_tmplt = (struct fds_template *) new_rec->tmplt;
-    rc = template_store(mod, new_tmplt, garbage);
+    rc = template_store(mod, new_rec, garbage);
 
     if (rc < FDS_OK) {
         // Something bad happened
@@ -1039,18 +1055,13 @@ ipx_modifier_modify(ipx_modifier_t *mod, const struct fds_drec *rec, ipx_msg_gar
         }
         return NULL;
     } else if (rc > FDS_OK) {
+        // Added new template
         MODIFIER_DEBUG(mod, "Added new template %" PRIu16 " from template %" PRIu16 "",
             rc, rec->tmplt->id);
+    } else {
+        // Template was already found
+        fds_template_destroy(new_tmplt);
     }
-
-    // Update record snapshot
-    const fds_tsnapshot_t *snap;
-    rc = fds_tmgr_snapshot_get(mod->curr_ctx->mgr, &snap);
-    MODIFIER_ERR_CHECK(rc, new_rec, new_rec->data, new_tmplt);
-    new_rec->snap = snap;
-
-    // Set definitions to new fields (preserve == true)
-    fds_template_ies_define(new_tmplt, mod->iemgr, true);
 
     return new_rec;
 }
