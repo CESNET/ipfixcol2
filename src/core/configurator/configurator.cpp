@@ -73,17 +73,22 @@ termination_handler(int sig)
 
     // In case we change 'errno' (e.g. write())
     int errno_backup = errno;
+    enum ipx_cpipe_type request_type = IPX_CPIPE_TYPE_TERM_SLOW;
     static int cnt = 0;
 
-    if (cnt > 0) {
+    if (cnt == 1) {
+        static const char *msg = "Another termination signal detected. Skipping unprocess data...\n";
+        write(STDERR_FILENO, msg, strlen(msg));
+        request_type = IPX_CPIPE_TYPE_TERM_FAST;
+    } else if (cnt > 1) {
         static const char *msg = "Another termination signal detected. Quiting without cleanup...\n";
-        write(STDOUT_FILENO, msg, strlen(msg));
+        write(STDERR_FILENO, msg, strlen(msg));
         abort();
     }
     cnt++;
 
     // Send a termination request to the configurator
-    int rc = ipx_cpipe_send_term(NULL, IPX_CPIPE_TYPE_TERM_FAST);
+    int rc = ipx_cpipe_send_term(NULL, request_type);
     if (rc != IPX_OK) {
         static const char *msg = "ERROR: Signal handler: failed to send a termination request";
         write(STDOUT_FILENO, msg, strlen(msg));

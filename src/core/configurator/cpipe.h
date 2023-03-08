@@ -60,8 +60,7 @@ enum ipx_cpipe_type {
      * @brief Fast termination request
      *
      * Request to terminate the collector as fast as possible. Usually this request should be
-     * send in case of a fatal failure of any plugin instance (by a particular instance thread)
-     * or on a user request to terminate the collector (e.g. SIGINT/SIGTERM signals).
+     * send in case of a fatal failure of any plugin instance (by a particular instance thread).
      *
      * As a reaction to this request the configurator will force stop calling processing functions
      * of ALL plugin instances (i.e. ipx_plugin_get() and ipx_plugin_process() callbacks) and send
