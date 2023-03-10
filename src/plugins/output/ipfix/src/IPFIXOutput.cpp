@@ -66,7 +66,11 @@
 bool
 IPFIXOutput::should_start_new_file(std::time_t current_time)
 {
-    if (config->window_size == 0 && output_file != nullptr) {
+    if (!output_file) {
+        return true;
+    }
+
+    if (config->window_size == 0) {
         return false;
     }
 
