@@ -88,7 +88,7 @@ IPFIXOutput::new_file(const std::time_t current_time)
     close_file();
 
     // Get the timestamp of the file to create
-    if (config->align_windows) {
+    if (config->window_size > 0 && config->align_windows) {
         // Round down to the nearest multiple of window size
         file_start_time = (current_time / config->window_size) * config->window_size;
     } else {
