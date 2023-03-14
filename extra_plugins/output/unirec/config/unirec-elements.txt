@@ -284,3 +284,6 @@ OSQUERY_OS_ARCH                 string       cesnet:OSQueryOSArch
 OSQUERY_KERNEL_VERSION          string       cesnet:OSQueryKernelVersion
 OSQUERY_SYSTEM_HOSTNAME         string       cesnet:OSQuerySystemHostname
 
+# --- SYN-SYNACK-ACK (SSA) detection of new handshake within existing connection
+SSA_CONF_LEVEL                  uint8        cesnet:ssaConfLevel     # Confidence level of detected SSA
+
