@@ -46,22 +46,6 @@
 
 #define ASN_LOOKUP_STRING "autonomous_system_number"
 
-/** Plugin description */
-IPX_API struct ipx_plugin_info ipx_plugin_info = {
-    // Plugin type
-    .type = IPX_PT_INTERMEDIATE,
-    // Plugin identification name
-    .name = "asn",
-    // Brief description of plugin
-    .dsc = "IPv4/IPv6 autonomous system number (ASN) module",
-    // Configuration flags (reserved for future use)
-    .flags = 0,
-    // Plugin version string (like "1.2.3")
-    .version = "2.0.0",
-    // Minimal IPFIXcol version string (like "1.2.3")
-    .ipx_min = "2.3.0"
-};
-
 /** Instance */
 struct instance_data {
     /** Parsed configuration of the instance    */
@@ -155,7 +139,7 @@ get_asn(MMDB_s *db, struct ipx_modifier_output *out, uint8_t *address, size_t le
             .sin_addr.s_addr = *((uint32_t *)address)
         };
         addr = (struct sockaddr *) &addr_4;
-    } else if (length == 6) {
+    } else if (length == 16) {
         // IPv6 address
         struct sockaddr_in6 addr_6 = {
             .sin6_family = AF_INET6
@@ -221,11 +205,11 @@ modifier_asn_callback(const struct fds_drec *rec, struct ipx_modifier_output out
     if (fds_drec_find((struct fds_drec *)rec, 0, 12, &field) != FDS_EOC) {
         // IPv4
         assert(field.size == 4);
-        get_asn(db, &output[ASN_DST], field.data, 4);
+        rc = get_asn(db, &output[ASN_DST], field.data, 4);
     } else if (fds_drec_find((struct fds_drec *)rec, 0, 28, &field) != FDS_EOC) {
         // IPv6
         assert(field.size == 16);
-        get_asn(db, &output[ASN_DST], field.data, 16);
+        rc = get_asn(db, &output[ASN_DST], field.data, 16);
     }
 
     if (rc) {
@@ -238,8 +222,7 @@ modifier_asn_callback(const struct fds_drec *rec, struct ipx_modifier_output out
 /**
  * \brief Process session message
  *
- * In the event of closing session, information about the particular
- * Transport Session will be removed.
+ * In the event of closing session, information about the particular Transport Session will be removed.
  * \param[in] ctx       Plugin context
  * \param[in] modifier  Modifier component
  * \param[in] msg       Transport session message
@@ -257,18 +240,19 @@ process_session(ipx_ctx_t *ctx, ipx_modifier_t *modifier, ipx_msg_session_t *msg
     int rc;
     const struct ipx_session *session = ipx_msg_session_get_session(msg);
 
+    // Always pass the original session message
+    ipx_ctx_msg_pass(ctx, ipx_msg_session2base(msg));
+
     ipx_msg_garbage_t *garbage;
     if ((rc = ipx_modifier_remove_session(modifier, session, &garbage)) == IPX_OK) {
-        // No error occured, pass the original message
-        ipx_ctx_msg_pass(ctx, ipx_msg_session2base(msg));
-
-        /* Send garbage after session message because other plugins might have references to
-           templates linked to that session */
+        // Again, possible memory leak
         if (garbage == NULL) {
             IPX_CTX_WARNING(ctx, "A memory allocation failed (%s:%d).", __FILE__, __LINE__);
             return IPX_OK;
         }
 
+        /* Send garbage after session message because other plugins might have references to
+           templates linked to that session */
         ipx_ctx_msg_pass(ctx, ipx_msg_garbage2base(garbage));
         return IPX_OK;
     }
@@ -490,6 +474,22 @@ process_ipfix(ipx_ctx_t *ctx, ipx_modifier_t *modifier, ipx_msg_builder_t *build
 }
 
 // -------------------------------------------------------------------------------------------------
+
+/** Plugin description */
+IPX_API struct ipx_plugin_info ipx_plugin_info = {
+    // Plugin type
+    .type = IPX_PT_INTERMEDIATE,
+    // Plugin identification name
+    .name = "asn",
+    // Brief description of plugin
+    .dsc = "IPv4/IPv6 autonomous system number (ASN) module",
+    // Configuration flags (reserved for future use)
+    .flags = 0,
+    // Plugin version string (like "1.2.3")
+    .version = "2.0.0",
+    // Minimal IPFIXcol version string (like "1.2.3")
+    .ipx_min = "2.3.0"
+};
 
 int
 ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
