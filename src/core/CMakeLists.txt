@@ -47,6 +47,8 @@ set(CORE_SOURCE
     message_builder.c
     modifier.c
     modifier.h
+    template_mapper.c
+    template_mapper.h
     odid_range.c
     odid_range.h
     parser.c
@@ -87,7 +89,7 @@ if (CMAKE_HOST_SYSTEM_NAME STREQUAL "FreeBSD" OR CMAKE_HOST_SYSTEM_NAME STREQUAL
 endif()
 
 add_executable(ipfixcol2 main.cpp)
-target_link_libraries(ipfixcol2 ${BASE_LIB})
+target_link_libraries(ipfixcol2 ${BASE_LIB} ${PROFILER_LIB})
 set_target_properties(ipfixcol2 PROPERTIES  # by default, hide all symbols
     C_VISIBILITY_PRESET hidden
     CXX_VISIBILITY_PRESET hidden

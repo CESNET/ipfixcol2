@@ -268,18 +268,6 @@ process_session(ipx_ctx_t *ctx, ipx_modifier_t *modifier, ipx_msg_session_t *msg
 }
 
 /**
- * \brief Free modified record
- *
- * \param[in] rec Data record
- */
-void
-free_modified_record(struct fds_drec *rec)
-{
-    free(rec->data);
-    free(rec);
-}
-
-/**
  * \brief Estimate size of new message based on old message
  *
  * Estimation counts with worst case scenario, which is that in new message,
@@ -437,7 +425,6 @@ process_ipfix(ipx_ctx_t *ctx, ipx_modifier_t *modifier, ipx_msg_builder_t *build
         rc = ipx_msg_builder_add_drec(builder, modified_rec);
 
         if (rc) {
-            free_modified_record(modified_rec);
             switch(rc) {
                 case IPX_ERR_DENIED:
                     // Exceeded builder limit
@@ -452,8 +439,8 @@ process_ipfix(ipx_ctx_t *ctx, ipx_modifier_t *modifier, ipx_msg_builder_t *build
                     return rc;
             }
         }
-
-        free_modified_record(modified_rec);
+        free(modified_rec->data);
+        free(modified_rec);
     }
 
     // Create new message with modified records

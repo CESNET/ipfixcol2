@@ -12,6 +12,7 @@
 #include <ipfixcol2.h>
 
 #include "verbose.h"
+#include "template_mapper.h"
 
 /** Default amount of contexts used for transport sessions  */
 #define IPX_MODIFIER_DEF_CTX 1u
@@ -28,6 +29,8 @@ struct session_odid_ctx {
 
     /** Template manager for given session      */
     struct fds_tmgr *mgr;
+    /** Template mapper for given context       */
+    template_mapper_t *mapper;
     /** ID of last added template               */
     uint16_t next_id;
 };
@@ -38,6 +41,8 @@ struct session_garbage {
     size_t rec_cnt;
     /** Array of mangers to destroy             */
     struct fds_tmgr **mgrs;
+    /** Array of mappers to destroy             */
+    template_mapper_t **mappers;
 };
 
 /**
