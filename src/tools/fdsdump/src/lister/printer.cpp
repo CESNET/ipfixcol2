@@ -8,6 +8,7 @@
 #include <common/common.hpp>
 
 #include "printer.hpp"
+#include "csvPrinter.hpp"
 #include "jsonPrinter.hpp"
 #include "jsonRawPrinter.hpp"
 #include "tablePrinter.hpp"
@@ -21,6 +22,9 @@ struct PrinterFactory {
 };
 
 static const std::vector<struct PrinterFactory> g_printers {
+    {"csv", [](const shared_iemgr &iemgr, const std::string &args) {
+        return new CsvPrinter(iemgr, args); }
+    },
     {"json", [](const shared_iemgr &iemgr, const std::string &args) {
         return new JsonPrinter(iemgr, args); }
     },
