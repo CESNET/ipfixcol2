@@ -2,6 +2,7 @@
 set(LISTER_SRC
     lister.cpp
     printer.cpp
+    csvPrinter.cpp
     jsonPrinter.cpp
     jsonRawPrinter.cpp
     tablePrinter.cpp
