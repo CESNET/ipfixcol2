@@ -79,18 +79,14 @@ struct ipx_modifier_field asn_fields[] = {
  * \return 0 (reserved AS number) if number was not found
  */
 static uint32_t
-mmdb_lookup(MMDB_s *db, struct sockaddr *address, int *err)
+mmdb_lookup(MMDB_s *db, struct sockaddr *address)
 {
-    assert(db != NULL && address != NULL && err != NULL);
-
-    int rc;
-    *err = MMDB_SUCCESS;
+    int rc = 0;
     MMDB_lookup_result_s result;
 
     // Search for address
     result = MMDB_lookup_sockaddr(db, address, &rc);
     if (rc) {
-        *err = rc;
         return 0;
     }
 
@@ -103,11 +99,11 @@ mmdb_lookup(MMDB_s *db, struct sockaddr *address, int *err)
     MMDB_entry_data_s data;
     rc = MMDB_get_value(&(result.entry), &data, ASN_LOOKUP_STRING, NULL);
     if (rc) {
-        *err = rc;
+        MMDB_strerror(rc);
         return 0;
     }
 
-    // Address was not found
+    // No AS number found
     if (!data.has_data) {
         return 0;
     }
@@ -128,9 +124,8 @@ mmdb_lookup(MMDB_s *db, struct sockaddr *address, int *err)
 static int
 get_asn(MMDB_s *db, struct ipx_modifier_output *out, uint8_t *address, size_t length)
 {
-    int rc;
+    int rc = 0;
     uint32_t asn;
-    struct sockaddr *addr;
 
     if (length == 4) {
         // IPv4 address
@@ -138,20 +133,20 @@ get_asn(MMDB_s *db, struct ipx_modifier_output *out, uint8_t *address, size_t le
             .sin_family = AF_INET,
             .sin_addr.s_addr = *((uint32_t *)address)
         };
-        addr = (struct sockaddr *) &addr_4;
+        asn = mmdb_lookup(db, (struct sockaddr *) &addr_4);
     } else if (length == 16) {
         // IPv6 address
         struct sockaddr_in6 addr_6 = {
             .sin6_family = AF_INET6
         };
         memcpy(&(addr_6.sin6_addr), address, 16);
-        addr = (struct sockaddr *) &addr_6;
+        asn = mmdb_lookup(db, (struct sockaddr *) &addr_6);
     } else {
         // Unknown address format
         return IPX_ERR_ARG;
     }
 
-    asn = htonl(mmdb_lookup(db, addr, &rc));
+    asn = htonl(asn);
     if (rc) {
         // MMDB error
         return IPX_ERR_DENIED;
