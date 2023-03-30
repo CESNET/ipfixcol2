@@ -10,6 +10,8 @@
 
 #include <ipfixcol2/api.h>
 
+#define IPX_MODIFIER_SKIP -20
+
 /** Internal declaration of modifier */
 typedef struct ipx_modifier ipx_modifier_t;
 
@@ -35,8 +37,15 @@ struct ipx_modifier_output {
     uint8_t raw[UINT16_MAX];
 
     /** Length of returned data
-     *  If value is not available, length contains negative
-     *  number and represents error code */
+     *
+     *  If output is not available, length contains negative number and represents error code.
+     *  If length contains value #IPX_MODIFIER_SKIP, this field will not be used in modified record
+     *
+     * Example: {.raw = 10, .length =  2} => 2 bits are copied from output buffer with value 10
+     *          {.raw = 10, .length = -1} => no bits are copied, but modified record still
+     *                                          contains this field
+     *          {.raw = 10, .length = #IPX_MODIFIER_SKIP} => field is not copied to modified record
+     */
     int length;
 };
 

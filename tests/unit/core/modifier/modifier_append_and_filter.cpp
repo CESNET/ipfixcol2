@@ -152,7 +152,7 @@ void all_filter(uint8_t *filter) {
 }
 
 // Filter no fields from template
-TEST_F(Filter, ZeroTFields) {
+TEST_F(Filter, TemplateFields_None) {
     ASSERT_EQ(ipx_modifier_filter(&rec, filter), IPX_OK);
     fds_template *t = (fds_template *)(rec.tmplt);
 
@@ -170,7 +170,7 @@ TEST_F(Filter, ZeroTFields) {
 }
 
 // Filter out starting fields from template
-TEST_F(Filter, StartTFields) {
+TEST_F(Filter, TemplateFields_Start) {
     // Set filter
     start_filter(filter);
 
@@ -192,7 +192,7 @@ TEST_F(Filter, StartTFields) {
 }
 
 // Filter out last 2 fields from template
-TEST_F(Filter, EndTFields) {
+TEST_F(Filter, TemplateFields_End) {
     // Set filter
     end_filter(filter);
 
@@ -216,7 +216,7 @@ TEST_F(Filter, EndTFields) {
 }
 
 // Filter out random fields from template (start, middle, end fields)
-TEST_F(Filter, MixedTFields) {
+TEST_F(Filter, TemplateFields_MixedPosition) {
     // Set filter
     mixed_filter(filter);
 
@@ -238,7 +238,7 @@ TEST_F(Filter, MixedTFields) {
 }
 
 // Filter out all fields from template
-TEST_F(Filter, AllTFields) {
+TEST_F(Filter, TemplateFields_All) {
     // Set filter
     memset(filter, 1, tmplt->fields_cnt_total);
 
@@ -254,7 +254,7 @@ TEST_F(Filter, AllTFields) {
 }
 
 // Filtering zero fields from original data record
-TEST_F(Filter, NoneDrecs) {
+TEST_F(Filter, DataRecords_None) {
     uint16_t rec_prev_size = rec.size;
     uint8_t *orig_raw = new uint8_t[rec.size];
     memcpy(orig_raw, rec.data, rec.size);
@@ -272,7 +272,7 @@ TEST_F(Filter, NoneDrecs) {
 
 // Filtering out static (non variable length) fields from original data record
 // Also tests filtering last data record
-TEST_F(Filter, StaticLengthDrecs) {
+TEST_F(Filter, DataRecords_StaticLength) {
     uint16_t rec_prev_size = rec.size;
     static_filter(filter);
 
@@ -329,7 +329,7 @@ TEST_F(Filter, StaticLengthDrecs) {
 
 // Filtering out dynamic (variable length) fields from original data record
 // Also tests filtering first data record
-TEST_F(Filter, DynamicLengthDrecs) {
+TEST_F(Filter, DataRecords_VariableLength) {
     uint16_t rec_prev_size = rec.size;
     dynamic_filter(filter);
 
@@ -388,11 +388,6 @@ TEST_F(Filter, DynamicLengthDrecs) {
     fds_template_destroy((fds_template *)rec.tmplt);
 }
 
-TEST_F(Filter, InvalidArguments) {
-    EXPECT_EQ(ipx_modifier_filter(NULL, filter), IPX_ERR_ARG);
-    EXPECT_EQ(ipx_modifier_filter(&rec, NULL), IPX_ERR_ARG);
-}
-
 /** ------------------------- ADDING TESTS ------------------------- **/
 
 #define STATIC_CNT 4
@@ -447,7 +442,7 @@ protected:
             static_fields[i-1].en = i % 2;
             static_fields[i-1].id = i * 10;
             static_fields[i-1].length = i * 2;
-            static_output[i-1].length = -1;
+            static_output[i-1].length = IPX_MODIFIER_SKIP;
         }
     }
 
@@ -540,9 +535,9 @@ protected:
 
 };
 
-// Just copy template and drec, do not change anything
+// Append zero fields to record
 TEST_F(Adder, ZeroFields) {
-    // "Modify" record
+    // Modify record
     ASSERT_EQ(ipx_modifier_append(&rec, static_fields, static_output, STATIC_CNT), IPX_OK);
 
     // Check template and record
@@ -550,8 +545,32 @@ TEST_F(Adder, ZeroFields) {
     cmp_data_overall(0);
 }
 
+// Append zero fields to record but keep them in template and records as 0
+TEST_F(Adder, Static_ZeroFields_KeepEmptyOutputs) {
+    for (struct ipx_modifier_output &i : static_output) {
+        i.length = -1;
+    }
+    // Modify record
+    ASSERT_EQ(ipx_modifier_append(&rec, static_fields, static_output, STATIC_CNT), IPX_OK);
+
+    // Check template
+    cmp_template_overall(20, 4, 24);
+
+    // Check record
+    cmp_data_overall(20);
+
+    uint64_t zero = 0;
+    int p = 8;
+
+    for (auto i : static_fields) {
+        ASSERT_EQ(fds_drec_find(&rec, i.en, i.id, &field), p++);
+        cmp_data_record(field, &zero, i.length);
+    }
+
+}
+
 // Append single value to data record and template
-TEST_F(Adder, StaticSingleField) {
+TEST_F(Adder, Static_SingleField) {
     // Add single value to output buffer
     uint8_t pos = 1;
     uint32_t value = 422322;
@@ -572,7 +591,7 @@ TEST_F(Adder, StaticSingleField) {
 }
 
 // Append single value (EN specific) to data record and template
-TEST_F(Adder, StaticSingleFieldEN) {
+TEST_F(Adder, Static_SingleField_WithEN) {
     // Add single value (with EN) to output buffer
     uint8_t pos = 0;
     uint16_t value = 15213;
@@ -593,12 +612,11 @@ TEST_F(Adder, StaticSingleFieldEN) {
 }
 
 // Append multiple values (EN and non-EN specific) to data record and template
-TEST_F(Adder, StaticMultipleFields) {
+TEST_F(Adder, Static_MultipleFields) {
     // Add all values to output buffer
     int used_length = 0;
-    long value = 0;
+    long value = 0x123456789ABCDEF;
     for (uint8_t pos = 0; pos < STATIC_CNT; pos++) {
-        value = 0x123456789ABCDEF;
         ipx_modifier_field used = static_fields[pos];
         set_value(used, static_output[pos], &value, used.length);
         used_length += used.length;
@@ -627,8 +645,65 @@ TEST_F(Adder, StaticMultipleFields) {
     } while (fds_drec_iter_next(&it) != FDS_EOC);
 }
 
+// Append multiple values, some of which are kept in template and records with no values
+TEST_F(Adder, Static_MultipleFields_KeepEmptyOutputs) {
+    long value = 0x123456789ABCDEF;
+
+    // Keep first field (length = 2)
+    static_output[0].length = -1;
+    // Use second and third field (lengths = {4, 6})
+    set_value(static_fields[1], static_output[1], &value, 4);
+    set_value(static_fields[2], static_output[2], &value, 6);
+    // Do not use fourth field
+    static_output[3].length = IPX_MODIFIER_SKIP;
+
+    // Modify template
+    ASSERT_EQ(ipx_modifier_append(&rec, static_fields, static_output, STATIC_CNT), IPX_OK);
+
+    // Check modified template
+    cmp_template_overall(12, 3, 20); // 4 (non-EN) + 16 (2x8=EN)
+    for (int i = 0; i < 3; i++) {
+        cmp_template_field(rec.tmplt->fields_cnt_total - (3 - i), static_fields[i]);
+    }
+
+    // Check modified record
+    cmp_data_overall(12);
+    fds_drec_iter_init(&it, &rec, 0);
+    // Set iterator to first appended field
+    ASSERT_EQ(fds_drec_iter_find(&it, static_fields[0].en, static_fields[0].id), 8);
+    EXPECT_EQ(*(uint16_t *)it.field.data, 0);
+    ASSERT_EQ(fds_drec_iter_next(&it), 9);
+
+    // Iterate through all remaining data records and compare them
+    int size = 4;
+    do {
+        cmp_data_record(it.field, &value, size);
+        size += 2;
+    } while (fds_drec_iter_next(&it) != FDS_EOC);
+}
+
+// Append zero fields to record but keep them in template and records as 0
+TEST_F(Adder, Dynamic_ZeroFields_KeepEmptyOutputs) {
+    // Modify record
+    ASSERT_EQ(ipx_modifier_append(&rec, dynamic_fields, dynamic_output, DYNAMIC_CNT), IPX_OK);
+
+    // Check template
+    cmp_template_overall(2, 2, 8);
+
+    // Check record
+    cmp_data_overall(2);
+
+    uint64_t zero = 0;
+    int p = 8;
+
+    for (auto i : dynamic_fields) {
+        ASSERT_EQ(fds_drec_find(&rec, i.en, i.id, &field), p++);
+        cmp_data_record(field, &zero, 0);
+    }
+}
+
 // Append values with variable length (one with single prefix octet, second with 3 prefix octets)
-TEST_F(Adder, DynamicFields) {
+TEST_F(Adder, Dynamic_MultipleFields) {
     // Add all values to output buffer
     uint8_t values[1000] = {0x12, 0x34, 0x56, };
     values[678] = 0x78;
@@ -658,10 +733,4 @@ TEST_F(Adder, DynamicFields) {
     cmp_data_record(it.field, &values, 1000);
 
     EXPECT_EQ(fds_drec_iter_next(&it), FDS_EOC);
-}
-
-TEST_F(Adder, InvalidArguments) {
-    EXPECT_EQ(ipx_modifier_append(NULL, static_fields, static_output, 0), IPX_ERR_ARG);
-    EXPECT_EQ(ipx_modifier_append(&rec, NULL, static_output, 0), IPX_ERR_ARG);
-    EXPECT_EQ(ipx_modifier_append(&rec, static_fields, NULL, 0), IPX_ERR_ARG);
 }

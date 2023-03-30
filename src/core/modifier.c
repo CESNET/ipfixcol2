@@ -520,7 +520,7 @@ new_template_size(const struct ipx_modifier_field *fields,
 {
     size_t new_size = 0;
     for (size_t i = 0; i < fields_cnt; i++) {
-        if (buffers[i].length >= 0) {
+        if (buffers[i].length != IPX_MODIFIER_SKIP) {
             new_size += (fields[i].en ? 8 : 4);
         }
     }
@@ -530,19 +530,27 @@ new_template_size(const struct ipx_modifier_field *fields,
 /**
  * \brief Calculate size needed for new data records
  *
+ * \param[in] fields     Field defintions
  * \param[in] buffers    Output buffers
  * \param[in] fields_cnt Fields array cnt
  * \return Space needed for new data records in output buffers
  */
 static inline size_t
-get_buffers_size(const struct ipx_modifier_output *buffers, const size_t fields_cnt)
+get_buffers_size(const struct ipx_modifier_field *fields, const struct ipx_modifier_output *buffers,
+    const size_t fields_cnt)
 {
     size_t new_size = 0;
     for (size_t i = 0; i < fields_cnt; i++) {
-        if (buffers[i].length >= 0) {
+        if (buffers[i].length == IPX_MODIFIER_SKIP) {
+            continue;
+        } else if (buffers[i].length >= 0) {
             // Take the worst case scanario where each new record
             // has variable length with 3 prefix octets
             new_size += buffers[i].length + 3;
+        } else {
+            // Invalid length in buffer but keep it ... use length from field defintion
+            // For variable length fields use smallest possible length (1 because of prefix octet)
+            new_size += fields[i].length == FDS_IPFIX_VAR_IE_LEN ? 1 : fields[i].length;
         }
     }
     return new_size;
@@ -608,7 +616,7 @@ ipfix_template_add_fields(const struct fds_template *tmplt,
 
     // Iterate through all valid values in output buffers and append their fields
     for (size_t i = 0; i < fields_cnt; i++) {
-        if (buffers[i].length >= 0) {
+        if (buffers[i].length != IPX_MODIFIER_SKIP) {
             field_size = ipfix_template_add_field(fields[i], (uint16_t *) iter);
             iter += field_size;
             tmplt_length += field_size;
@@ -648,7 +656,7 @@ ipfix_msg_add_drecs(struct fds_drec *rec,
     const size_t arr_cnt)
 {
     // Allocate memory for raw data record, copy previous record
-    size_t append_size = get_buffers_size(output, arr_cnt);
+    size_t append_size = get_buffers_size(fields, output, arr_cnt);
     uint8_t *new_data = malloc(rec->size + append_size);
     if (new_data == NULL) {
         return IPX_ERR_NOMEM;
@@ -658,15 +666,31 @@ ipfix_msg_add_drecs(struct fds_drec *rec,
     // Iterate through values in output buffer and append them to data record
     uint8_t *it = new_data + rec->size;
     for (size_t i = 0; i < arr_cnt; i++) {
-        if (output[i].length < 0) {
-            // Skip invalid value in buffer
+        if (output[i].length == IPX_MODIFIER_SKIP) {
+            // Skip field
+            continue;
+        } else if (output[i].length < 0) {
+            // Dont copy memory from buffer, but keep this field
+
+            if (fields[i].length == FDS_IPFIX_VAR_IE_LEN) {
+                // For variable length field append only prefix octet containing zero
+                *it = 0;
+                it++;
+                rec->size += 1;
+            } else {
+                memset(it, 0, fields[i].length);
+                it += fields[i].length;
+                rec->size += fields[i].length;
+            }
             continue;
         }
 
-        if (fields[i].length == FDS_IPFIX_VAR_IE_LEN) {
+        // Process output with normal length
+        else if (fields[i].length == FDS_IPFIX_VAR_IE_LEN) {
             // Append length octet prefix for variable length record
             if (output[i].length < 255) {
-                memcpy(it++, &(output[i].length), 1);
+                *it = output[i].length;
+                it++;
                 rec->size += 1;
             } else {
                 *it = 0xFF;
