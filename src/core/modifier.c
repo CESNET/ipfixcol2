@@ -586,16 +586,7 @@ ipfix_template_add_field(const struct ipx_modifier_field field, uint16_t *raw)
     assert(false);
 }
 
-/**
- * \brief Append new fields to template based on given output values
- *
- * \param[in] tmplt      Original template
- * \param[in] fields     Array of new fields
- * \param[in] buffers    Array of output values
- * \param[in] fields_cnt Number of items in fields (and buffers) array
- * \return Parsed modified template or NULL (memory allocation error)
- */
-static struct fds_template *
+struct fds_template *
 ipfix_template_add_fields(const struct fds_template *tmplt,
     const struct ipx_modifier_field *fields,
     const struct ipx_modifier_output *buffers,
@@ -636,20 +627,7 @@ ipfix_template_add_fields(const struct fds_template *tmplt,
     return new_tmplt;
 }
 
-/**
- * \brief Append new fields to data record
- *
- * \note Variable length fields will contain 1 or 3 length prefix octets
- *  based on their length in output buffer. For length < 255 single prefix octet
- *  is used. Otherwise 3 octets are used.
- *
- * \param[in,out] rec         Original/modified record
- * \param[in]     fields      Field definitions
- * \param[in]     output      Output buffers containing new values
- * \param[in]     arr_cnt     Size of output buffer
- * \return #IPX_OK on success, otherwise #IPX_ERR_NOMEM
- */
-static int
+int
 ipfix_msg_add_drecs(struct fds_drec *rec,
     const struct ipx_modifier_field *fields,
     const struct ipx_modifier_output *output,
@@ -669,7 +647,7 @@ ipfix_msg_add_drecs(struct fds_drec *rec,
         if (output[i].length == IPX_MODIFIER_SKIP) {
             // Skip field
             continue;
-        } else if (output[i].length < 0) {
+        } else if (output[i].length <= 0) {
             // Dont copy memory from buffer, but keep this field
 
             if (fields[i].length == FDS_IPFIX_VAR_IE_LEN) {
@@ -710,16 +688,7 @@ ipfix_msg_add_drecs(struct fds_drec *rec,
     return IPX_OK;
 }
 
-/**
- * \brief Remove fields from template based on given filter
- *
- * \warning Only non-option templates are accepted.
- *
- * \param[in] tmplt     Original template
- * \param[in] filter    Filter array
- * \return Parsed modified template or NULL (memory allocation error)
- */
-static struct fds_template *
+struct fds_template *
 ipfix_template_remove_fields(const struct fds_template *tmplt, const uint8_t *filter)
 {
     assert(tmplt->type == FDS_TYPE_TEMPLATE);
@@ -787,16 +756,7 @@ ipfix_template_remove_fields(const struct fds_template *tmplt, const uint8_t *fi
     return new_template;
 }
 
-/**
- * \brief Remove fields from data record based on filter
- *
- * Filter is an array of integers for each field in record template. For each
- * non-zero value in filter, data field at same position is removed from message.
- *
- * \param[in,out] rec         Original record
- * \param[in]     filter      Filter array
- */
-static void
+void
 ipfix_msg_remove_drecs(struct fds_drec *rec, const uint8_t *filter)
 {
     uint16_t filter_size = rec->tmplt->fields_cnt_total;
@@ -825,7 +785,8 @@ ipfix_msg_remove_drecs(struct fds_drec *rec, const uint8_t *filter)
             rec_size -= it.field.size + length_octets;
         }
         prev_rec = it.field.data + it.field.size;
-        assert(idx++ < filter_size);
+        idx++;
+        assert(idx <= filter_size);
     }
 
     // Go through filter in reverse order and delete selected records
@@ -837,54 +798,6 @@ ipfix_msg_remove_drecs(struct fds_drec *rec, const uint8_t *filter)
     }
 
     rec->size = rec_size;
-}
-
-int
-ipx_modifier_filter(struct fds_drec *rec, uint8_t *filter)
-{
-    if(rec == NULL || filter == NULL) {
-        return IPX_ERR_ARG;
-    }
-
-    // Modify template
-    struct fds_template *tmplt = ipfix_template_remove_fields(rec->tmplt, filter);
-    if (tmplt == NULL) {
-        return IPX_ERR_NOMEM;
-    }
-
-    // Modify record
-    ipfix_msg_remove_drecs(rec, filter);
-    rec->tmplt = tmplt;
-    rec->snap = NULL;
-
-    return IPX_OK;
-}
-
-int
-ipx_modifier_append(struct fds_drec *rec,
-    const struct ipx_modifier_field *fields,
-    const struct ipx_modifier_output *buffers,
-    const size_t fields_cnt)
-{
-    if (rec == NULL || fields == NULL || buffers == NULL) {
-        return IPX_ERR_ARG;
-    }
-
-    // Modify template
-    struct fds_template *tmplt = ipfix_template_add_fields(rec->tmplt, fields, buffers, fields_cnt);
-    if (tmplt == NULL) {
-        return IPX_ERR_NOMEM;
-    }
-
-    // Modify record
-    if (ipfix_msg_add_drecs(rec, fields, buffers, fields_cnt) != IPX_OK) {
-        fds_template_destroy(tmplt);
-        return IPX_ERR_NOMEM;
-    }
-    rec->tmplt = tmplt;
-    rec->snap = NULL;
-
-    return IPX_OK;
 }
 
 /**
@@ -976,7 +889,7 @@ template_store(ipx_modifier_t *mod, struct fds_drec *rec, ipx_msg_garbage_t **ga
  * \param[out]    garbage Possible garbage created in this function
  * \return #IPX_OK on success, #IPX_ERR_NOMEM on memory allocation error
  */
-int
+static int
 template_modify_and_store(struct fds_drec *rec, ipx_modifier_t *mod, struct ipx_modifier_output *output, uint8_t *filter, ipx_msg_garbage_t **garbage)
 {
     struct fds_template *new_tmplt = (struct fds_template *) rec->tmplt;
@@ -1022,7 +935,7 @@ template_modify_and_store(struct fds_drec *rec, ipx_modifier_t *mod, struct ipx_
  * \param[out] new_output Array of valid values
  * \param[in]  output_cnt Number of output buffer elements
  */
-void
+static inline void
 output_buffer_to_array(struct ipx_modifier_output *output, uint8_t *new_output, size_t output_cnt)
 {
     for (size_t i = 0; i < output_cnt; ++i) {
@@ -1034,7 +947,17 @@ output_buffer_to_array(struct ipx_modifier_output *output, uint8_t *new_output, 
     }
 }
 
-int
+/**
+ * \brief Update appended/filtered fields in template
+ *
+ * \param[in]  rec    Pointer to data record
+ * \param[in]  mod    Modifier
+ * \param[in]  output Output buffers
+ * \param[in]  filter Filter array
+ * \param[out] garbage Possible garbage created in this function
+ * \return #IPX_OK on success, #IPX_ERR_NOMEM on memory allocation error
+ */
+static int
 template_update(struct fds_drec *rec, ipx_modifier_t *mod, struct ipx_modifier_output *output, uint8_t *filter, ipx_msg_garbage_t **garbage)
 {
     const struct fds_template *tmplt = rec->tmplt;
@@ -1085,7 +1008,7 @@ template_update(struct fds_drec *rec, ipx_modifier_t *mod, struct ipx_modifier_o
  * \param[in] filter Filter array
  * \return #IPX_OK on success, #IPX_ERR_NOMEM on memory allocation error
  */
-int
+static int
 fields_update(struct fds_drec *rec, ipx_modifier_t *mod, struct ipx_modifier_output *output, uint8_t *filter)
 {
     if (mod->cb_filter) {

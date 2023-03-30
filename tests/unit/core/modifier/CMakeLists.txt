@@ -7,5 +7,5 @@ set(AUX_TOOLS
 )
 
 # Register tests
-unit_tests_register_test(modifier_append_and_filter.cpp ${AUX_TOOLS})
+unit_tests_register_test(modifier_modify_message.cpp ${AUX_TOOLS})
 unit_tests_register_test(modifier_context.cpp ${AUX_TOOLS})

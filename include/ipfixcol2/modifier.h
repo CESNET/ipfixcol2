@@ -160,41 +160,62 @@ IPX_API int
 ipx_modifier_set_iemgr(ipx_modifier_t *mod, struct fds_iemgr *iemgr);
 
 /**
- * \brief Filter data from parsed IPFIX data record and modify records template
+ * \brief Remove fields from data record based on filter
  *
- * Modified record data is replaced in place and new template is created. Original
- * template in record is replaced with new template.
+ * Filter is an array of integers for each field in record template. For each
+ * non-zero value in filter, data field at same position is removed from message.
  *
- * \warning This function removes snapshot from data record, which needs to be set again!
- *
- * \param[in,out]   rec     Original/parsed data record
- * \param[in]       filter  Filter array
- * \return #IPX_OK on success
- * \return #IPX_ERR_ARG if any argument is NULL
- * \return #IPX_ERR_NOMEM on memory allocation error
+ * \param[in,out] rec         Original record
+ * \param[in]     filter      Filter array
  */
-IPX_API int
-ipx_modifier_filter(struct fds_drec *rec, uint8_t *filter);
+IPX_API void
+ipfix_msg_remove_drecs(struct fds_drec *rec, const uint8_t *filter);
 
 /**
- * \brief Append data to parsed IPFIX data record and modify records template
+ * \brief Append new fields to data record
  *
- * Modified record data is replaced in place and new template is created. Original
- * template in record is replaced with new template.
+ * \note Variable length fields will contain 1 or 3 length prefix octets
+ *  based on their length in output buffer. For length < 255 single prefix octet
+ *  is used. Otherwise 3 octets are used.
  *
- * \warning This function removes snapshot from data record, which needs to be set again!
- *
- * \param[in,out]   rec         Original/parsed data record
- * \param[in]       fields      Array of new template fields
- * \param[in]       buffers     Output buffers
- * \param[in]       fields_cnt  Number of items in fields (and buffers)
- * \return #IPX_OK on success
- * \return #IPX_ERR_ARG if any argument is NULL
- * \return #IPX_ERR_NOMEM on memory allocation error
+ * \param[in,out] rec         Original/modified record
+ * \param[in]     fields      Field definitions
+ * \param[in]     output      Output buffers containing new values
+ * \param[in]     arr_cnt     Size of output buffer
+ * \return #IPX_OK on success, otherwise #IPX_ERR_NOMEM
  */
 IPX_API int
-ipx_modifier_append(struct fds_drec *rec, const struct ipx_modifier_field *fields,
-    const struct ipx_modifier_output *buffers, const size_t fields_cnt);
+ipfix_msg_add_drecs(struct fds_drec *rec,
+    const struct ipx_modifier_field *fields,
+    const struct ipx_modifier_output *output,
+    const size_t arr_cnt);
+
+/**
+ * \brief Remove fields from template based on given filter
+ *
+ * \warning Only non-option templates are accepted.
+ *
+ * \param[in] tmplt     Original template
+ * \param[in] filter    Filter array
+ * \return Parsed modified template or NULL (memory allocation error)
+ */
+IPX_API struct fds_template *
+ipfix_template_remove_fields(const struct fds_template *tmplt, const uint8_t *filter);
+
+/**
+ * \brief Append new fields to template based on given output values
+ *
+ * \param[in] tmplt      Original template
+ * \param[in] fields     Array of new fields
+ * \param[in] buffers    Array of output values
+ * \param[in] fields_cnt Number of items in fields (and buffers) array
+ * \return Parsed modified template or NULL (memory allocation error)
+ */
+IPX_API struct fds_template *
+ipfix_template_add_fields(const struct fds_template *tmplt,
+    const struct ipx_modifier_field *fields,
+    const struct ipx_modifier_output *buffers,
+    const size_t fields_cnt);
 
 /**
  * \brief Add new session context to modifier

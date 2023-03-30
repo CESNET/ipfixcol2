@@ -77,6 +77,8 @@ public:
 int adder_one(const struct fds_drec *rec, struct ipx_modifier_output output[], void *cb_data) {
     (void) rec, (void) cb_data;
     output[0].length = 4;
+    output[1].length = IPX_MODIFIER_SKIP;
+    output[2].length = IPX_MODIFIER_SKIP;
     return 0;
 }
 
@@ -85,6 +87,7 @@ int adder_two(const struct fds_drec *rec, struct ipx_modifier_output output[], v
     (void) rec, (void) cb_data;
     output[0].length = 4;
     output[1].length = 4;
+    output[2].length = IPX_MODIFIER_SKIP;
     return 0;
 }
 
@@ -431,8 +434,8 @@ TEST_F(MixedSessions, createSameType) {
 
     // Check order
     EXPECT_EQ(mod->sessions.ctx_valid, session_cnt);
-    for (size_t i = 0; i < session_cnt; i++) {
-        EXPECT_EQ(mod->sessions.ctx[i].session, sessions[i]->getSession(FDS_SESSION_TCP));
+    for (size_t i = 0; i < session_cnt - 1; i++) {
+        EXPECT_LT(mod->sessions.ctx[i].session, mod->sessions.ctx[i+1].session);
     }
 
     // Free memory
@@ -495,8 +498,8 @@ TEST_F(MixedSessions, reachMaximumTemplateID) {
     // 257 because last template with ID 256 was still added ...
     findTemplate(FDS_OK, 256, 4);
     EXPECT_EQ(mod->curr_ctx->next_id, 257);
-    modifyRecord(&adder_one);
-    findTemplate(FDS_OK, 257, 3);
+    modifyRecord(&adder_three);
+    findTemplate(FDS_OK, 257, 5);
 
     delete sessions;
 }

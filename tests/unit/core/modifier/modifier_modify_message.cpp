@@ -13,6 +13,54 @@ int main(int argc, char **argv)
     return RUN_ALL_TESTS();
 }
 
+int
+ipx_modifier_filter(struct fds_drec *rec, uint8_t *filter)
+{
+    if (rec == NULL || filter == NULL) {
+        return IPX_ERR_ARG;
+    }
+
+    // Modify template
+    struct fds_template *tmplt = ipfix_template_remove_fields(rec->tmplt, filter);
+    if (tmplt == NULL) {
+        return IPX_ERR_NOMEM;
+    }
+
+    // Modify record
+    ipfix_msg_remove_drecs(rec, filter);
+    rec->tmplt = tmplt;
+    rec->snap = NULL;
+
+    return IPX_OK;
+}
+
+int
+ipx_modifier_append(struct fds_drec *rec,
+    const struct ipx_modifier_field *fields,
+    const struct ipx_modifier_output *buffers,
+    const size_t fields_cnt)
+{
+    if (rec == NULL || fields == NULL || buffers == NULL) {
+        return IPX_ERR_ARG;
+    }
+
+    // Modify template
+    struct fds_template *tmplt = ipfix_template_add_fields(rec->tmplt, fields, buffers, fields_cnt);
+    if (tmplt == NULL) {
+        return IPX_ERR_NOMEM;
+    }
+
+    // Modify record
+    if (ipfix_msg_add_drecs(rec, fields, buffers, fields_cnt) != IPX_OK) {
+        fds_template_destroy(tmplt);
+        return IPX_ERR_NOMEM;
+    }
+    rec->tmplt = tmplt;
+    rec->snap = NULL;
+
+    return IPX_OK;
+}
+
 /**
  * \brief Main testing fixture for testing modifier component
  */
@@ -458,6 +506,7 @@ protected:
             dynamic_fields[i-1].en = 0;
             dynamic_fields[i-1].id = i * 1000;
             dynamic_fields[i-1].length = FDS_IPFIX_VAR_IE_LEN;
+            dynamic_output[i-1].length = -1;
         }
     }
 
@@ -536,7 +585,7 @@ protected:
 };
 
 // Append zero fields to record
-TEST_F(Adder, ZeroFields) {
+TEST_F(Adder, Static_ZeroFields) {
     // Modify record
     ASSERT_EQ(ipx_modifier_append(&rec, static_fields, static_output, STATIC_CNT), IPX_OK);
 
@@ -683,6 +732,20 @@ TEST_F(Adder, Static_MultipleFields_KeepEmptyOutputs) {
 }
 
 // Append zero fields to record but keep them in template and records as 0
+TEST_F(Adder, Dynamic_ZeroFields) {
+    dynamic_output[0].length = IPX_MODIFIER_SKIP;
+    dynamic_output[1].length = IPX_MODIFIER_SKIP;
+    // Modify record
+    ASSERT_EQ(ipx_modifier_append(&rec, dynamic_fields, dynamic_output, DYNAMIC_CNT), IPX_OK);
+
+    // Check template
+    cmp_template_overall(0, 0, 0);
+
+    // Check record
+    cmp_data_overall(0);
+}
+
+// Append zero fields to record but keep them in template and records as 0
 TEST_F(Adder, Dynamic_ZeroFields_KeepEmptyOutputs) {
     // Modify record
     ASSERT_EQ(ipx_modifier_append(&rec, dynamic_fields, dynamic_output, DYNAMIC_CNT), IPX_OK);
@@ -733,4 +796,24 @@ TEST_F(Adder, Dynamic_MultipleFields) {
     cmp_data_record(it.field, &values, 1000);
 
     EXPECT_EQ(fds_drec_iter_next(&it), FDS_EOC);
+}
+
+// Append value with variable length (single prefix octet) and
+TEST_F(Adder, Dynamic_MultipleFields_KeepEmptyOutputs) {
+    // Add all values to output buffer
+    uint8_t values[] = {0x12, 0x34, 0x56};
+    set_value(dynamic_fields[0], dynamic_output[0], &values, 3);
+    dynamic_output[1].length = IPX_MODIFIER_SKIP;
+
+    // Modify template
+    ASSERT_EQ(ipx_modifier_append(&rec, dynamic_fields, dynamic_output, DYNAMIC_CNT), IPX_OK);
+
+    // Check modified template
+    cmp_template_overall(1, 1, 4);
+    cmp_template_field(rec.tmplt->fields_cnt_total - 1, dynamic_fields[0]);
+
+    // Check modified record
+    cmp_data_overall(4); // 4 (1B prefix + 3B)
+    fds_drec_find(&rec, dynamic_fields[0].en, dynamic_fields[0].id, &field);
+    cmp_data_record(field, &values, 3);
 }
