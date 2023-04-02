@@ -12,7 +12,6 @@ if(NOT MAXMIND)
 endif()
 
 target_link_libraries(asn-intermediate maxminddb)
-target_link_options(asn-intermediate PRIVATE -Wl,--no-as-needed -lprofiler -Wl,--as-needed)
 
 install(
     TARGETS asn-intermediate
