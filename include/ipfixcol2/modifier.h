@@ -185,10 +185,8 @@ ipfix_msg_remove_drecs(struct fds_drec *rec, const uint8_t *filter);
  * \return #IPX_OK on success, otherwise #IPX_ERR_NOMEM
  */
 IPX_API int
-ipfix_msg_add_drecs(struct fds_drec *rec,
-    const struct ipx_modifier_field *fields,
-    const struct ipx_modifier_output *output,
-    const size_t arr_cnt);
+ipfix_msg_add_drecs(struct fds_drec *rec, const struct ipx_modifier_field *fields,
+    const struct ipx_modifier_output *output, const size_t arr_cnt);
 
 /**
  * \brief Remove fields from template based on given filter
@@ -212,10 +210,8 @@ ipfix_template_remove_fields(const struct fds_template *tmplt, const uint8_t *fi
  * \return Parsed modified template or NULL (memory allocation error)
  */
 IPX_API struct fds_template *
-ipfix_template_add_fields(const struct fds_template *tmplt,
-    const struct ipx_modifier_field *fields,
-    const struct ipx_modifier_output *buffers,
-    const size_t fields_cnt);
+ipfix_template_add_fields(const struct fds_template *tmplt, const struct ipx_modifier_field *fields,
+    const struct ipx_modifier_output *buffers, const size_t fields_cnt);
 
 /**
  * \brief Add new session context to modifier
@@ -238,7 +234,8 @@ ipfix_template_add_fields(const struct fds_template *tmplt,
  * \return #IPX_ERR_DENIED on unexpected error
  */
 IPX_API int
-ipx_modifier_add_session(struct ipx_modifier *mod, ipx_msg_ipfix_t *ipfix_msg, ipx_msg_garbage_t **garbage);
+ipx_modifier_add_session(struct ipx_modifier *mod, ipx_msg_ipfix_t *ipfix_msg,
+    ipx_msg_garbage_t **garbage);
 
 /**
  * \brief Remove transport session context from modifier

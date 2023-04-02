@@ -11,24 +11,6 @@
 #include "message_ipfix.h"
 #include "modifier.h"
 
-/**
- * \def MODIFIER_ERR_CHECK
- * \brief Free memory after filter or append function fail
- * \param[in] rc        Return value of function
- * \param[in] rec       Record to free
- * \param[in] rec_raw   Pointer to raw drec memory (is skipped if NULL)
- * \param[in] tmplt     Pointer to parsed template
- */
-#define MODIFIER_ERR_CHECK(rc, rec, rec_raw, tmplt)             \
-    if ((rc) != IPX_OK) {                                       \
-        if ((rec_raw) != NULL) {                                \
-            free((rec)->data);                                  \
-        }                                                       \
-        free((rec));                                            \
-        fds_template_destroy((tmplt));                          \
-        return NULL;                                            \
-    }
-
 ipx_modifier_t *
 ipx_modifier_create(const struct ipx_modifier_field *fields,
     size_t fields_size,
@@ -621,7 +603,8 @@ ipfix_template_add_fields(const struct fds_template *tmplt,
 
     // Parse modified template
     struct fds_template *new_tmplt = NULL;
-    fds_template_parse(FDS_TYPE_TEMPLATE, raw_tmplt, &tmplt_length, &new_tmplt);
+    int rc = fds_template_parse(FDS_TYPE_TEMPLATE, raw_tmplt, &tmplt_length, &new_tmplt);
+    assert(rc == FDS_OK);
 
     free(raw_tmplt);
     return new_tmplt;
@@ -750,7 +733,8 @@ ipfix_template_remove_fields(const struct fds_template *tmplt, const uint8_t *fi
 
     // Parse new template and replace it in record
     struct fds_template *new_template = NULL;
-    fds_template_parse(FDS_TYPE_TEMPLATE, raw_tmplt, &length, &new_template);
+    int rc = fds_template_parse(FDS_TYPE_TEMPLATE, raw_tmplt, &length, &new_template);
+    assert(rc == FDS_OK);
 
     free(raw_tmplt);
     return new_template;
@@ -801,6 +785,31 @@ ipfix_msg_remove_drecs(struct fds_drec *rec, const uint8_t *filter)
 }
 
 /**
+ * \brief Get the current snapshot from modifier active template manager
+ *
+ * \param[in]  mod  Modifier
+ * \param[out] snap Pointer to the current snapshot
+ */
+static inline void
+get_current_snapshot(ipx_modifier_t *mod, const fds_tsnapshot_t **snap)
+{
+    // Find snapshot for given record
+    int rc;
+    if ((rc = fds_tmgr_snapshot_get(mod->curr_ctx->mgr, snap)) != FDS_OK) {
+        // Something went wrong
+        if (rc == FDS_ERR_NOMEM) {
+            // Memory allocation failure
+            MODIFIER_ERROR(mod, "A memory allocation failed (%s:%d)", __FILE__, __LINE__);
+        } else {
+            // Unexpected error
+            MODIFIER_ERROR(mod, "fds_tmgr_snapshot_get() returned an unexpected "
+                "error code (%s:%d, code: %d)", __FILE__, __LINE__, rc);
+        }
+        *snap = NULL;
+    }
+}
+
+/**
  * \brief Generate and set new ID for template
  *
  * \param[in] mod   Modifier
@@ -827,176 +836,203 @@ template_set_new_id(ipx_modifier_t *mod, struct fds_template *tmplt)
 }
 
 /**
- * \brief Store template in template manager
+ * \brief Auxiliary structure for comparing templates in manager snapshots
+ * used in mgr_template_cmp()
+ */
+struct mgr_template_cmp_data {
+    struct fds_template *tmplt;         ///< [in]  Template to compare snapshot template with
+    struct fds_template *found_tmplt;   ///< [out] Found template or NULL
+};
+
+/**
+ * \brief Auxiliary function for comparing templates in manager snapshots
  *
- * Generate new ID for modified template and store it in template manager.
- * This function also updates snapshot of given record and updates template definitions
- * in all records that use this template.
+ * \param[in]      t1   Template from snapshot
+ * \param[in, out] data Pointer to mgr_template_cmp_data structure
+ * \return True if iteration should continue, false if it should stop
+ */
+bool mgr_template_cmp(const struct fds_template *t1, void *data)
+{
+    struct mgr_template_cmp_data *cmp_data = (struct mgr_template_cmp_data *) data;
+    struct fds_template *t2 = cmp_data->tmplt;
+    if (t1->raw.length != t2->raw.length) {
+        // Different length, continue iteration
+        return true;
+    }
+
+    // Compare raw templates except template ID
+    if (memcmp(t1->raw.data+2, t2->raw.data+2, t1->raw.length-2) == 0) {
+        // Found template with same ID and same fields
+        cmp_data->found_tmplt = (struct fds_template *) t1;
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * \brief Find template in current snapshot
  *
- * \param[in]  mgr      Template manager
- * \param[in]  template Template to store
- * \param[out] garbage  Possible garbage created in this function
+ * Iterate through all templates in current snapshot and find template with same
+ * field defintions. Template ID is ignored when comparing templates.
  *
- * \return Template ID if template was successfully added
- * \return #FDS_OK if template already exists
- * \return #FDS_ERR_DENIED for invalid combination of session and template
- * \return #FDS_ERR_ARG if time context of manager is not set
- * \return #FDS_ERR_NOMEM for memory allocation error
+ * \param[in] mod   Modifier
+ * \param[in] tmplt Template to find
+ * \return Pointer to template in current snapshot or NULL if not found
+ */
+static struct fds_template *
+mgr_find_template(ipx_modifier_t *mod, struct fds_template *tmplt)
+{
+    // Get current snapshot
+    const fds_tsnapshot_t *snap;
+    get_current_snapshot(mod, &snap);
+    if (!snap) {
+        return NULL;
+    }
+
+    // Try to find template in snapshot
+    struct mgr_template_cmp_data cmp_data = { .tmplt = tmplt, .found_tmplt = NULL };
+    fds_tsnapshot_for(snap, &mgr_template_cmp, &cmp_data);
+    return cmp_data.found_tmplt;
+}
+
+/**
+ * \brief Store template in current context manager
+ *
+ * \param[in]  mod      Modifier
+ * \param[in]  tmplt    Template to store
+ * \param[out] garbage  Potential garbage
+ * \return
  */
 static int
-template_store(ipx_modifier_t *mod, struct fds_drec *rec, ipx_msg_garbage_t **garbage)
+mgr_store_template(ipx_modifier_t *mod, struct fds_template *tmplt, ipx_msg_garbage_t **garbage)
 {
-    int rc;
-    struct fds_template *template = (struct fds_template *) rec->tmplt;
-
     // Try to create new ID for template
-    rc = template_set_new_id(mod, template);
+    int rc = template_set_new_id(mod, tmplt);
     if (rc == IPX_ERR_LIMIT) {
         // No more IDs available, restart context
         modifier_ctx_restart(mod, garbage);
         // Need to set new ID again
-        rc = template_set_new_id(mod, template);
+        rc = template_set_new_id(mod, tmplt);
         assert(rc == IPX_OK);
     }
 
     // Try to add template
-    rc = fds_tmgr_template_add(mod->curr_ctx->mgr, template);
+    rc = fds_tmgr_template_add(mod->curr_ctx->mgr, tmplt);
     if (rc != FDS_OK) {
-        return rc;
-    }
+        switch (rc) {
+        case FDS_ERR_NOMEM:
+            MODIFIER_ERROR(mod, "A memory allocation failed (%s:%d)", __FILE__, __LINE__);
+            break;
 
-    // Update record snapshot
-    const fds_tsnapshot_t *snap;
-    rc = fds_tmgr_snapshot_get(mod->curr_ctx->mgr, &snap);
-    if (rc) {
+        default:
+            MODIFIER_ERROR(mod, "fds_tmgr_template_add unexpected error (%s:%d)", __FILE__, __LINE__);
+            break;
+        }
         return rc;
     }
-    rec->snap = snap;
 
     // Set definitions to new fields (preserve == true)
-    fds_template_ies_define(template, mod->iemgr, true);
+    rc = fds_template_ies_define(tmplt, mod->iemgr, true);
+    if (rc != FDS_OK) {
+        switch (rc) {
+        case FDS_ERR_NOMEM:
+            MODIFIER_ERROR(mod, "A memory allocation failed (%s:%d)", __FILE__, __LINE__);
+            break;
+
+        default:
+            MODIFIER_ERROR(mod, "fds_template_ies_define unexpected error (%s:%d)", __FILE__, __LINE__);
+            break;
+        }
+        return rc;
+    }
 
     return IPX_OK;
 }
 
 /**
- * \brief Modify and store template
- *
- * \param[in,out] rec     Record with original template and snapshot, which will be updated
- * \param[in]     mod     Modifier
- * \param[in]     output  Output buffers
- * \param[in]     filter  Filter array
- * \param[out]    garbage Possible garbage created in this function
- * \return #IPX_OK on success, #IPX_ERR_NOMEM on memory allocation error
+ * \brief Add template to mapper, print error line if failed
  */
-static int
-template_modify_and_store(struct fds_drec *rec, ipx_modifier_t *mod, struct ipx_modifier_output *output, uint8_t *filter, ipx_msg_garbage_t **garbage)
+static inline void
+mapper_add_template(ipx_modifier_t *mod, const struct fds_template *tmplt, uint16_t original_id)
 {
-    struct fds_template *new_tmplt = (struct fds_template *) rec->tmplt;
-    if (new_tmplt == NULL) {
-        return IPX_ERR_NOMEM;
+    if (ipx_mapper_add(mod->curr_ctx->mapper, tmplt, original_id) != IPX_OK) {
+        // Could not add mapping
+        MODIFIER_WARNING(mod, "Could not add mapping for template ID %u (ODID: %d)",
+            original_id, mod->curr_ctx->odid);
     }
+}
+
+/**
+ * \brief Store template
+ *
+ * First, try to look for given template in template manager. If template is not
+ * found, try to add it to manager. In both cases, add mapping to mapper.
+ *
+ * \warning If template was not found in manager, its ID is changed to new ID
+ * based on current context.
+ *
+ * \param[in]  mod          Modifier
+ * \param[in]  tmplt        Template to store
+ * \param[in]  original_id  Original template ID
+ * \param[out] garbage      Potential garbage from modifier context
+ * \return Pointer to stored template or NULL if error occurred
+ */
+static const struct fds_template *
+template_store(ipx_modifier_t *mod, struct fds_template *tmplt, uint16_t original_id, ipx_msg_garbage_t **garbage)
+{
+    // First, try to look in manager for given template
+    struct fds_template *mgr_tmplt = mgr_find_template(mod, tmplt);
+    int rc;
+
+    if (mgr_tmplt) {
+        // Template exists in manager, add mapping
+        mapper_add_template(mod, mgr_tmplt, original_id);
+        return mgr_tmplt;
+    }
+
+    // Template not found in manager, try to add it
+    rc = mgr_store_template(mod, tmplt, garbage);
+    if (rc) {
+        // Message has been generated
+        return NULL;
+    }
+
+    // Add new mapping
+    mapper_add_template(mod, tmplt, original_id);
+    return tmplt;
+}
+
+/**
+ * \brief Filter and append fields from original template and return modified template
+ *
+ * \param[in] tmplt  Original template
+ * \param[in] mod    Modifier
+ * \param[in] output Array with values of appended fields
+ * \param[in] filter Filter array
+ * \return Pointer to new template or NULL on error
+ */
+static struct fds_template *
+template_update(const struct fds_template *tmplt, ipx_modifier_t *mod, struct ipx_modifier_output *output, uint8_t *filter)
+{
+    assert(mod->cb_adder || mod->cb_filter);
+    struct fds_template *new_tmplt = (struct fds_template *) tmplt;
 
     // Apply filter to template
     if (mod->cb_filter) {
-        new_tmplt = ipfix_template_remove_fields(rec->tmplt, filter);
+        new_tmplt = ipfix_template_remove_fields(tmplt, filter);
         if (new_tmplt == NULL) {
-            return IPX_ERR_NOMEM;
+            return NULL;
         }
     }
 
     // Append new fields to template
     if (mod->cb_adder) {
         new_tmplt = ipfix_template_add_fields(new_tmplt, mod->fields, output, mod->fields_cnt);
-        if (new_tmplt == NULL) {
-            return IPX_ERR_NOMEM;
-        }
     }
 
-    // Store template in template manager
-    rec->tmplt = (const struct fds_template *) new_tmplt;
-    int rc = template_store(mod, rec, garbage);
-    if (rc != FDS_OK) {
-        switch (rc) {
-        // TODO: Handle other cases, print error messages
-        default:
-            break;
-        }
-        return IPX_ERR_NOMEM;
-    }
-
-    return IPX_OK;
-}
-
-/**
- * \brief Convert output buffer to array with 1s on valid values and 0s on invalid values
- *
- * \param[in]  output     Output buffer
- * \param[out] new_output Array of valid values
- * \param[in]  output_cnt Number of output buffer elements
- */
-static inline void
-output_buffer_to_array(struct ipx_modifier_output *output, uint8_t *new_output, size_t output_cnt)
-{
-    for (size_t i = 0; i < output_cnt; ++i) {
-        if (output[i].length > 0) {
-            new_output[i] = 1;
-        } else {
-            new_output[i] = 0;
-        }
-    }
-}
-
-/**
- * \brief Update appended/filtered fields in template
- *
- * \param[in]  rec    Pointer to data record
- * \param[in]  mod    Modifier
- * \param[in]  output Output buffers
- * \param[in]  filter Filter array
- * \param[out] garbage Possible garbage created in this function
- * \return #IPX_OK on success, #IPX_ERR_NOMEM on memory allocation error
- */
-static int
-template_update(struct fds_drec *rec, ipx_modifier_t *mod, struct ipx_modifier_output *output, uint8_t *filter, ipx_msg_garbage_t **garbage)
-{
-    const struct fds_template *tmplt = rec->tmplt;
-
-    // Create array of output buffer valid values used to search for modified template
-    uint8_t output_array[mod->fields_cnt];
-    output_buffer_to_array(output, output_array, mod->fields_cnt);
-
-    struct mapper_identifier id = {
-        .original = { .length = tmplt->raw.length, .data = tmplt->raw.data},
-        .fields = output_array,
-        .fields_cnt = mod->fields_cnt,
-        .filter = filter,
-        .filter_cnt = tmplt->fields_cnt_total
-    };
-
-    // Try to find modified template in mapper
-    const struct mapper_field *field = ipx_mapper_lookup(mod->curr_ctx->mapper, tmplt->id, &id);
-    if (field) {
-        // Mapping found, update template and snapshot
-        rec->tmplt = ipx_mapper_field_get_template(field);
-        rec->snap = ipx_mapper_field_get_snapshot(field);
-        return IPX_OK;
-    }
-
-    // Mapping not found, modify template and store it in mapper
-    uint16_t tmplt_id = rec->tmplt->id;
-    int rc = template_modify_and_store(rec, mod, output, filter, garbage);
-    if (rc != IPX_OK) {
-        return IPX_ERR_DENIED;
-    }
-
-    // Add new item into mapper
-    rc = ipx_mapper_add(mod->curr_ctx->mapper, tmplt_id, &id, rec->tmplt, rec->snap);
-    if (rc != IPX_OK) {
-        return rc;
-    }
-
-    return IPX_OK;
+    // Returns NULL on error
+    return new_tmplt;
 }
 
 /**
@@ -1028,50 +1064,82 @@ fields_update(struct fds_drec *rec, ipx_modifier_t *mod, struct ipx_modifier_out
 struct fds_drec *
 ipx_modifier_modify(ipx_modifier_t *mod, const struct fds_drec *rec, ipx_msg_garbage_t **garbage)
 {
-    if (!mod || !rec || (!(mod->cb_adder) && !(mod->cb_filter))) {
-        return NULL;
-    }
-
     if (!mod->curr_ctx) {
         MODIFIER_ERROR(mod, "Attempting to modify record without context being set");
         return NULL;
     }
 
+    if (!mod->cb_adder && !mod->cb_filter) {
+        MODIFIER_WARNING(mod, "Modifying record with no callbacks set");
+        return NULL;
+    }
+
     *garbage = NULL;
 
-    // Create copy of original record
+    // Create filter array
+    assert(rec->tmplt->fields_cnt_total != 0);
+    uint8_t filter[rec->tmplt->fields_cnt_total];
+    memset(filter, 0, rec->tmplt->fields_cnt_total);
+    if (mod->cb_filter) {
+        // Call filter callback function to fill filter
+        mod->cb_filter(rec, filter, mod->cb_data);
+    }
+
+    // Create output buffers to store values of new fields
+    struct ipx_modifier_output buffers[mod->fields_cnt];
+    output_buffers_init(buffers, mod->fields_cnt);
+    if (mod->cb_adder) {
+        // Call adder callback to fill output buffers
+        mod->cb_adder(rec, buffers, mod->cb_data);
+    }
+
+    // Update template based on modified configuration
+    struct fds_template *new_tmplt = template_update(rec->tmplt, mod, buffers, filter);
+    if (!new_tmplt) {
+        MODIFIER_ERROR(mod, "Failed to update template (%s:%d)", __FILE__, __LINE__);
+        return NULL;
+    }
+
+    // Try to search for modified template in modifier mapper
+    const struct fds_template *map_tmplt = ipx_mapper_lookup(mod->curr_ctx->mapper, new_tmplt, rec->tmplt->id);
+    if (map_tmplt) {
+        // Mapping found, free modified template and use template found in mapper
+        fds_template_destroy(new_tmplt);
+        new_tmplt = (struct fds_template *) map_tmplt;
+    } else {
+        // Mapping not found, need to store modified template in manager
+        const struct fds_template *stored_tmplt = template_store(mod, new_tmplt, rec->tmplt->id, garbage);
+
+        if (!stored_tmplt) {
+            // Error message has been generated
+            fds_template_destroy(new_tmplt);
+            return NULL;
+        }
+    }
+
+    // Fetch current snapshot
+    const fds_tsnapshot_t *snap;
+    get_current_snapshot(mod, &snap);
+    if (!snap) {
+        // Error message has been generated
+        // DO NOT free modified template as it is stored in modifier
+        return NULL;
+    }
+
+    // Create copy of original record, update its template and snapshot
     struct fds_drec *new_rec = malloc(sizeof(*new_rec));
     if (new_rec == NULL) {
         return NULL;
     }
     memcpy(new_rec, rec, sizeof(*new_rec));
-
-    // Create filter based on filter callback
-    uint8_t filter[rec->tmplt->fields_cnt_total];
-    memset(filter, 0, rec->tmplt->fields_cnt_total);
-    if (mod->cb_filter) {
-        mod->cb_filter(rec, filter, mod->cb_data);
-    }
-
-    // Create output buffers and fill it with data from adder callback
-    struct ipx_modifier_output buffers[mod->fields_cnt];
-    output_buffers_init(buffers, mod->fields_cnt);
-    if (mod->cb_adder) {
-        mod->cb_adder(rec, buffers, mod->cb_data);
-    }
-
-    // Update template and snapshot in record
-    int rc = template_update(new_rec, mod, buffers, filter, garbage);
-    if (rc != IPX_OK) {
-        free(new_rec);
-        return NULL;
-    }
+    new_rec->tmplt = new_tmplt;
+    new_rec->snap = snap;
 
     // Update fields in record
-    rc = fields_update(new_rec, mod, buffers, filter);
-    if (rc != IPX_OK) {
-        fds_template_destroy((struct fds_template *) new_rec->tmplt);
+    if (fields_update(new_rec, mod, buffers, filter) != IPX_OK) {
+        MODIFIER_ERROR(mod, "Failed to update fields in record (%s:%d)", __FILE__, __LINE__);
         free(new_rec);
+        // Do not free template, as it is stored in modifier
         return NULL;
     }
 

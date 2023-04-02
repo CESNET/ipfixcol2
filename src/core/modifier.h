@@ -30,7 +30,7 @@ struct session_odid_ctx {
     /** Template manager for given session      */
     struct fds_tmgr *mgr;
     /** Template mapper for given context       */
-    template_mapper_t *mapper;
+    ipx_template_mapper_t *mapper;
     /** ID of last added template               */
     uint16_t next_id;
 };
@@ -42,7 +42,7 @@ struct session_garbage {
     /** Array of mangers to destroy             */
     struct fds_tmgr **mgrs;
     /** Array of mappers to destroy             */
-    template_mapper_t **mappers;
+    ipx_template_mapper_t **mappers;
 };
 
 /**
