@@ -15,6 +15,7 @@ add_subdirectory(core/parser)
 add_subdirectory(core/netflow)
 add_subdirectory(core/message_builder)
 add_subdirectory(core/modifier)
+add_subdirectory(core/template_mapper)
 # >> Add your new tests or test subdirectories HERE <<
 
 # Enable code coverage target (i.e. make coverage) when appropriate build
