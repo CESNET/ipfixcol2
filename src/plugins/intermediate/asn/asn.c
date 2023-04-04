@@ -418,7 +418,7 @@ process_ipfix(ipx_ctx_t *ctx, ipx_modifier_t *modifier, ipx_msg_builder_t *build
         }
         if (!modified_rec) {
             // Proper message has been already printed
-            return rc;
+            return IPX_ERR_DENIED;
         }
 
         // Store modified record in builder

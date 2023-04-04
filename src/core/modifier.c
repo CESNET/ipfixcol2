@@ -1090,7 +1090,11 @@ ipx_modifier_modify(ipx_modifier_t *mod, const struct fds_drec *rec, ipx_msg_gar
     output_buffers_init(buffers, mod->fields_cnt);
     if (mod->cb_adder) {
         // Call adder callback to fill output buffers
-        mod->cb_adder(rec, buffers, mod->cb_data);
+        int cb_rc = mod->cb_adder(rec, buffers, mod->cb_data);
+        if (cb_rc != IPX_OK) {
+            MODIFIER_ERROR(mod, "Callback function returned error code %d", cb_rc);
+            return NULL;
+        }
     }
 
     // Update template based on modified configuration

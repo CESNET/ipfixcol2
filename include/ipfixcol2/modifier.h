@@ -54,7 +54,7 @@ struct ipx_modifier_output {
  * \note output size is equal to number of new fields
  * \note Any non-negative value in output[i].length means that
  * data in output at given position is valid and will be appended to IPFIX message
- * \return #IPX_OK if function was successfull, otherwise any non-zero value
+ * \return #IPX_OK if function was successfull, #IPX_ERR_DENIED if modification can not continue
  */
 typedef int (*modifier_adder_cb_t)(const struct fds_drec *rec,
     struct ipx_modifier_output output[], void *cb_data);
