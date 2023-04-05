@@ -471,6 +471,39 @@ ipfix_start_builder(ipx_ctx_t *ctx, ipx_msg_builder_t *builder,
 }
 
 /**
+ * \brief Add record to new message in builder
+ *
+ * \param[in] ctx     Plugin context
+ * \param[in] builder Message builder
+ * \param[in] rec     Data record
+ * \return
+ */
+static int
+add_record_to_builder(ipx_ctx_t *ctx, ipx_msg_builder_t *builder, const struct fds_drec *rec)
+{
+    // Store modified record in builder
+    int rc = ipx_msg_builder_add_drec(builder, rec);
+
+    if (rc) {
+        switch(rc) {
+            case IPX_ERR_DENIED:
+                // Exceeded builder limit
+                IPX_CTX_ERROR(ctx, "Exceeded message builder limit", __FILE__, __LINE__);
+                return rc;
+            case IPX_ERR_NOMEM:
+                IPX_CTX_ERROR(ctx, "Memory allocation error (%s:%d)", __FILE__, __LINE__);
+                return rc;
+            default:
+                IPX_CTX_ERROR(ctx, "Unexpected error from ipx_modifier_add_session (%s:%d)",
+                    __FILE__, __LINE__);
+                return rc;
+        }
+    }
+
+    return IPX_OK;
+}
+
+/**
  * \brief Process IPFIX message
  *
  * Iterate through all data records in message and modify them, store modified records
@@ -512,6 +545,15 @@ process_ipfix(ipx_ctx_t *ctx, ipx_modifier_t *modifier, ipx_msg_builder_t *build
     for (uint32_t i = 0; i < rec_cnt; i++) {
         rec = ipx_msg_ipfix_get_drec(msg, i);
 
+        if (rec->rec.tmplt->type == FDS_TYPE_TEMPLATE_OPTS) {
+            // Options template found ... just add it into new message
+            if (add_record_to_builder(ctx, builder, &(rec->rec)) != IPX_OK) {
+                // Error ... proper message has been already printed
+                return rc;
+            }
+            continue;
+        }
+
         // Modify record
         modified_rec = ipx_modifier_modify(modifier, &(rec->rec), &ipfix_garbage);
         if (ipfix_garbage) {
@@ -522,24 +564,13 @@ process_ipfix(ipx_ctx_t *ctx, ipx_modifier_t *modifier, ipx_msg_builder_t *build
             return IPX_ERR_DENIED;
         }
 
-        // Store modified record in builder
-        rc = ipx_msg_builder_add_drec(builder, modified_rec);
-
-        if (rc) {
-            switch(rc) {
-                case IPX_ERR_DENIED:
-                    // Exceeded builder limit
-                    IPX_CTX_ERROR(ctx, "Exceeded message builder limit", __FILE__, __LINE__);
-                    return rc;
-                case IPX_ERR_NOMEM:
-                    IPX_CTX_ERROR(ctx, "Memory allocation error (%s:%d)", __FILE__, __LINE__);
-                    return rc;
-                default:
-                    IPX_CTX_ERROR(ctx, "Unexpected error from ipx_modifier_add_session (%s:%d)",
-                        __FILE__, __LINE__);
-                    return rc;
-            }
+        // Add modified record to new message
+        rc = add_record_to_builder(ctx, builder, modified_rec);
+        if (rc != IPX_OK) {
+            // Error ... proper message has been already printed
+            return rc;
         }
+
         free(modified_rec->data);
         free(modified_rec);
     }
