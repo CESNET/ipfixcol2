@@ -45,10 +45,22 @@
 #include <ipfixcol2.h>
 #include "stdint.h"
 
+/** Enum of all possible GeoIP module fields (in param/fields configuration) */
+#define GPARAM_CNT 5        ///< Number of all possible GeoIP fields
+enum geo_fields {
+    GPARAM_CONT_CODE,       ///< Continent name
+    GPARAM_COUNTRY_CODE,    ///< Country name
+    GPARAM_CITY_NAME,       ///< City name
+    GPARAM_LATITUDE,        ///< Latitude
+    GPARAM_LONGITUDE        ///< Longitude
+};
+
 /** Configuration of a instance of the ASN plugin        */
 struct geo_config {
     /** Path to ASN database                             */
     char *db_path;
+    /** Array of used GeoIP fields                       */
+    uint8_t fields[GPARAM_CNT];
 };
 
 /**

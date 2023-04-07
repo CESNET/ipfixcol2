@@ -47,20 +47,61 @@
 /*
  * <params>
  *  <path>...</path>
+ *  <fields>
+ *      <field>...</field>
+ *  </fields>
  * </params>
  */
 
 /** XML nodes */
 enum params_xml_nodes {
-    GEO_PATH = 1,
+    GEO_PATH   = 1,
+    GEO_FIELDS = 2,
+    GEO_FIELD  = 3,
 };
+
+static const struct fds_xml_args fields_schema[] = {
+    FDS_OPTS_ELEM(GEO_FIELD, "field", FDS_OPTS_T_STRING, FDS_OPTS_P_MULTI),
+    FDS_OPTS_END
+};
+
 
 /** Definition of the \<params\> node  */
 static const struct fds_xml_args args_params[] = {
     FDS_OPTS_ROOT("params"),
-    FDS_OPTS_ELEM(GEO_PATH, "path", FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_ELEM  (GEO_PATH,   "path",   FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_NESTED(GEO_FIELDS, "fields", fields_schema,     FDS_OPTS_P_OPT),
     FDS_OPTS_END
 };
+
+static int
+config_parser_fields(ipx_ctx_t *ctx, fds_xml_ctx_t *fields_ctx, struct geo_config *cfg)
+{
+    size_t field_len;
+
+    const struct fds_xml_cont *fields;
+    while (fds_xml_next(fields_ctx, &fields) != FDS_EOC) {
+        assert(fields->type == FDS_OPTS_T_STRING);
+        field_len = strlen(fields->ptr_string);
+
+        if (!strncasecmp(fields->ptr_string, "continent", field_len)) {
+            cfg->fields[GPARAM_CONT_CODE] = 1;
+        } else if (!strncasecmp(fields->ptr_string, "country", field_len)) {
+            cfg->fields[GPARAM_COUNTRY_CODE] = 1;
+        } else if (!strncasecmp(fields->ptr_string, "city", field_len)) {
+            cfg->fields[GPARAM_CITY_NAME] = 1;
+        } else if (!strncasecmp(fields->ptr_string, "latitude", field_len)) {
+            cfg->fields[GPARAM_LATITUDE] = 1;
+        } else if (!strncasecmp(fields->ptr_string, "longitude", field_len)) {
+            cfg->fields[GPARAM_LONGITUDE] = 1;
+        } else {
+            IPX_CTX_ERROR(ctx, "Unknown field '%s'", fields->ptr_string);
+            return IPX_ERR_FORMAT;
+        }
+    }
+
+    return IPX_OK;
+}
 
 /**
  * \brief Process \<params\> node
@@ -73,25 +114,41 @@ static const struct fds_xml_args args_params[] = {
 static int
 config_parser_root(ipx_ctx_t *ctx, fds_xml_ctx_t *root, struct geo_config *cfg)
 {
-    (void) ctx;
     size_t path_len;
+    bool fields_found = false;
 
     const struct fds_xml_cont *content;
     while (fds_xml_next(root, &content) != FDS_EOC) {
         switch (content->id) {
-        case GEO_PATH:
-            assert(content->type == FDS_OPTS_T_STRING);
-            path_len = strlen(content->ptr_string);
-            cfg->db_path = strndup(content->ptr_string, path_len);
-            if (!cfg->db_path) {
-                IPX_CTX_ERROR(ctx, "Memory allocation error (%s:%d)", __FILE__, __LINE__);
-                return IPX_ERR_FORMAT;
-            }
-            break;
-        default:
-            // Internal error
-            assert(false);
+            case GEO_PATH:
+                assert(content->type == FDS_OPTS_T_STRING);
+                path_len = strlen(content->ptr_string);
+                cfg->db_path = strndup(content->ptr_string, path_len);
+                if (!cfg->db_path) {
+                    IPX_CTX_ERROR(ctx, "Memory allocation error (%s:%d)", __FILE__, __LINE__);
+                    return IPX_ERR_FORMAT;
+                }
+                break;
+
+            case GEO_FIELDS:
+                fields_found = true;
+                assert(content->type == FDS_OPTS_T_CONTEXT);
+                if (config_parser_fields(ctx, content->ptr_ctx, cfg) != IPX_OK) {
+                    return IPX_ERR_FORMAT;
+                }
+                break;
+
+            default:
+                // Internal error
+                assert(false);
         }
+
+    }
+
+    // No fields found, use default configuration
+    if (fields_found == false) {
+        cfg->fields[GPARAM_COUNTRY_CODE] = 1;
+        cfg->fields[GPARAM_CITY_NAME] = 1;
     }
 
     return IPX_OK;

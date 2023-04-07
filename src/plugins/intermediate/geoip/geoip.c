@@ -48,9 +48,11 @@
  *  Best way to look for these defintions is to use mmdbinspect tool
  *  from: https://github.com/maxmind/mmdbinspect
 */
-#define GEO_LOOKUP_COUNTRY   "country",  "iso_code",  NULL
-#define GEO_LOOKUP_LATITUDE  "location", "latitude",  NULL
-#define GEO_LOOKUP_LONGITUDE "location", "longitude", NULL
+#define GEO_LOOKUP_CONT      "continent", "code",      NULL
+#define GEO_LOOKUP_COUNTRY   "country",   "iso_code",  NULL
+#define GEO_LOOKUP_LATITUDE  "location",  "latitude",  NULL
+#define GEO_LOOKUP_LONGITUDE "location",  "longitude", NULL
+#define GEO_LOOKUP_CITY      "city", "names", "en",    NULL
 
 /** Maximum size of appended fields (used for creating new message)
  * 4x double (8B) + 2x country code (2B) = 34 (round up to 50 just in case)
@@ -71,10 +73,15 @@ struct instance_data {
 
 /** Direction of GeoIP information      */
 enum geo_direction {GSRC, GDST};
+
 /** Diffent types of GeoIP information  */
 enum geo_type {
-    GSRC_COUNTRY_NAME,
-    GDST_COUNTRY_NAME,
+    GSRC_CONT_CODE,
+    GDST_CONT_CODE,
+    GSRC_COUNTRY_CODE,
+    GDST_COUNTRY_CODE,
+    GSRC_CITY_NAME,
+    GDST_CITY_NAME,
     GSRC_LATITUDE,
     GDST_LATITUDE,
     GSRC_LONGITUDE,
@@ -83,36 +90,17 @@ enum geo_type {
 
 /** Fields defining new possible elements in enriched messages */
 struct ipx_modifier_field geo_fields[] = {
-    [GSRC_COUNTRY_NAME] = {.id = 5, .length = 65535, .en = 1111},  // sourceCountryGeonameID
-    [GDST_COUNTRY_NAME] = {.id = 6, .length = 65535, .en = 1111},  // destinationCountryGeonameID
-    [GSRC_LATITUDE]  = {.id = 13, .length = 8, .en = 1111},        // sourceLatitude
-    [GDST_LATITUDE]  = {.id = 14, .length = 8, .en = 1111},        // destinationLatitude
-    [GSRC_LONGITUDE] = {.id = 15, .length = 8, .en = 1111},        // sourceLatitude
-    [GDST_LONGITUDE] = {.id = 16, .length = 8, .en = 1111}         // destinationLatitude
+    [GSRC_CONT_CODE]    = {.id = 1200, .length = 65535, .en = 8057}, // sourceContinentName
+    [GDST_CONT_CODE]    = {.id = 1201, .length = 65535, .en = 8057}, // destinationContinentName
+    [GSRC_COUNTRY_CODE] = {.id = 1202, .length = 65535, .en = 8057}, // sourceCountryName
+    [GDST_COUNTRY_CODE] = {.id = 1203, .length = 65535, .en = 8057}, // destinationCountryName
+    [GSRC_CITY_NAME]    = {.id = 1204, .length = 65535, .en = 8057}, // sourceCityName
+    [GDST_CITY_NAME]    = {.id = 1205, .length = 65535, .en = 8057}, // destinationCityName
+    [GSRC_LATITUDE]     = {.id = 1206, .length = 8, .en = 8057},     // sourceLatitude
+    [GDST_LATITUDE]     = {.id = 1207, .length = 8, .en = 8057},     // destinationLatitude
+    [GSRC_LONGITUDE]    = {.id = 1208, .length = 8, .en = 8057},     // sourceLatitude
+    [GDST_LONGITUDE]    = {.id = 1209, .length = 8, .en = 8057}      // destinationLatitude
 };
-
-/**
- * \brief Fill output buffer with country name
- *
- * \param[in]  result Result of MaxMindDB lookup
- * \param[out] out    Output buffer
- */
-static inline void
-geo_country(MMDB_lookup_result_s *result, struct ipx_modifier_output *out)
-{
-    // Find country code
-    MMDB_entry_data_s data;
-    int status = MMDB_get_value(&(result->entry), &data, GEO_LOOKUP_COUNTRY);
-    if (status != MMDB_SUCCESS) {
-        return;
-    }
-
-    // Country code found, copy data to buffer and set length
-    if (data.has_data) {
-        out->length = data.data_size;
-        memcpy(out->raw, data.utf8_string, data.data_size);
-    }
-}
 
 /**
  * \brief Auxiliary function for storing double value to output buffer
@@ -134,6 +122,81 @@ geo_store_double(MMDB_entry_data_s *data, struct ipx_modifier_output *out)
         memcpy(out->raw, &(dst_num), 8);
         out->length = 8;
     }
+}
+
+/**
+ * \brief Auxiliary function for storing string value to output buffer
+ *
+ * \param[in]  data Result of MMDB_get_value function
+ * \param[out] out  Output buffer
+ */
+static inline void
+geo_store_string(MMDB_entry_data_s *data, struct ipx_modifier_output *out)
+{
+    if (data->has_data) {
+        assert(data->type == MMDB_DATA_TYPE_UTF8_STRING);
+        assert(data->data_size != 0);
+
+        out->length = data->data_size;
+        memcpy(out->raw, data->utf8_string, data->data_size);
+    }
+}
+
+/**
+ * \brief Fill output buffer with continent code
+ *
+ * \param[in]  result Result of MaxMindDB lookup
+ * \param[out] out    Output buffer
+ */
+static inline void
+geo_continent(MMDB_lookup_result_s *result, struct ipx_modifier_output *out)
+{
+    // Find country code
+    MMDB_entry_data_s data;
+    int status = MMDB_get_value(&(result->entry), &data, GEO_LOOKUP_CONT);
+    if (status != MMDB_SUCCESS) {
+        return;
+    }
+    // Store continent to output buffer
+    geo_store_string(&data, out);
+}
+
+/**
+ * \brief Fill output buffer with country code
+ *
+ * \param[in]  result Result of MaxMindDB lookup
+ * \param[out] out    Output buffer
+ */
+static inline void
+geo_country(MMDB_lookup_result_s *result, struct ipx_modifier_output *out)
+{
+    // Find country code
+    MMDB_entry_data_s data;
+    int status = MMDB_get_value(&(result->entry), &data, GEO_LOOKUP_COUNTRY);
+    if (status != MMDB_SUCCESS) {
+        return;
+    }
+    // Store country to output buffer
+    geo_store_string(&data, out);
+}
+
+/**
+ * \brief Fill output buffer with city name
+ *
+ * \param[in]  result Result of MaxMindDB lookup
+ * \param[out] out    Output buffer
+ */
+static inline void
+geo_city(MMDB_lookup_result_s *result, struct ipx_modifier_output *out)
+{
+    // Find country code
+    MMDB_entry_data_s data;
+    int status = MMDB_get_value(&(result->entry), &data, GEO_LOOKUP_CITY);
+    if (status != MMDB_SUCCESS) {
+        return;
+    }
+    // Store city to output buffer
+    geo_store_string(&data, out);
 }
 
 /**
@@ -213,8 +276,8 @@ get_database_entry(MMDB_s *db, struct sockaddr *address, MMDB_lookup_result_s *r
  * \return #IPX_OK on success, #IPX_ERR_ARG on invalid address, #IPX_ERR_DENIED ony MMDB error
  */
 static int
-get_geo_info(MMDB_s *db, struct ipx_modifier_output output[], uint8_t *address, size_t length,
-    enum geo_direction direction)
+get_geo_info(MMDB_s *db, uint8_t *fields, struct ipx_modifier_output output[], uint8_t *address,
+    size_t length,  enum geo_direction direction)
 {
     int rc = 0;
     MMDB_lookup_result_s result;
@@ -248,21 +311,42 @@ get_geo_info(MMDB_s *db, struct ipx_modifier_output output[], uint8_t *address, 
     }
 
     // Found address, fill output buffers
-    struct ipx_modifier_output *country, *latitude, *longitude;
+    struct ipx_modifier_output *cont, *country, *city, *latitude, *longitude;
 
     if (direction == GSRC) {
-        country = &(output[GSRC_COUNTRY_NAME]);
-        latitude = &(output[GSRC_LATITUDE]);
+        cont      = &(output[GSRC_CONT_CODE]);
+        country   = &(output[GSRC_COUNTRY_CODE]);
+        city      = &(output[GSRC_CITY_NAME]);
+        latitude  = &(output[GSRC_LATITUDE]);
         longitude = &(output[GSRC_LONGITUDE]);
     } else {
-        country = &(output[GDST_COUNTRY_NAME]);
-        latitude = &(output[GDST_LATITUDE]);
+        cont      = &(output[GDST_CONT_CODE]);
+        country   = &(output[GDST_COUNTRY_CODE]);
+        city      = &(output[GDST_CITY_NAME]);
+        latitude  = &(output[GDST_LATITUDE]);
         longitude = &(output[GDST_LONGITUDE]);
     }
 
-    geo_country(&result, country);
-    geo_latitude(&result, latitude);
-    geo_longitude(&result, longitude);
+    // Store information to output buffers only if requested in config file
+    if (fields[GPARAM_CONT_CODE]) {
+        geo_continent(&result, cont);
+    }
+
+    if (fields[GPARAM_COUNTRY_CODE]) {
+        geo_country(&result, country);
+    }
+
+    if (fields[GPARAM_CITY_NAME]) {
+        geo_city(&result, city);
+    }
+
+    if (fields[GPARAM_LATITUDE]) {
+        geo_latitude(&result, latitude);
+    }
+
+    if (fields[GPARAM_LONGITUDE]) {
+        geo_longitude(&result, longitude);
+    }
     return IPX_OK;
 }
 
@@ -279,18 +363,27 @@ int
 modifier_geo_callback(const struct fds_drec *rec, struct ipx_modifier_output output[], void *data)
 {
     int rc;
-    MMDB_s *db = (MMDB_s *) data;
+    struct instance_data *inst_data = (struct instance_data *) data;
+    MMDB_s *db = &(inst_data->database);
+
+    // By default, do not include all fields from database
+    for (size_t i = 0; i < sizeof(geo_fields)/sizeof(geo_fields[0]); i++) {
+        assert(i / 2 < GPARAM_CNT);
+        if (!inst_data->config->fields[i/2]) {
+            output[i].length = IPX_MODIFIER_SKIP;
+        }
+    }
 
     // Source address
     struct fds_drec_field field;
     if (fds_drec_find((struct fds_drec *)rec, 0, 8, &field) != FDS_EOC) {
         // IPv4
         assert(field.size == 4);
-        rc = get_geo_info(db, output, field.data, 4, GSRC);
+        rc = get_geo_info(db, inst_data->config->fields, output, field.data, 4, GSRC);
     } else if (fds_drec_find((struct fds_drec *)rec, 0, 27, &field) != FDS_EOC) {
         // IPv6
         assert(field.size == 16);
-        rc = get_geo_info(db, output, field.data, 16, GSRC);
+        rc = get_geo_info(db, inst_data->config->fields, output, field.data, 16, GSRC);
     }
 
     if (rc) {
@@ -301,11 +394,11 @@ modifier_geo_callback(const struct fds_drec *rec, struct ipx_modifier_output out
     if (fds_drec_find((struct fds_drec *)rec, 0, 12, &field) != FDS_EOC) {
         // IPv4
         assert(field.size == 4);
-        rc = get_geo_info(db, output, field.data, 4, GDST);
+        rc = get_geo_info(db, inst_data->config->fields, output, field.data, 4, GDST);
     } else if (fds_drec_find((struct fds_drec *)rec, 0, 28, &field) != FDS_EOC) {
         // IPv6
         assert(field.size == 16);
-        rc = get_geo_info(db, output, field.data, 16, GDST);
+        rc = get_geo_info(db, inst_data->config->fields, output, field.data, 16, GDST);
     }
 
     if (rc) {
@@ -620,6 +713,7 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
         return IPX_ERR_DENIED;
     }
 
+
     // Setup GEO database
     if (MMDB_open(data->config->db_path, MMDB_MODE_MMAP, &(data->database)) != MMDB_SUCCESS) {
         config_destroy(data->config);
@@ -633,7 +727,7 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
     const char *ident        = ipx_ctx_name_get(ctx);
     size_t fsize             = sizeof(geo_fields) / sizeof(*geo_fields);
 
-    data->modifier = ipx_modifier_create(geo_fields, fsize, &(data->database), iemgr, &verb, ident);
+    data->modifier = ipx_modifier_create(geo_fields, fsize, data, iemgr, &verb, ident);
     if (!data->modifier) {
         config_destroy(data->config);
         MMDB_close(&(data->database));
@@ -656,6 +750,11 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
     // Subscribe to session messages
     const ipx_msg_mask_t new_mask = IPX_MSG_SESSION | IPX_MSG_IPFIX;
     if (ipx_ctx_subscribe(ctx, &new_mask, NULL) != IPX_OK) {
+        config_destroy(data->config);
+        MMDB_close(&(data->database));
+        ipx_modifier_destroy(data->modifier);
+        ipx_msg_builder_destroy(data->builder);
+        free(data);
         return IPX_ERR_DENIED;
     }
 
