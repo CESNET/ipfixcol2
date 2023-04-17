@@ -19,8 +19,25 @@ typedef struct template_mapper ipx_template_mapper_t;
  *
  * \return Pointer to allocated mapper or NULL on memory allocation error
  */
-IPX_API struct template_mapper *
+IPX_API ipx_template_mapper_t *
 ipx_mapper_create();
+
+/**
+ * \brief Clear template mapper
+ *
+ * \param[in] map Pointer to template mapper
+ */
+IPX_API void
+ipx_mapper_clear(ipx_template_mapper_t *map);
+
+/**
+ * \brief Get number of templates in template mapper
+ *
+ * \param[in] map Pointer to template mapper
+ * \return Number of templates in template mapper
+ */
+IPX_API size_t
+ipx_mapper_get_tmplt_count(ipx_template_mapper_t *map);
 
 /**
  * \brief Destroy template mapper
@@ -28,7 +45,7 @@ ipx_mapper_create();
  * \param[in] map Pointer to template mapper
  */
 IPX_API void
-ipx_mapper_destroy(struct template_mapper *map);
+ipx_mapper_destroy(ipx_template_mapper_t *map);
 
 /**
  * \brief Add new mapping to template mapper

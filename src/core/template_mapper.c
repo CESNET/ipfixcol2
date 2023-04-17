@@ -51,6 +51,8 @@ struct mapper_l1_table {
 
 /** \brief Template mapper                                          */
 struct template_mapper {
+    /** Number of templates in mapper                               */
+    size_t template_cnt;
     /** Mapping fields                                              */
     struct mapper_l1_table *l1_table[IPX_MAPPER_L1_RANGE];
 };
@@ -63,7 +65,6 @@ struct template_mapper {
 void
 mapper_field_destroy(struct mapper_field *field)
 {
-    fds_template_destroy((struct fds_template *)field->modified_tmplt);
     free(field);
 }
 
@@ -76,6 +77,34 @@ ipx_mapper_create()
     }
 
     return map;
+}
+
+void
+ipx_mapper_clear(struct template_mapper *map)
+{
+    for (size_t i = 0; i < IPX_MAPPER_L1_RANGE; i++) {
+        if (map->l1_table[i] == NULL) {
+            continue;
+        }
+
+        for (size_t j = 0; j < IPX_MAPPER_L2_RANGE; j++) {
+            struct mapper_field *field = map->l1_table[i]->l2_table[j].fields;
+
+            while (field != NULL) {
+                struct mapper_field *next = field->next;
+                mapper_field_destroy(field);
+                field = next;
+            }
+            map->l1_table[i]->l2_table[j].fields = NULL;
+        }
+    }
+    map->template_cnt = 0;
+}
+
+size_t
+ipx_mapper_get_tmplt_count(ipx_template_mapper_t *map)
+{
+    return map->template_cnt;
 }
 
 void
@@ -190,13 +219,14 @@ ipx_mapper_add(ipx_template_mapper_t *map, const struct fds_template *modified_t
     }
 
     // Store data from identifier to field
-    new_field->modified_tmplt = fds_template_copy(modified_tmplt);
+    new_field->modified_tmplt = modified_tmplt;
 
     // Store field in mapper
     if (mapper_store_field(map, original_id, new_field) != IPX_OK) {
         mapper_field_destroy(new_field);
         return IPX_ERR_NOMEM;
     }
+    map->template_cnt++;
 
     return IPX_OK;
 }
