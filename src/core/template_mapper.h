@@ -11,8 +11,19 @@
 #include <ipfixcol2.h>
 #include <inttypes.h>
 
-/** External definitions of items in mapper         */
+#define APPENDED_FIELDS_DEF_CNT 32
+
+/** External definitions of items in mapper                 */
 typedef struct template_mapper ipx_template_mapper_t;
+
+struct modified_tmplt_id {
+    /** Original template info                              */
+    uint8_t *data;     /**< Original template data          */
+    uint16_t length;   /**< Original template size          */
+
+    /** Array of new fields to append to original template  */
+    int8_t appended_fields[APPENDED_FIELDS_DEF_CNT];
+};
 
 /**
  * \brief Create new instance of template mapper
@@ -56,7 +67,7 @@ ipx_mapper_destroy(ipx_template_mapper_t *map);
  * \return #IPX_OK on success, #IPX_ERR_NOMEM on memory allocation error
  */
 IPX_API int
-ipx_mapper_add(ipx_template_mapper_t *map, const struct fds_template *modified_tmplt, uint16_t original_id);
+ipx_mapper_add(ipx_template_mapper_t *map, const struct fds_template *modified_tmplt, struct modified_tmplt_id *item, uint16_t original_id);
 
 /**
  * \brief Look for modified template in template mapper
@@ -67,6 +78,6 @@ ipx_mapper_add(ipx_template_mapper_t *map, const struct fds_template *modified_t
  * \return Pointer to mapping or NULL if not found
  */
 IPX_API const struct fds_template *
-ipx_mapper_lookup(ipx_template_mapper_t *map, const struct fds_template *tmplt, uint16_t original_id);
+ipx_mapper_lookup(ipx_template_mapper_t *map, const struct modified_tmplt_id *item, uint16_t original_id);
 
 #endif

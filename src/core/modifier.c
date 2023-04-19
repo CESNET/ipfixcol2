@@ -957,9 +957,9 @@ mgr_store_template(ipx_modifier_t *mod, struct fds_template *tmplt, fds_tgarbage
  * \brief Add template to mapper, print error line if failed
  */
 static inline void
-mapper_add_template(ipx_modifier_t *mod, const struct fds_template *tmplt, uint16_t original_id)
+mapper_add_template(ipx_modifier_t *mod, const struct fds_template *tmplt, struct modified_tmplt_id *item, uint16_t original_id)
 {
-    if (ipx_mapper_add(mod->curr_ctx->mapper, tmplt, original_id) != IPX_OK) {
+    if (ipx_mapper_add(mod->curr_ctx->mapper, tmplt, item, original_id) != IPX_OK) {
         // Could not add mapping
         MODIFIER_WARNING(mod, "Could not add mapping for template ID %u (ODID: %d)",
             original_id, mod->curr_ctx->odid);
@@ -1006,8 +1006,8 @@ aux_template_store_garbage_destroy(struct aux_template_store_garbage *gb)
  * \param[out] garbage      Potential garbage from modifier context
  * \return Pointer to stored template or NULL if error occurred
  */
-static const struct fds_template *
-template_store(ipx_modifier_t *mod, struct fds_template *tmplt, uint16_t original_id, ipx_msg_garbage_t **garbage)
+static struct fds_template *
+template_store(ipx_modifier_t *mod, struct fds_template *tmplt, uint16_t original_id, ipx_msg_garbage_t **garbage, struct modified_tmplt_id *item)
 {
     int rc;
     fds_tgarbage_t *mapper_garbage = NULL;
@@ -1029,7 +1029,9 @@ template_store(ipx_modifier_t *mod, struct fds_template *tmplt, uint16_t origina
 
     if (mgr_tmplt) {
         // Template exists in manager, add mapping
-        mapper_add_template(mod, mgr_tmplt, original_id);
+        mapper_add_template(mod, mgr_tmplt, item, original_id);
+        // Destroy modified template
+        fds_template_destroy(tmplt);
         return mgr_tmplt;
     }
 
@@ -1041,10 +1043,12 @@ template_store(ipx_modifier_t *mod, struct fds_template *tmplt, uint16_t origina
     }
 
     // Add new mapping
-    mapper_add_template(mod, tmplt, original_id);
+    mapper_add_template(mod, tmplt, item, original_id);
 
     // If any garbage was generated, create garbage message from it
     if (mapper_garbage || context_garbage) {
+        // Clear mapper
+        ipx_mapper_clear(mod->curr_ctx->mapper);
         struct aux_template_store_garbage *gb = malloc(sizeof(*gb));
         if (gb == NULL) {
             MODIFIER_ERROR(mod, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
@@ -1119,6 +1123,26 @@ fields_update(struct fds_drec *rec, ipx_modifier_t *mod, struct ipx_modifier_out
     return IPX_OK;
 }
 
+static inline void
+output_buffer2id(const struct ipx_modifier_output *output, size_t fields_cnt, struct modified_tmplt_id *id)
+{
+    uint8_t appended_fields[fields_cnt];
+
+    /** Convert fields to array, which will be stored in modified_tmplt_id*/
+    for (uint16_t i = 0; i < fields_cnt; ++i) {
+        if (output[i].length >= 0) {
+            appended_fields[i] = 1;
+        } else if (output[i].length == IPX_MODIFIER_SKIP) {
+            appended_fields[i] = 0;
+        } else {
+            appended_fields[i] = -1;
+        }
+    }
+
+    memcpy(id->appended_fields, appended_fields, fields_cnt);
+}
+
+
 struct fds_drec *
 ipx_modifier_modify(ipx_modifier_t *mod, const struct fds_drec *rec, ipx_msg_garbage_t **garbage)
 {
@@ -1132,6 +1156,7 @@ ipx_modifier_modify(ipx_modifier_t *mod, const struct fds_drec *rec, ipx_msg_gar
         return NULL;
     }
 
+    struct fds_template *new_tmplt = NULL;
     *garbage = NULL;
 
     // Create filter array
@@ -1155,28 +1180,34 @@ ipx_modifier_modify(ipx_modifier_t *mod, const struct fds_drec *rec, ipx_msg_gar
         }
     }
 
-    // Update template based on modified configuration
-    struct fds_template *new_tmplt = template_update(rec->tmplt, mod, buffers, filter);
-    if (!new_tmplt) {
-        MODIFIER_ERROR(mod, "Failed to update template (%s:%d)", __FILE__, __LINE__);
-        return NULL;
-    }
+    // Create array which will be used to identify modified template
+    struct modified_tmplt_id mod_identifier = {0};
+    output_buffer2id(buffers, mod->fields_cnt, &mod_identifier);
+    mod_identifier.data = rec->tmplt->raw.data;
+    mod_identifier.length = rec->tmplt->raw.length;
 
     // Try to search for modified template in modifier mapper
-    const struct fds_template *map_tmplt = ipx_mapper_lookup(mod->curr_ctx->mapper, new_tmplt, rec->tmplt->id);
+    const struct fds_template *map_tmplt = ipx_mapper_lookup(mod->curr_ctx->mapper, &mod_identifier, rec->tmplt->id);
     if (map_tmplt) {
         // Mapping found, free modified template and use template found in mapper
-        fds_template_destroy(new_tmplt);
         new_tmplt = (struct fds_template *) map_tmplt;
     } else {
         // Mapping not found, need to store modified template in manager
-        const struct fds_template *stored_tmplt = template_store(mod, new_tmplt, rec->tmplt->id, garbage);
+        new_tmplt = template_update(rec->tmplt, mod, buffers, filter);
+        if (!new_tmplt) {
+            MODIFIER_ERROR(mod, "Failed to update template (%s:%d)", __FILE__, __LINE__);
+            return NULL;
+        }
+
+        struct fds_template *stored_tmplt = template_store(mod, new_tmplt, rec->tmplt->id, garbage, &mod_identifier);
 
         if (!stored_tmplt) {
             // Error message has been generated
             fds_template_destroy(new_tmplt);
             return NULL;
         }
+
+        new_tmplt = stored_tmplt;
     }
 
     // Fetch current snapshot
@@ -1184,7 +1215,6 @@ ipx_modifier_modify(ipx_modifier_t *mod, const struct fds_drec *rec, ipx_msg_gar
     get_current_snapshot(mod, &snap);
     if (!snap) {
         // Error message has been generated
-        // DO NOT free modified template as it is stored in modifier
         return NULL;
     }
 
@@ -1201,7 +1231,6 @@ ipx_modifier_modify(ipx_modifier_t *mod, const struct fds_drec *rec, ipx_msg_gar
     if (fields_update(new_rec, mod, buffers, filter) != IPX_OK) {
         MODIFIER_ERROR(mod, "Failed to update fields in record (%s:%d)", __FILE__, __LINE__);
         free(new_rec);
-        // DO NOT free modified template, as it is stored in modifier
         return NULL;
     }
 

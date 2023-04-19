@@ -31,6 +31,8 @@
 
 /** \brief Template mapper field                                    */
 struct mapper_field {
+    /** Data used by mapper callbacks                               */
+    struct modified_tmplt_id ident;
     /** Pointer to modified template                                */
     const struct fds_template *modified_tmplt;
     /** Next item in linked list                                    */
@@ -62,9 +64,10 @@ struct template_mapper {
  *
  * \param[in] field Pointer to mapper field
  */
-void
+static inline void
 mapper_field_destroy(struct mapper_field *field)
 {
+    free(field->ident.data);
     free(field);
 }
 
@@ -79,53 +82,57 @@ ipx_mapper_create()
     return map;
 }
 
-void
-ipx_mapper_clear(struct template_mapper *map)
-{
-    for (size_t i = 0; i < IPX_MAPPER_L1_RANGE; i++) {
-        if (map->l1_table[i] == NULL) {
-            continue;
-        }
-
-        for (size_t j = 0; j < IPX_MAPPER_L2_RANGE; j++) {
-            struct mapper_field *field = map->l1_table[i]->l2_table[j].fields;
-
-            while (field != NULL) {
-                struct mapper_field *next = field->next;
-                mapper_field_destroy(field);
-                field = next;
-            }
-            map->l1_table[i]->l2_table[j].fields = NULL;
-        }
-    }
-    map->template_cnt = 0;
-}
-
 size_t
 ipx_mapper_get_tmplt_count(ipx_template_mapper_t *map)
 {
     return map->template_cnt;
 }
 
-void
-ipx_mapper_destroy(struct template_mapper *map)
+typedef void (*mapper_l1_cb)(void *ptr);
+
+static void
+mapper_item_cleanup(struct template_mapper *map, mapper_l1_cb l1_cb)
 {
+    // Go through all L1 tables
     for (size_t i = 0; i < IPX_MAPPER_L1_RANGE; i++) {
         if (map->l1_table[i] == NULL) {
             continue;
         }
 
+        // Go through all L2 tables
         for (size_t j = 0; j < IPX_MAPPER_L2_RANGE; j++) {
-            struct mapper_field *field = map->l1_table[i]->l2_table[j].fields;
+            struct mapper_field *orig_field = map->l1_table[i]->l2_table[j].fields;
+            struct mapper_field *field = orig_field;
 
+            // Go through all fields in current L2 table
             while (field != NULL) {
                 struct mapper_field *next = field->next;
                 mapper_field_destroy(field);
                 field = next;
             }
+
+            orig_field = NULL;
         }
-        free(map->l1_table[i]);
+
+        // Apply callback to L1 table
+        if (l1_cb != NULL) {
+            l1_cb(map->l1_table[i]);
+        }
+
     }
+}
+
+void
+ipx_mapper_clear(struct template_mapper *map)
+{
+    mapper_item_cleanup(map, NULL);
+    map->template_cnt = 0;
+}
+
+void
+ipx_mapper_destroy(struct template_mapper *map)
+{
+    mapper_item_cleanup(map, free);
     free(map);
 }
 
@@ -210,7 +217,7 @@ mapper_store_field(struct template_mapper *map, uint16_t original_id, struct map
 }
 
 int
-ipx_mapper_add(ipx_template_mapper_t *map, const struct fds_template *modified_tmplt, uint16_t original_id)
+ipx_mapper_add(ipx_template_mapper_t *map, const struct fds_template *modified_tmplt, struct modified_tmplt_id *item, uint16_t original_id)
 {
     // Create new field
     struct mapper_field *new_field = malloc(sizeof(*new_field));
@@ -218,7 +225,18 @@ ipx_mapper_add(ipx_template_mapper_t *map, const struct fds_template *modified_t
         return IPX_ERR_NOMEM;
     }
 
-    // Store data from identifier to field
+    new_field->ident.data = malloc(item->length);
+    if (new_field->ident.data == NULL) {
+        free(new_field);
+        return IPX_ERR_NOMEM;
+    }
+
+
+    new_field->ident.length = item->length;
+    memcpy(new_field->ident.data, item->data, item->length);
+    memcpy(new_field->ident.appended_fields, item->appended_fields, APPENDED_FIELDS_DEF_CNT * sizeof(uint8_t));
+
+    // Store modifed template in new field
     new_field->modified_tmplt = modified_tmplt;
 
     // Store field in mapper
@@ -231,26 +249,30 @@ ipx_mapper_add(ipx_template_mapper_t *map, const struct fds_template *modified_t
     return IPX_OK;
 }
 
-/**
- * \brief Check if identifier describes given field
- *
- * \param[in] field Field to check
- * \param[in] id    Identifier to check
- * \return IPX_OK if identifier describes given field, IPX_ERR_NOTFOUND otherwise
- */
+
 static inline int
-templates_cmp(const struct fds_template *t1, const struct fds_template *t2)
+item_cmp(const struct modified_tmplt_id *item1, const struct modified_tmplt_id *item2)
 {
-    if (t1->raw.length != t2->raw.length) {
-        return (t1->raw.length > t2->raw.length) ? 1 : -1;
+    // Compare original templates
+    if (item1->length != item2->length) {
+        return -1;
     }
 
     // Compare raw templates except template ID
-    return memcmp(t1->raw.data+2, t2->raw.data+2, t1->raw.length-2);
+    if (memcmp(item1->data+2, item2->data+2, item1->length-2)) {
+        return -1;
+    }
+
+    // Compare fields
+    if (memcmp(item1->appended_fields, item2->appended_fields, APPENDED_FIELDS_DEF_CNT)) {
+        return -1;
+    }
+
+    return IPX_OK;
 }
 
 const struct fds_template *
-ipx_mapper_lookup(ipx_template_mapper_t *map, const struct fds_template *tmplt, uint16_t original_id)
+ipx_mapper_lookup(ipx_template_mapper_t *map, const struct modified_tmplt_id *item, uint16_t original_id)
 {
     // Get index of L1 table
     size_t l1_idx = mapper_get_l1_idx(original_id);
@@ -266,9 +288,10 @@ ipx_mapper_lookup(ipx_template_mapper_t *map, const struct fds_template *tmplt, 
 
     struct mapper_field *field = l2_table->fields;
     while (field != NULL) {
-        if (templates_cmp(field->modified_tmplt, tmplt) == IPX_OK) {
+        if (item_cmp(&field->ident, item) == IPX_OK) {
             return field->modified_tmplt;
         }
+
         field = field->next;
     }
     return NULL;
