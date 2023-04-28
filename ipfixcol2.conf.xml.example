@@ -1,0 +1,35 @@
+<!-- 
+  Receive flow data over UDP, convert them into JSON and provide them as
+  a server on local port
+-->
+<ipfixcol2>
+  <!-- Input plugins -->
+  <inputPlugins>
+    <input>
+      <name>UDP collector</name>
+      <plugin>udp</plugin>
+      <params>
+        <!-- List on port 4739 -->
+        <localPort>4739</localPort>
+        <!-- Bind to all local adresses -->
+        <localIPAddress></localIPAddress>
+      </params>
+    </input>
+  </inputPlugins>
+
+  <!-- Output plugins -->
+  <outputPlugins>
+    <output>
+      <name>FDS output</name>
+      <plugin>fds</plugin>
+      <params>
+        <storagePath>/var/spool/ipfixcol/</storagePath>
+        <compression>zstd</compression>
+        <dumpInterval>
+          <timeWindow>300</timeWindow>
+          <align>yes</align>
+        </dumpInterval>
+      </params>
+    </output>
+  </outputPlugins>
+</ipfixcol2>
