@@ -39,6 +39,7 @@
 
 #include <memory>
 #include <string>
+#include <stdexcept>
 
 #include <glob.h>
 
