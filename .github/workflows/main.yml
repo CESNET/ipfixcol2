@@ -16,12 +16,11 @@ jobs:
       fail-fast: false
       matrix:
         image:
-          - 'ubuntu:18.04'
           - 'ubuntu:20.04'
-          - 'debian:stretch'
+          - 'ubuntu:22.04'
           - 'debian:buster'
           - 'debian:bullseye'
-          - 'centos:7'
+          - 'debian:bookworm'
           - 'quay.io/centos/centos:stream8'
           - 'oraclelinux:8'
           - 'oraclelinux:9'
@@ -101,7 +100,6 @@ jobs:
       env:
         TESTS: ${{ startsWith(matrix.image, 'centos:7') != true }}
     - name: Run tests
-      if: startsWith(matrix.image, 'centos:7') != true
       run: cd build && make test
     - name: Try to run IPFIXcol2
       run: |
