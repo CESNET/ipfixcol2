@@ -21,6 +21,8 @@ namespace aggregator {
  * @brief A view object for accessing fields and their values in an aggregation record
  */
 class View {
+    friend class ViewFactory;
+
 public:
     /**
      * @brief The ordering/sorting direction
