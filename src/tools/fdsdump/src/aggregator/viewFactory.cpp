@@ -174,6 +174,18 @@ ViewFactory::parse_prefixlen_field(const std::string &def)
     return field;
 }
 
+std::string
+ViewFactory::parse_inout_prefix(std::string &def)
+{
+    std::string dir = "";
+    if (check_strip_prefix(def, "in ") || check_strip_prefix(def, "in")) {
+        dir = "in";
+    } else if (check_strip_prefix(def, "out ") || check_strip_prefix(def, "out")) {
+        dir = "out";
+    }
+    return dir;
+}
+
 std::unique_ptr<Field>
 ViewFactory::parse_dir_field(const std::string &def)
 {
@@ -236,6 +248,12 @@ ViewFactory::create_value_field(const std::string& def)
         field.reset(new SumAggregatedField(std::move(field)));
     } else {
         throw std::invalid_argument("invalid aggregation function " + func);
+    }
+
+    if (prefix == "in") {
+        field.reset(new InOutValueField(std::move(field), ViewDirection::In));
+    } else if (prefix == "out") {
+        field.reset(new InOutValueField(std::move(field), ViewDirection::Out));
     }
 
     field->set_name(def);
@@ -301,7 +319,22 @@ ViewFactory::create_view(
         view.m_value_size += field->size();
         view.m_value_count++;
 
+        if (field->is_of_type<InOutValueField>()) {
+            view.m_has_inout_fields = true;
+        }
+
         view.m_fields.push_back(std::move(field));
+    }
+
+    if (view.m_has_inout_fields) {
+        for (size_t i = 0; i < view.m_key_count; i++) {
+            auto &field = view.m_fields[i];
+            if (auto new_field = InOutKeyField::create_from(*field.get())) {
+                new_field->set_name(field->name());
+                new_field->set_offset(field->offset());
+                field = std::move(new_field);
+            }
+        }
     }
 
     if (!order_def.empty()) {
