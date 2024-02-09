@@ -106,12 +106,11 @@ IPAddr
 FieldView::as_ipaddr() const
 {
     if (m_field.size == 4U) {
-        const uint32_t *value = reinterpret_cast<uint32_t *>(m_field.data);
-        return IPAddr(*value);
+        return IPAddr::ip4(m_field.data);
     }
 
     if (m_field.size == 16U) {
-        return IPAddr(m_field.data);
+        return IPAddr::ip6(m_field.data);
     }
 
     throw std::invalid_argument("Conversion error (ipaddr)");

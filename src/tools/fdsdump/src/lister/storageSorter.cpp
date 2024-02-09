@@ -346,7 +346,7 @@ get_ip_max(Field &field, const struct Flow &flow, IPAddr &result)
 {
     bool is_reverse {flow.dir == DIRECTION_REV};
     bool found {false};
-    IPAddr max {};
+    IPAddr max = IPAddr::zero();
 
     auto selector = [&](struct fds_drec_field &data) -> void {
         IPAddr value = FieldView(data).as_ipaddr();
@@ -377,7 +377,7 @@ get_ip_min(Field &field, const Flow &flow, IPAddr &result)
 {
     bool is_reverse {flow.dir == DIRECTION_REV};
     bool found {false};
-    IPAddr min {};
+    IPAddr min = IPAddr::zero();
 
     auto selector = [&](struct fds_drec_field &data) -> void {
         IPAddr value = FieldView(data).as_ipaddr();
@@ -409,8 +409,8 @@ StorageSorter::cmp_ip_desc(
     const Flow &lhs,
     const Flow &rhs)
 {
-    IPAddr lhs_max;
-    IPAddr rhs_max;
+    IPAddr lhs_max = IPAddr::zero();
+    IPAddr rhs_max = IPAddr::zero();
     bool lhs_is_defined = get_ip_max(field, lhs, lhs_max);
     bool rhs_is_defined = get_ip_max(field, rhs, rhs_max);
 
@@ -431,8 +431,8 @@ StorageSorter::cmp_ip_asc(
     const Flow &lhs,
     const Flow &rhs)
 {
-    IPAddr lhs_min;
-    IPAddr rhs_min;
+    IPAddr lhs_min = IPAddr::zero();
+    IPAddr rhs_min = IPAddr::zero();
     bool lhs_is_defined = get_ip_min(field, lhs, lhs_min);
     bool rhs_is_defined = get_ip_min(field, rhs, rhs_min);
 
