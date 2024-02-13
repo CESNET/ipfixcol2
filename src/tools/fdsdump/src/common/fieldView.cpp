@@ -4,6 +4,8 @@
 
 #include <common/fieldView.hpp>
 
+#include <libfds/converters.h>
+
 namespace fdsdump {
 
 uint64_t
@@ -113,6 +115,37 @@ FieldView::as_ipaddr() const
     }
 
     throw std::invalid_argument("Conversion error (ipaddr)");
+}
+
+std::string
+FieldView::as_string() const
+{
+    std::string value;
+
+    if (m_field.size > 0) {
+        // &value[0] doesn't work for zero-sized strings, so we have to handle this specially
+        value.resize(m_field.size);
+        int ret = fds_get_string(m_field.data, m_field.size, &value[0]);
+        if (ret != FDS_OK) {
+            throw std::invalid_argument("Conversion error (string)");
+        }
+    }
+
+    return value;
+}
+
+std::vector<uint8_t>
+FieldView::as_bytes() const
+{
+    std::vector<uint8_t> value;
+
+    value.resize(m_field.size);
+    int ret = fds_get_octet_array(m_field.data, m_field.size, value.data());
+    if (ret != FDS_OK) {
+        throw std::invalid_argument("Conversion error (bytes)");
+    }
+
+    return value;
 }
 
 } // fdsdump
