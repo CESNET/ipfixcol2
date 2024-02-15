@@ -342,6 +342,8 @@ public:
     /**
      * @brief Get the field definitions the view consists of
      */
+    size_t record_size(const uint8_t *ptr) const { return key_size(ptr) + value_size(); }
+
     const std::vector<std::unique_ptr<Field>> &fields() const { return m_fields; }
 
     /**
