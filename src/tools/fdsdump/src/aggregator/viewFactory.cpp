@@ -296,6 +296,18 @@ ViewFactory::create_view(
     return view;
 }
 
+std::unique_ptr<View>
+ViewFactory::create_unique_view(
+    const std::string &key_def,
+    const std::string &value_def,
+    const std::string &order_def,
+    unsigned int output_limit)
+{
+    std::unique_ptr<View> view(new View);
+    create_view(*view.get(), key_def, value_def, order_def, output_limit);
+    return view;
+}
+
 void
 ViewFactory::create_view(
     View &view,
