@@ -2,7 +2,11 @@
  * @file
  * @author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
  * @brief View print functions
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
+
 #pragma once
 
 #include <aggregator/field.hpp>

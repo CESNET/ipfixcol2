@@ -3,6 +3,9 @@
  * @author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
  * @author Lukas Hutak <hutaklukas@fit.vut.cz>
  * @brief General utility functions
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #pragma once
