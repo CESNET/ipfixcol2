@@ -47,6 +47,14 @@ private:
     static int cmp_datetime_asc(Field &field, const Flow &lhs, const Flow &rhs);
     static int cmp_ip_desc(Field &field, const Flow &lhs, const Flow &rhs);
     static int cmp_ip_asc(Field &field, const Flow &lhs, const Flow &rhs);
+    static int cmp_int_desc(Field &field, const Flow &lhs, const Flow &rhs);
+    static int cmp_int_asc(Field &field, const Flow &lhs, const Flow &rhs);
+    static int cmp_bool_desc(Field &field, const Flow &lhs, const Flow &rhs);
+    static int cmp_bool_asc(Field &field, const Flow &lhs, const Flow &rhs);
+    static int cmp_string_desc(Field &field, const Flow &lhs, const Flow &rhs);
+    static int cmp_string_asc(Field &field, const Flow &lhs, const Flow &rhs);
+    static int cmp_bytes_desc(Field &field, const Flow &lhs, const Flow &rhs);
+    static int cmp_bytes_asc(Field &field, const Flow &lhs, const Flow &rhs);
 };
 
 } // lister
