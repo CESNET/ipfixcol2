@@ -12,7 +12,7 @@
 namespace fdsdump {
 namespace aggregator {
 
-JSONPrinter::JSONPrinter(std::shared_ptr<View> view)
+JSONPrinter::JSONPrinter(const View &view)
     : m_view(view)
 {
     m_buffer.reserve(1024);
@@ -36,7 +36,7 @@ JSONPrinter::print_record(uint8_t *record)
 
     size_t field_cnt = 0;
 
-    for (const auto &pair : m_view->iter_fields(record)) {
+    for (const auto &pair : m_view.iter_fields(record)) {
         if (field_cnt++ > 0) {
             m_buffer.push_back(',');
         }

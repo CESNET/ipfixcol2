@@ -35,7 +35,7 @@ public:
 };
 
 std::unique_ptr<Printer>
-printer_factory(std::shared_ptr<View> view, const std::string &manual);
+printer_factory(const View &view, const std::string &manual);
 
 } // aggregator
 } // fdsdump
