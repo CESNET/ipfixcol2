@@ -11,7 +11,7 @@ namespace lister {
 
 class CsvPrinter : public Printer {
 public:
-    CsvPrinter(const shared_iemgr &iemgr, const std::string &args);
+    CsvPrinter(const std::string &args);
 
     virtual
     ~CsvPrinter();
@@ -34,7 +34,7 @@ private:
             : m_field(field), m_name(name) {}
     };
 
-    void parse_fields(const std::string &str, const shared_iemgr &iemgr);
+    void parse_fields(const std::string &str);
     void parse_opts(const std::string &str);
 
     void print_record(struct fds_drec *rec, bool reverse);

@@ -7,16 +7,15 @@
 
 #include <common/common.hpp>
 
+#include <common/ieMgr.hpp>
 #include <lister/jsonRawPrinter.hpp>
 
 namespace fdsdump {
 namespace lister {
 
-JsonRawPrinter::JsonRawPrinter(const shared_iemgr &iemgr, const std::string &args)
+JsonRawPrinter::JsonRawPrinter(const std::string &args)
 {
     const std::vector<std::string> args_vec = string_split(args, ",");
-
-    m_iemgr = iemgr;
 
     if (args.empty()) {
         return;
@@ -50,13 +49,14 @@ JsonRawPrinter::~JsonRawPrinter()
 void
 JsonRawPrinter::print_record(struct fds_drec *rec, uint32_t flags)
 {
+    const fds_iemgr_t *iemgr = IEMgr::instance().ptr();
     const uint32_t base_flags =
         FDS_CD2J_ALLOW_REALLOC | FDS_CD2J_OCTETS_NOINT | FDS_CD2J_TS_FORMAT_MSEC;
     int ret;
 
     flags |= base_flags;
 
-    ret = fds_drec2json(rec, flags, m_iemgr.get(), &m_buffer, &m_buffer_size);
+    ret = fds_drec2json(rec, flags, iemgr, &m_buffer, &m_buffer_size);
     if (ret < 0) {
         throw std::runtime_error("JSON conversion failed: " + std::to_string(ret));
     }

@@ -18,26 +18,26 @@ namespace lister {
 
 struct PrinterFactory {
     const char *name;
-    std::function<Printer *(const shared_iemgr &iemgr, const std::string &)> create_fn;
+    std::function<Printer *(const std::string &)> create_fn;
 };
 
 static const std::vector<struct PrinterFactory> g_printers {
-    {"csv", [](const shared_iemgr &iemgr, const std::string &args) {
-        return new CsvPrinter(iemgr, args); }
+    {"csv", [](const std::string &args) {
+        return new CsvPrinter(args); }
     },
-    {"json", [](const shared_iemgr &iemgr, const std::string &args) {
-        return new JsonPrinter(iemgr, args); }
+    {"json", [](const std::string &args) {
+        return new JsonPrinter(args); }
     },
-    {"json-raw",  [](const shared_iemgr &iemgr, const std::string &args) {
-        return new JsonRawPrinter(iemgr, args); }
+    {"json-raw",  [](const std::string &args) {
+        return new JsonRawPrinter(args); }
     },
-    {"table", [](const shared_iemgr &iemgr, const std::string &args){
-        return new TablePrinter(iemgr, args); }
+    {"table", [](const std::string &args){
+        return new TablePrinter(args); }
     },
 };
 
 std::unique_ptr<Printer>
-printer_factory(const shared_iemgr &iemgr, const std::string &manual)
+printer_factory(const std::string &manual)
 {
     std::string type;
     std::string args;
@@ -57,7 +57,7 @@ printer_factory(const shared_iemgr &iemgr, const std::string &manual)
             continue;
         }
 
-        return std::unique_ptr<Printer>(it.create_fn(iemgr, args));
+        return std::unique_ptr<Printer>(it.create_fn(args));
     }
 
     throw std::invalid_argument("Unsupported output type '" + type + "'");

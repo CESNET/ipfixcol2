@@ -16,7 +16,7 @@ class StorageSorter {
 public:
 
     // Expected format "<field>,<field>:asc,<field>:desc", default is descending
-    StorageSorter(const std::string desc, const shared_iemgr &iemgr);
+    StorageSorter(const std::string desc);
     ~StorageSorter() = default;
 
     bool operator()(const StorageRecord &lhs, const StorageRecord &rhs);
@@ -37,7 +37,7 @@ private:
 
     std::vector<Item> m_items;
 
-    Item determine_item(const std::string &name, const shared_iemgr &iemgr) const;
+    Item determine_item(const std::string &name) const;
     Sorter determine_sorter(const Field &field, Order order) const;
     Order determine_order(const std::string &name) const;
 

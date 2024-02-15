@@ -7,7 +7,7 @@ namespace fdsdump {
 namespace statistics {
 
 void
-mode_statistics(const shared_iemgr &iemgr, const Options &opts);
+mode_statistics(const Options &opts);
 
 } // statistics
 } // fdsdump
