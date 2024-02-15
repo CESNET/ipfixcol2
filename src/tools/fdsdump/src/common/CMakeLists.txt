@@ -1,5 +1,6 @@
 # Create a common "object" library
 set(COMMON_SRC
+    argParser.cpp
     common.cpp
     field.cpp
     fieldView.cpp
