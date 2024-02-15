@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <stdexcept>
 
-#include "storageRecord.hpp"
+#include <lister/storageRecord.hpp>
 
 namespace fdsdump {
 namespace lister {

@@ -6,7 +6,7 @@
 
 #include <libfds.h>
 
-#include "common.hpp"
+#include <common/common.hpp>
 
 namespace fdsdump {
 

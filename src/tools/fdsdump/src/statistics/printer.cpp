@@ -4,9 +4,9 @@
 #include <stdexcept>
 #include <vector>
 
-#include "printer.hpp"
-#include "jsonPrinter.hpp"
-#include "tablePrinter.hpp"
+#include <statistics/printer.hpp>
+#include <statistics/jsonPrinter.hpp>
+#include <statistics/tablePrinter.hpp>
 
 namespace fdsdump {
 namespace statistics {

@@ -1,10 +1,10 @@
 
 #include <iostream>
 
-#include "common/flowProvider.hpp"
+#include <common/flowProvider.hpp>
 
-#include "mode.hpp"
-#include "printer.hpp"
+#include <statistics/mode.hpp>
+#include <statistics/printer.hpp>
 
 namespace fdsdump {
 namespace statistics {

@@ -12,7 +12,7 @@
 #include <aggregator/mode.hpp>
 #include <statistics/mode.hpp>
 
-#include "options.hpp"
+#include <options.hpp>
 
 using namespace fdsdump;
 

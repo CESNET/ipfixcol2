@@ -5,7 +5,7 @@
 
 #include <common/field.hpp>
 
-#include "printer.hpp"
+#include <lister/printer.hpp>
 
 namespace fdsdump {
 namespace lister {
