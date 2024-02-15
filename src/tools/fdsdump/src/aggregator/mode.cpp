@@ -15,6 +15,7 @@
 #include <aggregator/viewFactory.hpp>
 
 #include <memory>
+#include <iomanip>
 
 namespace fdsdump {
 namespace aggregator {
