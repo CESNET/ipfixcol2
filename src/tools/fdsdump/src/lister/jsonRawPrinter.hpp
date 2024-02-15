@@ -10,7 +10,7 @@ namespace lister {
 
 class JsonRawPrinter : public Printer {
 public:
-    JsonRawPrinter(const shared_iemgr &iemgr, const std::string &args);
+    JsonRawPrinter(const std::string &args);
 
     virtual
     ~JsonRawPrinter();
@@ -27,7 +27,6 @@ public:
 private:
     void print_record(struct fds_drec *rec, uint32_t flags);
 
-    shared_iemgr m_iemgr {};
     char *m_buffer = nullptr;
     size_t m_buffer_size = 0;
 

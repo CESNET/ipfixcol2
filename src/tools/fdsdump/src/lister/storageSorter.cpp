@@ -12,13 +12,13 @@
 namespace fdsdump {
 namespace lister {
 
-StorageSorter::StorageSorter(const std::string desc, const shared_iemgr &iemgr)
+StorageSorter::StorageSorter(const std::string desc)
 {
     std::vector<std::string> fields = string_split(desc, ",");
 
     for (const auto &field : fields) {
         try {
-            Item item = determine_item(field, iemgr);
+            Item item = determine_item(field);
             m_items.push_back(item);
         } catch (const std::exception &ex) {
             throw std::runtime_error(
@@ -28,11 +28,11 @@ StorageSorter::StorageSorter(const std::string desc, const shared_iemgr &iemgr)
 }
 
 StorageSorter::Item
-StorageSorter::determine_item(const std::string &name, const shared_iemgr &iemgr) const
+StorageSorter::determine_item(const std::string &name) const
 {
     const size_t delim_pos = name.find_last_of('/');
 
-    Field field {std::string{name, 0, delim_pos}, iemgr};
+    Field field {std::string{name, 0, delim_pos}};
     Order order {Order::descending};
 
     if (delim_pos != std::string::npos) {

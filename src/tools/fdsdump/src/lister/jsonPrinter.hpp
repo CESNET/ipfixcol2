@@ -12,7 +12,7 @@ namespace lister {
 
 class JsonPrinter : public Printer {
 public:
-    JsonPrinter(const shared_iemgr &iemgr, const std::string &args);
+    JsonPrinter(const std::string &args);
 
     virtual
     ~JsonPrinter();
@@ -27,7 +27,7 @@ public:
     print_epilogue() override;
 
 private:
-    void parse_fields(const std::string &str, const shared_iemgr &iemgr);
+    void parse_fields(const std::string &str);
     void parse_opts(const std::string &str);
 
     void print_record(struct fds_drec *rec, bool reverse);

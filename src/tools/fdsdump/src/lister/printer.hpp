@@ -33,7 +33,7 @@ public:
 };
 
 std::unique_ptr<Printer>
-printer_factory(const shared_iemgr &iemgr, const std::string &manual);
+printer_factory(const std::string &manual);
 
 } // lister
 } // fdsdump

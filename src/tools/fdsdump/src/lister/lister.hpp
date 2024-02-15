@@ -8,7 +8,7 @@ namespace fdsdump {
 namespace lister {
 
 void
-mode_list(const shared_iemgr &iemgr, const Options &opts);
+mode_list(const Options &opts);
 
 } // lister
 } // fdsdump

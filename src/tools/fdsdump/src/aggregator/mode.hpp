@@ -7,7 +7,7 @@ namespace fdsdump {
 namespace aggregator {
 
 void
-mode_aggregate(const shared_iemgr &iemgr, const Options &opts);
+mode_aggregate(const Options &opts);
 
 } // aggregator
 } // fdsdump

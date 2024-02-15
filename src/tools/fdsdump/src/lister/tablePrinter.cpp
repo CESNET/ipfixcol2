@@ -13,7 +13,7 @@
 namespace fdsdump {
 namespace lister {
 
-TablePrinter::TablePrinter(const shared_iemgr &iemgr, const std::string &args)
+TablePrinter::TablePrinter(const std::string &args)
 {
     std::string args_fields;
     std::string args_opts;
@@ -25,14 +25,14 @@ TablePrinter::TablePrinter(const shared_iemgr &iemgr, const std::string &args)
         ? args.substr(delim_pos + 1, std::string::npos)
         : "";
 
-    parse_fields(args_fields, iemgr);
+    parse_fields(args_fields);
     parse_opts(args_opts);
 
     m_buffer.reserve(1024);
 }
 
 void
-TablePrinter::parse_fields(const std::string &str, const shared_iemgr &iemgr)
+TablePrinter::parse_fields(const std::string &str)
 {
     std::vector<std::string> field_names;
 
@@ -43,7 +43,7 @@ TablePrinter::parse_fields(const std::string &str, const shared_iemgr &iemgr)
     field_names = string_split(str, ",");
 
     for (const std::string &name : field_names) {
-        Field field {name, iemgr};
+        Field field {name};
 
         if (field.is_alias()) {
             const struct fds_iemgr_alias *alias = field.get_alias();

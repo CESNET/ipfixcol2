@@ -2,6 +2,7 @@
 #include <vector>
 
 #include <common/flowProvider.hpp>
+#include <common/ieMgr.hpp>
 
 #include <aggregator/aggregator.hpp>
 #include <aggregator/mode.hpp>
@@ -13,19 +14,19 @@ namespace fdsdump {
 namespace aggregator {
 
 void
-mode_aggregate(const shared_iemgr &iemgr, const Options &opts)
+mode_aggregate(const Options &opts)
 {
     ViewDefinition view_def = make_view_def(
             opts.get_aggregation_keys(),
             opts.get_aggregation_values(),
-            iemgr.get());
+            IEMgr::instance().ptr());
     std::vector<SortField> sort_fields = make_sort_def(
             view_def,
             opts.get_order_by());
     std::unique_ptr<Printer> printer = printer_factory(
             view_def,
             opts.get_output_specifier());
-    FlowProvider flows {iemgr};
+    FlowProvider flows;
     Aggregator aggr(view_def);
 
     const size_t rec_limit = opts.get_output_limit();

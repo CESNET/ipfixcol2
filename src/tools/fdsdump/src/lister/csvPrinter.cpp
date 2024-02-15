@@ -11,7 +11,7 @@
 namespace fdsdump {
 namespace lister {
 
-CsvPrinter::CsvPrinter(const shared_iemgr &iemgr, const std::string &args)
+CsvPrinter::CsvPrinter(const std::string &args)
 {
     std::string args_fields;
     std::string args_opts;
@@ -23,7 +23,7 @@ CsvPrinter::CsvPrinter(const shared_iemgr &iemgr, const std::string &args)
         ? args.substr(delim_pos + 1, std::string::npos)
         : "";
 
-    parse_fields(args_fields, iemgr);
+    parse_fields(args_fields);
     parse_opts(args_opts);
 
     m_buffer.reserve(1024);
@@ -34,7 +34,7 @@ CsvPrinter::~CsvPrinter()
 }
 
 void
-CsvPrinter::parse_fields(const std::string &str, const shared_iemgr &iemgr)
+CsvPrinter::parse_fields(const std::string &str)
 {
     std::vector<std::string> field_names;
 
@@ -45,7 +45,7 @@ CsvPrinter::parse_fields(const std::string &str, const shared_iemgr &iemgr)
     field_names = string_split(str, ",");
 
     for (const std::string &name : field_names) {
-        m_fields.emplace_back(Field {name, iemgr}, name);
+        m_fields.emplace_back(Field {name}, name);
     }
 }
 

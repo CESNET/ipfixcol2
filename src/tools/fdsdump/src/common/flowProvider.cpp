@@ -5,11 +5,11 @@
 
 #include <common/fieldView.hpp>
 #include <common/flowProvider.hpp>
+#include <common/ieMgr.hpp>
 
 namespace fdsdump {
 
-FlowProvider::FlowProvider(const shared_iemgr &iemgr)
-    : m_iemgr(iemgr)
+FlowProvider::FlowProvider()
 {
     int ret;
 
@@ -18,7 +18,7 @@ FlowProvider::FlowProvider(const shared_iemgr &iemgr)
         throw std::runtime_error("fds_file_init() has failed");
     }
 
-    ret = fds_file_set_iemgr(m_file.get(), m_iemgr.get());
+    ret = fds_file_set_iemgr(m_file.get(), IEMgr::instance().ptr());
     if (ret != FDS_OK) {
         throw std::runtime_error("fds_file_set_iemgr() has failed: " + std::to_string(ret));
     }
@@ -36,7 +36,7 @@ FlowProvider::set_filter(const std::string &expr)
     fds_ipfix_filter_t *filter;
     int ret;
 
-    ret = fds_ipfix_filter_create(&filter, m_iemgr.get(), expr.c_str());
+    ret = fds_ipfix_filter_create(&filter, IEMgr::instance().ptr(), expr.c_str());
     m_filter.reset(filter);
 
     if (ret != FDS_OK) {
