@@ -168,7 +168,7 @@ void ThreadedAggregator::thread_worker(unsigned int thread_id)
                 continue;
             }
 
-            info.processed_flows.fetch_add(1, std::memory_order_relaxed);
+            info.processed_flows.store(flows.get_processed_flow_count(), std::memory_order_relaxed);
             aggregator.process_record(*flow);
         }
 
