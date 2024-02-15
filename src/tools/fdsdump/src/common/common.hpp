@@ -15,6 +15,12 @@
 
 namespace fdsdump {
 
+#define DISABLE_COPY_AND_MOVE(CLASSNAME) \
+    CLASSNAME ( CLASSNAME &) = delete; \
+    CLASSNAME (const CLASSNAME &&) = delete; \
+    CLASSNAME &operator=( CLASSNAME &) = delete; \
+    CLASSNAME &operator=(const CLASSNAME &&) = delete;
+
 using unique_file = std::unique_ptr<fds_file_t, decltype(&fds_file_close)>;
 using unique_iemgr = std::unique_ptr<fds_iemgr_t, decltype(&fds_iemgr_destroy)>;
 using unique_filter = std::unique_ptr<fds_ipfix_filter, decltype(&fds_ipfix_filter_destroy)>;
