@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-#include "fieldView.hpp"
+#include <common/fieldView.hpp>
 
 namespace fdsdump {
 

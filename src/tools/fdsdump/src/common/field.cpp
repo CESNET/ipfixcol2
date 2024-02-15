@@ -2,7 +2,7 @@
 #include <cassert>
 #include <stdexcept>
 
-#include "field.hpp"
+#include <common/field.hpp>
 
 namespace fdsdump {
 

@@ -2,7 +2,7 @@
 #include <cassert>
 #include <iterator>
 
-#include "storageSorted.hpp"
+#include <lister/storageSorted.hpp>
 
 namespace fdsdump {
 namespace lister {

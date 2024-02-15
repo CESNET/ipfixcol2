@@ -10,8 +10,8 @@
 
 #include <xmmintrin.h>
 
-#include "fastHashTable.hpp"
-#include "3rd_party/xxhash/xxhash.h"
+#include <3rd_party/xxhash/xxhash.h>
+#include <aggregator/fastHashTable.hpp>
 
 namespace fdsdump {
 namespace aggregator {

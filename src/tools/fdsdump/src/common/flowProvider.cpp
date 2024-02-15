@@ -3,8 +3,8 @@
 #include <stdexcept>
 #include <iostream>
 
-#include "fieldView.hpp"
-#include "flowProvider.hpp"
+#include <common/fieldView.hpp>
+#include <common/flowProvider.hpp>
 
 namespace fdsdump {
 

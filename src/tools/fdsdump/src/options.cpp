@@ -2,7 +2,7 @@
 #include <getopt.h>
 #include <unistd.h>
 
-#include "options.hpp"
+#include <options.hpp>
 
 namespace fdsdump {
 

@@ -7,11 +7,11 @@
 
 #include <common/common.hpp>
 
-#include "printer.hpp"
-#include "csvPrinter.hpp"
-#include "jsonPrinter.hpp"
-#include "jsonRawPrinter.hpp"
-#include "tablePrinter.hpp"
+#include <lister/printer.hpp>
+#include <lister/csvPrinter.hpp>
+#include <lister/jsonPrinter.hpp>
+#include <lister/jsonRawPrinter.hpp>
+#include <lister/tablePrinter.hpp>
 
 namespace fdsdump {
 namespace lister {

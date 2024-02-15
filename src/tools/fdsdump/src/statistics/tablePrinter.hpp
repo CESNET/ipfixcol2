@@ -2,7 +2,7 @@
 #pragma once
 
 #include <string>
-#include "printer.hpp"
+#include <statistics/printer.hpp>
 
 namespace fdsdump {
 namespace statistics {
