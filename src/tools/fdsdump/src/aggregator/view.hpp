@@ -354,6 +354,11 @@ public:
      *
      * @return true if key1 comes before key2 in an ordered sequence, else false
      */
+    void
+    set_output_limit(size_t n);
+
+    size_t output_limit() const { return m_output_limit; }
+
     bool
     ordered_before(uint8_t *key1, uint8_t *key2) const;
 
@@ -402,6 +407,7 @@ private:
     size_t m_value_count = 0;
     size_t m_key_size = 0;
     size_t m_value_size = 0;
+    size_t m_output_limit = 0; // 0 = no limit
     std::vector<OrderField> m_order_fields;
     bool m_has_inout_fields = false;
     bool m_is_fixed_size = true;

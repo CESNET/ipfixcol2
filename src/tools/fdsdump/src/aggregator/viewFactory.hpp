@@ -40,10 +40,15 @@ public:
      * @param key_def  The definition of the key fields as specified on the command line
      * @param value_def  The definition of the value fields as specified on the command line
      * @param order_def  The definition of the order-by fields as specified on the command line
+     * @param output_limit  The number of items that will be outputted using this view (0 = no limit)
      *
      * @return The view
      */
-    static View create_view(const std::string &key_def, const std::string &value_def, const std::string &order_def);
+    static View create_view(
+        const std::string &key_def,
+        const std::string &value_def,
+        const std::string &order_def,
+        unsigned int output_limit = 0);
 
 private:
     static std::unique_ptr<Field> create_elem_or_alias(const std::string &def);
@@ -56,7 +61,7 @@ private:
 
     static std::unique_ptr<Field> parse_dir_field(const std::string &def);
 
-    static void create_view(View &view, const std::string &key_def, const std::string &value_def, const std::string &order_def);
+    static void create_view(View &view, const std::string &key_def, const std::string &value_def, const std::string &order_def, unsigned int output_limit);
 };
 
 } // namespace aggregator

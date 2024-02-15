@@ -77,6 +77,13 @@ View::find_field(const std::string &name)
     return nullptr;
 }
 
+
+void
+View::set_output_limit(size_t n)
+{
+    m_output_limit = n;
+}
+
 Value &
 View::access_field(const Field &field, uint8_t *record_ptr) const
 {
