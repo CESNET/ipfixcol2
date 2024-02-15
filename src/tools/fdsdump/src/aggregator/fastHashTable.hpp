@@ -7,7 +7,7 @@
 
 #ifdef __SSE2__
 
-#include <aggregator/arenaAllocator.hpp>
+#include <aggregator/allocator.hpp>
 
 #include <cstdint>
 #include <vector>
@@ -75,7 +75,7 @@ private:
     std::vector<HashTableBlock> m_blocks;
     std::vector<uint8_t *> m_items;
 
-    ArenaAllocator m_allocator;
+    Allocator m_allocator;
 
     bool
     lookup(uint8_t *key, uint8_t *&item, bool create_if_not_found);

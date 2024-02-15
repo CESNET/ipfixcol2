@@ -5,7 +5,7 @@
  */
 #pragma once
 
-#include "stdAllocator.hpp"
+#include "allocator.hpp"
 
 #include <cstdint>
 #include <functional>
@@ -66,7 +66,7 @@ private:
     std::size_t m_key_size;
     std::size_t m_value_size;
     std::vector<uint8_t *> m_items;
-    StdAllocator m_allocator;
+    Allocator m_allocator;
     Map m_map;
 };
 
