@@ -1,3 +1,11 @@
+/**
+ * @file
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief Abstract printer interface
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 
 #include <algorithm>
 #include <functional>

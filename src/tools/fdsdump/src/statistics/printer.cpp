@@ -1,3 +1,10 @@
+/**
+ * @file
+ * @author Lukas Hutak <hutak@cesnet.cz>
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief Statistics printer
+ */
+
 #include <algorithm>
 #include <cassert>
 #include <functional>

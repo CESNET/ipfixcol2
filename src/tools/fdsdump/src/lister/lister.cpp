@@ -1,3 +1,13 @@
+/**
+ * @file
+ * @author Lukas Hutak <hutak@cesnet.cz>
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief Lister entrypoint
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 #include <lister/lister.hpp>
 #include <lister/printer.hpp>
 #include <lister/storageSorted.hpp>
