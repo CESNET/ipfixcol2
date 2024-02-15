@@ -144,4 +144,10 @@ parse_number(const std::string &s)
     return value;
 }
 
+std::vector<std::string>
+glob_files(const std::string &pattern);
+
+std::vector<std::string>
+glob_files(const std::vector<std::string> &patterns);
+
 } // fdsdump
