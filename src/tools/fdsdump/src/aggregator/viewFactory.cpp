@@ -284,22 +284,22 @@ split_args(const std::string &str)
     return pieces;
 }
 
-std::shared_ptr<View> 
+View
 ViewFactory::create_view(
-    const std::string &key_def, 
-    const std::string &value_def, 
+    const std::string &key_def,
+    const std::string &value_def,
     const std::string &order_def)
 {
-    std::shared_ptr<View> view(new View);
-    create_view(*view.get(), key_def, value_def, order_def);
+    View view;
+    create_view(view, key_def, value_def, order_def);
     return view;
 }
 
-void 
+void
 ViewFactory::create_view(
-    View &view, 
-    const std::string &key_def, 
-    const std::string &value_def, 
+    View &view,
+    const std::string &key_def,
+    const std::string &value_def,
     const std::string &order_def)
 {
     for (auto def : split_args(key_def)) {

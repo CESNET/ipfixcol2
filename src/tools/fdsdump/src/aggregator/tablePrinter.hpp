@@ -20,7 +20,7 @@ class TABLEPrinter : public Printer
 public:
     bool m_translate_ip_addrs = false;
 
-    TABLEPrinter(std::shared_ptr<View> view);
+    TABLEPrinter(const View &view);
 
     ~TABLEPrinter() override;
 
@@ -34,7 +34,7 @@ public:
     print_epilogue() override;
 
 private:
-    std::shared_ptr<View> m_view;
+    const View &m_view;
     std::string m_buffer;
 };
 

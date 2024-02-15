@@ -43,7 +43,7 @@ public:
      *
      * @return The view
      */
-    static std::shared_ptr<View> create_view(const std::string &key_def, const std::string &value_def, const std::string &order_def);
+    static View create_view(const std::string &key_def, const std::string &value_def, const std::string &order_def);
 
 private:
     static std::unique_ptr<Field> create_elem_or_alias(const std::string &def);

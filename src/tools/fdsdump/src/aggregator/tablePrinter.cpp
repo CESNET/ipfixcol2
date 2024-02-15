@@ -13,7 +13,7 @@
 namespace fdsdump {
 namespace aggregator {
 
-TABLEPrinter::TABLEPrinter(std::shared_ptr<View> view)
+TABLEPrinter::TABLEPrinter(const View &view)
     : m_view(view)
 {
     m_buffer.reserve(1024);
@@ -28,7 +28,7 @@ TABLEPrinter::print_prologue()
 {
     bool is_first = true;
 
-    for (const auto &field : m_view->fields()) {
+    for (const auto &field : m_view.fields()) {
         if (!is_first) {
             std::cout << ' ';
         }
@@ -40,7 +40,7 @@ TABLEPrinter::print_prologue()
     std::cout << "\n";
     is_first = true;
 
-    for (const auto &field : m_view->fields()) {
+    for (const auto &field : m_view.fields()) {
         if (!is_first) {
             std::cout << ' ';
         }
@@ -58,7 +58,7 @@ TABLEPrinter::print_record(uint8_t *record)
     std::string buffer;
     bool is_first = true;
 
-    for (const auto &pair : m_view->iter_fields(record)) {
+    for (const auto &pair : m_view.iter_fields(record)) {
         if (!is_first) {
             std::cout << ' ';
         }

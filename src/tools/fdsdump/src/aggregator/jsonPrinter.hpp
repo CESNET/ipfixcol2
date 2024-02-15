@@ -19,7 +19,7 @@ namespace aggregator {
 class JSONPrinter : public Printer
 {
 public:
-    JSONPrinter(std::shared_ptr<View> view);
+    JSONPrinter(const View &view);
 
     ~JSONPrinter() override;
 
@@ -39,7 +39,7 @@ private:
     void append_octet_value(const Value *value);
     void append_varstring_value(const Value *value);
 
-    std::shared_ptr<View> m_view;
+    const View &m_view;
     std::string m_buffer;
     size_t m_rec_printed = 0;
 };

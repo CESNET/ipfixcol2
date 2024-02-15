@@ -19,16 +19,16 @@ namespace aggregator {
 void
 mode_aggregate(const Options &opts)
 {
-    std::shared_ptr<View> view = ViewFactory::create_view(
-            opts.get_aggregation_keys(), 
-            opts.get_aggregation_values(), 
+    View view = ViewFactory::create_view(
+            opts.get_aggregation_keys(),
+            opts.get_aggregation_values(),
             opts.get_order_by());
 
     std::unique_ptr<Printer> printer = printer_factory(
             view,
             opts.get_output_specifier());
     FlowProvider flows;
-    Aggregator aggr(*view.get());
+    Aggregator aggr(view);
 
     const size_t rec_limit = opts.get_output_limit();
     size_t rec_printed = 0;
