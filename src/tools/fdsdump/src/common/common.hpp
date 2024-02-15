@@ -15,6 +15,9 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <cassert>
+#include <limits>
+#include <type_traits>
 
 #include <libfds.h>
 
@@ -96,5 +99,49 @@ string_to_lower(std::string str);
  */
 void
 memcpy_bits(uint8_t *dst, uint8_t *src, unsigned int n_bits);
+
+template <typename T,
+    typename std::enable_if<std::is_integral<T>::value && std::is_signed<T>::value, bool>::type = true
+>
+Optional<T>
+parse_number(const std::string &s)
+{
+    static_assert(std::numeric_limits<T>::min() >= std::numeric_limits<long>::min()
+            && std::numeric_limits<T>::max() <= std::numeric_limits<long>::max(),
+            "supplied type has range broader than long thus cannot be used with strtol");
+
+    char *end;
+    errno = 0;
+    long value = std::strtol(s.c_str(), &end, 10);
+    if (errno != 0
+            || *end != '\0'
+            || value < std::numeric_limits<T>::min()
+            || value > std::numeric_limits<T>::max()) {
+        return {};
+    }
+    return value;
+}
+
+template <typename T,
+    typename std::enable_if<std::is_integral<T>::value && std::is_unsigned<T>::value, bool>::type = true
+>
+Optional<T>
+parse_number(const std::string &s)
+{
+    static_assert(std::numeric_limits<T>::min() >= std::numeric_limits<unsigned long>::min()
+            && std::numeric_limits<T>::max() <= std::numeric_limits<unsigned long>::max(),
+            "supplied type has range broader than unsigned long thus cannot be used with strtol");
+
+    char *end;
+    errno = 0;
+    unsigned long value = std::strtoul(s.c_str(), &end, 10);
+    if (errno != 0
+            || *end != '\0'
+            || value < std::numeric_limits<T>::min()
+            || value > std::numeric_limits<T>::max()) {
+        return {};
+    }
+    return value;
+}
 
 } // fdsdump
