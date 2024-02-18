@@ -8,7 +8,7 @@
 
 #include "common/common.hpp"
 #include "informationElements.hpp"
-#include "view.hpp"
+#include "viewOld.hpp"
 
 namespace fdsdump {
 namespace aggregator {

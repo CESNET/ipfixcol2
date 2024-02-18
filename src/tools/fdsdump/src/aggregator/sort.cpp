@@ -11,7 +11,7 @@
 
 #include "informationElements.hpp"
 #include "sort.hpp"
-#include "view.hpp"
+#include "viewOld.hpp"
 
 namespace fdsdump {
 namespace aggregator {
