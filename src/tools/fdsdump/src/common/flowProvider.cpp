@@ -28,6 +28,26 @@ void
 FlowProvider::add_file(const std::string &file)
 {
     m_remains.push_back(file);
+
+    unique_file file_obj(fds_file_init(), &fds_file_close);
+    if (!file_obj) {
+        throw std::runtime_error("fds_file_init() has failed");
+    }
+
+    int ret;
+    ret = fds_file_open(file_obj.get(), file.c_str(), FDS_FILE_READ);
+    if (ret != FDS_OK) {
+        const std::string err_msg = fds_file_error(file_obj.get());
+
+        std::cerr << "fds_file_open('" << file << "') failed: " << err_msg << std::endl;
+    }
+
+    const fds_file_stats *stats = fds_file_stats_get(file_obj.get());
+    if (stats) {
+        m_total_flow_count += stats->recs_total;
+    } else {
+        std::cerr << "WARNING: " << file << " has no stats" << std::endl;
+    }
 }
 
 void
@@ -88,6 +108,7 @@ FlowProvider::prepare_next_record()
     ret = fds_file_read_rec(m_file.get(), &m_flow.rec, NULL);
     switch (ret) {
     case FDS_OK:
+        m_processed_flow_count++;
         return true;
     case FDS_EOC:
         return false;
@@ -226,6 +247,13 @@ FlowProvider::next_record()
         m_flow.dir = static_cast<enum Direction>(dir);
         return &m_flow;
     }
+}
+
+void
+FlowProvider::reset_counters()
+{
+    m_processed_flow_count = 0;
+    m_total_flow_count = 0;
 }
 
 } // fdsdump

@@ -54,6 +54,22 @@ public:
     Flow *
     next_record();
 
+    /**
+     * @brief Reset the read and loaded flow counters
+     */
+    void
+    reset_counters();
+
+    /**
+     * @brief Get the number of processed flows, i.e. the number of flows in files that we went through
+     */
+    uint64_t get_processed_flow_count() const { return m_processed_flow_count; }
+
+    /**
+     * @brief Get the total number of loaded flows, i.e. the number of flows in files that have been added
+     */
+    uint64_t get_total_flow_count() const { return m_total_flow_count; }
+
 private:
     bool prepare_next_file();
     bool prepare_next_record();
@@ -69,6 +85,9 @@ private:
     unique_file m_file {nullptr, &fds_file_close};
     bool m_file_ready = false;
     bool m_biflow_autoignore = false;
+
+    uint64_t m_processed_flow_count = 0;
+    uint64_t m_total_flow_count = 0;
 
     Flow m_flow;
 };
