@@ -9,7 +9,7 @@
 #include <cstdint>
 
 #include "common/common.hpp"
-#include "view.hpp"
+#include "viewOld.hpp"
 
 namespace fdsdump {
 namespace aggregator {

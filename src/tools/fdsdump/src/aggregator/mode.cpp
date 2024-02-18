@@ -7,7 +7,7 @@
 #include <aggregator/aggregator.hpp>
 #include <aggregator/mode.hpp>
 #include <aggregator/printer.hpp>
-#include <aggregator/view.hpp>
+#include <aggregator/viewOld.hpp>
 #include <aggregator/sort.hpp>
 
 namespace fdsdump {

@@ -4,7 +4,7 @@ set(AGGREGATOR_SRC
     aggregator.cpp
     arenaAllocator.cpp
     fastHashTable.cpp
-    view.cpp
+    viewOld.cpp
     sort.cpp
     print.cpp
     printer.cpp
