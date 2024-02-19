@@ -10,6 +10,7 @@ set(AGGREGATOR_SRC
     printer.cpp
     jsonPrinter.cpp
     tablePrinter.cpp
+    stdAllocator.cpp
 )
 
 add_library(aggregator_obj OBJECT ${AGGREGATOR_SRC})
