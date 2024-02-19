@@ -10,6 +10,7 @@ set(AGGREGATOR_SRC
     printer.cpp
     jsonPrinter.cpp
     tablePrinter.cpp
+    stdHashTable.cpp
     stdAllocator.cpp
 )
 
