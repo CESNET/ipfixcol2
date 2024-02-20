@@ -58,7 +58,9 @@ enum MAP_SRC {
     /** Internal "link bit field" converter           */
     MAP_SRC_INTERNAL_LBF,
     /** Internal "dir bit field" converter            */
-    MAP_SRC_INTERNAL_DBF
+    MAP_SRC_INTERNAL_DBF,
+    /** Internal "odid field" converter               */
+    MAP_SRC_INTERNAL_ODID
 };
 
 enum MAP_FLAGS {
