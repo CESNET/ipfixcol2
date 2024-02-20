@@ -151,6 +151,12 @@ struct translator_s {
             int  field_size;            /**< UniRec field size          */
             ur_field_id_t field_id;     /**< UniRec field ID            */
         } lbf; /**< ODID to 'link bit field' converter                  */
+        struct
+        {
+            bool en;                    /**< Enabled/disabled           */
+            int  req_idx;               /**< Index in the template      */
+            ur_field_id_t field_id;     /**< UniRec field ID            */
+        } odid; /**< ODID from IPFIX Message header                     */
     } extra_conv; /**< Special internal conversion functions            */
 };
 
