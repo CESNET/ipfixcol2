@@ -840,6 +840,32 @@ translate_internal_lbf(translator_t *trans)
 }
 
 /**
+ * \brief Convert (fill) ODID field
+ *
+ * \note This function uses a message context configured by the user. It's independent on the
+ *   content of an IPFIX record.
+ * \param[in] trans Internal translator structure
+ * \return On success returns 0. Otherwise returns non-zero value!
+ */
+static int
+translate_internal_odid(translator_t *trans)
+{
+    if (!trans->msg_context.hdr) {
+        return 1; // Message header is not available!
+    }
+
+    // Get the ODID value
+    uint32_t odid = ntohl(trans->msg_context.hdr->odid);
+
+    ur_field_type_t ur_id = trans->extra_conv.odid.field_id;
+    void *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
+
+    *((uint32_t *) field_ptr) = odid;
+
+    return 0;
+}
+
+/**
  * \brief Get size of UniRec numeric data types
  * \param type UniRec data types
  * \return If the type is not numeric, returns 0. Otherwise returns the size.
