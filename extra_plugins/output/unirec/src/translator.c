@@ -137,8 +137,8 @@ struct translator_s {
     } progress; /**< Auxiliary conversion variables                     */
 
     struct {
-        /** IPFIX Message header                                        */
-        const struct fds_ipfix_msg_hdr *hdr;
+        /** IPFIX Message context                                        */
+        const struct ipx_msg_ctx *ctx;
     } msg_context; /**< IPFIX context of the record to translate        */
 
     struct {
@@ -808,12 +808,12 @@ translate_internal_dbf(translator_t *trans, const struct translator_rec *rec,
 static int
 translate_internal_lbf(translator_t *trans)
 {
-    if (!trans->msg_context.hdr) {
-        return 1; // Message header is not available!
+    if (!trans->msg_context.ctx) {
+        return 1; // Message context is not available!
     }
 
     // Get the ODID value
-    uint32_t odid = ntohl(trans->msg_context.hdr->odid);
+    uint32_t odid = trans->msg_context.ctx->odid;
 
     // Store the value is 'link bit field'
     ur_field_type_t ur_id = trans->extra_conv.lbf.field_id;
@@ -850,12 +850,12 @@ translate_internal_lbf(translator_t *trans)
 static int
 translate_internal_odid(translator_t *trans)
 {
-    if (!trans->msg_context.hdr) {
-        return 1; // Message header is not available!
+    if (!trans->msg_context.ctx) {
+        return 1; // Message context is not available!
     }
 
     // Get the ODID value
-    uint32_t odid = ntohl(trans->msg_context.hdr->odid);
+    uint32_t odid = trans->msg_context.ctx->odid;
 
     ur_field_type_t ur_id = trans->extra_conv.odid.field_id;
     void *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
@@ -1707,9 +1707,9 @@ translator_destroy(translator_t *trans)
 }
 
 void
-translator_set_context(translator_t *trans, const struct fds_ipfix_msg_hdr *hdr)
+translator_set_context(translator_t *trans, const struct ipx_msg_ctx *ctx)
 {
-    trans->msg_context.hdr = hdr;
+    trans->msg_context.ctx = ctx;
 }
 
 const void *

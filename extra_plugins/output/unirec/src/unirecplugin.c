@@ -344,8 +344,8 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
     const void *msg_data = NULL;
 
     ipx_msg_ipfix_t *ipfix = ipx_msg_base2ipfix(msg);
-    const uint8_t *ipfix_raw_msg = ipx_msg_ipfix_get_packet(ipfix);
-    translator_set_context(conf->trans, (const struct fds_ipfix_msg_hdr *) ipfix_raw_msg);
+    const struct ipx_msg_ctx *ipfix_msg_ctx = ipx_msg_ipfix_get_ctx(ipfix);
+    translator_set_context(conf->trans, ipfix_msg_ctx);
 
     const uint32_t rec_cnt = ipx_msg_ipfix_get_drec_cnt(ipfix);
     for (uint32_t i = 0; i < rec_cnt; i++) {
