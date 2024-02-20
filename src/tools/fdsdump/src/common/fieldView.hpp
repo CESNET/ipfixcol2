@@ -5,7 +5,7 @@
 
 #include <libfds.h>
 
-#include "ipaddr.hpp"
+#include <common/ipaddr.hpp>
 
 namespace fdsdump {
 

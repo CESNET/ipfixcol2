@@ -3,7 +3,7 @@
  * @author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
  * @brief Simple arena allocator
  */
-#include "arenaAllocator.hpp"
+#include <aggregator/arenaAllocator.hpp>
 
 #include <cassert>
 

@@ -1,13 +1,13 @@
 
 #include <vector>
 
-#include "common/flowProvider.hpp"
+#include <common/flowProvider.hpp>
 
-#include "aggregator.hpp"
-#include "mode.hpp"
-#include "printer.hpp"
-#include "view.hpp"
-#include "sort.hpp"
+#include <aggregator/aggregator.hpp>
+#include <aggregator/mode.hpp>
+#include <aggregator/printer.hpp>
+#include <aggregator/view.hpp>
+#include <aggregator/sort.hpp>
 
 namespace fdsdump {
 namespace aggregator {

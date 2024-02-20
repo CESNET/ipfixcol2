@@ -163,7 +163,6 @@ CsvPrinter::print_epilogue()
 void
 CsvPrinter::append_value(struct fds_drec *rec, Field &field, bool reverse)
 {
-    const size_t start_pos = m_buffer.size();
     unsigned int count = 0;
 
     auto cb = [this, &count](const struct fds_drec_field &field) -> void {

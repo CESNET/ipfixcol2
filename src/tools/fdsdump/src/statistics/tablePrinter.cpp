@@ -6,7 +6,7 @@
 #include <string>
 #include <cstring>
 
-#include "tablePrinter.hpp"
+#include <statistics/tablePrinter.hpp>
 
 namespace fdsdump {
 namespace statistics {

@@ -1,6 +1,6 @@
-#include "lister.hpp"
-#include "printer.hpp"
-#include "storageSorted.hpp"
+#include <lister/lister.hpp>
+#include <lister/printer.hpp>
+#include <lister/storageSorted.hpp>
 
 namespace fdsdump {
 namespace lister {

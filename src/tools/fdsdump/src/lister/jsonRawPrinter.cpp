@@ -7,7 +7,7 @@
 
 #include <common/common.hpp>
 
-#include "jsonRawPrinter.hpp"
+#include <lister/jsonRawPrinter.hpp>
 
 namespace fdsdump {
 namespace lister {

@@ -3,13 +3,15 @@ set(AGGREGATOR_SRC
     mode.cpp
     aggregator.cpp
     arenaAllocator.cpp
-    hashTable.cpp
+    fastHashTable.cpp
     view.cpp
     sort.cpp
     print.cpp
     printer.cpp
     jsonPrinter.cpp
     tablePrinter.cpp
+    stdHashTable.cpp
+    stdAllocator.cpp
 )
 
 add_library(aggregator_obj OBJECT ${AGGREGATOR_SRC})
