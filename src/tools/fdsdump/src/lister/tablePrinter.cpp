@@ -8,7 +8,7 @@
 
 #include <common/common.hpp>
 
-#include "tablePrinter.hpp"
+#include <lister/tablePrinter.hpp>
 
 namespace fdsdump {
 namespace lister {

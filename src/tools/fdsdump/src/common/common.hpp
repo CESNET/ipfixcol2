@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <3rd_party/optional.hpp>
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -15,11 +17,21 @@
 
 namespace fdsdump {
 
+#define DISABLE_COPY_AND_MOVE(CLASSNAME) \
+    CLASSNAME ( CLASSNAME &) = delete; \
+    CLASSNAME (const CLASSNAME &&) = delete; \
+    CLASSNAME &operator=( CLASSNAME &) = delete; \
+    CLASSNAME &operator=(const CLASSNAME &&) = delete;
+
 using unique_file = std::unique_ptr<fds_file_t, decltype(&fds_file_close)>;
 using unique_iemgr = std::unique_ptr<fds_iemgr_t, decltype(&fds_iemgr_destroy)>;
 using unique_filter = std::unique_ptr<fds_ipfix_filter, decltype(&fds_ipfix_filter_destroy)>;
 using shared_iemgr = std::shared_ptr<fds_iemgr_t>;
 using shared_tsnapshot = std::shared_ptr<fds_tsnapshot_t>;
+
+// std::optional implementation for C++11
+template <typename T>
+using Optional = tl::optional<T>;
 
 /**
  * @brief Split string using a user-defined delimeter.
@@ -60,6 +72,17 @@ string_trim(std::string &str);
 
 std::string
 string_trim_copy(std::string str);
+
+
+/**
+ * @brief Convert a string to lowercase
+ *
+ * @param The string to convert
+ *
+ * @return The supplied string converted to lowercase
+ */
+std::string
+string_to_lower(std::string str);
 
 /**
  * @brief Copy a specified number of bits from source to destination,

@@ -1,7 +1,7 @@
 
+#include <common/common.hpp>
 #include <algorithm>
 
-#include "common.hpp"
 
 namespace fdsdump {
 
@@ -96,6 +96,13 @@ std::string
 string_trim_copy(std::string str)
 {
     string_trim(str);
+    return str;
+}
+
+std::string
+string_to_lower(std::string str)
+{
+    std::for_each(str.begin(), str.end(), [](char &c) { c = std::tolower(c); });
     return str;
 }
 

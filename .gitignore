@@ -10,6 +10,9 @@ cmake-build-release/
 # JetBrains files
 .idea/
 
+# Clangd cache files
+.cache/
+
 # Prerequisites
 *.d
 

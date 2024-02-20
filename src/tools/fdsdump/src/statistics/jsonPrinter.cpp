@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "jsonPrinter.hpp"
+#include <statistics/jsonPrinter.hpp>
 
 namespace fdsdump {
 namespace statistics {

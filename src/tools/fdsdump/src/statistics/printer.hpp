@@ -4,7 +4,7 @@
 #include <string>
 #include <libfds.h>
 
-#include "common/common.hpp"
+#include <common/common.hpp>
 
 namespace fdsdump {
 namespace statistics {
