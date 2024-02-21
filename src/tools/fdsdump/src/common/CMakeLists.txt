@@ -6,6 +6,7 @@ set(COMMON_SRC
     filelist.cpp
     flowProvider.cpp
     ipaddr.cpp
+    ieMgr.cpp
 )
 
 add_library(common_obj OBJECT ${COMMON_SRC})

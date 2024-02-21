@@ -37,7 +37,7 @@ static void stats_merge(
 }
 
 void
-mode_statistics(const shared_iemgr &iemgr, const Options &opts)
+mode_statistics(const Options &opts)
 {
     auto printer = printer_factory(opts.get_output_specifier());
     const FileList &file_names = opts.get_input_files();
@@ -74,7 +74,6 @@ mode_statistics(const shared_iemgr &iemgr, const Options &opts)
     printer->print_stats(stats);
     printer->print_epilogue();
 
-    (void) iemgr;
     return;
 }
 

@@ -1,7 +1,10 @@
 
 #pragma once
 
+#include <cstdint>
 #include <ctime>
+#include <string>
+#include <vector>
 
 #include <libfds.h>
 
@@ -21,6 +24,8 @@ public:
     struct timespec as_datetime() const;
     uint64_t as_datetime_ms() const;
     IPAddr as_ipaddr() const;
+    std::string as_string() const;
+    std::vector<uint8_t> as_bytes() const;
 
 private:
     const struct fds_drec_field &m_field;
