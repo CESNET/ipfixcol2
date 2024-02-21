@@ -14,7 +14,7 @@ namespace lister {
 
 class TablePrinter : public Printer {
 public:
-    TablePrinter(const shared_iemgr &iemgr, const std::string &args);
+    TablePrinter(const std::string &args);
 
     virtual
     ~TablePrinter() = default;
@@ -38,7 +38,7 @@ private:
             : m_field(field), m_name(name), m_width(width) {};
     };
 
-    void parse_fields(const std::string &str, const shared_iemgr &iemgr);
+    void parse_fields(const std::string &str);
     void parse_opts(const std::string &str);
 
     size_t data_length(fds_iemgr_element_type type);

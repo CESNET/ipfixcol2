@@ -39,10 +39,9 @@ public:
      * @brief Create a new getter for an alias or an IPFIX Field.
      *
      * @param name  Name of alias or an IPFIX Element to lookup
-     * @param iemgr IE manager where to look for the field
      * @throw std::invalid_argument If the alias or element cannot be found.
      */
-    Field(std::string name, const shared_iemgr &iemgr);
+    Field(std::string name);
     ~Field() = default;
 
     /**
@@ -93,8 +92,6 @@ public:
 private:
     // Name of the field (trimmed)
     std::string m_name;
-    // Reference to the IE manager
-    shared_iemgr m_iemgr;
     // Data type of the the field
     FieldType m_type;
     // Alias definition (might be nullptr)

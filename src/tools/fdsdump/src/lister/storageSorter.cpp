@@ -12,13 +12,13 @@
 namespace fdsdump {
 namespace lister {
 
-StorageSorter::StorageSorter(const std::string desc, const shared_iemgr &iemgr)
+StorageSorter::StorageSorter(const std::string desc)
 {
     std::vector<std::string> fields = string_split(desc, ",");
 
     for (const auto &field : fields) {
         try {
-            Item item = determine_item(field, iemgr);
+            Item item = determine_item(field);
             m_items.push_back(item);
         } catch (const std::exception &ex) {
             throw std::runtime_error(
@@ -28,11 +28,11 @@ StorageSorter::StorageSorter(const std::string desc, const shared_iemgr &iemgr)
 }
 
 StorageSorter::Item
-StorageSorter::determine_item(const std::string &name, const shared_iemgr &iemgr) const
+StorageSorter::determine_item(const std::string &name) const
 {
     const size_t delim_pos = name.find_last_of('/');
 
-    Field field {std::string{name, 0, delim_pos}, iemgr};
+    Field field {std::string{name, 0, delim_pos}};
     Order order {Order::descending};
 
     if (delim_pos != std::string::npos) {
@@ -61,6 +61,26 @@ StorageSorter::determine_sorter(const Field &field, Order order) const
         return (order == Order::descending)
             ? &StorageSorter::cmp_ip_desc
             : &StorageSorter:: cmp_ip_asc;
+
+    case FieldType::num_signed:
+        return (order == Order::descending)
+            ? &StorageSorter::cmp_int_desc
+            : &StorageSorter:: cmp_int_asc;
+
+    case FieldType::boolean:
+        return (order == Order::descending)
+            ? &StorageSorter::cmp_bool_desc
+            : &StorageSorter:: cmp_bool_asc;
+
+    case FieldType::string:
+        return (order == Order::descending)
+            ? &StorageSorter::cmp_string_desc
+            : &StorageSorter:: cmp_string_asc;
+
+    case FieldType::bytes:
+        return (order == Order::descending)
+            ? &StorageSorter::cmp_bytes_desc
+            : &StorageSorter:: cmp_bytes_asc;
 
     case FieldType::none:
         if (field.is_alias()) {
@@ -326,7 +346,7 @@ get_ip_max(Field &field, const struct Flow &flow, IPAddr &result)
 {
     bool is_reverse {flow.dir == DIRECTION_REV};
     bool found {false};
-    IPAddr max {};
+    IPAddr max = IPAddr::zero();
 
     auto selector = [&](struct fds_drec_field &data) -> void {
         IPAddr value = FieldView(data).as_ipaddr();
@@ -357,7 +377,7 @@ get_ip_min(Field &field, const Flow &flow, IPAddr &result)
 {
     bool is_reverse {flow.dir == DIRECTION_REV};
     bool found {false};
-    IPAddr min {};
+    IPAddr min = IPAddr::zero();
 
     auto selector = [&](struct fds_drec_field &data) -> void {
         IPAddr value = FieldView(data).as_ipaddr();
@@ -389,8 +409,8 @@ StorageSorter::cmp_ip_desc(
     const Flow &lhs,
     const Flow &rhs)
 {
-    IPAddr lhs_max;
-    IPAddr rhs_max;
+    IPAddr lhs_max = IPAddr::zero();
+    IPAddr rhs_max = IPAddr::zero();
     bool lhs_is_defined = get_ip_max(field, lhs, lhs_max);
     bool rhs_is_defined = get_ip_max(field, rhs, rhs_max);
 
@@ -411,8 +431,8 @@ StorageSorter::cmp_ip_asc(
     const Flow &lhs,
     const Flow &rhs)
 {
-    IPAddr lhs_min;
-    IPAddr rhs_min;
+    IPAddr lhs_min = IPAddr::zero();
+    IPAddr rhs_min = IPAddr::zero();
     bool lhs_is_defined = get_ip_min(field, lhs, lhs_min);
     bool rhs_is_defined = get_ip_min(field, rhs, rhs_min);
 
@@ -424,6 +444,390 @@ StorageSorter::cmp_ip_asc(
         return 0;
     } else {
         return (lhs_min < rhs_min) ? -1 : 1;
+    }
+}
+
+static bool
+get_string_max(Field &field, const Flow &flow, std::string &result)
+{
+    bool is_reverse {flow.dir == DIRECTION_REV};
+    bool found {false};
+    std::string max {};
+
+    auto selector = [&](struct fds_drec_field &data) -> void {
+        std::string value = FieldView(data).as_string();
+
+        if (!found) {
+            max = value;
+            found = true;
+            return;
+        }
+
+        if (value > max) {
+            max = value;
+            return;
+        }
+    };
+
+    field.for_each(
+        const_cast<struct fds_drec *>(&flow.rec),
+        selector,
+        is_reverse);
+
+    result = max;
+    return found;
+}
+
+static bool
+get_string_min(Field &field, const Flow &flow, std::string &result)
+{
+    bool is_reverse {flow.dir == DIRECTION_REV};
+    bool found {false};
+    std::string min {};
+
+    auto selector = [&](struct fds_drec_field &data) -> void {
+        std::string value = FieldView(data).as_string();
+
+        if (!found) {
+            min = value;
+            found = true;
+            return;
+        }
+
+        if (value < min) {
+            min = value;
+            return;
+        }
+    };
+
+    field.for_each(
+        const_cast<struct fds_drec *>(&flow.rec),
+        selector,
+        is_reverse);
+
+    result = min;
+    return found;
+}
+
+int
+StorageSorter::cmp_string_asc(
+    Field &field,
+    const Flow &lhs,
+    const Flow &rhs)
+{
+    std::string lhs_min;
+    std::string rhs_min;
+    bool lhs_is_defined = get_string_min(field, lhs, lhs_min);
+    bool rhs_is_defined = get_string_min(field, rhs, rhs_min);
+
+    if (lhs_is_defined != rhs_is_defined) {
+        return lhs_is_defined ? -1 : 1;
+    }
+
+    if (lhs_min == rhs_min) {
+        return 0;
+    } else {
+        return (lhs_min < rhs_min) ? -1 : 1;
+    }
+}
+
+int
+StorageSorter::cmp_string_desc(
+    Field &field,
+    const Flow &lhs,
+    const Flow &rhs)
+{
+    std::string lhs_max;
+    std::string rhs_max;
+    bool lhs_is_defined = get_string_max(field, lhs, lhs_max);
+    bool rhs_is_defined = get_string_max(field, rhs, rhs_max);
+
+    if (lhs_is_defined != rhs_is_defined) {
+        return lhs_is_defined ? -1 : 1;
+    }
+
+    if (lhs_max == rhs_max) {
+        return 0;
+    } else {
+        return (lhs_max > rhs_max) ? -1 : 1;
+    }
+}
+
+static bool
+get_bytes_max(Field &field, const Flow &flow, std::vector<uint8_t> &result)
+{
+    bool is_reverse {flow.dir == DIRECTION_REV};
+    bool found {false};
+    std::vector<uint8_t> max {};
+
+    auto selector = [&](struct fds_drec_field &data) -> void {
+        std::vector<uint8_t> value = FieldView(data).as_bytes();
+
+        if (!found) {
+            max = value;
+            found = true;
+            return;
+        }
+
+        if (value > max) {
+            max = value;
+            return;
+        }
+    };
+
+    field.for_each(
+        const_cast<struct fds_drec *>(&flow.rec),
+        selector,
+        is_reverse);
+
+    result = max;
+    return found;
+}
+
+static bool
+get_bytes_min(Field &field, const Flow &flow, std::vector<uint8_t> &result)
+{
+    bool is_reverse {flow.dir == DIRECTION_REV};
+    bool found {false};
+    std::vector<uint8_t> min {};
+
+    auto selector = [&](struct fds_drec_field &data) -> void {
+        std::vector<uint8_t> value = FieldView(data).as_bytes();
+
+        if (!found) {
+            min = value;
+            found = true;
+            return;
+        }
+
+        if (value < min) {
+            min = value;
+            return;
+        }
+    };
+
+    field.for_each(
+        const_cast<struct fds_drec *>(&flow.rec),
+        selector,
+        is_reverse);
+
+    result = min;
+    return found;
+}
+
+int
+StorageSorter::cmp_bytes_asc(
+    Field &field,
+    const Flow &lhs,
+    const Flow &rhs)
+{
+    std::vector<uint8_t> lhs_min;
+    std::vector<uint8_t> rhs_min;
+    bool lhs_is_defined = get_bytes_min(field, lhs, lhs_min);
+    bool rhs_is_defined = get_bytes_min(field, rhs, rhs_min);
+
+    if (lhs_is_defined != rhs_is_defined) {
+        return lhs_is_defined ? -1 : 1;
+    }
+
+    if (lhs_min == rhs_min) {
+        return 0;
+    } else {
+        return (lhs_min < rhs_min) ? -1 : 1;
+    }
+}
+
+int
+StorageSorter::cmp_bytes_desc(
+    Field &field,
+    const Flow &lhs,
+    const Flow &rhs)
+{
+    std::vector<uint8_t> lhs_max;
+    std::vector<uint8_t> rhs_max;
+    bool lhs_is_defined = get_bytes_max(field, lhs, lhs_max);
+    bool rhs_is_defined = get_bytes_max(field, rhs, rhs_max);
+
+    if (lhs_is_defined != rhs_is_defined) {
+        return lhs_is_defined ? -1 : 1;
+    }
+
+    if (lhs_max == rhs_max) {
+        return 0;
+    } else {
+        return (lhs_max > rhs_max) ? -1 : 1;
+    }
+}
+
+static bool
+get_int_max(Field &field, const Flow &flow, int64_t &result)
+{
+    bool is_reverse {flow.dir == DIRECTION_REV};
+    bool found {false};
+    int64_t max {INT64_MIN};
+
+    auto selector = [&](struct fds_drec_field &data) -> void {
+        max = std::max(max, FieldView(data).as_int());
+        found = true;
+    };
+
+    field.for_each(
+        const_cast<struct fds_drec *>(&flow.rec),
+        selector,
+        is_reverse);
+
+    result = max;
+    return found;
+}
+
+static bool
+get_int_min(Field &field, const Flow &flow, int64_t &result)
+{
+    bool is_reverse {flow.dir == DIRECTION_REV};
+    bool found {false};
+    int64_t min {INT64_MAX};
+
+    auto selector = [&](struct fds_drec_field &data) -> void {
+        min = std::min(min, FieldView(data).as_int());
+        found = true;
+    };
+
+    field.for_each(
+        const_cast<struct fds_drec *>(&flow.rec),
+        selector,
+        is_reverse);
+
+    result = min;
+    return found;
+}
+
+int
+StorageSorter::cmp_int_asc(
+    Field &field,
+    const Flow &lhs,
+    const Flow &rhs)
+{
+    int64_t lhs_min;
+    int64_t rhs_min;
+    bool lhs_is_defined = get_int_min(field, lhs, lhs_min);
+    bool rhs_is_defined = get_int_min(field, rhs, rhs_min);
+
+    if (lhs_is_defined != rhs_is_defined) {
+        return lhs_is_defined ? -1 : 1;
+    }
+
+    if (lhs_min == rhs_min) {
+        return 0;
+    } else {
+        return (lhs_min < rhs_min) ? -1 : 1;
+    }
+}
+
+int
+StorageSorter::cmp_int_desc(
+    Field &field,
+    const Flow &lhs,
+    const Flow &rhs)
+{
+    int64_t lhs_max;
+    int64_t rhs_max;
+    bool lhs_is_defined = get_int_max(field, lhs, lhs_max);
+    bool rhs_is_defined = get_int_max(field, rhs, rhs_max);
+
+    if (lhs_is_defined != rhs_is_defined) {
+        return lhs_is_defined ? -1 : 1;
+    }
+
+    if (lhs_max == rhs_max) {
+        return 0;
+    } else {
+        return (lhs_max > rhs_max) ? -1 : 1;
+    }
+}
+
+static bool
+get_bool_max(Field &field, const Flow &flow, bool &result)
+{
+    bool is_reverse {flow.dir == DIRECTION_REV};
+    bool found {false};
+    bool max {false};
+
+    auto selector = [&](struct fds_drec_field &data) -> void {
+        max = max || FieldView(data).as_bool();
+        found = true;
+    };
+
+    field.for_each(
+        const_cast<struct fds_drec *>(&flow.rec),
+        selector,
+        is_reverse);
+
+    result = max;
+    return found;
+}
+
+static bool
+get_bool_min(Field &field, const Flow &flow, bool &result)
+{
+    bool is_reverse {flow.dir == DIRECTION_REV};
+    bool found {false};
+    int64_t min {true};
+
+    auto selector = [&](struct fds_drec_field &data) -> void {
+        min = min && FieldView(data).as_bool();
+        found = true;
+    };
+
+    field.for_each(
+        const_cast<struct fds_drec *>(&flow.rec),
+        selector,
+        is_reverse);
+
+    result = min;
+    return found;
+}
+
+int
+StorageSorter::cmp_bool_asc(
+    Field &field,
+    const Flow &lhs,
+    const Flow &rhs)
+{
+    bool lhs_min;
+    bool rhs_min;
+    bool lhs_is_defined = get_bool_min(field, lhs, lhs_min);
+    bool rhs_is_defined = get_bool_min(field, rhs, rhs_min);
+
+    if (lhs_is_defined != rhs_is_defined) {
+        return lhs_is_defined ? -1 : 1;
+    }
+
+    if (lhs_min == rhs_min) {
+        return 0;
+    } else {
+        return (lhs_min < rhs_min) ? -1 : 1;
+    }
+}
+
+int
+StorageSorter::cmp_bool_desc(
+    Field &field,
+    const Flow &lhs,
+    const Flow &rhs)
+{
+    bool lhs_max;
+    bool rhs_max;
+    bool lhs_is_defined = get_bool_max(field, lhs, lhs_max);
+    bool rhs_is_defined = get_bool_max(field, rhs, rhs_max);
+
+    if (lhs_is_defined != rhs_is_defined) {
+        return lhs_is_defined ? -1 : 1;
+    }
+
+    if (lhs_max == rhs_max) {
+        return 0;
+    } else {
+        return (lhs_max > rhs_max) ? -1 : 1;
     }
 }
 
