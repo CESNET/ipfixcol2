@@ -9,6 +9,7 @@
 
 #include <iostream>
 
+#include <common/common.hpp>
 #include <common/flowProvider.hpp>
 
 #include <statistics/mode.hpp>
@@ -48,7 +49,7 @@ void
 mode_statistics(const Options &opts)
 {
     auto printer = printer_factory(opts.get_output_specifier());
-    const FileList &file_names = opts.get_input_files();
+	std::vector<std::string> file_names = glob_files(opts.get_input_file_patterns());
     unique_file file {nullptr, &fds_file_close};
     fds_file_stats stats {};
 

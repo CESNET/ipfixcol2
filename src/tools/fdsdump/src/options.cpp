@@ -53,7 +53,7 @@ void Options::reset()
     m_help_flag = false;
     m_mode = Mode::undefined;
 
-    m_input_files.clear();
+    m_input_file_patterns.clear();
     m_input_filter.clear();
 
     m_output_limit = 0;
@@ -103,9 +103,7 @@ void Options::parse(int argc, char *argv[])
 	}
 
 	if (args.has('r')) {
-		for (const auto &arg : args.get_all('r')) {
-			m_input_files.add_files(arg);
-		}
+        m_input_file_patterns = args.get_all('r');
 	}
 
 	if (args.has('c')) {

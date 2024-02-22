@@ -12,9 +12,8 @@
 
 #include <cstddef>
 #include <string>
+#include <vector>
 #include <stdexcept>
-
-#include <common/filelist.hpp>
 
 namespace fdsdump {
 
@@ -69,8 +68,8 @@ public:
 
     const Mode &get_mode() const { return m_mode; };
 
-    /** @brief Get list of files to process.             */
-    const FileList &get_input_files() const { return m_input_files; };
+    /** @brief Get list of provided file patterns to process.             */
+    const std::vector<std::string> &get_input_file_patterns() const { return m_input_file_patterns; };
     /** @brief Get input flow filter.                    */
     const std::string &get_input_filter() const { return m_input_filter; };
 
@@ -95,7 +94,7 @@ private:
 
     bool m_help_flag;
 
-    FileList    m_input_files;
+    std::vector<std::string> m_input_file_patterns;
     std::string m_input_filter;
 
     size_t      m_output_limit;

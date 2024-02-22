@@ -4,7 +4,6 @@ set(COMMON_SRC
     common.cpp
     field.cpp
     fieldView.cpp
-    filelist.cpp
     flowProvider.cpp
     ipaddr.cpp
     ieMgr.cpp

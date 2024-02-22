@@ -8,6 +8,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include <common/common.hpp>
 #include <lister/lister.hpp>
 #include <lister/printer.hpp>
 #include <lister/storageSorted.hpp>
@@ -75,7 +76,7 @@ mode_list(const Options &opts)
         flows.set_filter(opts.get_input_filter());
     }
 
-    for (const auto &it : opts.get_input_files()) {
+    for (const auto &it : glob_files(opts.get_input_file_patterns())) {
         flows.add_file(it);
     }
 
