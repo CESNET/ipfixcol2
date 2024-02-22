@@ -19,6 +19,23 @@
 
 namespace fdsdump {
 
+void Options::print_usage()
+{
+    std::cerr << "Usage: fdsdump [OPTIONS]\n";
+    std::cerr << "\n";
+    std::cerr << "Options:\n";
+    std::cerr << "  -h, --help                       Show this help message\n";
+    std::cerr << "  -r, --input FILE                 File or glob pattern of files to read\n";
+    std::cerr << "  -f, --filter EXPR                Select only records matching filter expression (default = all records)\n";
+    std::cerr << "  -o, --output FMT                 Output format - TABLE, JSON, JSON-RAW\n";
+    std::cerr << "  -O, --order FIELDS               Record fields and order direction to order by\n";
+    std::cerr << "  -c, --limit NUM                  Max number of output records (default = infinite)\n";
+    std::cerr << "  -A, --aggregation-keys FIELDS    Fields making up the aggregation key (default = none)\n";
+    std::cerr << "  -S, --aggregation-values FIELDS  Fields that will be aggregated (default = flows,packets,bytes)\n";
+    std::cerr << "  -I, --stats-mode                 Run in statistics mode\n";
+    std::cerr << "  --no-biflow-autoignore           Turn off smart ignoring of empty biflow records\n";
+}
+
 Options::Options()
 {
     reset();
@@ -33,6 +50,7 @@ Options::Options(int argc, char *argv[])
 
 void Options::reset()
 {
+    m_help_flag = false;
     m_mode = Mode::undefined;
 
     m_input_files.clear();
@@ -60,6 +78,7 @@ void Options::reset()
 void Options::parse(int argc, char *argv[])
 {
 	ArgParser parser;
+	parser.add('h', "help", false);
 	parser.add('r', "input", true);
 	parser.add('F', "filter", true);
 	parser.add('o', "output", true);
@@ -77,6 +96,10 @@ void Options::parse(int argc, char *argv[])
 		throw OptionsException("Missing argument for " + missing.arg);
 	} catch (const ArgParser::UnknownArgument& unknown) {
 		throw OptionsException("Unknown argument " + unknown.arg);
+	}
+
+	if (args.has('h')) {
+		m_help_flag = true;
 	}
 
 	if (args.has('r')) {

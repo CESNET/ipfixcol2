@@ -30,6 +30,10 @@ main(int argc, char *argv[])
     try {
         Options options {argc, argv};
 
+        if (options.get_help_flag()) {
+            Options::print_usage();
+            return EXIT_SUCCESS;
+        }
 
         switch (options.get_mode()) {
         case Options::Mode::list:
@@ -44,6 +48,12 @@ main(int argc, char *argv[])
         default:
             throw std::runtime_error("Invalid mode");
         }
+
+    } catch (const OptionsException &ex) {
+        std::cerr << "ERROR: " << ex.what() << std::endl;
+        Options::print_usage();
+        return EXIT_FAILURE;
+
     } catch (const std::exception &ex) {
         std::cerr << "ERROR: " << ex.what() << std::endl;
         return EXIT_FAILURE;

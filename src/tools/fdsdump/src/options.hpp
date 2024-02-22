@@ -44,6 +44,11 @@ public:
     };
 
     /**
+     * @brief Print the usage message
+     */
+    static void print_usage();
+
+    /**
      * @brief Create options with default values.
      */
     Options();
@@ -59,6 +64,8 @@ public:
      * @brief Reset all values to default.
      */
     void reset();
+
+    bool get_help_flag() const { return m_help_flag; };
 
     const Mode &get_mode() const { return m_mode; };
 
@@ -85,6 +92,8 @@ public:
 
 private:
     Mode m_mode;
+
+    bool m_help_flag;
 
     FileList    m_input_files;
     std::string m_input_filter;
