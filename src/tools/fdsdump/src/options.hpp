@@ -15,6 +15,8 @@
 #include <vector>
 #include <stdexcept>
 
+#include <common/logger.hpp>
+
 namespace fdsdump {
 
 class OptionsException : public std::invalid_argument {
@@ -89,6 +91,9 @@ public:
     /** @brief Get output order specificiation           */
     const std::string &get_order_by() const { return m_order_by; };
 
+    /** @brief Get the logging level */
+    LogLevel get_log_level() const { return m_log_level; }
+
 private:
     Mode m_mode;
 
@@ -106,6 +111,8 @@ private:
     std::string m_aggregation_values;
 
     bool        m_biflow_autoignore;
+
+    LogLevel    m_log_level;
 
     void parse(int argc, char *argv[]);
     void validate();

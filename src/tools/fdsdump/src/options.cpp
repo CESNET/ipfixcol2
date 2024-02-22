@@ -34,6 +34,8 @@ void Options::print_usage()
     std::cerr << "  -S, --aggregation-values FIELDS  Fields that will be aggregated (default = flows,packets,bytes)\n";
     std::cerr << "  -I, --stats-mode                 Run in statistics mode\n";
     std::cerr << "  --no-biflow-autoignore           Turn off smart ignoring of empty biflow records\n";
+    std::cerr << "  -v, --verbose                    Increase logging verbosity\n";
+    std::cerr << "  -q, --quiet                      Decrease logging verbosity\n";
 }
 
 Options::Options()
@@ -65,6 +67,8 @@ void Options::reset()
     m_biflow_autoignore = true;
 
     m_order_by.clear();
+
+    m_log_level = LogLevel::warning;
 }
 
 /**
@@ -88,6 +92,8 @@ void Options::parse(int argc, char *argv[])
 	parser.add('S', "aggregation-values", true);
 	parser.add("no-biflow-autoignore", true);
 	parser.add('I', "stats-mode", false);
+	parser.add('v', "verbose", false);
+	parser.add('q', "quiet", false);
 
     Args args;
 	try {
@@ -141,6 +147,14 @@ void Options::parse(int argc, char *argv[])
 	if (args.has('I')) {
 		m_mode = Mode::stats;
 	}
+
+    for (int i = 0; i < args.count('v'); i++) {
+        m_log_level++;
+    }
+
+    for (int i = 0; i < args.count('q'); i++) {
+        m_log_level--;
+    }
 }
 
 void Options::validate()

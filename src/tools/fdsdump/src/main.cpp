@@ -15,6 +15,7 @@
 #include <libfds.h>
 
 #include <common/common.hpp>
+#include <common/logger.hpp>
 #include <lister/lister.hpp>
 #include <aggregator/mode.hpp>
 #include <statistics/mode.hpp>
@@ -28,6 +29,8 @@ main(int argc, char *argv[])
 {
     try {
         Options options {argc, argv};
+
+        Logger::get_instance().set_log_level(options.get_log_level());
 
         if (options.get_help_flag()) {
             Options::print_usage();
