@@ -872,6 +872,57 @@ translate_internal_odid(translator_t *trans)
 }
 
 /**
+ * \brief Convert (fill) EXPORTER_IP field with IPv4 or IPv6 address from IPFIX
+ * message session.
+ *
+ * \note This function uses a message context configured by the user. It's independent on the
+ *   content of an IPFIX record.
+ * \param[in] trans Internal translator structure
+ * \return On success returns 0. Otherwise returns non-zero value!
+ */
+static int
+translate_internal_exporter_ip(translator_t *trans)
+{
+    if (!trans->msg_context.ctx) {
+        return 1; // Message context is not available!
+    }
+
+    const struct ipx_session *session = trans->msg_context.ctx->session;
+
+    const struct ipx_session_net *session_net;
+    switch (session->type)
+    {
+    case FDS_SESSION_UDP:
+        session_net = &session->udp.net;
+        break;
+    case FDS_SESSION_TCP:
+        session_net = &session->tcp.net;
+        break;
+    case FDS_SESSION_SCTP:
+        session_net = &session->sctp.net;
+        break;
+    default:
+        // Uncompatible type of message session. E.g. messages from file.
+        return 1;
+    }
+
+    // Get pointer to save result IP
+    ur_field_type_t ur_id = trans->extra_conv.exporter_ip.field_id;
+    void *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
+
+    if (session->udp.net.l3_proto == AF_INET) {
+        *((ip_addr_t *) field_ptr) = ip_from_4_bytes_be((char *) &session_net->addr_src.ipv4.s_addr);
+    } else if (session->udp.net.l3_proto == AF_INET6) {
+        *((ip_addr_t *) field_ptr) = ip_from_16_bytes_be((char *) session_net->addr_src.ipv6.s6_addr);
+    } else {
+        // Unknown IP protocol
+        return 1;
+    }
+
+    return 0;
+}
+
+/**
  * \brief Get size of UniRec numeric data types
  * \param type UniRec data types
  * \return If the type is not numeric, returns 0. Otherwise returns the size.
