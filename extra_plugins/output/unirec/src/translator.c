@@ -1568,6 +1568,34 @@ translator_table_fill_internal(translator_t *trans, const struct map_rec *map_re
         return IPX_ERR_NOTFOUND; // Do NOT add the record!
     }
 
+    /* Internal "exporter_ip field" function
+     * Implemented as a special converter that must be enabled in the translator because
+     * IPFIX Message session is not defined in IPFIX record
+     */
+    if (src == MAP_SRC_INTERNAL_EXPORTER_IP) {
+        if (trans->extra_conv.exporter_ip.en) {
+            // The function is already enabled!
+            IPX_CTX_ERROR(trans->ctx, "Internal 'exporter_ip field' function can be mapped only "
+                "to one UniRec field!", '\0');
+            return IPX_ERR_DENIED;
+        }
+
+        if (ur_type != UR_TYPE_IP) {
+            IPX_CTX_ERROR(trans->ctx, "Internal 'exporter_ip field' function supports only UniRec "
+                "ipaddress type but UniRec field '%s' is '%s'!", map_rec->unirec.name,
+                map_rec->unirec.type_str);
+            return IPX_ERR_DENIED;
+        }
+
+        // Enable the internal converter
+        trans->extra_conv.exporter_ip.en = true;
+        trans->extra_conv.exporter_ip.req_idx = field_idx;
+        trans->extra_conv.exporter_ip.field_id = ur_id;
+        IPX_CTX_DEBUG(trans->ctx, "Added conversion from internal 'exporter_ip field' to UniRec '%s'",
+            map_rec->unirec.name);
+        return IPX_ERR_NOTFOUND; // Do NOT add the record!
+    }
+
     IPX_CTX_ERROR(trans->ctx, "Unimplemented internal mapping function!", '\0');
     return IPX_ERR_DENIED;
 }
@@ -1724,6 +1752,19 @@ translator_call_internals(translator_t *trans)
             converted_fields++;
         } else {
             IPX_CTX_WARNING(trans->ctx, "Internal function 'odid field' failed to fill "
+                "UniRec field '%s'", trans->progress.req_names[field_idx]);
+        }
+    }
+
+    if (trans->extra_conv.exporter_ip.en) {
+        // Call internal 'exporter_ip field' converter
+        int field_idx = trans->extra_conv.exporter_ip.req_idx;
+        if (translate_internal_exporter_ip(trans) == 0) {
+            // Success
+            trans->progress.req_fields[field_idx] = 0; // Filled!
+            converted_fields++;
+        } else {
+            IPX_CTX_WARNING(trans->ctx, "Internal function 'exporter_ip field' failed to fill "
                 "UniRec field '%s'", trans->progress.req_names[field_idx]);
         }
     }
