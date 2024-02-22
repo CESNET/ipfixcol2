@@ -13,6 +13,8 @@
 #include <getopt.h>
 #include <unistd.h>
 
+#include <common/common.hpp>
+#include <common/argParser.hpp>
 #include <options.hpp>
 
 namespace fdsdump {
@@ -57,60 +59,67 @@ void Options::reset()
  */
 void Options::parse(int argc, char *argv[])
 {
-    enum long_opts_vals {
-        OPT_BIFLOW_AUTOIGNORE_OFF = 256, // Value that cannot colide with chars
-    };
-    const struct option long_opts[] = {
-        {"filter",               required_argument, NULL, 'F'},
-        {"output",               required_argument, NULL, 'o'},
-        {"order",                required_argument, NULL, 'O'},
-        {"limit",                required_argument, NULL, 'c'},
-        {"no-biflow-autoignore", no_argument,       NULL, OPT_BIFLOW_AUTOIGNORE_OFF},
-        {0, 0, 0, 0},
-    };
-    const char *short_opts = "r:c:o:O:F:A:S:I";
-    int opt;
+	ArgParser parser;
+	parser.add('r', "input", true);
+	parser.add('F', "filter", true);
+	parser.add('o', "output", true);
+	parser.add('O', "order", true);
+	parser.add('c', "limit", true);
+	parser.add('A', "aggregation-keys", true);
+	parser.add('S', "aggregation-values", true);
+	parser.add("no-biflow-autoignore", true);
+	parser.add('I', "stats-mode", false);
 
-    while ((opt = getopt_long(argc, argv, short_opts, long_opts, NULL)) != -1) {
-        switch (opt) {
-        case 'r':
-            m_input_files.add_files(optarg);
-            break;
-        case 'c':
-            m_output_limit = std::stoull(optarg);
-            break;
-        case 'o':
-            m_output_specifier = optarg;
-            break;
-        case 'O':
-            m_order_by = optarg;
-            break;
-        case 'F':
-            m_input_filter = optarg;
-            break;
-        case 'A':
-            m_aggregation_keys = optarg;
-            break;
-        case 'I':
-            m_mode = Mode::stats;
-            break;
-        case 'S':
-            m_aggregation_values = optarg;
-            break;
-        case OPT_BIFLOW_AUTOIGNORE_OFF:
-            m_biflow_autoignore = false;
-            break;
-        case '?':
-            throw OptionsException("invalid command line option(s)");
-        default:
-            throw OptionsException("getopts_long() returned unexpected value " + std::to_string(opt));
-        }
-    }
+    Args args;
+	try {
+		args = parser.parse(argc, argv);
+	} catch (const ArgParser::MissingArgument& missing) {
+		throw OptionsException("Missing argument for " + missing.arg);
+	} catch (const ArgParser::UnknownArgument& unknown) {
+		throw OptionsException("Unknown argument " + unknown.arg);
+	}
 
-    if (optind < argc) {
-        const char *arg = argv[optind];
-        throw OptionsException("unknown argument '" + std::string(arg) + "'");
-    }
+	if (args.has('r')) {
+		for (const auto &arg : args.get_all('r')) {
+			m_input_files.add_files(arg);
+		}
+	}
+
+	if (args.has('c')) {
+		auto maybe_value = parse_number<unsigned int>(args.get('c'));
+		if (!maybe_value) {
+			throw OptionsException("invalid -c/--limit value - not a number");
+		}
+		m_output_limit = *maybe_value;
+	}
+
+	if (args.has('o')) {
+		m_output_specifier = args.get('o');
+	}
+
+	if (args.has('O')) {
+		m_order_by = args.get('O');
+	}
+
+	if (args.has('F')) {
+		m_input_filter = args.get('F');
+	}
+
+	if (args.has('A')) {
+		m_aggregation_keys = args.get('A');
+	}
+
+	if (args.has('S')) {
+		m_aggregation_values = args.get('S');
+	}
+
+	if (args.has("no-biflow-autoignore")) {
+		m_biflow_autoignore = false;
+	}
+
+	if (args.has('I')) {
+		m_mode = Mode::stats;
+	}
 }
 
 void Options::validate()
@@ -137,6 +146,7 @@ void Options::validate()
             m_output_specifier = "JSON-RAW";
         }
     }
+
 }
 
 } // fdsdump
