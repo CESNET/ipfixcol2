@@ -60,7 +60,9 @@ enum MAP_SRC {
     /** Internal "dir bit field" converter            */
     MAP_SRC_INTERNAL_DBF,
     /** Internal "odid field" converter               */
-    MAP_SRC_INTERNAL_ODID
+    MAP_SRC_INTERNAL_ODID,
+    /** Internal "exporter ip field" converter        */
+    MAP_SRC_INTERNAL_EXPORTER_IP
 };
 
 enum MAP_FLAGS {
