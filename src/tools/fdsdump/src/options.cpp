@@ -40,7 +40,7 @@ void Options::reset()
     m_output_specifier.clear();
 
     m_aggregation_keys.clear();
-    m_aggregation_fields = "packets,bytes,flows";
+    m_aggregation_values = "packets,bytes,flows";
 
     m_biflow_autoignore = true;
 
@@ -95,7 +95,7 @@ void Options::parse(int argc, char *argv[])
             m_mode = Mode::stats;
             break;
         case 'S':
-            m_aggregation_fields = optarg;
+            m_aggregation_values = optarg;
             break;
         case OPT_BIFLOW_AUTOIGNORE_OFF:
             m_biflow_autoignore = false;
