@@ -157,6 +157,12 @@ struct translator_s {
             int  req_idx;               /**< Index in the template      */
             ur_field_id_t field_id;     /**< UniRec field ID            */
         } odid; /**< ODID from IPFIX Message header                     */
+        struct
+        {
+            bool en;                    /**< Enabled/disabled           */
+            int  req_idx;               /**< Index in the template      */
+            ur_field_id_t field_id;     /**< UniRec field ID            */
+        } exporter_ip; /**< Exporter IP address from message session    */
     } extra_conv; /**< Special internal conversion functions            */
 };
 
