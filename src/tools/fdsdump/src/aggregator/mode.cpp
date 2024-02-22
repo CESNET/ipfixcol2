@@ -42,7 +42,7 @@ mode_aggregate(const Options &opts)
         flows.set_filter(opts.get_input_filter());
     }
 
-    for (const auto &it : opts.get_input_files()) {
+    for (const auto &it : glob_files(opts.get_input_file_patterns())) {
         flows.add_file(it);
     }
 

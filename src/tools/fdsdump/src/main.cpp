@@ -15,7 +15,6 @@
 #include <libfds.h>
 
 #include <common/common.hpp>
-#include <common/filelist.hpp>
 #include <lister/lister.hpp>
 #include <aggregator/mode.hpp>
 #include <statistics/mode.hpp>
