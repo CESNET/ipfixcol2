@@ -36,6 +36,8 @@ TIME_FIRST                     time          e0id150,e0id152,e0id154,e0id156    
 TIME_LAST                      time          e0id151,e0id153,e0id155,e0id157    # Time of the last packet of a flow
 DIR_BIT_FIELD                  uint8         _internal_dbf_                     # Bit field used for determining incoming/outgoing flow (1 => Incoming, 0 => Outgoing)
 LINK_BIT_FIELD                 uint64        _internal_lbf_                     # Bit field of links on which was flow seen
+ODID                           uint32        _internal_odid_                    # Observation Domain ID (ODID) of exporter
+EXPORTER_IP                    ipaddr        _internal_exporter_ip_             # IP address of exporter from exporting session
 
 SRC_MAC                        macaddr       e0id56
 DST_MAC                        macaddr       e0id80

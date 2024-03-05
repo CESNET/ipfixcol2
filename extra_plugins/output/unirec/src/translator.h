@@ -78,10 +78,10 @@ translator_destroy(translator_t *trans);
  * This function MUST be called before processing each IPFIX Message to set proper record
  * parameters. The message header is required for determine ODID or other parameters.
  * \param[in] trans Translator instance
- * \param[in] hdr   IPFIX message header
+ * \param[in] ctx   IPFIX message context
  */
 void
-translator_set_context(translator_t *trans, const struct fds_ipfix_msg_hdr *hdr);
+translator_set_context(translator_t *trans, const struct ipx_msg_ctx *ctx);
 
 /**
  * \brief Convert a IPFIX record to an UniRec message

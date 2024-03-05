@@ -232,6 +232,10 @@ map_elem_get_internal(const char *elem)
         return MAP_SRC_INTERNAL_LBF;
     } else if (strcmp(elem, "_internal_dbf_") == 0) {
         return MAP_SRC_INTERNAL_DBF;
+    } else if (strcmp(elem, "_internal_odid_") == 0) {
+        return MAP_SRC_INTERNAL_ODID;
+    } else if (strcmp(elem, "_internal_exporter_ip_") == 0) {
+        return MAP_SRC_INTERNAL_EXPORTER_IP;
     } else {
         return MAP_SRC_INVALID;
     }

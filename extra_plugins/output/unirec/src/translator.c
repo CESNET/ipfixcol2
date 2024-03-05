@@ -137,8 +137,8 @@ struct translator_s {
     } progress; /**< Auxiliary conversion variables                     */
 
     struct {
-        /** IPFIX Message header                                        */
-        const struct fds_ipfix_msg_hdr *hdr;
+        /** IPFIX Message context                                        */
+        const struct ipx_msg_ctx *ctx;
     } msg_context; /**< IPFIX context of the record to translate        */
 
     struct {
@@ -151,6 +151,18 @@ struct translator_s {
             int  field_size;            /**< UniRec field size          */
             ur_field_id_t field_id;     /**< UniRec field ID            */
         } lbf; /**< ODID to 'link bit field' converter                  */
+        struct
+        {
+            bool en;                    /**< Enabled/disabled           */
+            int  req_idx;               /**< Index in the template      */
+            ur_field_id_t field_id;     /**< UniRec field ID            */
+        } odid; /**< ODID from IPFIX Message header                     */
+        struct
+        {
+            bool en;                    /**< Enabled/disabled           */
+            int  req_idx;               /**< Index in the template      */
+            ur_field_id_t field_id;     /**< UniRec field ID            */
+        } exporter_ip; /**< Exporter IP address from message session    */
     } extra_conv; /**< Special internal conversion functions            */
 };
 
@@ -802,12 +814,12 @@ translate_internal_dbf(translator_t *trans, const struct translator_rec *rec,
 static int
 translate_internal_lbf(translator_t *trans)
 {
-    if (!trans->msg_context.hdr) {
-        return 1; // Message header is not available!
+    if (!trans->msg_context.ctx) {
+        return 1; // Message context is not available!
     }
 
     // Get the ODID value
-    uint32_t odid = ntohl(trans->msg_context.hdr->odid);
+    uint32_t odid = trans->msg_context.ctx->odid;
 
     // Store the value is 'link bit field'
     ur_field_type_t ur_id = trans->extra_conv.lbf.field_id;
@@ -827,6 +839,83 @@ translate_internal_lbf(translator_t *trans)
         *((uint64_t *) field_ptr) = ((uint64_t) 1U) << (odid & 0x3F);
         break;
     default:
+        return 1;
+    }
+
+    return 0;
+}
+
+/**
+ * \brief Convert (fill) ODID field
+ *
+ * \note This function uses a message context configured by the user. It's independent on the
+ *   content of an IPFIX record.
+ * \param[in] trans Internal translator structure
+ * \return On success returns 0. Otherwise returns non-zero value!
+ */
+static int
+translate_internal_odid(translator_t *trans)
+{
+    if (!trans->msg_context.ctx) {
+        return 1; // Message context is not available!
+    }
+
+    // Get the ODID value
+    uint32_t odid = trans->msg_context.ctx->odid;
+
+    ur_field_type_t ur_id = trans->extra_conv.odid.field_id;
+    void *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
+
+    *((uint32_t *) field_ptr) = odid;
+
+    return 0;
+}
+
+/**
+ * \brief Convert (fill) EXPORTER_IP field with IPv4 or IPv6 address from IPFIX
+ * message session.
+ *
+ * \note This function uses a message context configured by the user. It's independent on the
+ *   content of an IPFIX record.
+ * \param[in] trans Internal translator structure
+ * \return On success returns 0. Otherwise returns non-zero value!
+ */
+static int
+translate_internal_exporter_ip(translator_t *trans)
+{
+    if (!trans->msg_context.ctx) {
+        return 1; // Message context is not available!
+    }
+
+    const struct ipx_session *session = trans->msg_context.ctx->session;
+
+    const struct ipx_session_net *session_net;
+    switch (session->type)
+    {
+    case FDS_SESSION_UDP:
+        session_net = &session->udp.net;
+        break;
+    case FDS_SESSION_TCP:
+        session_net = &session->tcp.net;
+        break;
+    case FDS_SESSION_SCTP:
+        session_net = &session->sctp.net;
+        break;
+    default:
+        // Uncompatible type of message session. E.g. messages from file.
+        return 1;
+    }
+
+    // Get pointer to save result IP
+    ur_field_type_t ur_id = trans->extra_conv.exporter_ip.field_id;
+    void *field_ptr = ur_get_ptr_by_id(trans->record.ur_tmplt, trans->record.data, ur_id);
+
+    if (session->udp.net.l3_proto == AF_INET) {
+        *((ip_addr_t *) field_ptr) = ip_from_4_bytes_be((char *) &session_net->addr_src.ipv4.s_addr);
+    } else if (session->udp.net.l3_proto == AF_INET6) {
+        *((ip_addr_t *) field_ptr) = ip_from_16_bytes_be((char *) session_net->addr_src.ipv6.s6_addr);
+    } else {
+        // Unknown IP protocol
         return 1;
     }
 
@@ -1451,6 +1540,62 @@ translator_table_fill_internal(translator_t *trans, const struct map_rec *map_re
         return IPX_OK;
     }
 
+    /* Internal "ODID field" function
+     * Implemented as a special converter that must be enabled in the translator because
+     * ODID is not defined in the IPFIX record but in the IPFIX Message header
+     */
+    if (src == MAP_SRC_INTERNAL_ODID) {
+        if (trans->extra_conv.odid.en) {
+            // The function is already enabled!
+            IPX_CTX_ERROR(trans->ctx, "Internal 'odid field' function can be mapped only "
+                "to one UniRec field!", '\0');
+            return IPX_ERR_DENIED;
+        }
+
+        if (ur_type != UR_TYPE_UINT32) {
+            IPX_CTX_ERROR(trans->ctx, "Internal 'odid field' function supports only UniRec "
+                "uint32 type but UniRec field '%s' is '%s'!", map_rec->unirec.name,
+                map_rec->unirec.type_str);
+            return IPX_ERR_DENIED;
+        }
+
+        // Enable the internal converter
+        trans->extra_conv.odid.en = true;
+        trans->extra_conv.odid.req_idx = field_idx;
+        trans->extra_conv.odid.field_id = ur_id;
+        IPX_CTX_DEBUG(trans->ctx, "Added conversion from internal 'odid field' to UniRec '%s'",
+            map_rec->unirec.name);
+        return IPX_ERR_NOTFOUND; // Do NOT add the record!
+    }
+
+    /* Internal "exporter_ip field" function
+     * Implemented as a special converter that must be enabled in the translator because
+     * IPFIX Message session is not defined in IPFIX record
+     */
+    if (src == MAP_SRC_INTERNAL_EXPORTER_IP) {
+        if (trans->extra_conv.exporter_ip.en) {
+            // The function is already enabled!
+            IPX_CTX_ERROR(trans->ctx, "Internal 'exporter_ip field' function can be mapped only "
+                "to one UniRec field!", '\0');
+            return IPX_ERR_DENIED;
+        }
+
+        if (ur_type != UR_TYPE_IP) {
+            IPX_CTX_ERROR(trans->ctx, "Internal 'exporter_ip field' function supports only UniRec "
+                "ipaddress type but UniRec field '%s' is '%s'!", map_rec->unirec.name,
+                map_rec->unirec.type_str);
+            return IPX_ERR_DENIED;
+        }
+
+        // Enable the internal converter
+        trans->extra_conv.exporter_ip.en = true;
+        trans->extra_conv.exporter_ip.req_idx = field_idx;
+        trans->extra_conv.exporter_ip.field_id = ur_id;
+        IPX_CTX_DEBUG(trans->ctx, "Added conversion from internal 'exporter_ip field' to UniRec '%s'",
+            map_rec->unirec.name);
+        return IPX_ERR_NOTFOUND; // Do NOT add the record!
+    }
+
     IPX_CTX_ERROR(trans->ctx, "Unimplemented internal mapping function!", '\0');
     return IPX_ERR_DENIED;
 }
@@ -1598,6 +1743,32 @@ translator_call_internals(translator_t *trans)
         }
     }
 
+    if (trans->extra_conv.odid.en) {
+        // Call internal 'odid field' converter
+        int field_idx = trans->extra_conv.odid.req_idx;
+        if (translate_internal_odid(trans) == 0) {
+            // Success
+            trans->progress.req_fields[field_idx] = 0; // Filled!
+            converted_fields++;
+        } else {
+            IPX_CTX_WARNING(trans->ctx, "Internal function 'odid field' failed to fill "
+                "UniRec field '%s'", trans->progress.req_names[field_idx]);
+        }
+    }
+
+    if (trans->extra_conv.exporter_ip.en) {
+        // Call internal 'exporter_ip field' converter
+        int field_idx = trans->extra_conv.exporter_ip.req_idx;
+        if (translate_internal_exporter_ip(trans) == 0) {
+            // Success
+            trans->progress.req_fields[field_idx] = 0; // Filled!
+            converted_fields++;
+        } else {
+            IPX_CTX_WARNING(trans->ctx, "Internal function 'exporter_ip field' failed to fill "
+                "UniRec field '%s'", trans->progress.req_names[field_idx]);
+        }
+    }
+
     return converted_fields;
 }
 
@@ -1634,9 +1805,9 @@ translator_destroy(translator_t *trans)
 }
 
 void
-translator_set_context(translator_t *trans, const struct fds_ipfix_msg_hdr *hdr)
+translator_set_context(translator_t *trans, const struct ipx_msg_ctx *ctx)
 {
-    trans->msg_context.hdr = hdr;
+    trans->msg_context.ctx = ctx;
 }
 
 const void *

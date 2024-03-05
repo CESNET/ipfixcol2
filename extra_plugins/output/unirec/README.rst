@@ -270,3 +270,7 @@ and egress flows. For this reason, the lowest bit of IPFIX field ``iana:ingressI
 (PEN: 0, ID: 10) is copied to the particular UniRec field (Nemea modules expects that
 1 = ingress flow and 0 = egress flow).
 
+Other UniRec specific fields available are ``ODID`` and ``EXPORTER_IP``. The information for these
+fields is extracted from the IPFIX message session. The ``ODID`` contains raw Observation Domain ID
+of the exporter and ``EXPORTER_IP`` carries exporter IP address to identify which probe the flow
+was observed on.
