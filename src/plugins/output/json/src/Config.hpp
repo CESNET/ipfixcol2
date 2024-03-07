@@ -177,7 +177,6 @@ struct cfg_syslog : cfg_output {
 /** Parsed configuration of an instance                                                          */
 class Config {
 private:
-    bool check_ip(const std::string &ip_addr);
     bool check_or(const std::string &elem, const char *value, const std::string &val_true,
         const std::string &val_false);
     bool is_syslog_ascii(const std::string &str);
