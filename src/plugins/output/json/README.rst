@@ -230,7 +230,7 @@ with each other.
     "``ncat -lk <local ip> <local port>``"
 
     :``name``: Identification name of the output. Used only for readability.
-    :``ip``: IPv4/IPv6 address of the client
+    :``ip``: IP address or domain name of the client
     :``port``: Remote port number
     :``protocol``: Transport protocol: TCP or UDP (this field is case insensitive)
     :``blocking``:
