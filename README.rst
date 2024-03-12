@@ -144,14 +144,6 @@ be stored. The structure of the configuration is described
 of the collector are given in the section
 "`Example configuration files <doc/sphinx/configuration.rst#example-configuration-files>`_".
 
-Coming soon
------------
-- Runtime reconfiguration (improved compared to the previous generation)
-- Input plugins for files (IPFIX, fds, etc.)
-- Flow filtration and flow profiling
-- Flow aggregation
-- RPM/DEB packages
-
 FAQ
 --------------
 
