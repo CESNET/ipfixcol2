@@ -127,21 +127,6 @@ static const struct fds_xml_args args_params[] = {
 };
 
 /**
- * \brief Check if a given string is a valid IPv4/IPv6 address
- * \param[in] ip_addr Address to check
- * \return True or false
- */
-bool
-Config::check_ip(const std::string &ip_addr)
-{
-    in_addr ipv4;
-    in6_addr ipv6;
-
-    return (inet_pton(AF_INET, ip_addr.c_str(), &ipv4) == 1
-        || inet_pton(AF_INET6, ip_addr.c_str(), &ipv6) == 1);
-}
-
-/**
  * \brief Check one of 2 expected options
  *
  * \param[in] elem      XML element to check (just for exception purposes)
