@@ -60,6 +60,20 @@ network interface and a port. Multiple instances of these plugins can run concur
 
 \* Must be installed individually due to extra dependencies
 
+How to install
+--------------
+
+If you are running a RHEL system or one of its derivatives, the easiest way to
+get IPFIXcol installed is using our Copr package repository.
+
+.. code-block:: bash
+
+    $ dnf install 'dnf-command(copr)'  # Extra step necessary on some systems
+    $ dnf copr enable @CESNET/IPFIXcol
+    $ dnf install ipfixcol2
+
+For other systems, follow the build instructions below.
+
 How to build
 ------------
 
