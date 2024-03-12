@@ -30,6 +30,7 @@ Plugin for converting IPFIX data to UniRec format.
 
 # Build source code
 %build
+%global _vpath_builddir .
 %cmake .
 make %{?_smp_mflags}
 
