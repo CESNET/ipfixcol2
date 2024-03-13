@@ -1,3 +1,10 @@
+✨ *Tip: Are you sure your NetFlow/IPFIX probe is working correctly? Be sure with our other project:* |FlowTest|_
+
+-----
+
+.. _FlowTest: https://github.com/CESNET/FlowTest
+.. |FlowTest| replace:: *🌊 FlowTest*
+
 ============= =============
 Master branch |BuildMaster|
 ------------- -------------
