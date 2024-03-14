@@ -39,14 +39,35 @@
  *
  */
 
-// Get GNU specific basename() function
-#define _GNU_SOURCE
 #include <string.h>
 
 #include <stdint.h>
 #include <ipfixcol2.h>
 #include <stdlib.h>
 #include <inttypes.h>
+
+/**
+ * \brief Return the name part of a file path, i.e. the part after the last /
+ * \param path  The file path
+ * \return The name part of the path or NULL if path is NULL
+ */
+static const char *get_basename(const char *path)
+{
+    if (path == NULL) {
+        return NULL;
+    }
+
+    const char *res = path;
+    const char *p = path;
+    while (*p != '\0') {
+        if (*p == '/') {
+            res = p + 1;
+        }
+        p++;
+    }
+
+    return res;
+}
 
 /**
  * \brief Create a source description string from a Network Session structure
@@ -166,7 +187,9 @@ ipx_session_new_file(const char *file_path)
         return NULL;
     }
 
-    res->ident = basename(res->file.file_path); // GNU specific basename()
+    res->ident = res->file.file_path;
+
+    res->ident = (char *) get_basename(res->file.file_path);
     if (!res->ident) {
         free(res);
         return NULL;
