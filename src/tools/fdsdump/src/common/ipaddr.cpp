@@ -1,5 +1,7 @@
 
 #include <stdexcept>
+#include <sys/socket.h>
+#include <netinet/in.h>
 #include "ipaddr.hpp"
 
 namespace fdsdump {
