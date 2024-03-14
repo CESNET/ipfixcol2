@@ -1,3 +1,10 @@
+✨ *Tip: Are you sure your NetFlow/IPFIX probe is working correctly? Be sure with our other project:* |FlowTest|_
+
+-----
+
+.. _FlowTest: https://github.com/CESNET/FlowTest
+.. |FlowTest| replace:: *🌊 FlowTest*
+
 ============= =============
 Master branch |BuildMaster|
 ------------- -------------
@@ -59,6 +66,20 @@ network interface and a port. Multiple instances of these plugins can run concur
   via TRAP communication interface (into Nemea modules)
 
 \* Must be installed individually due to extra dependencies
+
+How to install
+--------------
+
+If you are running a RHEL system or one of its derivatives, the easiest way to
+get IPFIXcol installed is using our Copr package repository.
+
+.. code-block:: bash
+
+    $ dnf install 'dnf-command(copr)'  # Extra step necessary on some systems
+    $ dnf copr enable @CESNET/IPFIXcol
+    $ dnf install ipfixcol2
+
+For other systems, follow the build instructions below.
 
 How to build
 ------------
@@ -129,14 +150,6 @@ be stored. The structure of the configuration is described
 `here <doc/sphinx/configuration.rst>`_. Several configuration examples that demonstrate features
 of the collector are given in the section
 "`Example configuration files <doc/sphinx/configuration.rst#example-configuration-files>`_".
-
-Coming soon
------------
-- Runtime reconfiguration (improved compared to the previous generation)
-- Input plugins for files (IPFIX, fds, etc.)
-- Flow filtration and flow profiling
-- Flow aggregation
-- RPM/DEB packages
 
 FAQ
 --------------
