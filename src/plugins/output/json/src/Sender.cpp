@@ -39,11 +39,13 @@
  *
  */
 
+#include <ipfixcol2.h>
 #include "Sender.hpp"
 
 #include <time.h>
 #include <unistd.h>
 #include <inttypes.h>
+#include <cerrno>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -229,8 +231,8 @@ Sender::send(const char *str, size_t len)
             }
 
             // Connection failed
-            char buffer[128];
-            const char *err_str = strerror_r(errno, buffer, 128);
+            const char *err_str;
+            ipx_strerror(errno, err_str);
             IPX_CTX_INFO(_ctx, "(Send output) Destination '%s:%" PRIu16 "' disconnected: %s",
                 params.addr.c_str(), params.port, err_str);
             return SEND_FAILED;

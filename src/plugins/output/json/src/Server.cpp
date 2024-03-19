@@ -37,9 +37,12 @@
  *
  */
 
+#include <ipfixcol2.h>
 #include "Server.hpp"
+
 #include <stdexcept>
 #include <cstring>
+#include <cerrno>
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -201,8 +204,8 @@ Server::thread_accept(void *context)
                 continue;
             }
 
-            char buffer[128];
-            const char *err_str = strerror_r(errno, buffer, 128);
+            const char *err_str;
+            ipx_strerror(errno, err_str);
             IPX_CTX_ERROR(acc->ctx, "(Server output) select() - failed (%s)", err_str);
             break;
         }
@@ -214,8 +217,8 @@ Server::thread_accept(void *context)
 
         new_fd = accept(acc->socket_fd, (struct sockaddr *) &client_addr, &sin_size);
         if (new_fd == -1) {
-            char buffer[128];
-            const char *err_str = strerror_r(errno, buffer, 128);
+            const char *err_str;
+            ipx_strerror(errno, err_str);
             IPX_CTX_ERROR(acc->ctx, "(Server output) accept() - failed (%s)", err_str);
             continue;
         }
@@ -270,8 +273,8 @@ Server::msg_send(const char *data, ssize_t len, client_t &client)
             }
 
             // Connection failed
-            char buffer[128];
-            const char *err_str = strerror_r(errno, buffer, 128);
+            const char *err_str;
+            ipx_strerror(errno, err_str);
             IPX_CTX_INFO(_ctx, "(Server output) Client disconnected: %s (%s)",
                 get_client_desc(client.info).c_str(), err_str);
             return SEND_FAILED;
