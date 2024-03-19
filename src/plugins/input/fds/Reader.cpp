@@ -47,6 +47,22 @@
 #include "Exception.hpp"
 #include "Reader.hpp"
 
+static inline bool in6_is_addr_v4mapped(const uint8_t addr[16])
+{
+    return
+        addr[0] == 0 &&
+        addr[1] == 0 &&
+        addr[2] == 0 &&
+        addr[3] == 0 &&
+        addr[4] == 0 &&
+        addr[5] == 0 &&
+        addr[6] == 0 &&
+        addr[7] == 0 &&
+        addr[8] == 0 &&
+        addr[9] == 0 &&
+        addr[10] == 0xFF &&
+        addr[11] == 0xFF;
+}
 
 Reader::Reader(ipx_ctx_t *ctx, const fds_config *cfg, const char *path)
     : m_ctx(ctx), m_cfg(cfg)
@@ -97,7 +113,7 @@ Reader::session_from_sid(fds_file_sid_t sid)
     memset(&session_net, 0, sizeof(session_net));
     session_net.port_src = desc->port_src;
     session_net.port_dst = desc->port_dst;
-    if (IN6_IS_ADDR_V4MAPPED(desc->ip_src) && IN6_IS_ADDR_V4MAPPED(desc->ip_dst)) {
+    if (in6_is_addr_v4mapped(desc->ip_src) && in6_is_addr_v4mapped(desc->ip_dst)) {
         session_net.l3_proto = AF_INET;
         session_net.addr_src.ipv4 = *reinterpret_cast<const struct in_addr *>(&desc->ip_src[12]);
         session_net.addr_dst.ipv4 = *reinterpret_cast<const struct in_addr *>(&desc->ip_dst[12]);
