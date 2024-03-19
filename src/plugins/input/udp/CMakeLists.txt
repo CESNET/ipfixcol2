@@ -5,6 +5,16 @@ add_library(udp-input MODULE
     config.h
 )
 
+if (CMAKE_HOST_SYSTEM_NAME STREQUAL "FreeBSD" OR CMAKE_HOST_SYSTEM_NAME STREQUAL "OpenBSD")
+    find_package(LibEpollShim REQUIRED)
+    include_directories(
+        ${LIBEPOLLSHIM_INCLUDE_DIRS}
+    )
+    target_link_libraries(udp-input
+        ${LIBEPOLLSHIM_LIBRARIES}
+    )
+endif()
+
 install(
     TARGETS udp-input
     LIBRARY DESTINATION "${INSTALL_DIR_LIB}/ipfixcol2/"
