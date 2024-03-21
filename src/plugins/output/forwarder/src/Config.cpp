@@ -46,6 +46,8 @@
 #include <cstring>
 #include <netdb.h>
 #include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 ///
 /// Config schema definition

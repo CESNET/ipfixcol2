@@ -49,6 +49,10 @@
 
 #include "Syslog.hpp"
 
+#ifndef HOST_NAME_MAX
+#define HOST_NAME_MAX _POSIX_HOST_NAME_MAX
+#endif
+
 /** Delay between reconnection attempts (seconds)  */
 #define RECONN_DELAY (5)
 /** How ofter to report statistics (seconds) */

@@ -27,7 +27,7 @@ static int cpipe_fd[2] = {INVALID_FD, INVALID_FD};
 static const char *module = "Configuration pipe";
 
 // Size of the request must allow atomic write! (see write() for help)
-static_assert(sizeof(struct ipx_cpipe_req) <= PIPE_BUF, "non-atomic write!");
+_Static_assert(sizeof(struct ipx_cpipe_req) <= PIPE_BUF, "non-atomic write!");
 
 int
 ipx_cpipe_init()

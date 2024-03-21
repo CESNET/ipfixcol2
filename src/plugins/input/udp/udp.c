@@ -446,8 +446,33 @@ listener_init(struct udp_data *instance)
     const char *err_str;
 
     // Get maximum socket receive buffer size (in bytes)
-    FILE *f;
     int sock_rmax = 0;
+
+#if defined(__FreeBSD__) || defined(__OpenBSD__)
+    unsigned long space = 0;
+    size_t n = sizeof(space);
+    int sock = socket(PF_INET, SOCK_DGRAM, 0);
+    if (sock < 0) {
+        ipx_strerror(errno, err_str);
+        IPX_CTX_WARNING(instance->ctx, "Unable to get the maximum socket receive buffer size "
+            "(socket() failed: %s). Due to potentially small buffers, some records may be lost!",
+            err_str);
+    }
+
+    if (getsockopt(sock, SOL_SOCKET, SO_RCVBUF, &space, (socklen_t*)&n) != 0) {
+        ipx_strerror(errno, err_str);
+        IPX_CTX_WARNING(instance->ctx, "Unable to get the maximum socket receive buffer size "
+            "(getsockopt() failed: %s). Due to potentially small buffers, some records may be lost!",
+            err_str);
+    } else {
+        sock_rmax = (int) space;
+    }
+
+    if (sock != 0) {
+        close(sock);
+    }
+#else
+    FILE *f;
     static const char *sys_cfg = "/proc/sys/net/core/rmem_max";
     if ((f = fopen(sys_cfg, "r")) == NULL || fscanf(f, "%d", &sock_rmax) != 1 || sock_rmax < 0) {
         ipx_strerror(errno, err_str);
@@ -457,10 +482,12 @@ listener_init(struct udp_data *instance)
         sock_rmax = 0;
     }
 
-    instance->listen.rmem_size = sock_rmax;
     if (f != NULL) {
         fclose(f);
     }
+#endif
+
+    instance->listen.rmem_size = sock_rmax;
 
     if (sock_rmax != 0 && sock_rmax < UDP_RMEM_REQ) {
         IPX_CTX_WARNING(instance->ctx, "The maximum socket receive buffer size is too small "
@@ -915,20 +942,34 @@ static void
 process_socket(struct udp_data *instance, int sd)
 {
     const char *err_str;
+    ssize_t ret;
 
     // Get size of the message
     int msg_size;
+#if defined(__FreeBSD__) || defined(__OpenBSD__)
+    // ioctl(FIONREAD) on Linux returns the size of the next datagram available to read,
+    // ioctl(FIONREAD) on *BSD returns the _total_ size of _all_ datagrams available to read
+    ret = recv(sd, NULL, 0, MSG_PEEK | MSG_TRUNC);
+    if (ret == -1) {
+        ipx_strerror(errno, err_str);
+        IPX_CTX_ERROR(instance->ctx, "Unable to get size of a next datagram. recv() failed: %s",
+            err_str);
+        return;
+    }
+    msg_size = ret;
+#else
     if (ioctl(sd, FIONREAD, &msg_size) == -1) {
         ipx_strerror(errno, err_str);
         IPX_CTX_ERROR(instance->ctx, "Unable to get size of a next datagram. ioctl() failed: %s",
             err_str);
         return;
     }
+#endif
 
     if (msg_size < (int) sizeof(uint16_t) || msg_size > UINT16_MAX) {
         // Remove the malformed message from the buffer
         uint16_t mini_buffer;
-        ssize_t ret = recvfrom(sd, &mini_buffer, sizeof(mini_buffer), 0, NULL, NULL);
+        ret = recvfrom(sd, &mini_buffer, sizeof(mini_buffer), 0, NULL, NULL);
         if (ret == -1) {
             ipx_strerror(errno, err_str);
             IPX_CTX_WARNING(instance->ctx, "An error has occurred during reading a malformed "
@@ -950,7 +991,7 @@ process_socket(struct udp_data *instance, int sd)
     // Get the message
     struct sockaddr_storage addr;
     socklen_t addr_len = sizeof(addr);
-    ssize_t ret = recvfrom(sd, buffer, (size_t) msg_size, 0, (struct sockaddr *) &addr, &addr_len);
+    ret = recvfrom(sd, buffer, (size_t) msg_size, 0, (struct sockaddr *) &addr, &addr_len);
     if (ret == -1) {
         // Failed
         ipx_strerror(errno, err_str);

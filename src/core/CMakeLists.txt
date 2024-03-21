@@ -79,6 +79,10 @@ target_link_libraries(ipfixcol2base
 
 # Build IPFIXCOL2 exacutable with all symbols from the base library
 set(BASE_LIB -Wl,--whole-archive ipfixcol2base -Wl,--no-whole-archive)
+if (CMAKE_HOST_SYSTEM_NAME STREQUAL "FreeBSD" OR CMAKE_HOST_SYSTEM_NAME STREQUAL "OpenBSD")
+    set(BASE_LIB ${BASE_LIB} -rdynamic)
+endif()
+
 add_executable(ipfixcol2 main.cpp)
 target_link_libraries(ipfixcol2 ${BASE_LIB})
 set_target_properties(ipfixcol2 PROPERTIES  # by default, hide all symbols

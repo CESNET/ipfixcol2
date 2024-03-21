@@ -45,7 +45,11 @@
 #include <pthread.h>
 #include <errno.h>
 #include <signal.h>
+#if defined(__OpenBSD__) || defined(__FreeBSD__)
+#include <pthread_np.h>
+#else
 #include <sys/prctl.h>
+#endif
 
 #include "context.h"
 #include "extension.h"
@@ -640,6 +644,9 @@ thread_set_name(const char *ident)
     strncpy(name, ident, size - 1);
     name[size - 1] = '\0';
 
+#if defined(__OpenBSD__) || defined(__FreeBSD__)
+    pthread_set_name_np(pthread_self(), name);
+#else
     int rc = prctl(PR_SET_NAME, name, 0, 0, 0);
     if (rc == -1) {
         const char *err_str;
@@ -647,6 +654,7 @@ thread_set_name(const char *ident)
         IPX_WARNING(comp_str, "Failed to set the name of a thread. prctl() failed: %s",
             err_str);
     }
+#endif
 }
 
 /**
@@ -656,6 +664,9 @@ thread_set_name(const char *ident)
 static inline void
 thread_get_name(char ident[16])
 {
+#if defined(__OpenBSD__) || defined(__FreeBSD__)
+    pthread_get_name_np(pthread_self(), ident, 16);
+#else
     int rc = prctl(PR_GET_NAME, ident, 0, 0, 0);
     if (rc == -1) {
         const char *err_str;
@@ -664,6 +675,7 @@ thread_get_name(char ident[16])
             err_str);
         ident[0] = '\0';
     }
+#endif
 }
 
 int
