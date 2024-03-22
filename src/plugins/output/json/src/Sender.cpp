@@ -229,8 +229,21 @@ Sender::send(const char *str, size_t len)
             }
 
             // Connection failed
-            char buffer[128];
-            const char *err_str = strerror_r(errno, buffer, 128);
+            int errno_save = errno;
+            locale_t loc = newlocale(LC_MESSAGES_MASK, "", (locale_t)0);
+            const char *err_str;
+            if (loc == (locale_t)0) {
+                if (errno == ENOENT) {
+                    loc = newlocale(LC_MESSAGES_MASK, "POSIX", (locale_t)0);
+                }
+            }
+            if (loc != (locale_t)0) {
+                err_str = strerror_l(errno_save, loc);
+                freelocale(loc);
+            } else {
+                err_str = "newlocale() failed";
+            }
+            errno = errno_save;
             IPX_CTX_INFO(_ctx, "(Send output) Destination '%s:%" PRIu16 "' disconnected: %s",
                 params.addr.c_str(), params.port, err_str);
             return SEND_FAILED;

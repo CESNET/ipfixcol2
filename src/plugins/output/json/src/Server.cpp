@@ -47,6 +47,7 @@
 #include <sys/time.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <locale.h>
 
 /** How many pending connections queue will hold */
 #define BACKLOG (10)
@@ -201,8 +202,21 @@ Server::thread_accept(void *context)
                 continue;
             }
 
-            char buffer[128];
-            const char *err_str = strerror_r(errno, buffer, 128);
+            int errno_save = errno;
+            locale_t loc = newlocale(LC_MESSAGES_MASK, "", (locale_t)0);
+            const char *err_str;
+            if (loc == (locale_t)0) {
+                if (errno == ENOENT) {
+                    loc = newlocale(LC_MESSAGES_MASK, "POSIX", (locale_t)0);
+                }
+            }
+            if (loc != (locale_t)0) {
+                err_str = strerror_l(errno_save, loc);
+                freelocale(loc);
+            } else {
+                err_str = "newlocale() failed";
+            }
+            errno = errno_save;
             IPX_CTX_ERROR(acc->ctx, "(Server output) select() - failed (%s)", err_str);
             break;
         }
@@ -214,8 +228,21 @@ Server::thread_accept(void *context)
 
         new_fd = accept(acc->socket_fd, (struct sockaddr *) &client_addr, &sin_size);
         if (new_fd == -1) {
-            char buffer[128];
-            const char *err_str = strerror_r(errno, buffer, 128);
+            int errno_save = errno;
+            locale_t loc = newlocale(LC_MESSAGES_MASK, "", (locale_t)0);
+            const char *err_str;
+            if (loc == (locale_t)0) {
+                if (errno == ENOENT) {
+                    loc = newlocale(LC_MESSAGES_MASK, "POSIX", (locale_t)0);
+                }
+            }
+            if (loc != (locale_t)0) {
+                err_str = strerror_l(errno_save, loc);
+                freelocale(loc);
+            } else {
+                err_str = "newlocale() failed";
+            }
+            errno = errno_save;
             IPX_CTX_ERROR(acc->ctx, "(Server output) accept() - failed (%s)", err_str);
             continue;
         }
@@ -270,8 +297,21 @@ Server::msg_send(const char *data, ssize_t len, client_t &client)
             }
 
             // Connection failed
-            char buffer[128];
-            const char *err_str = strerror_r(errno, buffer, 128);
+            int errno_save = errno;
+            locale_t loc = newlocale(LC_MESSAGES_MASK, "", (locale_t)0);
+            const char *err_str;
+            if (loc == (locale_t)0) {
+                if (errno == ENOENT) {
+                    loc = newlocale(LC_MESSAGES_MASK, "POSIX", (locale_t)0);
+                }
+            }
+            if (loc != (locale_t)0) {
+                err_str = strerror_l(errno_save, loc);
+                freelocale(loc);
+            } else {
+                err_str = "newlocale() failed";
+            }
+            errno = errno_save;
             IPX_CTX_INFO(_ctx, "(Server output) Client disconnected: %s (%s)",
                 get_client_desc(client.info).c_str(), err_str);
             return SEND_FAILED;
