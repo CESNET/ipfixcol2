@@ -4,6 +4,7 @@ add_library(tcp-input MODULE
     src/Config.cpp
     src/ByteVector.cpp
     src/DecodeBuffer.cpp
+    src/Connection.cpp
 )
 
 install(
