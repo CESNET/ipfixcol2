@@ -9,6 +9,9 @@ Unlike UDP, TCP is reliable transport protocol that allows exporters to detect c
 disconnection of the collector. Therefore, the issues with templates retransmission and
 initial period of inability to interpret flow records does not apply here.
 
+Received IPFIX messages may be compressed using LZ4 stream compression. The compression is
+enabled on the exporter and the plugin detects it automatically.
+
 Example configuration
 ---------------------
 
@@ -35,3 +38,8 @@ Mandatory parameters:
     is left empty, the plugin binds to all available network interfaces. The element can occur
     multiple times (one IP address per occurrence) to manually select multiple interfaces.
     [default: empty]
+
+Notes
+-----
+The LZ4 compression uses special format that compatible with
+`ipfixproble <https://github.com/CESNET/ipfixprobe>`.
