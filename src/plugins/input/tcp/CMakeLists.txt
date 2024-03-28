@@ -6,6 +6,7 @@ add_library(tcp-input MODULE
     src/DecodeBuffer.cpp
     src/Connection.cpp
     src/Epoll.cpp
+    src/ClientManager.cpp
 )
 
 install(
