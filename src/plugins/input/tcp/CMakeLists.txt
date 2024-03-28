@@ -9,6 +9,7 @@ add_library(tcp-input MODULE
     src/ClientManager.cpp
     src/IpfixDecoder.cpp
     src/Lz4Decoder.cpp
+    src/DecoderFactory.cpp
 )
 
 install(
