@@ -7,6 +7,7 @@ add_library(tcp-input MODULE
     src/Connection.cpp
     src/Epoll.cpp
     src/ClientManager.cpp
+    src/IpfixDecoder.cpp
 )
 
 install(
