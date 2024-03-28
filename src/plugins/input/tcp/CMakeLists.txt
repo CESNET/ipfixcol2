@@ -8,6 +8,7 @@ add_library(tcp-input MODULE
     src/Epoll.cpp
     src/ClientManager.cpp
     src/IpfixDecoder.cpp
+    src/Lz4Decoder.cpp
 )
 
 if (CMAKE_HOST_SYSTEM_NAME STREQUAL "FreeBSD" OR CMAKE_HOST_SYSTEM_NAME STREQUAL "OpenBSD")
