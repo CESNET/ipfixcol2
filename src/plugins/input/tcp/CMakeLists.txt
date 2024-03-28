@@ -11,6 +11,7 @@ add_library(tcp-input MODULE
     src/Lz4Decoder.cpp
     src/DecoderFactory.cpp
     src/Acceptor.cpp
+    src/Plugin.cpp
 )
 
 if (CMAKE_HOST_SYSTEM_NAME STREQUAL "FreeBSD" OR CMAKE_HOST_SYSTEM_NAME STREQUAL "OpenBSD")
