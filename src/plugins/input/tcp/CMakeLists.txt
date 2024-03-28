@@ -12,6 +12,7 @@ add_library(tcp-input MODULE
     src/DecoderFactory.cpp
     src/Acceptor.cpp
     src/Plugin.cpp
+    src/IpxPlugin.cpp
 )
 
 if (CMAKE_HOST_SYSTEM_NAME STREQUAL "FreeBSD" OR CMAKE_HOST_SYSTEM_NAME STREQUAL "OpenBSD")
