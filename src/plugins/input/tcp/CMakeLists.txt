@@ -2,6 +2,7 @@
 add_library(tcp-input MODULE
     src/IpAddress.cpp
     src/Config.cpp
+    src/ByteVector.cpp
 )
 
 install(
