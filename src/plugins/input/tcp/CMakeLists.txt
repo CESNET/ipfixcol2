@@ -2,6 +2,7 @@
 add_library(tcp-input MODULE
     src/IpAddress.cpp
     src/Config.cpp
+    src/ByteVector.cpp
 )
 
 if (CMAKE_HOST_SYSTEM_NAME STREQUAL "FreeBSD" OR CMAKE_HOST_SYSTEM_NAME STREQUAL "OpenBSD")
