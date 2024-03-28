@@ -12,6 +12,7 @@ add_library(tcp-input MODULE
     src/DecoderFactory.cpp
     src/Acceptor.cpp
     src/Plugin.cpp
+    src/IpxPlugin.cpp
 )
 
 install(
