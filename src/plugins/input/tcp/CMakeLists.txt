@@ -5,6 +5,7 @@ add_library(tcp-input MODULE
     src/ByteVector.cpp
     src/DecodeBuffer.cpp
     src/Connection.cpp
+    src/Epoll.cpp
 )
 
 install(
