@@ -1,8 +1,5 @@
 # Create a linkable module
 add_library(tcp-input MODULE
-    tcp.c
-    config.c
-    config.h
 )
 
 if (CMAKE_HOST_SYSTEM_NAME STREQUAL "FreeBSD" OR CMAKE_HOST_SYSTEM_NAME STREQUAL "OpenBSD")
