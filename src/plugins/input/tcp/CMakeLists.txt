@@ -1,5 +1,6 @@
 # Create a linkable module
 add_library(tcp-input MODULE
+    src/IpAddress.cpp
 )
 
 install(
