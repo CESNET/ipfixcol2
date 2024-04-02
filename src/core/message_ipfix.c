@@ -39,6 +39,7 @@
  *
  */
 
+#include <assert.h>
 #include <ipfixcol2.h>
 #include <libfds.h>
 #include "message_base.h"

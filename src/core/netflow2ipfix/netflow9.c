@@ -8,6 +8,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include <assert.h>
 #include <stdint.h>
 #include <endian.h>
 #include <assert.h>

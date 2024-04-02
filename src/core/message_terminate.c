@@ -39,6 +39,7 @@
  *
  */
 
+#include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include "message_terminate.h"
