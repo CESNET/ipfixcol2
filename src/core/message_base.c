@@ -67,5 +67,8 @@ ipx_msg_destroy(ipx_msg_t *msg)
     case IPX_MSG_TERMINATE:
         ipx_msg_terminate_destroy(ipx_msg_base2terminate(msg));
         break;
+    case IPX_MSG_PERIODIC:
+        ipx_msg_periodic_destroy(ipx_msg_base2periodic(msg));
+        break;
     }
 }
