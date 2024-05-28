@@ -381,6 +381,7 @@ ipx_ctx_msg_pass(ipx_ctx_t *ctx, ipx_msg_t *msg);
  * types of messages:
  * - ::IPX_MSG_IPFIX (IPFIX Message)
  * - ::IPX_MSG_SESSION (Transport Session Message)
+ * - ::IPX_MSG_PERIODIC (Periodic Message)
  *
  * If \p mask_new is non-NULL, the new subscription mask is installed from \p mask_new.
  * If \p mask_old is non-NULL, the previous mask is saved in \p mask_old.

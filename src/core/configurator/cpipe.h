@@ -83,11 +83,13 @@ enum ipx_cpipe_type {
      *
      * Sending this request before termination of all plugin instances is considered as fatal.
      */
-    IPX_CPIPE_TYPE_TERM_DONE        ///< Terminate request - complete
+    IPX_CPIPE_TYPE_TERM_DONE,        ///< Terminate request - complete
 
     // Proposed types for the future runtime reconfiguration
     // IPX_CPIPE_TYPE_RECONF_START,
     // IPX_CPIPE_TYPE_RECONF_DONE
+
+    IPX_CPIPE_TYPE_PERIODIC
 };
 
 /// Configuration request
@@ -152,7 +154,7 @@ ipx_cpipe_receive(struct ipx_cpipe_req *msg);
  * @return #IPX_ERR_DENIED if the request failed to be sent
  */
 int
-ipx_cpipe_send_term(ipx_ctx_t *ctx, enum ipx_cpipe_type type);
+ipx_cpipe_send(ipx_ctx_t *ctx, enum ipx_cpipe_type type);
 
 #ifdef __cplusplus
 }

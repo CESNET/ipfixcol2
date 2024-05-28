@@ -42,6 +42,7 @@
 #include <ipfixcol2.h>
 #include "message_base.h"
 #include "message_terminate.h"
+#include "message_periodic.h"
 
 // Get the type of a message for the collector pipeline
 enum ipx_msg_type
