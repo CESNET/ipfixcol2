@@ -45,8 +45,6 @@
 extern "C" {
 #endif
 
-#include <ipfixcol2.h>
-
 #ifdef __cplusplus
 }
 #endif
