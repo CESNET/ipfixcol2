@@ -22,13 +22,11 @@
 
 namespace tcp_in {
 
-using namespace std;
-
 Epoll::Epoll() : m_fd(epoll_create(1)) {
     if (!m_fd) {
         const char *err_str;
         ipx_strerror(errno, err_str);
-        throw runtime_error("Failed to create epoll: " + string(err_str));
+        throw std::runtime_error("Failed to create epoll: " + std::string(err_str));
     }
 }
 
@@ -43,7 +41,7 @@ void Epoll::add(int fd, void *data) {
     if (epoll_ctl(m_fd.get(), EPOLL_CTL_ADD, fd, &ev) == -1) {
         const char *err_str;
         ipx_strerror(errno, err_str);
-        throw runtime_error("Failed to add to epoll: " + string(err_str));
+        throw std::runtime_error("Failed to add to epoll: " + std::string(err_str));
     }
 }
 

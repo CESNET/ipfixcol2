@@ -47,7 +47,7 @@ public:
      * @param fd File descriptor to remove from the epoll.
      * @return true on success, otherwise false
      */
-    inline bool remove(int fd) noexcept {
+    bool remove(int fd) noexcept {
         return epoll_ctl(m_fd.get(), EPOLL_CTL_DEL, fd, nullptr) == 0;
     }
 
