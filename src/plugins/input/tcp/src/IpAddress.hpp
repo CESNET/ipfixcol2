@@ -10,8 +10,6 @@
 
 #pragma once
 
-#include <string> // std::string
-
 #include <netinet/in.h> // in_addr, in6_addr
 #include <sys/socket.h> // AF_INET, AF_INET6
 

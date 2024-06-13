@@ -17,8 +17,6 @@
 
 namespace tcp_in {
 
-using namespace std;
-
 IpAddress::IpAddress(const char *adr) {
     if (inet_pton(AF_INET, adr, &v4) == 1) {
         version = IpVersion::IP4;
@@ -30,7 +28,7 @@ IpAddress::IpAddress(const char *adr) {
         return;
     }
 
-    throw invalid_argument("Invalid ip address string: " + string(adr));
+    throw std::invalid_argument("Invalid ip address string: " + std::string(adr));
 }
 
 } // namespace tcp_in
