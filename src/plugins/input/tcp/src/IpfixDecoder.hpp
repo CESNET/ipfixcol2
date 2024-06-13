@@ -19,6 +19,7 @@
 
 namespace tcp_in {
 
+/** Identifies data for which this decoder should be used. */
 constexpr uint16_t IPFIX_MAGIC = 10;
 
 /** Decoder for basic IPFX data. */
@@ -48,6 +49,7 @@ private:
     DecodeBuffer m_decoded;
 
     ByteVector m_part_readed;
+    /** Final size of the whole IPFIX message. When 0 IPIFX header is not fully read. */
     size_t m_msg_size;
 };
 
