@@ -33,8 +33,6 @@
 
 namespace tcp_in {
 
-using namespace std;
-
 Acceptor::Acceptor(ClientManager &clients, DecoderFactory factory, ipx_ctx_t *ctx) :
     m_epoll(),
     m_sockets(),
@@ -45,11 +43,11 @@ Acceptor::Acceptor(ClientManager &clients, DecoderFactory factory, ipx_ctx_t *ct
     m_thread(),
     m_ctx(ctx)
 {
-    array<int, 2> pipe_fd{};
+    std::array<int, 2> pipe_fd{};
     if (pipe(pipe_fd.begin()) != 0) {
         const char *err_str;
         ipx_strerror(errno, err_str);
-        throw runtime_error("Failed to create pipe: " + string(err_str));
+        throw std::runtime_error("Failed to create pipe: " + std::string(err_str));
     }
 
     UniqueFd pipe_in(pipe_fd[1]);
@@ -101,7 +99,7 @@ UniqueFd Acceptor::bind_address(IpAddress &addr, uint16_t port, bool ipv6_only) 
     UniqueFd sd(socket(saddr.sa_family, SOCK_STREAM, 0));
     if (!sd) {
         ipx_strerror(errno, err_str);
-        throw runtime_error("Failed to create socket: " + string(err_str));
+        throw std::runtime_error("Failed to create socket: " + std::string(err_str));
     }
 
     int on = 1;
@@ -129,16 +127,16 @@ UniqueFd Acceptor::bind_address(IpAddress &addr, uint16_t port, bool ipv6_only) 
         }
     }
 
-    array<char, INET6_ADDRSTRLEN> addr_str{};
+    std::array<char, INET6_ADDRSTRLEN> addr_str{};
     inet_ntop(static_cast<int>(addr.version), &addr.v6, addr_str.begin(), INET6_ADDRSTRLEN);
 
     if (bind(sd.get(), &saddr, addr_len) == -1) {
         ipx_strerror(errno, err_str);
-        throw runtime_error(
+        throw std::runtime_error(
             "Failed to bind to socket (local IP: "
-            + string(addr_str.begin())
+            + std::string(addr_str.begin())
             + ", port: "
-            + to_string(port)
+            + std::to_string(port)
             + "): "
             + err_str
         );
@@ -146,11 +144,11 @@ UniqueFd Acceptor::bind_address(IpAddress &addr, uint16_t port, bool ipv6_only) 
 
     if (listen(sd.get(), SOMAXCONN) == -1) {
         ipx_strerror(errno, err_str);
-        throw runtime_error(
+        throw std::runtime_error(
             "Failed to listen on a socket (local IP: "
-            + string(addr_str.begin())
+            + std::string(addr_str.begin())
             + ", port: "
-            + to_string(port)
+            + std::to_string(port)
             + "): "
             + err_str
         );
@@ -162,9 +160,9 @@ UniqueFd Acceptor::bind_address(IpAddress &addr, uint16_t port, bool ipv6_only) 
 
 void Acceptor::start() {
     if (m_thread.joinable()) {
-        throw runtime_error("Cannot start acceptor, it is already running.");
+        throw std::runtime_error("Cannot start acceptor, it is already running.");
     }
-    thread acceptor([=](){ mainloop(); });
+    std::thread acceptor([=](){ mainloop(); });
     m_thread.swap(acceptor);
 }
 
@@ -176,9 +174,9 @@ void Acceptor::stop() {
     if (write(m_pipe_in.get(), "x", 1) != 1) {
         const char *err_str;
         ipx_strerror(errno, err_str);
-        throw runtime_error(
-            "Failed to notify acceptor thread to exit by writing to pipe: "
-                + string(err_str)
+        throw std::runtime_error(
+            "Faidled to notify acceptor thread to exit by writing to pipe: "
+                + std::string(err_str)
         );
     }
 
@@ -234,7 +232,7 @@ void Acceptor::mainloop() {
         try {
             auto decoder = m_factory.detect_decoder(new_sd.get());
             m_clients.add_connection(std::move(new_sd), std::move(decoder));
-        } catch (exception &ex) {
+        } catch (std::exception &ex) {
             IPX_CTX_ERROR(m_ctx, "Acceptor: %s", ex.what());
         }
     }
