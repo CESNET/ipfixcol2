@@ -22,8 +22,6 @@
 
 namespace tcp_in {
 
-using namespace std;
-
 Plugin::Plugin(ipx_ctx_t *ctx, Config &config) :
     m_ctx(ctx),
     m_clients(ctx),
@@ -35,7 +33,7 @@ Plugin::Plugin(ipx_ctx_t *ctx, Config &config) :
 
 void Plugin::get() {
     constexpr int MAX_CONNECTIONS = 16;
-    array<Connection *, MAX_CONNECTIONS> connections{};
+    std::array<Connection *, MAX_CONNECTIONS> connections{};
 
     auto count = m_clients.wait_for_connections(connections.begin(), connections.size());
 
@@ -47,7 +45,7 @@ void Plugin::get() {
                 IPX_CTX_INFO(m_ctx, "Closing %s", session->ident);
                 m_clients.close_connection(session);
             }
-        } catch (exception &ex) {
+        } catch (std::exception &ex) {
             IPX_CTX_ERROR(m_ctx, "%s", ex.what());
             auto session = connections[i]->get_session();
             IPX_CTX_INFO(m_ctx, "Closing %s", session->ident);
@@ -64,7 +62,7 @@ Plugin::~Plugin() {
     try {
         m_acceptor.stop();
         m_clients.close_all_connections();
-    } catch (exception &ex) {
+    } catch (std::exception &ex) {
         IPX_CTX_WARNING(m_ctx, "%s", ex.what());
     }
 }
