@@ -20,52 +20,60 @@ public:
     static constexpr int INVALID_FD = -1;
 
     /** Creates invalid file descriptor */
-    inline UniqueFd() : m_fd(INVALID_FD) {}
+    UniqueFd() : m_fd(INVALID_FD) {}
 
     /** Creates owned file descriptor from the given file descriptor */
-    inline UniqueFd(int fd) : m_fd(fd) {}
+    UniqueFd(int fd) : m_fd(fd) {}
 
-    inline UniqueFd(const UniqueFd &) = delete;
+    UniqueFd(const UniqueFd &) = delete;
+
+    UniqueFd &operator=(const UniqueFd &) = delete;
 
     /** Takes the ownership of file descriptor from the given file descriptor */
-    inline UniqueFd(UniqueFd &&other) : m_fd(other.m_fd) {
+    UniqueFd(UniqueFd &&other) : m_fd(other.m_fd) {
         other.m_fd = INVALID_FD;
     }
 
+    /** Takes ownership of the other file descriptor. */
+    UniqueFd &operator=(UniqueFd &&other) {
+        swap(other);
+        return *this;
+    }
+
     /** gets the file descriptor */
-    inline int get() const noexcept {
+    int get() const noexcept {
         return m_fd;
     }
 
     /** gets the file descriptor and releases the ownership */
-    inline int take() noexcept {
+    int release() noexcept {
         int fd = m_fd;
         m_fd = INVALID_FD;
         return fd;
     }
 
     /** swaps the file descriptors */
-    inline void swap(UniqueFd &other) noexcept {
+    void swap(UniqueFd &other) noexcept {
         std::swap(m_fd, other.m_fd);
     }
 
-    inline void close() noexcept {
+    void close() noexcept {
         if (m_fd != INVALID_FD) {
             ::close(m_fd);
             m_fd = INVALID_FD;
         }
     }
 
-    inline ~UniqueFd() noexcept {
+    ~UniqueFd() noexcept {
         close();
     }
 
     /** checks whether the file descriptor is valid */
-    inline explicit operator bool() const noexcept {
+    explicit operator bool() const noexcept {
         return m_fd != INVALID_FD;
     }
 
-    inline bool operator ==(const UniqueFd &other) const {
+    bool operator ==(const UniqueFd &other) const {
         return m_fd == other.m_fd;
     }
 
