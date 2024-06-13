@@ -31,7 +31,6 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
 };
 
 using namespace tcp_in;
-using namespace std;
 
 int ipx_plugin_init(ipx_ctx_t *ctx, const char *params) {
     Plugin *plugin;
@@ -39,7 +38,7 @@ int ipx_plugin_init(ipx_ctx_t *ctx, const char *params) {
     try {
         Config conf(params);
         plugin = new Plugin(ctx, conf);
-    } catch (exception &ex) {
+    } catch (std::exception &ex) {
         IPX_CTX_ERROR(ctx, "%s", ex.what());
         return IPX_ERR_DENIED;
     }
@@ -53,7 +52,7 @@ int ipx_plugin_get(ipx_ctx_t *ctx, void *cfg) {
 
     try {
         plugin->get();
-    } catch (exception &ex) {
+    } catch (std::exception &ex) {
         IPX_CTX_ERROR(ctx, "%s", ex.what());
         return IPX_ERR_DENIED;
     }
@@ -66,7 +65,7 @@ void ipx_plugin_session_close(ipx_ctx_t *ctx, void *cfg, const struct ipx_sessio
 
     try {
         plugin->close_session(session);
-    } catch (exception &ex) {
+    } catch (std::exception &ex) {
         IPX_CTX_ERROR(ctx, "%s", ex.what());
     }
 }
