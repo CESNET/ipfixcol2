@@ -72,12 +72,10 @@ private:
      */
     bool read_body();
     /**
-     * @brief decompresses the next block of memory, returns size of the block
+     * @brief decompresses the next block of memory and write it to the decode buffer
      * @throws when decompression fails
      */
     void decompress();
-    /** sends the last decompressed block */
-    void send_last_data();
     /**
      * @brief read while `m_compressed.size() < n`
      * @param n number of bytes required to be in `m_compressed`

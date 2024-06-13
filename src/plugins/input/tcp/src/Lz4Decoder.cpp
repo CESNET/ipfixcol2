@@ -27,8 +27,6 @@
 
 namespace tcp_in {
 
-using namespace std;
-
 struct __attribute__((__packed__)) ipfix_compress_header {
     uint16_t decompressed_size;
     uint16_t compressed_size;
@@ -50,7 +48,7 @@ Lz4Decoder::Lz4Decoder(int fd) :
     m_decompressed_size(0)
 {
     if (!m_decoder) {
-        throw runtime_error("LZ4 Decoder: Failed to create stream decoder");
+        throw std::runtime_error("LZ4 Decoder: Failed to create stream decoder");
     }
 }
 
@@ -65,11 +63,10 @@ DecodeBuffer &Lz4Decoder::decode() {
         }
 
         decompress();
-        send_last_data();
     }
 
     if (m_decoded.is_eof_reached() && m_compressed.size() != 0) {
-        throw runtime_error("Incomplete compressed message received");
+        throw std::runtime_error("Incomplete compressed message received");
     }
 
     return m_decoded;
@@ -140,13 +137,21 @@ void Lz4Decoder::decompress() {
     );
 
     if (res < 0) {
-        throw runtime_error("LZ4 Decoder: decompression failed");
+        throw std::runtime_error("LZ4 Decoder: decompression failed");
     }
 
     if (static_cast<size_t>(res) != m_decompressed_size) {
         // this shouldn't happen, but it is not error
         m_decompressed_size = res;
     }
+
+    // Copy the decompressed data into the decode buffer
+    m_decoded.read_from(
+        m_decompressed.data(),
+        m_decompressed.size(),
+        m_decompressed_size,
+        m_decompressed_pos
+    );
 
     m_decompressed_pos += m_decompressed_size;
     if (m_decompressed_pos >= m_decompressed.size()) {
@@ -155,22 +160,6 @@ void Lz4Decoder::decompress() {
 
     m_compressed.clear();
     m_compressed_size = 0;
-}
-
-void Lz4Decoder::send_last_data() {
-    // calculate the start position of the data, avoid negative numbers
-    size_t start_pos = m_decompressed_pos + m_decompressed.size() - m_decompressed_size;
-    // if is faster than mod
-    if (start_pos >= m_decompressed.size()) {
-        start_pos -= m_decompressed.size();
-    }
-
-    m_decoded.read_from(
-        m_decompressed.data(),
-        m_decompressed.size(),
-        m_decompressed_size,
-        start_pos
-    );
 }
 
 bool Lz4Decoder::read_until_n(size_t n) {
@@ -183,7 +172,7 @@ void Lz4Decoder::reset_stream(size_t buffer_size) {
 
     int res = LZ4_setStreamDecode(m_decoder.get(), nullptr, 0);
     if (res == 0) {
-        throw runtime_error("LZ4 Decoder: Failed to reset stream decoder.");
+        throw std::runtime_error("LZ4 Decoder: Failed to reset stream decoder.");
     }
 }
 
