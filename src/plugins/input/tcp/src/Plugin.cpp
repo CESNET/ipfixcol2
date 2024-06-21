@@ -32,8 +32,9 @@ Plugin::Plugin(ipx_ctx_t *ctx, Config &config) :
 }
 
 void Plugin::get() {
-    constexpr int MAX_CONNECTIONS = 16;
-    std::array<Connection *, MAX_CONNECTIONS> connections{};
+    /** Maximum number of connections to process in one call to get */
+    constexpr int MAX_CONNECTION_BATCH_SIZE = 16;
+    std::array<Connection *, MAX_CONNECTION_BATCH_SIZE> connections{};
 
     auto count = m_clients.wait_for_connections(connections.begin(), connections.size());
 
