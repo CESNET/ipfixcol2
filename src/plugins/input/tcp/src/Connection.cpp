@@ -53,7 +53,7 @@ Connection::Connection(UniqueFd fd, std::unique_ptr<Decoder> decoder) :
 
     if (src_addr.ss_family != dst_addr.ss_family) {
         throw std::runtime_error(
-            "Local and remote IP address must be of the same type (IPv6/IPv6)"
+            "Local and remote IP address must be of the same type (IPv4/IPv6)"
         );
     }
 
