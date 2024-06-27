@@ -196,6 +196,21 @@ PPI_PKT_TIMES                  time*         e0id291/cesnet:packetTime          
 PPI_PKT_FLAGS                  uint8*        e0id291/cesnet:packetFlag           # basicList of packet TCP flags
 PPI_PKT_DIRECTIONS             int8*         e0id291/cesnet:packetDirection      # basicList of packet directions
 
+# --- NetTiSA flow information - statistical representation of time series within communication
+NTS_MEAN                       float         cesnet:ntsMeanPacketPayload         # Mean of the payload lengths of packets.
+NTS_MIN                        uint16        cesnet:ntsMinPacketPayload          # Min value from all packet payload lengths.
+NTS_MAX                        uint16        cesnet:ntsMaxPacketPayload          # Max value from all packet payload lengths.
+NTS_STDEV                      float         cesnet:ntsStdevPacketPayload        # Measure of the variation of payload lenghts from the mean.
+NTS_KURTOSIS                   float         cesnet:ntsKurtosisPacketPayload     # Measure describing the extent to which the tails of a distribution differ from the tails of a normal distribution.
+NTS_ROOT_MEAN_SQUARE           float         cesnet:ntsRootMeanSquarePacketPayload        # Measure of the magnitude of payload lengths of packets.
+NTS_AVERAGE_DISPERSION         float         cesnet:ntsAverageDispersionPacketPayload     # Average absolute difference between each payload length of packet.
+NTS_MEAN_SCALED_TIME           float         cesnet:ntsMeanScaledTime            # Mean of times from which is subtracted the first time.
+NTS_MEAN_DIFFTIMES             float         cesnet:ntsMeanDifftimes             # Mean of time differences between packets.
+NTS_MAX_DIFFTIMES              float         cesnet:ntsMinDifftimes              # Min of time differences between packets.
+NTS_MIN_DIFFTIMES              float         cesnet:ntsMaxDifftimes              # Max of time differences between packets.
+NTS_TIME_DISTRIBUTION          float         cesnet:ntsTimeDistribution          # The distribution of time differences between individual packets.
+NTS_SWITCHING_RATIO            float         cesnet:ntsSwitchingRatio            # Represents a switching ratio between different values of the sequence of observation.
+
 # --- SSDP Information elements ---
 SSDP_LOCATION_PORT             uint16        cesnet:SSDPLocationPort,flowmon:SSDPLocationPort
 SSDP_SERVER                    string        cesnet:SSDPServer,flowmon:SSDPServer
