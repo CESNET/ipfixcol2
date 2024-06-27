@@ -130,6 +130,8 @@ FME_SIP_VIA                    string        flowmon:sipVia                     
 
 # --- HTTP elements ---
 HTTP_REQUEST_METHOD_ID         string        cesnet:httpMethod                  # HTTP request method
+HTTP_RESPONSE_SERVER           string        cesnet:httpServer                  # HTTP resp. server
+HTTP_RESPONSE_SET_COOKIE_NAMES string        cesnet:httpCookieNames             # HTTP resp. all set-cookie names separate with delimiter
 
 FME_HTTP_UA_OS                 uint16        flowmon:httpUaOs
 FME_HTTP_UA_OS_MAJ             uint16        flowmon:httpUaOsMaj
