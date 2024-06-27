@@ -65,6 +65,7 @@ DNS_RR_RDATA                   bytes         cesnet:DNSRData                    
 DNS_PSIZE                      uint16        cesnet:DNSPSize                    # DNS payload size
 DNS_DO                         uint8         cesnet:DNSRDO                      # DNS DNSSEC OK bit
 DNS_ID                         uint16        cesnet:DNSTransactionID            # DNS transaction id
+DNS_ATYPE                      uint16        cesnet:DNSAType                    # DNS Answer Type
 
 FME_DNS_FLAGS                  uint16        flowmon:dnsFlagsCodes              # DNS header flags
 FME_DNS_CNT_QUESTIONS          uint16        flowmon:dnsQuestionCount           # DNS questions
