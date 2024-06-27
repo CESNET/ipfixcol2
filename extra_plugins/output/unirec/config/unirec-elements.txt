@@ -186,9 +186,25 @@ FME_TLS_PUBLIC_KEYLENGTH       int32         flowmon:tlsPublicKeyLength         
 TLS_SNI                        string        cesnet:TLSSNI                      # Server Name Indication https://en.wikipedia.org/wiki/Server_Name_Indication
 TLS_JA3_FINGERPRINT            bytes         flowmon:tlsJa3Fingerprint          # tlsJa3Fingerprint
 
+# --- QUIC protocol elements
 QUIC_SNI                       string        cesnet:quicSNI                     # Server Name Indication from QUIC
 QUIC_USER_AGENT                string        cesnet:quicUserAgent               # User-Agent value extracted from decrypted QUIC header
 QUIC_VERSION                   uint32        cesnet:quicVersion                 # Version of QUIC protocol extracted from decrypted QUIC header
+# ---- additional QUIC protocol elements proposed by https://github.com/jmuecke
+QUIC_CLIENT_VERSION            uint32        cesnet:quicClientVersion           # QUIC version from the Initial packet with the TLS Client Hello
+QUIC_TOKEN_LENGTH              uint64        cesnet:quicTokenLength             # Token length from Initial and Retry packets
+QUIC_OCCID                     bytes         cesnet:quicOCCID                   # Source Connection ID from Initial packet with the TLS Client Hello
+QUIC_OSCID                     bytes         cesnet:quicOSCID                   # Destination Connection ID from Initial packet
+QUIC_SCID                      bytes         cesnet:quicSCID                    # Source Connection ID from long header packets other than before.
+QUIC_RETRY_SCID                bytes         cesnet:quicRetrySCID               # Source Connection ID from Retry packet
+QUIC_MULTIPLEXED               uint8         cesnet:quicMultiplexed             # > 0 if multiplexed (at least two QUIC_OSCIDs or SNIs)
+QUIC_ZERO_RTT                  uint8         cesnet:quicZeroRTT                 # Number of 0-RTT packets in flow.
+QUIC_SERVER_PORT               uint16        cesnet:quicServerPort              # Server Port determined by packet type and TLS message
+QUIC_PACKETS                   uint8*        e0id291/cesnet:quicPackets         # QUIC long header packet type (v1 encoded), version negotiation, QUIC bit
+QUIC_CH_PARSED                 uint8         cesnet:quicCHParsed                # >0 if TLS Client Hello parsed without errors
+QUIC_TLS_EXT_TYPE              uint16*       e0id291/cesnet:quicTlsExtType      # Types of TLS extensions in the TLS Client Hello
+QUIC_TLS_EXT_LEN               uint16*       e0id291/cesnet:quicTlsExtLen       # Length of each TLS extension
+QUIC_TLS_EXT                   bytes         cesnet:quicTlsExt                  # Payload of ALPN and QUIC Transport params
 
 # --- Per-Packet Information elements ---
 PPI_PKT_LENGTHS                uint16*       e0id291/cesnet:packetLength         # basicList of packet lengths
