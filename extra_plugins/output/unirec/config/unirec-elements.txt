@@ -183,6 +183,14 @@ FME_TLS_SIGNATURE_ALG          uint16        flowmon:tlsSignatureAlg            
 FME_TLS_PUBLIC_KEYALG          uint16        flowmon:tlsPublicKeyAlg            # tlsPublicKeyAlg
 FME_TLS_PUBLIC_KEYLENGTH       int32         flowmon:tlsPublicKeyLength         # tlsPublicKeyLength
 
+STATS_TLS_SIZES                uint16*       e0id291/cesnet:statsTLSSize        # basicList of Sizes of TLS records
+STATS_TLS_TIMESTAMP            time*         e0id291/cesnet:statsTLSTimestamp   # basicList of Timestamps of TLS records
+STATS_TLS_DIR                  int8*         e0id291/cesnet:statsTLSDirection   # basicList of Directions of TLS records
+STATS_TLS_TYPE                 uint8*        e0id291/cesnet:statsTLSType        # basicList of Types of TLS records (e.g., CHANGE_CIPHER_SPEC, ALERT, etc.; see TLSSTATSPlugin:content_type in ipfixprobe)
+
+TLS_EXT_TYPES                  uint16*       e0id291/cesnet:tlsExtTypeField     # basicList of TLS ClientHello types extensions
+TLS_EXT_LENS                   uint16*       e0id291/cesnet:tlsExtLenField      # basicList of TLS ClientHello extension lengths
+
 TLS_SNI                        string        cesnet:TLSSNI                      # Server Name Indication https://en.wikipedia.org/wiki/Server_Name_Indication
 TLS_JA3_FINGERPRINT            bytes         flowmon:tlsJa3Fingerprint          # tlsJa3Fingerprint
 
