@@ -323,3 +323,7 @@ OSQUERY_SYSTEM_HOSTNAME         string       cesnet:OSQuerySystemHostname
 # --- SYN-SYNACK-ACK (SSA) detection of new handshake within existing connection
 SSA_CONF_LEVEL                  uint8        cesnet:ssaConfLevel     # Confidence level of detected SSA
 
+# --- scitag plugin to represent fields SciTag in IPv6 header
+SCITAG_EXPERIMENT_ID            uint16       cesnet:scitagExperimentID    # ID experiment according to SciTag IPv6 flow label
+SCITAG_EXPERIMENT_ACTIVITY      uint8        cesnet:scitagExperimentAct   # ID of activity within the experiment from SciTag IPv6 flow label
+
