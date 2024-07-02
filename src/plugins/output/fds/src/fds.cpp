@@ -68,6 +68,12 @@ window_check(struct Instance &inst)
 int
 ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
 {
+    ipx_msg_mask_t mask = IPX_MSG_IPFIX | IPX_MSG_PERIODIC;
+    if (ipx_ctx_subscribe(ctx, &mask, nullptr) != IPX_OK) {
+        IPX_CTX_ERROR(ctx, "Error subscribing to messages", 0);
+        return IPX_ERR_DENIED;
+    }
+
     try {
         // Parse configuration, try to create a storage and time window
         std::unique_ptr<Instance> instance(new Instance);
@@ -107,12 +113,15 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
 {
     auto *inst = reinterpret_cast<Instance *>(cfg);
     bool failed = false;
+    ipx_msg_type msg_type = ipx_msg_get_type(msg);
 
     try {
         // Check if the current time window should be closed
         window_check(*inst);
-        ipx_msg_ipfix_t *msg_ipfix = ipx_msg_base2ipfix(msg);
-        inst->storage_ptr->process_msg(msg_ipfix);
+        if (msg_type == IPX_MSG_IPFIX) {
+            ipx_msg_ipfix_t *msg_ipfix = ipx_msg_base2ipfix(msg);
+            inst->storage_ptr->process_msg(msg_ipfix);
+        }
     } catch (const FDS_exception &ex) {
         IPX_CTX_ERROR(ctx, "%s", ex.what());
         failed = true;
