@@ -110,6 +110,9 @@ file_is_dir(const char *filename)
 void
 file_list_init(Instance *inst, const char *pattern)
 {
+#ifndef GLOB_TILDE_CHECK
+#define GLOB_TILDE_CHECK GLOB_TILDE
+#endif
     int glob_flags = GLOB_MARK | GLOB_BRACE | GLOB_TILDE_CHECK;
     size_t file_cnt;
     int ret;

@@ -5,6 +5,16 @@ add_library(tcp-input MODULE
     config.h
 )
 
+if (CMAKE_HOST_SYSTEM_NAME STREQUAL "FreeBSD" OR CMAKE_HOST_SYSTEM_NAME STREQUAL "OpenBSD")
+    find_package(LibEpollShim REQUIRED)
+    include_directories(
+        ${LIBEPOLLSHIM_INCLUDE_DIRS}
+    )
+    target_link_libraries(tcp-input
+        ${LIBEPOLLSHIM_LIBRARIES}
+    )
+endif()
+
 install(
     TARGETS tcp-input
     LIBRARY DESTINATION "${INSTALL_DIR_LIB}/ipfixcol2/"
