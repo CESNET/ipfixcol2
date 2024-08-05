@@ -95,10 +95,8 @@ jobs:
     - name: Build and install IPFIXcol2
       run: |
         mkdir build && cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=$TESTS
+        cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=1
         make && make install
-      env:
-        TESTS: ${{ startsWith(matrix.image, 'centos:7') != true }}
     - name: Run tests
       run: cd build && make test
     - name: Try to run IPFIXcol2
