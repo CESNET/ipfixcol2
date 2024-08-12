@@ -1,8 +1,18 @@
 # Create a linkable module
 add_library(tcp-input MODULE
-    tcp.c
-    config.c
-    config.h
+    src/IpAddress.cpp
+    src/Config.cpp
+    src/ByteVector.cpp
+    src/DecodeBuffer.cpp
+    src/Connection.cpp
+    src/Epoll.cpp
+    src/ClientManager.cpp
+    src/IpfixDecoder.cpp
+    src/Lz4Decoder.cpp
+    src/DecoderFactory.cpp
+    src/Acceptor.cpp
+    src/Plugin.cpp
+    src/IpxPlugin.cpp
 )
 
 if (CMAKE_HOST_SYSTEM_NAME STREQUAL "FreeBSD" OR CMAKE_HOST_SYSTEM_NAME STREQUAL "OpenBSD")
