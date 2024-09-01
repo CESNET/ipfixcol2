@@ -82,7 +82,7 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
         window_check(*instance);
         // Everything seems OK
         ipx_ctx_private_set(ctx, instance.release());
-    } catch (const FDS_exception &ex) {
+    } catch (const std::exception &ex) {
         IPX_CTX_ERROR(ctx, "Initialization failed: %s", ex.what());
         return IPX_ERR_DENIED;
     } catch (...) {
