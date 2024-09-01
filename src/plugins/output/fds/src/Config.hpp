@@ -1,6 +1,7 @@
 /**
  * \file src/plugins/output/fds/src/Config.hpp
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
+ * \author Michal Sedlak <sedlakm@cesnet.cz>
  * \brief Parser of XML configuration (header file)
  * \date 2019
  *
@@ -12,6 +13,7 @@
 #define IPFIXCOL2_FDS_CONFIG_HPP
 
 #include <string>
+#include <vector>
 #include <libfds.h>
 
 /**
@@ -22,9 +24,10 @@ public:
     /**
      * @brief Parse configuration of the plugin
      * @param[in] params XML parameters to parse
+     * @param[in] iemgr Information elements manager
      * @throw runtime_exception on error
      */
-    Config(const char *params);
+    Config(const char *params, const fds_iemgr_t *iemgr);
     ~Config() = default;
 
     enum class calg {
@@ -45,6 +48,13 @@ public:
         uint32_t size;    ///< Time window size
     } m_window;   ///< Window alignment
 
+    struct element {
+        uint32_t pen;
+        uint16_t id;
+    };
+    bool m_selection_used;
+    std::vector<element> m_selection;
+
 private:
     /// Default window size
     static const uint32_t WINDOW_SIZE = 300U;
@@ -55,9 +65,11 @@ private:
     validate();
 
     void
-    parse_root(fds_xml_ctx_t *ctx);
+    parse_root(fds_xml_ctx_t *ctx, const fds_iemgr_t *iemgr);
     void
     parse_dump(fds_xml_ctx_t *ctx);
+    void
+    parse_selection(fds_xml_ctx_t *ctx, const fds_iemgr_t *iemgr);
 };
 
 
