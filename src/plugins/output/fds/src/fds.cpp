@@ -74,10 +74,12 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
         return IPX_ERR_DENIED;
     }
 
+    const fds_iemgr_t *iemgr = ipx_ctx_iemgr_get(ctx);
+
     try {
         // Parse configuration, try to create a storage and time window
         std::unique_ptr<Instance> instance(new Instance);
-        instance->config_ptr.reset(new Config(params));
+        instance->config_ptr.reset(new Config(params, iemgr));
         instance->storage_ptr.reset(new Storage(ctx, *instance->config_ptr));
         window_check(*instance);
         // Everything seems OK
