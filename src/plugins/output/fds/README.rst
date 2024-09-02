@@ -28,6 +28,21 @@ Example configuration
                 <timeWindow>300</timeWindow>
                 <align>yes</align>
             </dumpInterval>
+            <outputSelection>
+                <element>iana:octetDeltaCount</element>
+                <element>iana@reverse:octetDeltaCount@reverse</element>
+                <element>iana:packetDeltaCount</element>
+                <element>iana@reverse:packetDeltaCount@reverse</element>
+                <element>iana:destinationIPv4Address</element>
+                <element>iana:destinationIPv6Address</element>
+                <element>iana:sourceIPv4Address</element>
+                <element>iana:sourceIPv6Address</element>
+                <element>iana:destinationTransportPort</element>
+                <element>iana:sourceTransportPort</element>
+                <element>iana:protocolIdentifier</element>
+                <element>cesnet:quicSNI</element>
+                <element>cesnet:TLSSNI</element>
+            </outputSelection>
         </params>
     </output>
 
@@ -61,6 +76,20 @@ Parameters
         Align file rotation with next N minute interval. For example, if enabled
         and window size is 5 minutes long, files will be created at 0, 5, 10, etc.
         [values: yes/no, default: yes]
+
+:``outputSelection``:
+    Select only a subset of fields that will be saved in output. A list of IPFIX
+    elements is provided. Any fields of an element that are not a part of this list
+    will be skipped and not included in the resulting FDS output file.
+    Note that when
+    [default: all fields]
+
+    :``element``:
+        The identifier of the IPFIX element in the form of ``SCOPE_NAME:ELEMENT_NAME``,
+        for example ``iana:sourceIPv4Address``. ``SCOPE_NAME:`` prefix can be omitted in
+        case of "iana:".
+        Note: Reverse elements use the following naming pattern
+        ``iana@reverse:sourceIPv4Address@reverse``
 
 :``asyncIO``:
     Allows to use asynchronous I/O for writing to the file. Usually when parts
