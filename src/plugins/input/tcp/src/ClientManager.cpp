@@ -25,19 +25,19 @@
 #include <ipfixcol2.h> // ipx_strerror, ipx_ctx_t, ipx_session, IPX_CTX_INFO, IPX_CTX_WARNING
 
 #include "Connection.hpp" // Connection
-#include "Decoder.hpp"    // Decoder
 #include "UniqueFd.hpp"   // UniqueFd
 
 namespace tcp_in {
 
-ClientManager::ClientManager(ipx_ctx_t *ctx) :
+ClientManager::ClientManager(ipx_ctx_t *ctx, DecoderFactory factory) :
     m_ctx(ctx),
     m_epoll(),
     m_mutex(),
-    m_connections()
+    m_connections(),
+    m_factory(std::move(factory))
 {}
 
-void ClientManager::add_connection(UniqueFd fd, std::unique_ptr<Decoder> decoder) {
+void ClientManager::add_connection(UniqueFd fd) {
     const char *err_str;
 
     // get the flags and set it to non-blocking mode
@@ -57,17 +57,12 @@ void ClientManager::add_connection(UniqueFd fd, std::unique_ptr<Decoder> decoder
 
     int borrowed_fd = fd.get();
 
-    std::unique_ptr<Connection> connection(new Connection(std::move(fd), std::move(decoder)));
+    std::unique_ptr<Connection> connection(new Connection(std::move(fd), m_factory, m_ctx));
 
     auto net = &connection->get_session()->tcp.net;
     std::array<char, INET6_ADDRSTRLEN> src_addr_str{};
     inet_ntop(net->l3_proto, &net->addr_src, src_addr_str.begin(), src_addr_str.size());
     IPX_CTX_INFO(m_ctx, "New exporter connected from '%s'.", src_addr_str.begin());
-    IPX_CTX_INFO(
-        m_ctx,
-        "Using %s Decoder for the new connection",
-        connection->get_decoder().get_name()
-    );
 
     std::lock_guard<std::mutex> lock(m_mutex);
 

@@ -26,20 +26,18 @@
 #include <ipfixcol2.h> // ipx_ctx_t, ipx_strerror, IPX_CTX_WARNING
 
 #include "ClientManager.hpp"  // ClientManager
-#include "DecoderFactory.hpp" // DecoderFactory
 #include "Config.hpp"         // Config
 #include "UniqueFd.hpp"       // UniqueFd
 #include "IpAddress.hpp"      // IpAddress, IpVersion
 
 namespace tcp_in {
 
-Acceptor::Acceptor(ClientManager &clients, DecoderFactory factory, ipx_ctx_t *ctx) :
+Acceptor::Acceptor(ClientManager &clients, ipx_ctx_t *ctx) :
     m_epoll(),
     m_sockets(),
     m_pipe_in(),
     m_pipe_out(),
     m_clients(clients),
-    m_factory(std::move(factory)),
     m_thread(),
     m_ctx(ctx)
 {
@@ -231,8 +229,7 @@ void Acceptor::mainloop() {
         }
 
         try {
-            auto decoder = m_factory.detect_decoder(new_sd.get());
-            m_clients.add_connection(std::move(new_sd), std::move(decoder));
+            m_clients.add_connection(std::move(new_sd));
         } catch (std::exception &ex) {
             IPX_CTX_ERROR(m_ctx, "Acceptor: %s", ex.what());
         }

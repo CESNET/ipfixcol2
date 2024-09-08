@@ -16,6 +16,7 @@
 
 #include "ByteVector.hpp"     // ByteVector
 #include "Decoder.hpp"        // Decoder
+#include "DecoderFactory.hpp"
 #include "UniqueFd.hpp"       // UniqueFd
 
 namespace tcp_in {
@@ -26,10 +27,10 @@ public:
     /**
      * @brief Creates new connection with this TCP connection file descriptor.
      * @param fd File descriptor of the new tcp connection.
-     * @param decoder Decoder to use in this connection.
+     * @param factory The decoder factory to decide the decoder of this connection
      * @throws when fails to create new session
      */
-    Connection(UniqueFd fd, std::unique_ptr<Decoder> decoder);
+    Connection(UniqueFd fd, DecoderFactory& factory, ipx_ctx_t *ctx);
 
     Connection(const Connection &) = delete;
 
@@ -69,13 +70,18 @@ public:
 private:
     void send_msg(ipx_ctx_t *ctx, ByteVector &&msg);
 
-    ipx_session *m_session;
     /** TCP file descriptor */
     UniqueFd m_fd;
+    /** Decoder factory */
+    DecoderFactory &m_factory;
+    /** Plugin context for logging */
+    ipx_ctx_t *m_ctx;
+    /** The session identifier */
+    ipx_session *m_session = nullptr;
     /** true if this connection didn't receive any full messages, otherwise false. */
-    bool m_new_connnection;
+    bool m_new_connnection = true;
     /** selected decoder or nullptr. */
-    std::unique_ptr<Decoder> m_decoder;
+    std::unique_ptr<Decoder> m_decoder = nullptr;
 };
 
 } // namespace tcp_in

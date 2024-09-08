@@ -39,7 +39,12 @@ std::unique_ptr<Decoder> DecoderFactory::detect_decoder(int fd) {
 
     std::array<uint8_t, MAX_MAGIC_LEN> buf{};
 
-    auto res = recv(fd, buf.begin(), buf.size(), MSG_PEEK | MSG_WAITALL);
+    auto res = recv(fd, buf.begin(), buf.size(), MSG_PEEK | MSG_DONTWAIT);
+    if (res == EAGAIN || res == EWOULDBLOCK) {
+        // Not enough data yet
+        return nullptr;
+    }
+
     if (res == -1) {
         const char *err_msg;
         ipx_strerror(errno, err_msg);

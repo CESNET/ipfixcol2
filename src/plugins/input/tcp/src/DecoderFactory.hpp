@@ -26,7 +26,8 @@ public:
      * constructs it. This function may block if the decoder cannot be determined without recieving
      * more data.
      * @param fd TCP stream file descriptor
-     * @return Instance of the correct decoder, nullptr no decoder matches the data.
+     * @throws std::runtime_error on socket error or if no decoder matches the data
+     * @return Instance of the correct decoder, nullptr if there is not enough data to decide the decoder yet
      */
     std::unique_ptr<Decoder> detect_decoder(int fd);
 

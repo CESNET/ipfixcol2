@@ -26,15 +26,11 @@
 
 namespace tcp_in {
 
-Connection::Connection(UniqueFd fd, std::unique_ptr<Decoder> decoder) :
-    m_session(nullptr),
+Connection::Connection(UniqueFd fd, DecoderFactory &factory, ipx_ctx *ctx) :
     m_fd(std::move(fd)),
-    m_new_connnection(true),
-    m_decoder(std::move(decoder))
+    m_factory(factory),
+    m_ctx(ctx)
 {
-    if (!m_decoder) {
-        throw std::runtime_error("Decoder was null.");
-    }
     const char *err_str;
 
     sockaddr_storage src_addr;
@@ -96,6 +92,19 @@ Connection::Connection(UniqueFd fd, std::unique_ptr<Decoder> decoder) :
 }
 
 bool Connection::receive(ipx_ctx_t *ctx) {
+    if (!m_decoder) {
+        m_decoder = m_factory.detect_decoder(m_fd.get());
+        if (!m_decoder) {
+            return true;
+        }
+
+        IPX_CTX_INFO(
+            m_ctx,
+            "Using %s Decoder for the new connection",
+            m_decoder->get_name()
+        );
+    }
+
     auto &buffer = m_decoder->decode();
     buffer.process_decoded([=](ByteVector &&msg) { send_msg(ctx, std::move(msg)); });
     return !buffer.is_eof_reached();
