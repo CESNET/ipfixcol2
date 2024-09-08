@@ -18,7 +18,7 @@
 #include <ipfixcol2.h> // ipx_session, ipx_ctx_t
 
 #include "Connection.hpp" // Connection
-#include "Decoder.hpp"    // Decoder
+#include "DecoderFactory.hpp"    // Decoder
 #include "UniqueFd.hpp"   // UniqueFd
 #include "Epoll.hpp"      // Epoll
 
@@ -31,15 +31,14 @@ public:
      * @brief Creates client manager with no clients.
      * @throws when fails to create epoll
      */
-    ClientManager(ipx_ctx_t *ctx);
+    ClientManager(ipx_ctx_t *ctx, DecoderFactory factory);
 
     /**
      * @brief Adds connection to the vector and epoll.
      * @param fd file descriptor of the new tcp connection.
-     * @param decoder decoder for the connection.
      * @throws when fails to add the new connection to epoll or when fails to create new session.
      */
-    void add_connection(UniqueFd fd, std::unique_ptr<Decoder> decoder);
+    void add_connection(UniqueFd fd);
 
     /**
      * @brief Removes connection from the vector based on its session. This is safe only for the
@@ -69,6 +68,7 @@ private:
     Epoll m_epoll;
     std::mutex m_mutex;
     std::vector<std::unique_ptr<Connection>> m_connections;
+    DecoderFactory m_factory;
 };
 
 } // namespace tcp_in

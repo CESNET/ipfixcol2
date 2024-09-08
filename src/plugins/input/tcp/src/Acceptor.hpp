@@ -32,11 +32,10 @@ public:
      * @brief Creates the acceptor thread.
      *
      * @param clients Reference to client manager.
-     * @param factory Initialized decoder factory.
      * @param config File configuration.
      * @param ctx The plugin context.
      */
-    Acceptor(ClientManager &clients, DecoderFactory factory, ipx_ctx_t *ctx);
+    Acceptor(ClientManager &clients, ipx_ctx_t *ctx);
 
     // force that acceptor stays in its original memory (so that `this` pointer stays valid on the
     // other thread)
@@ -79,7 +78,6 @@ private:
 
     /** Accepted clients. */
     ClientManager &m_clients;
-    DecoderFactory m_factory;
     std::thread m_thread;
     ipx_ctx_t *m_ctx;
 };
