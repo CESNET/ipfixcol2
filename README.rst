@@ -64,6 +64,8 @@ network interface and a port. Multiple instances of these plugins can run concur
   format for long-term preservation
 - `UniRec <extra_plugins/output/unirec>`_ (*)  - send flow records in UniRec format
   via TRAP communication interface (into Nemea modules)
+- `ClickHouse <extra_plugins/output/clickhouse>`_ (*)  - insert flow records
+  into a ClickHouse database
 
 \* Must be installed individually due to extra dependencies
 
