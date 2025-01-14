@@ -75,7 +75,7 @@ jobs:
         ipfixcol2 -L
     - name: Archive DEB packages
       if: github.event_name == 'push'
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.ZIP_FILE }}
         path: |
@@ -179,7 +179,7 @@ jobs:
         ipfixcol2 -L -v
     - name: Archive RPM packages
       if: github.event_name == 'push'
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.ZIP_FILE }}
         path: |
