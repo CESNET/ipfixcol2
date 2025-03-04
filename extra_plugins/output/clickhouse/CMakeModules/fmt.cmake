@@ -8,6 +8,7 @@ include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(BUILD_SHARED_LIBS OFF)
 FetchContent_Declare(
         fmt
         GIT_REPOSITORY "https://github.com/fmtlib/fmt"
@@ -16,3 +17,4 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(fmt)
+set(BUILD_SHARED_LIBS ON)

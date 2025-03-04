@@ -8,6 +8,7 @@ include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(BUILD_SHARED_LIBS OFF)
 FetchContent_Declare(
         clickhouse
         GIT_REPOSITORY "https://github.com/ClickHouse/clickhouse-cpp.git"
@@ -17,3 +18,4 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(clickhouse)
 add_library(clickhouse::client ALIAS clickhouse-cpp-lib)
+set(BUILD_SHARED_LIBS ON)
