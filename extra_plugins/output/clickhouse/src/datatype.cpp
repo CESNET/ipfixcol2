@@ -18,9 +18,17 @@ public:
     ColumnDateTime64() : clickhouse::ColumnDateTime64(Precision) {}
 };
 
-DataType type_from_ipfix(fds_iemgr_element_type type)
+DataType type_from_ipfix(const fds_iemgr_elem *elem)
 {
-    switch (type) {
+    // Special cases
+    static constexpr uint32_t PEN_CESNET = 8057;
+    static constexpr uint16_t ID_FLOWUUID = 1300;
+    if (elem->scope->pen == PEN_CESNET && elem->id == ID_FLOWUUID) {
+        return DataType::Uuid;
+    }
+
+    // Otherwise
+    switch (elem->data_type) {
     case FDS_ET_STRING:                 return DataType::String;
     case FDS_ET_SIGNED_8:               return DataType::Int8;
     case FDS_ET_SIGNED_16:              return DataType::Int16;
@@ -36,7 +44,7 @@ DataType type_from_ipfix(fds_iemgr_element_type type)
     case FDS_ET_DATE_TIME_MILLISECONDS: return DataType::DatetimeMillisecs;
     case FDS_ET_DATE_TIME_MICROSECONDS: return DataType::DatetimeMicrosecs;
     case FDS_ET_DATE_TIME_NANOSECONDS:  return DataType::DatetimeNanosecs;
-    default:                            throw Error("unsupported IPFIX data type {}", type);
+    default:                            throw Error("unsupported IPFIX data type {}", elem->data_type);
     }
 }
 
@@ -91,9 +99,9 @@ DataType find_common_type(const fds_iemgr_alias &alias)
         throw Error("alias \"{}\" has no sources", alias.name);
     }
 
-    DataType common_type = type_from_ipfix(alias.sources[0]->data_type);
+    DataType common_type = type_from_ipfix(alias.sources[0]);
     for (size_t i = 1; i < alias.sources_cnt; i++) {
-        common_type = unify_type(common_type, type_from_ipfix(alias.sources[i]->data_type));
+        common_type = unify_type(common_type, type_from_ipfix(alias.sources[i]));
     }
     return common_type;
 }
@@ -199,6 +207,19 @@ static int64_t get_datetime64(fds_drec_field field)
     value = (static_cast<int64_t>(ts.tv_sec) * 1'000'000'000 + static_cast<int64_t>(ts.tv_nsec)) / Divisor;
     return value;
 }
+
+static std::pair<uint64_t, uint64_t> get_uuid(fds_drec_field field)
+{
+    if (field.size != 16) {
+        throw Error("invalid uuid field size. expected 16, got {}", field.size);
+    }
+
+    return {
+        *reinterpret_cast<uint64_t *>(&field.data[0]),
+        *reinterpret_cast<uint64_t *>(&field.data[8])
+    };
+}
+
 }
 
 template<DataType> struct DataTypeTraits {};
@@ -299,6 +320,12 @@ template<> struct DataTypeTraits<DataType::DatetimeNanosecs> {
     static constexpr auto Getter = &getters::get_datetime64<1>;
 };
 
+template<> struct DataTypeTraits<DataType::Uuid> {
+    using ColumnType = clickhouse::ColumnUUID;
+    static constexpr std::string_view ClickhouseTypeName = "UUID";
+    static constexpr auto Getter = &getters::get_uuid;
+};
+
 template <typename Func>
 static void visit(DataType type, Func func)
 {
@@ -319,6 +346,7 @@ static void visit(DataType type, Func func)
     case DataType::IPv4:              func(DataTypeTraits<DataType::IPv4>{});              break;
     case DataType::IPv6:              func(DataTypeTraits<DataType::IPv6>{});              break;
     case DataType::IP:                func(DataTypeTraits<DataType::IP>{});                break;
+    case DataType::Uuid:              func(DataTypeTraits<DataType::Uuid>{});              break;
     case DataType::Invalid:           throw std::runtime_error("invalid data type");
     }
 }

@@ -59,7 +59,7 @@ static std::vector<ColumnCtx> prepare_columns(std::vector<Config::Column> &colum
 
         if (std::holds_alternative<const fds_iemgr_elem *>(column_cfg.source)) {
             const fds_iemgr_elem *elem = std::get<const fds_iemgr_elem *>(column_cfg.source);
-            type = type_from_ipfix(elem->data_type);
+            type = type_from_ipfix(elem);
             column.extractor = make_extractor(*elem);
 
         } else if (std::holds_alternative<const fds_iemgr_alias *>(column_cfg.source)) {

@@ -65,6 +65,7 @@ modifier_callback(const struct fds_drec *rec, struct ipx_modifier_output output[
 
     uint32_t r = (uint32_t)rand();
     fill_uuid(instance->unix_time_ms, instance->counter, r, output->raw);
+    output->length = 16;
     instance->counter++;
 
     return IPX_OK;
@@ -357,7 +358,7 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
     // Plugin type
     .type = IPX_PT_INTERMEDIATE,
     // Plugin identification name
-    .name = "asn",
+    .name = "uuid",
     // Brief description of plugin
     .dsc = "IPv4/IPv6 autonomous system number (ASN) module",
     // Configuration flags (reserved for future use)

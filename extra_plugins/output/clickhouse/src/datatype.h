@@ -47,6 +47,8 @@ enum class DataType {
     DatetimeMillisecs,
     DatetimeMicrosecs,
     DatetimeNanosecs,
+
+    Uuid,
 };
 
 enum class DataTypeNullable {
@@ -115,6 +117,7 @@ template <> struct fmt::formatter<DataType> : formatter<string_view> {
             case DataType::DatetimeMicrosecs: return "DatetimeMicrosecs";
             case DataType::DatetimeMillisecs: return "DatetimeMillisecs";
             case DataType::DatetimeSecs: return "DatetimeSecs";
+            case DataType::Uuid: return "Uuid";
             }
             return "???";
         }();
@@ -159,12 +162,12 @@ template <> struct fmt::formatter<fds_iemgr_element_type> : formatter<string_vie
 };
 
 /**
- * @brief Get intermediary data type for a corresponding IPFIX element type
+ * @brief Get intermediary data type for a corresponding IPFIX element
  *
- * @param type The IPFIX type
+ * @param elem The IPFIX element definition
  * @return The intermediary data type
  */
-DataType type_from_ipfix(fds_iemgr_element_type type);
+DataType type_from_ipfix(const fds_iemgr_elem *elem);
 
 /**
  * @brief Get Clickhouse data type for the intermediary data type
@@ -196,7 +199,8 @@ using ValueVariant = std::variant<
     int64_t,
     IP4Addr,
     IP6Addr,
-    std::string
+    std::string,
+    std::pair<uint64_t, uint64_t>
 >;
 
 using GetterFn = std::function<void (fds_drec_field field, ValueVariant &value)>;
