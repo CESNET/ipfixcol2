@@ -24,7 +24,7 @@ namespace tcp_in {
 
 Plugin::Plugin(ipx_ctx_t *ctx, Config &config) :
     m_ctx(ctx),
-    m_clients(ctx, DecoderFactory()),
+    m_clients(ctx, DecoderFactory(ctx, config)),
     m_acceptor(m_clients, ctx)
 {
     m_acceptor.bind_addresses(config);

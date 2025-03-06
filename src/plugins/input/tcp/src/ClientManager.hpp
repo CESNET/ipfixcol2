@@ -34,6 +34,13 @@ public:
     ClientManager(ipx_ctx_t *ctx, DecoderFactory factory);
 
     /**
+     * @brief Initialize TLS. This is separately from constructor because it may prompt the user for
+     * password for private key.
+     * @param conf Configuration for the initialization.
+     */
+    void initialize_tls(const Config &conf) { m_factory.initialize_tls(conf); }
+
+    /**
      * @brief Adds connection to the vector and epoll.
      * @param fd file descriptor of the new tcp connection.
      * @throws when fails to add the new connection to epoll or when fails to create new session.
