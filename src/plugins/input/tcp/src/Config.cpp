@@ -15,6 +15,7 @@
 #include <string>    // string
 #include <cassert>   // assert
 #include <cstdint>   // UINT16_MAX
+#include <cstring>
 
 #include <libfds.h> // fds_*, FDS_*
 
@@ -30,19 +31,24 @@ namespace tcp_in {
  * <params>
  *  <localPort>...</localPort>                    <!-- optional -->
  *  <localIPAddress>...</localIPAddress>          <!-- optional, multiple times -->
+ *  <certificatePath>...</certificatePath>        <!-- optional -->
  * </params>
  */
 
 enum ParamsXmlNodes {
     PARAM_PORT,
     PARAM_IPADDR,
+    PARAM_CERTIFICATE,
+    PARAM_TLS_VERIFY_PEER,
 };
 
 static const struct fds_xml_args args_params[] = {
     FDS_OPTS_ROOT("params"),
-    FDS_OPTS_ELEM(PARAM_PORT  , "localPort"     , FDS_OPTS_T_UINT  , FDS_OPTS_P_OPT),
-    FDS_OPTS_ELEM(PARAM_IPADDR, "localIPAddress", FDS_OPTS_T_STRING, FDS_OPTS_P_OPT
-                                                                   | FDS_OPTS_P_MULTI),
+    FDS_OPTS_ELEM(PARAM_PORT           , "localPort"      , FDS_OPTS_T_UINT  , FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(PARAM_IPADDR         , "localIPAddress" , FDS_OPTS_T_STRING, FDS_OPTS_P_OPT
+                                                                             | FDS_OPTS_P_MULTI),
+    FDS_OPTS_ELEM(PARAM_CERTIFICATE    , "certificateFile", FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(PARAM_TLS_VERIFY_PEER, "tlsVerifyPeer"  , FDS_OPTS_T_BOOL  , FDS_OPTS_P_OPT),
     FDS_OPTS_END,
 };
 
@@ -69,6 +75,8 @@ Config::Config(ipx_ctx *ctx, const char *params) : local_port(DEFAULT_PORT), loc
 void Config::parse_params(ipx_ctx *ctx, fds_xml_ctx_t *params) {
     const struct fds_xml_cont *content;
     bool empty_address = false;
+    bool empty_cert = false;
+    bool verify_set = false;
 
     while (fds_xml_next(params, &content) != FDS_EOC) {
         switch (content->id) {
@@ -85,12 +93,26 @@ void Config::parse_params(ipx_ctx *ctx, fds_xml_ctx_t *params) {
             break;
         case PARAM_IPADDR:
             assert(content->type == FDS_OPTS_T_STRING);
-            // check if the string is not empty
-            if (*content->ptr_string) {
-                local_addrs.push_back(IpAddress(content->ptr_string));
-            } else {
+            // check if the string is empty
+            if (std::strcmp(content->ptr_string, "") == 0) {
                 empty_address = true;
+            } else {
+                local_addrs.push_back(IpAddress(content->ptr_string));
             }
+            break;
+        case PARAM_CERTIFICATE:
+            assert(content->type == FDS_OPTS_T_STRING);
+            // check if the string is empty
+            if (std::strcmp(content->ptr_string, "") == 0) {
+                empty_cert = true;
+            } else {
+                certificate_file = content->ptr_string;
+            }
+            break;
+        case PARAM_TLS_VERIFY_PEER:
+            assert(content->type == FDS_OPTS_T_BOOL);
+            verify_peer = content->val_bool;
+            verify_set = true;
             break;
         default:
             throw std::invalid_argument("Unexpected element within <params>.");
@@ -100,8 +122,24 @@ void Config::parse_params(ipx_ctx *ctx, fds_xml_ctx_t *params) {
     if (empty_address && local_addrs.size() != 0) {
         IPX_CTX_WARNING(
             ctx,
-            "Empty address in configuration ignored. Tcp plugin will NOT "
+            "Empty address in configuration ignored. TCP plugin will NOT "
             "listen on all interfaces but only on the specified addresses."
+        );
+    }
+
+    if (empty_cert) {
+        IPX_CTX_WARNING(
+            ctx,
+            "Empty certificate path in configuration ignored. TCP plugin will "
+            "NOT accept TLS connections."
+        )
+    }
+
+    if (verify_set && certificate_file.empty()) {
+        IPX_CTX_WARNING(
+            ctx,
+            "TLS peer verification enabled, but TLS certificate is missing. "
+            "TCP plugin will NOT accept TLS connections."
         );
     }
 }

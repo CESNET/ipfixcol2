@@ -10,8 +10,9 @@
 
 #pragma once
 
-#include <vector>  // std::vector
 #include <cstdint> // uint16_t
+#include <string>
+#include <vector>  // std::vector
 
 #include <libfds.h> // fds_xml_ctx_t
 
@@ -25,6 +26,13 @@ namespace tcp_in {
 struct Config {
     uint16_t local_port;
     std::vector<IpAddress> local_addrs;
+    /**
+     * @brief Path to file in pem format which contains certificate and private key for TLS. If
+     * empty, TLS connections are not accepted.
+     */
+    std::string certificate_file;
+    /** If true, ipfixcol server will require certificate verification of clients */
+    bool verify_peer = false;
 
     /**
      * @brief Parse configuration of the TCP plugin
