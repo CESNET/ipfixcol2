@@ -12,14 +12,16 @@
 
 #include <memory> // std::unique_ptr
 
+#include "Config.hpp"
 #include "Decoder.hpp" // Decoder
+#include "tls/DecoderFactory.hpp"
 
 namespace tcp_in {
 
 /** Factory for TCP decoders. */
 class DecoderFactory {
 public:
-    DecoderFactory();
+    DecoderFactory(ipx_ctx_t *ctx, const Config &conf);
 
     /**
      * @brief Detects the type of decoder that should be used to decode the given stream and
@@ -31,9 +33,14 @@ public:
      */
     std::unique_ptr<Decoder> detect_decoder(int fd);
 
+    void initialize_tls(std::string hostname, const char *cert_path);
+
 private:
     std::unique_ptr<Decoder> create_ipfix_decoder(int fd);
     std::unique_ptr<Decoder> create_lz4_decoder(int fd);
+    std::unique_ptr<Decoder> create_tls_decoder(int fd);
+
+    std::unique_ptr<tls::DecoderFactory> m_tls_factory;
 };
 
 } // namespace tcp_in

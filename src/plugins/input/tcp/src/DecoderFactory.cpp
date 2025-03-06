@@ -26,12 +26,22 @@
 #include "Decoder.hpp"      // Decoder
 #include "Lz4Decoder.hpp"   // LZ4_MAGIC, Lz4Decoder
 #include "IpfixDecoder.hpp" // IPFIX_MAGIC, IpfixDecoder
+#include "tls/TlsDecoder.hpp"
 
 #include <iostream>
 
 namespace tcp_in {
 
-DecoderFactory::DecoderFactory() {};
+DecoderFactory::DecoderFactory(ipx_ctx_t *ctx, const Config &conf) {
+    if (!conf.certificate_file.empty()) {
+        IPX_CTX_INFO(ctx, "Initializing TLS decoder.");
+        m_tls_factory = std::unique_ptr<tls::DecoderFactory>(
+            new tls::DecoderFactory(conf.certificate_file)
+        );
+    } else {
+        IPX_CTX_INFO(ctx, "TLS Decoder is disabled.");
+    }
+};
 
 std::unique_ptr<Decoder> DecoderFactory::detect_decoder(int fd) {
     // number of bytes neaded to detect the decoder
@@ -48,13 +58,25 @@ std::unique_ptr<Decoder> DecoderFactory::detect_decoder(int fd) {
     if (res == -1) {
         const char *err_msg;
         ipx_strerror(errno, err_msg);
-        throw std::runtime_error("Failed to receive start of first message: " + std::string(err_msg));
+        throw std::runtime_error(
+            "Failed to receive start of first message: " + std::string(err_msg)
+        );
     }
 
     constexpr const char *not_enough_data_err =
         "Failed to read enough bytes to recognize the decoder";
 
     // check decoders in order from shortest magic number to longest
+
+    if (res < 1) {
+        throw std::runtime_error(not_enough_data_err);
+    }
+
+    // TLS decoder
+    auto magic_u8 = buf[0];
+    if (magic_u8 == tls::TLS_MAGIC) {
+        return create_tls_decoder(fd);
+    }
 
     if (res < 2) {
         throw std::runtime_error(not_enough_data_err);
@@ -85,6 +107,13 @@ std::unique_ptr<Decoder> DecoderFactory::create_ipfix_decoder(int fd) {
 
 std::unique_ptr<Decoder> DecoderFactory::create_lz4_decoder(int fd) {
     return std::unique_ptr<Decoder>(new Lz4Decoder(fd));
+}
+
+std::unique_ptr<Decoder> DecoderFactory::create_tls_decoder(int fd) {
+    if (!m_tls_factory) {
+        throw std::runtime_error("TLS decoder is not enabled.");
+    }
+    return m_tls_factory->create(fd);
 }
 
 } // namespace tcp_in
