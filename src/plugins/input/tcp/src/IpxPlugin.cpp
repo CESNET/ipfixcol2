@@ -38,6 +38,7 @@ int ipx_plugin_init(ipx_ctx_t *ctx, const char *params) {
     try {
         Config conf(ctx, params);
         plugin = new Plugin(ctx, conf);
+        plugin->initialize_tls(conf); // This may prompt the user for password for private key.
     } catch (std::exception &ex) {
         IPX_CTX_ERROR(ctx, "%s", ex.what());
         return IPX_ERR_DENIED;

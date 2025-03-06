@@ -30,6 +30,13 @@ public:
      */
     Plugin(ipx_ctx_t *ctx, Config &config);
 
+    /**
+     * @brief Initialize TLS. This is separately from constructor because it may prompt the user for
+     * password for private key.
+     * @param conf Configuration for the initialization.
+     */
+    void initialize_tls(const Config &conf) { m_clients.initialize_tls(conf); }
+
     // force that Plugin stays in its original memory (so that reference to `m_clients` in acceptor
     // stays valid)
     Plugin(const Plugin &) = delete;
