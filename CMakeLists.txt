@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.8)
+cmake_minimum_required(VERSION 3.11.0)
 project(ipfixcol2)
 
 # Description of the project
@@ -94,6 +94,9 @@ endif()
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads REQUIRED)
+
+# Find OpenSSL
+find_package(OpenSSL REQUIRED)
 
 # ------------------------------------------------------------------------------
 # Project components

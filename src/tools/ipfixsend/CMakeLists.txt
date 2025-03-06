@@ -8,6 +8,8 @@ add_executable(ipfixsend2
     siso.h
 )
 
+target_link_libraries(ipfixsend2 OpenSSL::Crypto OpenSSL::SSL)
+
 # Installation targets
 install(
     TARGETS ipfixsend2
