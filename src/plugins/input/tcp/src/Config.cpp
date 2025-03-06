@@ -30,19 +30,22 @@ namespace tcp_in {
  * <params>
  *  <localPort>...</localPort>                    <!-- optional -->
  *  <localIPAddress>...</localIPAddress>          <!-- optional, multiple times -->
+ *  <certificatePath>...</certificatePath>        <!-- optional -->
  * </params>
  */
 
 enum ParamsXmlNodes {
     PARAM_PORT,
     PARAM_IPADDR,
+    PARAM_CERTIFICATE,
 };
 
 static const struct fds_xml_args args_params[] = {
     FDS_OPTS_ROOT("params"),
-    FDS_OPTS_ELEM(PARAM_PORT  , "localPort"     , FDS_OPTS_T_UINT  , FDS_OPTS_P_OPT),
-    FDS_OPTS_ELEM(PARAM_IPADDR, "localIPAddress", FDS_OPTS_T_STRING, FDS_OPTS_P_OPT
-                                                                   | FDS_OPTS_P_MULTI),
+    FDS_OPTS_ELEM(PARAM_PORT       , "localPort"      , FDS_OPTS_T_UINT  , FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(PARAM_IPADDR     , "localIPAddress" , FDS_OPTS_T_STRING, FDS_OPTS_P_OPT
+                                                                         | FDS_OPTS_P_MULTI),
+    FDS_OPTS_ELEM(PARAM_CERTIFICATE, "certificateFile", FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
     FDS_OPTS_END,
 };
 
@@ -69,6 +72,7 @@ Config::Config(ipx_ctx *ctx, const char *params) : local_port(DEFAULT_PORT), loc
 void Config::parse_params(ipx_ctx *ctx, fds_xml_ctx_t *params) {
     const struct fds_xml_cont *content;
     bool empty_address = false;
+    bool empty_cert = false;
 
     while (fds_xml_next(params, &content) != FDS_EOC) {
         switch (content->id) {
@@ -92,6 +96,15 @@ void Config::parse_params(ipx_ctx *ctx, fds_xml_ctx_t *params) {
                 empty_address = true;
             }
             break;
+        case PARAM_CERTIFICATE:
+            assert(content->type == FDS_OPTS_T_STRING);
+            // check if the string is not empty
+            if (*content->ptr_string) {
+                certificate_file = content->ptr_string;
+            } else {
+                empty_cert = true;
+            }
+            break;
         default:
             throw std::invalid_argument("Unexpected element within <params>.");
         }
@@ -103,6 +116,14 @@ void Config::parse_params(ipx_ctx *ctx, fds_xml_ctx_t *params) {
             "Empty address in configuration ignored. Tcp plugin will NOT "
             "listen on all interfaces but only on the specified addresses."
         );
+    }
+
+    if (empty_cert) {
+        IPX_CTX_WARNING(
+            ctx,
+            "Empty certificate path in configuration ignored. Tcp plugin will "
+            "NOT accept TLS connections."
+        )
     }
 }
 
