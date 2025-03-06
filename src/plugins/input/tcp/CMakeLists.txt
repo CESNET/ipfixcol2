@@ -29,6 +29,8 @@ if (CMAKE_HOST_SYSTEM_NAME STREQUAL "FreeBSD" OR CMAKE_HOST_SYSTEM_NAME STREQUAL
     )
 endif()
 
+target_link_libraries(tcp-input crypto ssl)
+
 install(
     TARGETS tcp-input
     LIBRARY DESTINATION "${INSTALL_DIR_LIB}/ipfixcol2/"
