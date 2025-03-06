@@ -10,8 +10,9 @@
 
 #pragma once
 
-#include <vector>  // std::vector
 #include <cstdint> // uint16_t
+#include <string>
+#include <vector>  // std::vector
 
 #include <libfds.h> // fds_xml_ctx_t
 
@@ -25,6 +26,31 @@ namespace tcp_in {
 struct Config {
     uint16_t local_port;
     std::vector<IpAddress> local_addrs;
+    /**
+     * @brief Path to file in pem format which contains certificate and private key for TLS. If
+     * empty, TLS connections are not accepted.
+     */
+    std::string certificate_file;
+    /** Path to private key. */
+    std::string private_key_file;
+    /** If true, ipfixcol server will require certificate verification of clients */
+    bool verify_peer = false;
+    /** Path to certificate authority. */
+    std::string ca_file;
+    /** If true, load default ca file. */
+    bool default_ca_file = false;
+    /** Path to certificate authority directory. */
+    std::string ca_dir;
+    /** If true, load default ca directory. */
+    bool default_ca_dir = false;
+    /** Path to certificate authority store. */
+    std::string ca_store;
+    /** If true, load default ca store. */
+    bool default_ca_store;
+    /** If set, ignore any other ca configuration paths and use system defaults. */
+    bool use_default_ca = true;
+    /** If set to false, only TCP connections are accepted. */
+    bool allow_insecure = true;
 
     /**
      * @brief Parse configuration of the TCP plugin
@@ -36,6 +62,7 @@ struct Config {
 
 private:
     void parse_params(ipx_ctx *ctx, fds_xml_ctx_t *params);
+    void parse_tls(ipx_ctx *ctx, fds_xml_ctx_t *params);
 };
 
 } // namespace tcp_in

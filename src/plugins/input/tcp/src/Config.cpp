@@ -15,6 +15,7 @@
 #include <string>    // string
 #include <cassert>   // assert
 #include <cstdint>   // UINT16_MAX
+#include <cstring>
 
 #include <libfds.h> // fds_*, FDS_*
 
@@ -30,12 +31,33 @@ namespace tcp_in {
  * <params>
  *  <localPort>...</localPort>                    <!-- optional -->
  *  <localIPAddress>...</localIPAddress>          <!-- optional, multiple times -->
+ *  <certificatePath>...</certificatePath>        <!-- optional -->
  * </params>
  */
 
 enum ParamsXmlNodes {
     PARAM_PORT,
     PARAM_IPADDR,
+    PARAM_TLS,
+
+    PARAM_TLS_CERTIFICATE,
+    PARAM_TLS_PRIVATE_KEY,
+    PARAM_TLS_VERIFY_PEER,
+    PARAM_TLS_CA_FILE,
+    PARAM_TLS_CA_DIR,
+    PARAM_TLS_CA_STORE,
+    PARAM_TLS_INSECURE,
+};
+
+static const struct fds_xml_args args_tls[] = {
+    FDS_OPTS_ELEM(PARAM_TLS_CERTIFICATE, "certificateFile", FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_ELEM(PARAM_TLS_PRIVATE_KEY, "privateKeyFile" , FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(PARAM_TLS_VERIFY_PEER, "verifyPeer"     , FDS_OPTS_T_BOOL  , FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(PARAM_TLS_CA_FILE    , "caFile"         , FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(PARAM_TLS_CA_DIR     , "caDir"          , FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(PARAM_TLS_CA_STORE   , "caStore"        , FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
+    FDS_OPTS_ELEM(PARAM_TLS_INSECURE   , "allowInsecure"  , FDS_OPTS_T_BOOL  , FDS_OPTS_P_OPT),
+    FDS_OPTS_END,
 };
 
 static const struct fds_xml_args args_params[] = {
@@ -43,6 +65,7 @@ static const struct fds_xml_args args_params[] = {
     FDS_OPTS_ELEM(PARAM_PORT  , "localPort"     , FDS_OPTS_T_UINT  , FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(PARAM_IPADDR, "localIPAddress", FDS_OPTS_T_STRING, FDS_OPTS_P_OPT
                                                                    | FDS_OPTS_P_MULTI),
+    FDS_OPTS_NESTED(PARAM_TLS , "tls"           , args_tls         , FDS_OPTS_P_OPT),
     FDS_OPTS_END,
 };
 
@@ -85,12 +108,16 @@ void Config::parse_params(ipx_ctx *ctx, fds_xml_ctx_t *params) {
             break;
         case PARAM_IPADDR:
             assert(content->type == FDS_OPTS_T_STRING);
-            // check if the string is not empty
-            if (*content->ptr_string) {
-                local_addrs.push_back(IpAddress(content->ptr_string));
-            } else {
+            // check if the string is empty
+            if (std::strcmp(content->ptr_string, "") == 0) {
                 empty_address = true;
+            } else {
+                local_addrs.push_back(IpAddress(content->ptr_string));
             }
+            break;
+        case PARAM_TLS:
+            assert(content->type == FDS_OPTS_T_CONTEXT);
+            parse_tls(ctx, content->ptr_ctx);
             break;
         default:
             throw std::invalid_argument("Unexpected element within <params>.");
@@ -100,10 +127,78 @@ void Config::parse_params(ipx_ctx *ctx, fds_xml_ctx_t *params) {
     if (empty_address && local_addrs.size() != 0) {
         IPX_CTX_WARNING(
             ctx,
-            "Empty address in configuration ignored. Tcp plugin will NOT "
+            "Empty address in configuration ignored. TCP plugin will NOT "
             "listen on all interfaces but only on the specified addresses."
         );
     }
+}
+
+void Config::parse_tls(ipx_ctx *ctx, fds_xml_ctx_t *params) {
+    const struct fds_xml_cont *content;
+    bool empty_private_key;
+
+    // The default when TCP is enabled.
+    allow_insecure = false;
+
+    while (fds_xml_next(params, &content) != FDS_EOC) {
+        switch (content->id) {
+        case PARAM_TLS_CERTIFICATE:
+            assert(content->type == FDS_OPTS_T_STRING);
+            // check if the string is empty
+            if (std::strcmp(content->ptr_string, "") == 0) {
+                throw std::invalid_argument("TLS certificate path must not be empty.");
+            } else {
+                certificate_file = content->ptr_string;
+            }
+            break;
+        case PARAM_TLS_PRIVATE_KEY:
+            assert(content->type == FDS_OPTS_T_STRING);
+            empty_private_key = std::strcmp(content->ptr_string, "") == 0;
+            private_key_file = content->ptr_string;
+            break;
+        case PARAM_TLS_VERIFY_PEER:
+            assert(content->type == FDS_OPTS_T_BOOL);
+            verify_peer = content->val_bool;
+            break;
+        case PARAM_TLS_CA_FILE:
+            assert(content->type == FDS_OPTS_T_STRING);
+            default_ca_file = std::strcmp(content->ptr_string, "") == 0;
+            ca_file = content->ptr_string;
+            break;
+        case PARAM_TLS_CA_DIR:
+            assert(content->type == FDS_OPTS_T_STRING);
+            default_ca_dir = std::strcmp(content->ptr_string, "") == 0;
+            ca_dir = content->ptr_string;
+            break;
+        case PARAM_TLS_CA_STORE:
+            assert(content->type == FDS_OPTS_T_STRING);
+            default_ca_store = std::strcmp(content->ptr_string, "") == 0;
+            ca_store = content->ptr_string;
+            break;
+        case PARAM_TLS_INSECURE:
+            assert(content->type == FDS_OPTS_T_BOOL);
+            allow_insecure = content->val_bool;
+            break;
+        default:
+            throw std::invalid_argument("Unexpected element within <params>.");
+        }
+    }
+
+    if (empty_private_key) {
+        IPX_CTX_WARNING(
+            ctx,
+            "Empty private key ignored. Ipfixcol will use the same file as "
+            "certificate."
+        );
+    }
+
+    if (private_key_file.empty()) {
+        private_key_file = certificate_file;
+    }
+
+    use_default_ca = !default_ca_file && ca_file.empty()
+        && !default_ca_dir && ca_dir.empty()
+        && !default_ca_store && ca_store.empty();
 }
 
 } // namespace tcp_in
