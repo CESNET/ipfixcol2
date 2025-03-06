@@ -13,6 +13,7 @@ add_library(tcp-input MODULE
     src/Acceptor.cpp
     src/Plugin.cpp
     src/IpxPlugin.cpp
+    src/tls/Ssl.cpp
 )
 
 find_package(LibLz4 REQUIRED)
