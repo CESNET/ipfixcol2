@@ -12,6 +12,9 @@ initial period of inability to interpret flow records does not apply here.
 Received IPFIX messages may be compressed using LZ4 stream compression. The compression is
 enabled on the exporter and the plugin detects it automatically.
 
+Received IPFIX messages may be secured with TLS. The TLS decoder is enabled by specifying the
+certificateFile parameter. Inbound TLS messages are automatically detected.
+
 Example configuration
 ---------------------
 
@@ -38,6 +41,18 @@ Mandatory parameters:
     is left empty, the plugin binds to all available network interfaces. The element can occur
     multiple times (one IP address per occurrence) to manually select multiple interfaces.
     [default: empty]
+
+Optional parameters:
+
+:``certificateFile``:
+    Path to a PEM file with certificate and private key. Specifying this path will enable TLS
+    decoder for the inbound connections. If this parameter is omitted, TLS decoder is disabled. Path
+    may be absolute or relative to cwd of ipfixcol2.
+
+:``tlsVerifyPeer``:
+    Boolean value. If true, ipfixcol as TLS server will verify its clients certificates. This has no
+    effect if certificateFile is not set. Trusted certificates are set with OpenSSL environment
+    variables SSL_CERT_DIR or SSL_CERT_FILE. [default: false]
 
 Notes
 -----
