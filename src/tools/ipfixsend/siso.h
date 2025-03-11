@@ -78,7 +78,7 @@ enum siso_units {
  *
  * \return new sisoconf object
  */
-sisoconf *siso_create();
+sisoconf *siso_create(void);
 
 /**
  * \brief Destructor
@@ -199,4 +199,3 @@ int siso_send(sisoconf *conf, const char *data, ssize_t length);
 #endif
 
 #endif	/* SISO_H */
-
