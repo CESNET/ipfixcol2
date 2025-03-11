@@ -81,7 +81,7 @@ void usage()
     printf("  -i path    IPFIX input file\n");
     printf("  -d ip      Destination IP address (default: %s)\n", DEFAULT_IP);
     printf("  -p port    Destination port number (default: %s)\n", DEFAULT_PORT);
-    printf("  -t type    Connection type (UDP or TCP) (default: UDP)\n");
+    printf("  -t type    Connection type (UDP/TCP/SCTP/TLS) (default: UDP)\n");
     printf("  -c         Precache input file (for performance tests)\n");
     printf("  -n num     How many times the file should be sent (default: infinity)\n");
     printf("  -s speed   Maximum data sending speed/s\n");
