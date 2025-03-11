@@ -81,7 +81,9 @@ void usage()
     printf("  -i path    IPFIX input file\n");
     printf("  -d ip      Destination IP address (default: %s)\n", DEFAULT_IP);
     printf("  -p port    Destination port number (default: %s)\n", DEFAULT_PORT);
-    printf("  -t type    Connection type (UDP or TCP) (default: UDP)\n");
+    printf("  -t type    Connection type (UDP/TCP/SCTP/TLS) (default: UDP)\n");
+    printf("             When using TLS you may want to specify trusted certificate with\n");
+    printf("             environment variable SSL_CERT_FILE or SSL_CERT_DIR.\n");
     printf("  -c         Precache input file (for performance tests)\n");
     printf("  -n num     How many times the file should be sent (default: infinity)\n");
     printf("  -s speed   Maximum data sending speed/s\n");
@@ -90,6 +92,8 @@ void usage()
     printf("  -R num     Real-time sending\n");
     printf("             Allow speed-up sending 'num' times (realtime: 1.0)\n");
     printf("  -O num     Rewrite Observation Domain ID (ODID)\n");
+    printf("  -C path    Set path to certificate/private key for TLS verification.\n");
+    printf("             This is required only if the server requires clients to verify.\n");
     printf("\n");
 }
 
@@ -125,6 +129,8 @@ int main(int argc, char** argv)
     bool    odid_rewrite = false;
     long    odid_new;
 
+    char   *certificate = NULL;
+
     if (argc == 1) {
         usage();
         return 0;
@@ -132,7 +138,7 @@ int main(int argc, char** argv)
 
     // Parse parameters
     int c;
-    while ((c = getopt(argc, argv, "hci:d:p:t:n:s:S:R:O:")) != -1) {
+    while ((c = getopt(argc, argv, "hci:d:p:t:n:s:S:R:O:C:")) != -1) {
         switch (c) {
         case 'h':
             usage();
@@ -168,6 +174,9 @@ int main(int argc, char** argv)
             odid_rewrite = true;
             odid_new = atol(optarg);
             break;
+        case 'C':
+            certificate = optarg;
+            break;
         default:
             fprintf(stderr, "Unknown option.\n");
             return 1;
@@ -202,6 +211,15 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    if (certificate && strcmp(type, "TLS") != 0) {
+        fprintf(
+            stderr,
+            "Certificate path is valid only with type TLS, but the type is %s.\n",
+            type
+        );
+        return 1;
+    }
+
     // Check whether everything is set
     if (!input) {
         fprintf(stderr, "Input file must be set!\n");
@@ -214,6 +232,13 @@ int main(int argc, char** argv)
     sisoconf *sender = siso_create();
     if (!sender) {
         fprintf(stderr, "Memory allocation error\n");
+        return 1;
+    }
+
+    // Load certificate and private key
+    if (certificate && siso_load_cert(sender, certificate) != SISO_OK) {
+        fprintf(stderr, "Failed to load certificate file: %s\n", siso_get_last_err(sender));
+        siso_destroy(sender);
         return 1;
     }
 

@@ -41,6 +41,8 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
+#include <assert.h>
+#include <signal.h>
 
 #include <errno.h>
 #include <netdb.h>
@@ -57,6 +59,9 @@
 #include <stdio.h>
 #include <strings.h>
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+
 /**
  * \brief Check that a pointer is not null. Otherwise returns #SISO_ERR
  * \param[in] ptr Pointer to check
@@ -71,6 +76,14 @@
  * \brief Get the lass error message
  */
 #define PERROR_LAST strerror(errno)
+/**
+ * @brief Get the last global OpenSSL error message
+ */
+#define TLS_LAST_ERROR tls_code_error(ERR_get_error())
+/**
+ * @brief Get the last OpenSSL error message for SSL connection.
+ */
+#define TLS_LAST_SSL_ERROR(ssl, ret) tls_ssl_code_error(SSL_get_error((ssl), (ret)))
 /** Maximum message size that can be send over UDP                          */
 #define SISO_UDP_MAX 65000
 /**
@@ -86,6 +99,7 @@ enum siso_conn_type {
    SC_UDP,
    SC_TCP,
    SC_SCTP,
+   SC_TLS,
    SC_UNKNOWN,
 };
 
@@ -109,26 +123,32 @@ static const char *siso_messages[] = {
 static const char *siso_sc_types[] = {
     [SC_UDP]  = "UDP",
     [SC_TCP]  = "TCP",
-    [SC_SCTP] = "SCTP"
+    [SC_SCTP] = "SCTP",
+    [SC_TLS]  = "TLS",
 };
+
+/** Buffer for error messages. */
+static char sisco_err_msg_buf[256] = { 0 };
 
 /**
  * \brief Main sisolib structure
  */
 struct sisoconf_s {
     const char *last_error;     /**< last error message */
-    enum siso_conn_type type;   /**< UDP/TCP/SCTP */
+    enum siso_conn_type type;   /**< UDP/TCP/SCTP/TLS */
     struct addrinfo *servinfo;  /**< server information */
     int sockfd;                 /**< socket descriptor */
     uint64_t max_speed;         /**< max sending speed */
     uint64_t act_speed;         /**< actual speed */
     struct timeval begin, end;  /**< start/end time for limited transfers */
+    SSL_CTX *ssl_ctx;           /**< context for creating TLS connecitons */
+    SSL *ssl;                   /**< TLS connection */
 };
 
 /**
  * \brief Constructor
  */
-sisoconf *siso_create()
+sisoconf *siso_create(void)
 {
     /* allocate memory */
     sisoconf *conf = (sisoconf *) calloc(1, sizeof(sisoconf));
@@ -152,6 +172,11 @@ void siso_destroy(sisoconf *conf)
 
     if (conf->servinfo != NULL) {
         freeaddrinfo(conf->servinfo);
+    }
+
+    if (conf->ssl_ctx) {
+        SSL_CTX_free(conf->ssl_ctx);
+        conf->ssl_ctx = NULL;
     }
 
     free(conf);
@@ -256,6 +281,7 @@ int siso_getaddrinfo(sisoconf *conf, const char *ip, const char *port)
         hints.ai_socktype = SOCK_DGRAM;
         hints.ai_protocol = IPPROTO_UDP;
         break;
+    case SC_TLS:
     case SC_TCP:
         hints.ai_socktype = SOCK_STREAM;
         hints.ai_protocol = IPPROTO_TCP;
@@ -278,6 +304,129 @@ int siso_getaddrinfo(sisoconf *conf, const char *ip, const char *port)
         return SISO_ERR;
     }
 
+    return SISO_OK;
+}
+
+/**
+ * @brief Get OpenSSL error message for the given code
+ */
+static inline const char *tls_code_error(unsigned long code)
+{
+    if (code == SSL_ERROR_SYSCALL) {
+        return PERROR_LAST;
+    }
+    ERR_error_string_n(code, sisco_err_msg_buf, sizeof(sisco_err_msg_buf));
+    return &sisco_err_msg_buf[0];
+}
+
+/**
+ * @brief Get OpenSSL error message for the given code from SSL connection.
+ */
+static inline const char *tls_ssl_code_error(unsigned long code)
+{
+    if (code == SSL_ERROR_SYSCALL) {
+        code = ERR_get_error();
+    }
+    return tls_code_error(code);
+}
+
+/**
+ * @brief Get SSL_CTX. Initialize it if it is not initialized.
+ * @return NULL on failure.
+ */
+SSL_CTX *siso_get_ssl_ctx(sisoconf *conf)
+{
+    if (conf->ssl_ctx) {
+        return conf->ssl_ctx;
+    }
+
+    SSL_load_error_strings();
+
+    SSL_CTX *ctx = SSL_CTX_new(TLS_client_method());
+    if (!ctx) {
+        conf->last_error = TLS_LAST_ERROR;
+        return NULL;
+    }
+
+    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+
+    if (!SSL_CTX_set_default_verify_paths(ctx)) {
+        conf->last_error = TLS_LAST_ERROR;
+        SSL_CTX_free(ctx);
+        return NULL;
+    }
+
+    if (!SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION)) {
+        conf->last_error = TLS_LAST_ERROR;
+        SSL_CTX_free(ctx);
+        return NULL;
+    }
+
+    SSL_CTX_set_mode(ctx, SSL_MODE_ENABLE_PARTIAL_WRITE);
+
+    // There is no way to pass MSG_SIGIGN when writing using OpenSSL without
+    // creating custom BIO. So we can just ignore SIGPIPE which can occur if
+    // peer closes the file descriptor.
+    signal(SIGPIPE, SIG_IGN);
+
+    return conf->ssl_ctx = ctx;
+}
+
+int siso_load_cert(sisoconf *conf, const char *cert_file) {
+    SSL_CTX *ctx = siso_get_ssl_ctx(conf);
+
+    if (SSL_CTX_use_certificate_chain_file(ctx, cert_file) <= 0) {
+        conf->last_error = TLS_LAST_ERROR;
+        return SISO_ERR;
+    }
+
+    if (SSL_CTX_use_PrivateKey_file(ctx, cert_file, SSL_FILETYPE_PEM) <= 0) {
+        conf->last_error = TLS_LAST_ERROR;
+        return SISO_ERR;
+    }
+
+    return SISO_OK;
+}
+
+int siso_tls_connect(sisoconf *conf, int new_fd)
+{
+    assert(!conf->ssl);
+
+    SSL_CTX *ctx = siso_get_ssl_ctx(conf);
+    if (!ctx) {
+        return SISO_ERR;
+    }
+
+    SSL *ssl = SSL_new(ctx);
+    if (!ssl) {
+        conf->last_error = TLS_LAST_ERROR;
+        return SISO_ERR;
+    }
+
+    BIO *bio = BIO_new(BIO_s_socket());
+    if (!bio) {
+        conf->last_error = TLS_LAST_ERROR;
+        SSL_free(ssl);
+        return SISO_ERR;
+    }
+
+    BIO_set_fd(bio, new_fd, BIO_NOCLOSE);
+    SSL_set_bio(ssl, bio, bio);
+
+    int res = SSL_connect(ssl);
+    if (res <= 0) {
+        // Get the best error message.
+        long vres = SSL_get_verify_result(ssl);
+        if (vres == X509_V_OK) {
+            conf->last_error = TLS_LAST_SSL_ERROR(ssl, res);
+        } else {
+            conf->last_error = X509_verify_cert_error_string(vres);
+        }
+        SSL_free(ssl);
+        return SISO_ERR;
+    }
+
+    conf->ssl = ssl;
     return SISO_OK;
 }
 
@@ -306,6 +455,11 @@ int siso_create_socket(sisoconf *conf)
 
     if (iter == NULL) {
         conf->last_error = siso_messages[SISO_ERR_CONNECT];
+        return SISO_ERR;
+    }
+
+    if (conf->type == SC_TLS && siso_tls_connect(conf, new_fd) != SISO_OK) {
+        close(new_fd);
         return SISO_ERR;
     }
 
@@ -345,7 +499,16 @@ int siso_create_connection(sisoconf* conf, const char* ip, const char *port, con
  */
 void siso_close_connection(sisoconf *conf)
 {
-    if (conf && conf->sockfd > 0) {
+    if (!conf) {
+        return;
+    }
+
+    if (conf->ssl) {
+        SSL_free(conf->ssl);
+        conf->ssl = NULL;
+    }
+
+    if (conf->sockfd > 0) {
         close(conf->sockfd);
         conf->sockfd = -1;
     }
@@ -375,6 +538,7 @@ int siso_send(sisoconf *conf, const char *data, ssize_t length)
 
     // data sent per cycle
     ssize_t sent_now = 0;
+    int ret_code = 1;
 
     // Size of remaining data
     ssize_t todo = length;
@@ -390,12 +554,25 @@ int siso_send(sisoconf *conf, const char *data, ssize_t length)
         case SC_SCTP:
             sent_now = send(conf->sockfd, ptr, todo, MSG_NOSIGNAL);
             break;
+        case SC_TLS:
+            ret_code = SSL_write_ex(conf->ssl, ptr, todo, (size_t *)&sent_now);
+            break;
         default:
             break;
         }
 
         // Check for errors
-        if (sent_now == -1) {
+        if (ret_code <= 0) {
+            int err_code = SSL_get_error(conf->ssl, ret_code);
+            if (err_code != SSL_ERROR_WANT_READ && err_code != SSL_ERROR_WANT_WRITE) {
+                // Connection is broken, close...
+                conf->last_error = tls_ssl_code_error(err_code);
+                siso_close_connection(conf);
+                return SISO_ERR;
+            }
+
+            // Don't use continue here, the write may be partial.
+        } else if (sent_now == -1) {
             if (errno != EAGAIN && errno != EWOULDBLOCK) {
                 // Connection broken, close...
                 conf->last_error = PERROR_LAST;
