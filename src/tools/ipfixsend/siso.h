@@ -78,7 +78,7 @@ enum siso_units {
  *
  * \return new sisoconf object
  */
-sisoconf *siso_create();
+sisoconf *siso_create(void);
 
 /**
  * \brief Destructor
@@ -152,6 +152,16 @@ void siso_set_speed(sisoconf* conf, uint32_t limit, enum siso_units units);
 void siso_set_speed_str(sisoconf* conf, const char* limit);
 
 /**
+ * \brief Load certificate and private key for TLS conections. This must be called before
+ * `siso_create_connection` or not at all.
+ *
+ * \param[in] conf susoconf configuration.
+ * \param[in] cert_file path to file with certificate and private key in PEM format.
+ * \return #SISO_OK or #SISO_ERR and sets error message.
+ */
+int siso_load_cert(sisoconf *conf, const char *cert_file);
+
+/**
  * \brief Create new connection
  *
  * Each sisoconf object can hold only one connection, any previous connection will be closed.
@@ -199,4 +209,3 @@ int siso_send(sisoconf *conf, const char *data, ssize_t length);
 #endif
 
 #endif	/* SISO_H */
-
