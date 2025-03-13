@@ -192,3 +192,9 @@ ipx_msg_ipfix_add_drec_ref(struct ipx_msg_ipfix **msg_ref)
     msg->rec_info.cnt_valid++;
     return ((struct ipx_ipfix_record *) (((uint8_t *) msg->recs) + offset));
 }
+
+void
+ipx_msg_ipfix_set_raw_size(ipx_msg_ipfix_t *msg, uint16_t new_raw_size)
+{
+    msg->raw_size = new_raw_size;
+}
