@@ -1,20 +1,20 @@
 
 #pragma once
 
-#include <memory>
-#include <string>
-#include <list>
+#include <common/common.hpp> // unique_file, unique_iemg
+#include <common/flow.hpp>
 
 #include <libfds.h>
 
-#include "common.hpp" // unique_file, unique_iemgr
-#include "flow.hpp"
+#include <memory>
+#include <string>
+#include <list>
 
 namespace fdsdump {
 
 class FlowProvider {
 public:
-    FlowProvider(const shared_iemgr &iemgr);
+    FlowProvider();
     ~FlowProvider() = default;
 
     FlowProvider(const FlowProvider &) = delete;
@@ -65,7 +65,6 @@ private:
 
     std::list<std::string> m_remains;
 
-    shared_iemgr m_iemgr;
     unique_filter m_filter {nullptr, &fds_ipfix_filter_destroy};
     unique_file m_file {nullptr, &fds_file_close};
     bool m_file_ready = false;

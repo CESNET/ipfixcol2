@@ -20,11 +20,18 @@ union IPAddr {
     uint64_t u64[2];
 
     /**
-     * @brief Default constructor (zeroes)
+     * @brief Default constructor (uninitialized)
      */
-    IPAddr()
+    IPAddr() = default;
+
+    /**
+     * @brief Zeroes constructor
+     */
+    static IPAddr zero()
     {
-        memset(this, 0, sizeof(*this));
+        IPAddr ip;
+        memset(&ip, 0, sizeof(ip));
+        return ip;
     }
 
     /**
@@ -37,20 +44,24 @@ union IPAddr {
     /**
      * @brief Create an IPv4 address (from 4 bytes array)
      */
-    explicit IPAddr(const uint32_t ip4)
+    static IPAddr ip4(const uint8_t ip4[4])
     {
-        u64[0] = 0;
-        u32[2] = htonl(0x0000FFFF);
-        u32[3] = ip4;
-    };
+        IPAddr ip;
+        ip.u64[0] = 0;
+        ip.u32[2] = htonl(0x0000FFFF);
+        std::memcpy(&ip.u8[12], &ip4[0], 4U);
+        return ip;
+    }
 
     /**
      * @brief Create an IPv6 address (from 16 bytes array)
      */
-    explicit IPAddr(const uint8_t ip6[16])
+    static IPAddr ip6(const uint8_t ip6[16])
     {
-        std::memcpy(&u8[0], &ip6[0], 16U);
-    };
+        IPAddr ip;
+        std::memcpy(&ip.u8[0], &ip6[0], 16U);
+        return ip;
+    }
 
     /**
      * @brief Check if the address is IPv4

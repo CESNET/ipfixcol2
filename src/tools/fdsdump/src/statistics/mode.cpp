@@ -1,10 +1,19 @@
+/**
+ * @file
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief Statistics mode
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 
 #include <iostream>
 
-#include "common/flowProvider.hpp"
+#include <common/common.hpp>
+#include <common/flowProvider.hpp>
 
-#include "mode.hpp"
-#include "printer.hpp"
+#include <statistics/mode.hpp>
+#include <statistics/printer.hpp>
 
 namespace fdsdump {
 namespace statistics {
@@ -37,10 +46,10 @@ static void stats_merge(
 }
 
 void
-mode_statistics(const shared_iemgr &iemgr, const Options &opts)
+mode_statistics(const Options &opts)
 {
     auto printer = printer_factory(opts.get_output_specifier());
-    const FileList &file_names = opts.get_input_files();
+	std::vector<std::string> file_names = glob_files(opts.get_input_file_patterns());
     unique_file file {nullptr, &fds_file_close};
     fds_file_stats stats {};
 
@@ -74,7 +83,6 @@ mode_statistics(const shared_iemgr &iemgr, const Options &opts)
     printer->print_stats(stats);
     printer->print_epilogue();
 
-    (void) iemgr;
     return;
 }
 

@@ -1,24 +1,35 @@
+/**
+ * @file
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief IPFIX field abstraction
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 
 #include <cassert>
 #include <stdexcept>
 
-#include "field.hpp"
+#include <common/field.hpp>
+#include <common/ieMgr.hpp>
 
 namespace fdsdump {
 
-Field::Field(std::string name, const shared_iemgr &iemgr)
-    : m_name(name), m_iemgr(iemgr)
+Field::Field(std::string name)
+    : m_name(name)
 {
     string_trim(m_name);
 
-    m_alias = fds_iemgr_alias_find(m_iemgr.get(), m_name.c_str());
+    auto *iemgr = IEMgr::instance().ptr();
+
+    m_alias = fds_iemgr_alias_find(iemgr, m_name.c_str());
     if (m_alias) {
         // Success
         m_type = get_type_of_alias(m_alias);
         return;
     }
 
-    m_elem = fds_iemgr_elem_find_name(m_iemgr.get(), m_name.c_str());
+    m_elem = fds_iemgr_elem_find_name(iemgr, m_name.c_str());
     if (m_elem) {
         // Success
         m_type = get_type_of_element(m_elem);

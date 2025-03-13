@@ -1,11 +1,21 @@
+/**
+ * @file
+ * @author Lukas Hutak <hutak@cesnet.cz>
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief Command line options
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 
 #pragma once
 
 #include <cstddef>
 #include <string>
+#include <vector>
 #include <stdexcept>
 
-#include <common/filelist.hpp>
+#include <common/logger.hpp>
 
 namespace fdsdump {
 
@@ -35,6 +45,11 @@ public:
     };
 
     /**
+     * @brief Print the usage message
+     */
+    static void print_usage();
+
+    /**
      * @brief Create options with default values.
      */
     Options();
@@ -51,10 +66,12 @@ public:
      */
     void reset();
 
+    bool get_help_flag() const { return m_help_flag; };
+
     const Mode &get_mode() const { return m_mode; };
 
-    /** @brief Get list of files to process.             */
-    const FileList &get_input_files() const { return m_input_files; };
+    /** @brief Get list of provided file patterns to process.             */
+    const std::vector<std::string> &get_input_file_patterns() const { return m_input_file_patterns; };
     /** @brief Get input flow filter.                    */
     const std::string &get_input_filter() const { return m_input_filter; };
 
@@ -66,7 +83,7 @@ public:
     /** @brief Get aggregation keys */
     const std::string &get_aggregation_keys() const { return m_aggregation_keys; };
     /** @brief Get aggregation values */
-    const std::string &get_aggregation_values() const { return m_aggregation_fields; };
+    const std::string &get_aggregation_values() const { return m_aggregation_values; };
 
     /** @brief Whether to ignore biflow direction with zero bytes and packets counter */
     bool get_biflow_autoignore() const { return m_biflow_autoignore; };
@@ -74,10 +91,15 @@ public:
     /** @brief Get output order specificiation           */
     const std::string &get_order_by() const { return m_order_by; };
 
+    /** @brief Get the logging level */
+    LogLevel get_log_level() const { return m_log_level; }
+
 private:
     Mode m_mode;
 
-    FileList    m_input_files;
+    bool m_help_flag;
+
+    std::vector<std::string> m_input_file_patterns;
     std::string m_input_filter;
 
     size_t      m_output_limit;
@@ -86,9 +108,11 @@ private:
     std::string m_order_by;
 
     std::string m_aggregation_keys;
-    std::string m_aggregation_fields;
+    std::string m_aggregation_values;
 
     bool        m_biflow_autoignore;
+
+    LogLevel    m_log_level;
 
     void parse(int argc, char *argv[]);
     void validate();

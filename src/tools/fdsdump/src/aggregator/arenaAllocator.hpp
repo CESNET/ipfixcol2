@@ -2,9 +2,13 @@
  * @file
  * @author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
  * @brief Simple arena allocator
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 #pragma once
 
+#include <common/common.hpp>
 #include <memory>
 #include <vector>
 
@@ -20,13 +24,11 @@ static constexpr size_t BLOCK_SIZE = 4 * 1024 * 1024;
  * memory upon destruction.
  */
 class ArenaAllocator {
-public:
-    ArenaAllocator() {}
+    DISABLE_COPY_AND_MOVE(ArenaAllocator)
 
-    /** @brief Disallow copy constructor. */
-    ArenaAllocator(const ArenaAllocator &) = delete;
-    /** @brief Disallow move constructor. */
-    ArenaAllocator(ArenaAllocator &&) = delete;
+public:
+    ArenaAllocator() = default;
+
 
     /**
      * @brief Allocate bytes.

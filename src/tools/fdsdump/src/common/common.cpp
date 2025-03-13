@@ -1,7 +1,19 @@
+/**
+ * @file
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief Common utility functions
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+#include <common/common.hpp>
 
 #include <algorithm>
+#include <memory>
+#include <stdexcept>
 
-#include "common.hpp"
+#include <glob.h>
 
 namespace fdsdump {
 
@@ -99,6 +111,13 @@ string_trim_copy(std::string str)
     return str;
 }
 
+std::string
+string_to_lower(std::string str)
+{
+    std::for_each(str.begin(), str.end(), [](char &c) { c = std::tolower(c); });
+    return str;
+}
+
 void
 memcpy_bits(uint8_t *dst, uint8_t *src, unsigned int n_bits)
 {
@@ -113,6 +132,54 @@ memcpy_bits(uint8_t *dst, uint8_t *src, unsigned int n_bits)
     if (rem_bits != 8) {
         dst[n_bytes - 1] &= (0xFF >> rem_bits) << rem_bits;
     }
+}
+
+std::vector<std::string>
+glob_files(const std::string &pattern)
+{
+    glob_t globbuf = {};
+    const int flags = GLOB_MARK | GLOB_BRACE | GLOB_TILDE;
+    int ret = glob(pattern.c_str(), flags, NULL, &globbuf);
+    switch (ret) {
+    case 0:
+        break;
+    case GLOB_NOMATCH:
+        return {};
+    case GLOB_NOSPACE:
+        throw std::bad_alloc();
+    case GLOB_ABORTED:
+        throw std::runtime_error("glob() failed: GLOB_ABORTED");
+    default:
+        throw std::runtime_error("glob() failed: " + std::to_string(ret));
+    }
+
+    std::unique_ptr<glob_t, decltype(&globfree)> glob_ptr{&globbuf, &globfree};
+    std::vector<std::string> files;
+
+    for (size_t i = 0; i < globbuf.gl_pathc; i++) {
+        std::string filename = globbuf.gl_pathv[i];
+
+        if (filename.back() == '/') {
+            // Skip directories
+            continue;
+        }
+
+        files.push_back(std::move(filename));
+    }
+
+    return files;
+}
+
+std::vector<std::string>
+glob_files(const std::vector<std::string> &patterns)
+{
+	std::vector<std::string> files;
+	for (const auto &pattern : patterns) {
+		for (const auto &file : glob_files(pattern)) {
+			files.push_back(file);
+		}
+	}
+	return files;
 }
 
 } // fdsdump

@@ -1,177 +1,411 @@
 /**
  * @file
- * @author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
- * @brief View definitions
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief Aggregate view
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #pragma once
 
-#include <string>
-#include <vector>
-#include <cstdint>
+#include <aggregator/field.hpp>
 
-#include <libfds.h>
+#include <cstddef>
+#include <memory>
+#include <vector>
 
 namespace fdsdump {
 namespace aggregator {
 
 /**
- * @brief A representation of an IP address that can hold both an IPv4 or
- * an IPv6 address.
+ * @brief A view object for accessing fields and their values in an aggregation record
  */
-struct IPAddress {
-    uint8_t length;
-    uint8_t address[16];
+class View {
+    friend class ViewFactory;
+
+public:
+    /**
+     * @brief The ordering/sorting direction
+     */
+    enum class OrderDirection {
+        Ascending,
+        Descending
+    };
+
+    /**
+     * @brief Definition of a field to order/sort by
+     */
+    struct OrderField {
+        const Field *field;
+        OrderDirection dir;
+    };
+
+    /**
+     * @brief A value that the iterator uses to provide individual iteration items
+     */
+    struct IteratorValue {
+        const Field &field;
+        Value &value;
+    };
+
+    /**
+     * @brief An iterator over aggregation record fields
+     */
+    class Iterator {
+    public:
+        Iterator(
+            std::vector<std::unique_ptr<Field>>::const_iterator begin,
+            std::vector<std::unique_ptr<Field>>::const_iterator end,
+            uint8_t *ptr
+        ) :
+            m_iter(begin),
+            m_end(end),
+            m_ptr(ptr)
+        {
+        }
+
+        void
+        operator++()
+        {
+            if (m_iter != m_end) {
+                m_ptr += (*m_iter)->size(reinterpret_cast<const Value *>(m_ptr));
+                ++m_iter;
+            }
+        }
+
+        IteratorValue
+        operator*()
+        {
+            return {*m_iter->get(), *reinterpret_cast<Value *>(m_ptr)};
+        }
+
+        bool
+        operator==(const Iterator &other) const
+        {
+            return m_iter == other.m_iter;
+        }
+
+        bool
+        operator!=(const Iterator &other) const
+        {
+            return !(*this == other);
+        }
+
+    private:
+        std::vector<std::unique_ptr<Field>>::const_iterator m_iter;
+        std::vector<std::unique_ptr<Field>>::const_iterator m_end;
+        uint8_t *m_ptr;
+    };
+
+    /**
+     * @brief An object providing iteration over a span of aggregation record fields
+     */
+    class IterSpan {
+    public:
+        Iterator
+        begin() const
+        {
+            return Iterator(m_begin, m_end, m_ptr);
+        }
+
+        Iterator
+        end() const
+        {
+            return Iterator(m_end, m_end, m_ptr);
+        }
+
+    private:
+        friend class View;
+
+        std::vector<std::unique_ptr<Field>>::const_iterator m_begin;
+        std::vector<std::unique_ptr<Field>>::const_iterator m_end;
+        uint8_t *m_ptr;
+
+        IterSpan(
+            std::vector<std::unique_ptr<Field>>::const_iterator begin,
+            std::vector<std::unique_ptr<Field>>::const_iterator end,
+            uint8_t *ptr
+        ) :
+            m_begin(begin),
+            m_end(end),
+            m_ptr(ptr)
+        {
+        }
+    };
+
+    /**
+     * @brief Same as `View::IteratorValue` but for iterating two records at the same time
+     */
+    struct IteratorValuePairs {
+        const Field &field;
+        Value &value1;
+        Value &value2;
+    };
+
+    /**
+     * @brief Same as `View::Iterator` but for iterating two records at the same time
+     */
+    class IteratorPairs {
+    public:
+        IteratorPairs(
+            std::vector<std::unique_ptr<Field>>::const_iterator begin,
+            std::vector<std::unique_ptr<Field>>::const_iterator end,
+            uint8_t *ptr1,
+            uint8_t *ptr2
+        ) :
+            m_iter(begin),
+            m_end(end),
+            m_ptr1(ptr1),
+            m_ptr2(ptr2)
+        {
+        }
+
+        void
+        operator++()
+        {
+            if (m_iter != m_end) {
+                m_ptr1 += (*m_iter)->size(reinterpret_cast<const Value *>(m_ptr1));
+                m_ptr2 += (*m_iter)->size(reinterpret_cast<const Value *>(m_ptr2));
+                ++m_iter;
+            }
+        }
+
+        IteratorValuePairs
+        operator*()
+        {
+            return {
+                *m_iter->get(),
+                *reinterpret_cast<Value *>(m_ptr1),
+                *reinterpret_cast<Value *>(m_ptr2)
+            };
+        }
+
+        bool
+        operator==(const IteratorPairs &other) const
+        {
+            return m_iter == other.m_iter;
+        }
+
+        bool
+        operator!=(const IteratorPairs &other) const
+        {
+            return !(*this == other);
+        }
+
+    private:
+        std::vector<std::unique_ptr<Field>>::const_iterator m_iter;
+        std::vector<std::unique_ptr<Field>>::const_iterator m_end;
+        uint8_t *m_ptr1;
+        uint8_t *m_ptr2;
+    };
+
+    /**
+     * @brief Same as `View::IterSpan` but for iterating two records at the same time
+     */
+    class IterSpanPairs {
+    public:
+        IteratorPairs
+        begin() const
+        {
+            return IteratorPairs(m_begin, m_end, m_ptr1, m_ptr2);
+        }
+
+        IteratorPairs
+        end() const
+        {
+            return IteratorPairs(m_end, m_end, m_ptr1, m_ptr2);
+        }
+
+    private:
+        friend class View;
+
+        std::vector<std::unique_ptr<Field>>::const_iterator m_begin;
+        std::vector<std::unique_ptr<Field>>::const_iterator m_end;
+        uint8_t *m_ptr1;
+        uint8_t *m_ptr2;
+
+        IterSpanPairs(
+            std::vector<std::unique_ptr<Field>>::const_iterator begin,
+            std::vector<std::unique_ptr<Field>>::const_iterator end,
+            uint8_t *ptr1,
+            uint8_t *ptr2
+        ) :
+            m_begin(begin),
+            m_end(end),
+            m_ptr1(ptr1),
+            m_ptr2(ptr2)
+        {
+        }
+    };
+
+    /**
+     * @brief Iterate over the key fields
+     *
+     * @param ptr  Pointer to the beginning of the aggregation record
+     *
+     * @returns A object to iterate over
+     */
+    IterSpan
+    iter_keys(uint8_t *ptr) const;
+
+    /**
+     * @brief Iterate over the key fields in pairs
+     *
+     * @param ptr1  Pointer to the beginning of the aggregation record
+     * @param ptr2  Pointer to the beginning of the other aggregation record
+     *
+     * @returns A object to iterate over
+     */
+    IterSpanPairs
+    iter_keys(uint8_t *ptr1, uint8_t *ptr2) const;
+
+    /**
+     * @brief Iterate over the value fields
+     *
+     * @param ptr  Pointer to the beginning of the aggregation record
+     *
+     * @returns A object to iterate over
+     */
+    IterSpan
+    iter_values(uint8_t *ptr) const;
+
+    /**
+     * @brief Iterate over the value fields in pairs
+     *
+     * @param ptr1  Pointer to the beginning of the aggregation record
+     * @param ptr2  Pointer to the beginning of the other aggregation record
+     *
+     * @returns A object to iterate over
+     */
+    IterSpanPairs
+    iter_values(uint8_t *ptr1, uint8_t *ptr2) const;
+
+    /**
+     * @brief Iterate over all the fields
+     *
+     * @param ptr  Pointer to the beginning of the aggregation record
+     *
+     * @returns A object to iterate over
+     */
+    IterSpan
+    iter_fields(uint8_t *ptr) const;
+
+    /**
+     * @brief Iterate over all the fields in pairs
+     *
+     * @param ptr1  Pointer to the beginning of the aggregation record
+     * @param ptr2  Pointer to the beginning of the other aggregation record
+     *
+     * @returns A object to iterate over
+     */
+    IterSpanPairs
+    iter_fields(uint8_t *ptr1, uint8_t *ptr2) const;
+
+    /**
+     * @brief Get the number of bytes the key portion of the aggregation record occupies
+     *        including the uint32_t size at the beginning of the record if the view is
+     *        not fixed size
+     *
+     * @param ptr  Pointer to the beginning of the record
+     *
+     * @return The number of bytes
+     */
+    size_t
+    key_size(const uint8_t *ptr) const
+    {
+        if (m_is_fixed_size) {
+            return m_key_size;
+        } else {
+            return *reinterpret_cast<const uint32_t *>(ptr);
+        }
+    }
+
+    /**
+     * @brief Get the number of bytes the value portion of the aggregation record occupies
+     *
+     * @param ptr  Pointer to the beginning of the record
+     *
+     * @return The number of bytes
+     */
+    size_t value_size() const { return m_value_size; }
+
+    /**
+     * @brief Get the field definitions the view consists of
+     */
+    const std::vector<std::unique_ptr<Field>> &fields() const { return m_fields; }
+
+    /**
+     * @brief Find a field definition given its name
+     *
+     * @param name  The name of the field
+     *
+     * @return Pointer to the field definition if found, else nullptr
+     */
+    const Field *
+    find_field(const std::string &name);
+
+
+    /**
+     * @brief Check whether one record is supposed to be ordered before another
+     *
+     * @param key1  Pointer to the key of the first aggregation record
+     * @param key2  Pointer to the key of the second aggregation record
+     *
+     * @return true if key1 comes before key2 in an ordered sequence, else false
+     */
+    bool
+    ordered_before(uint8_t *key1, uint8_t *key2) const;
+
+    /**
+     * @brief Get the definition of the ordering
+     */
+    const std::vector<OrderField> &order_fields() const { return m_order_fields; }
+
+    /**
+     * @brief Check whether the view contains "in/out" fields
+     */
+    bool has_inout_fields() const { return m_has_inout_fields; }
+
+    /**
+     * @brief Access a specific field in the record
+     *
+     * @param field  The field
+     * @param record  The pointer to the beginning of the aggregation record
+     *
+     * @return The value
+     */
+    Value &
+    access_field(const Field &field, uint8_t *record_ptr) const;
+
+    /**
+     * @brief Access a specific field in the record
+     *
+     * @param field  The field
+     * @param record  The pointer to the beginning of the aggregation record
+     *
+     * @return The value
+     */
+    const Value &
+    access_field(const Field &field, const uint8_t *record_ptr) const;
+
+    /**
+     * @brief Check whether the records of this view have a fixed size (as opposed to variable size)
+     */
+    bool is_fixed_size() const { return m_is_fixed_size; }
+
+private:
+    View() = default;
+
+    std::vector<std::unique_ptr<Field>> m_fields;
+    size_t m_key_count = 0;
+    size_t m_value_count = 0;
+    size_t m_key_size = 0;
+    size_t m_value_size = 0;
+    std::vector<OrderField> m_order_fields;
+    bool m_has_inout_fields = false;
+    bool m_is_fixed_size = true;
 };
-
-/** @brief The possible data types a view value can be. */
-enum class DataType {
-    Unassigned,
-    IPAddress,
-    IPv4Address,
-    IPv6Address,
-    MacAddress,
-    Unsigned8,
-    Signed8,
-    Unsigned16,
-    Signed16,
-    Unsigned32,
-    Signed32,
-    Unsigned64,
-    Signed64,
-    DateTime,
-    String128B,
-    Octets128B,
-};
-
-/** @brief The possible view value forms. */
-union ViewValue {
-    IPAddress ip;
-    uint8_t ipv4[4];
-    uint8_t ipv6[16];
-    uint8_t mac[6];
-    uint8_t u8;
-    uint16_t u16;
-    uint32_t u32;
-    uint64_t u64;
-    uint64_t ts_millisecs;
-    int8_t i8;
-    int16_t i16;
-    int32_t i32;
-    int64_t i64;
-    char str[128];
-};
-
-/** @brief The possible kinds of a view field. */
-enum class ViewFieldKind {
-    Unassigned,
-    VerbatimKey,
-    IPv4SubnetKey,
-    IPv6SubnetKey,
-    BidirectionalIPv4SubnetKey,
-    BidirectionalIPv6SubnetKey,
-    SourceIPAddressKey,
-    DestinationIPAddressKey,
-    BidirectionalIPAddressKey,
-    BidirectionalPortKey,
-    BiflowDirectionKey,
-    SumAggregate,
-    MinAggregate,
-    MaxAggregate,
-    CountAggregate,
-};
-
-/** @brief The direction in case of a bidirectional field. */
-enum class ViewDirection {
-    Unassigned,
-    In,
-    Out,
-};
-
-/** @brief The view field definition. */
-struct ViewField {
-    size_t size;
-    size_t offset;
-    std::string name;
-    uint32_t pen;
-    uint16_t id;
-    DataType data_type;
-    ViewFieldKind kind;
-    ViewDirection direction;
-    struct {
-        uint8_t prefix_length;
-    } extra;
-};
-
-/** @brief The view definition */
-struct ViewDefinition {
-    bool bidirectional;
-
-    std::vector<ViewField> key_fields;
-    std::vector<ViewField> value_fields;
-    size_t keys_size;
-    size_t values_size;
-    bool biflow_enabled;
-};
-
-/**
- * @brief Make a view definition
- *
- * @param keys   The aggregation keys specified in a text form
- * @param values The aggregation values specified in a text
- * @param iemgr  The iemgr instance
- * @return The view definition.
- */
-ViewDefinition
-make_view_def(const std::string &keys, const std::string &values, fds_iemgr_t *iemgr);
-
-/**
- * @brief Find a field in a view definition by its name
- * @param def  The view definition
- * @param name The field name
- * @return The view field or nullptr if not found.
- */
-ViewField *
-find_field(ViewDefinition &def, const std::string &name);
-
-/**
- * @brief Advance view value pointer
- * @param value      The value pointer reference
- * @param value_size The amount to advance by
- */
-static inline void
-advance_value_ptr(ViewValue *&value, size_t value_size)
-{
-    value = (ViewValue *) ((uint8_t *) value + value_size);
-}
-
-/**
- * @brief Consturct an IPv4 address
- * @param address The address bytes
- * @return The IPAddress instance
- */
-static inline IPAddress
-make_ipv4_address(uint8_t *address)
-{
-    IPAddress ip = {};
-    ip.length = 4;
-    memcpy(ip.address, address, 4);
-    return ip;
-}
-
-/**
- * @brief Construct an IPv6 address
- * @param address  The address bytes
- * @return The IPAddress instance
- */
-static inline IPAddress
-make_ipv6_address(uint8_t *address)
-{
-    IPAddress ip = {};
-    ip.length = 16;
-    memcpy(ip.address, address, 16);
-    return ip;
-}
 
 } // aggregator
 } // fdsdump

@@ -1,32 +1,37 @@
+/**
+ * @file
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief Aggregator mode
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 
-#include <vector>
+#include <common/flowProvider.hpp>
+#include <aggregator/aggregator.hpp>
+#include <aggregator/mode.hpp>
+#include <aggregator/printer.hpp>
+#include <aggregator/view.hpp>
+#include <aggregator/viewFactory.hpp>
 
-#include "common/flowProvider.hpp"
-
-#include "aggregator.hpp"
-#include "mode.hpp"
-#include "printer.hpp"
-#include "view.hpp"
-#include "sort.hpp"
+#include <memory>
 
 namespace fdsdump {
 namespace aggregator {
 
 void
-mode_aggregate(const shared_iemgr &iemgr, const Options &opts)
+mode_aggregate(const Options &opts)
 {
-    ViewDefinition view_def = make_view_def(
+    View view = ViewFactory::create_view(
             opts.get_aggregation_keys(),
             opts.get_aggregation_values(),
-            iemgr.get());
-    std::vector<SortField> sort_fields = make_sort_def(
-            view_def,
             opts.get_order_by());
+
     std::unique_ptr<Printer> printer = printer_factory(
-            view_def,
+            view,
             opts.get_output_specifier());
-    FlowProvider flows {iemgr};
-    Aggregator aggr(view_def);
+    FlowProvider flows;
+    Aggregator aggr(view);
 
     const size_t rec_limit = opts.get_output_limit();
     size_t rec_printed = 0;
@@ -37,7 +42,7 @@ mode_aggregate(const shared_iemgr &iemgr, const Options &opts)
         flows.set_filter(opts.get_input_filter());
     }
 
-    for (const auto &it : opts.get_input_files()) {
+    for (const auto &it : glob_files(opts.get_input_file_patterns())) {
         flows.add_file(it);
     }
 
@@ -51,8 +56,7 @@ mode_aggregate(const shared_iemgr &iemgr, const Options &opts)
         aggr.process_record(*flow);
     }
 
-    sort_records(aggr.items(), sort_fields, view_def);
-
+    aggr.sort_items();
     printer->print_prologue();
 
     for (uint8_t *record : aggr.items()) {

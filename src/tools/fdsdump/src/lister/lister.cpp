@@ -1,14 +1,25 @@
-#include "lister.hpp"
-#include "printer.hpp"
-#include "storageSorted.hpp"
+/**
+ * @file
+ * @author Lukas Hutak <hutak@cesnet.cz>
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief Lister entrypoint
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+#include <common/common.hpp>
+#include <lister/lister.hpp>
+#include <lister/printer.hpp>
+#include <lister/storageSorted.hpp>
 
 namespace fdsdump {
 namespace lister {
 
 static void
-mode_list_unordered(const shared_iemgr &iemgr, const Options &opts, FlowProvider &flows)
+mode_list_unordered(const Options &opts, FlowProvider &flows)
 {
-    auto printer = printer_factory(iemgr, opts.get_output_specifier());
+    auto printer = printer_factory(opts.get_output_specifier());
     const size_t rec_limit = opts.get_output_limit();
     size_t rec_printed = 0;
 
@@ -28,11 +39,11 @@ mode_list_unordered(const shared_iemgr &iemgr, const Options &opts, FlowProvider
 }
 
 static void
-mode_list_ordered(const shared_iemgr &iemgr, const Options &opts, FlowProvider &flows)
+mode_list_ordered(const Options &opts, FlowProvider &flows)
 {
-    StorageSorter sorter {opts.get_order_by(), iemgr};
+    StorageSorter sorter {opts.get_order_by()};
     StorageSorted storage {sorter, opts.get_output_limit()};
-    auto printer = printer_factory(iemgr, opts.get_output_specifier());
+    auto printer = printer_factory(opts.get_output_specifier());
 
     while (true) {
         Flow *flow = flows.next_record();
@@ -55,9 +66,9 @@ mode_list_ordered(const shared_iemgr &iemgr, const Options &opts, FlowProvider &
 }
 
 void
-mode_list(const shared_iemgr &iemgr, const Options &opts)
+mode_list(const Options &opts)
 {
-    FlowProvider flows {iemgr};
+    FlowProvider flows;
 
     flows.set_biflow_autoignore(opts.get_biflow_autoignore());
 
@@ -65,14 +76,14 @@ mode_list(const shared_iemgr &iemgr, const Options &opts)
         flows.set_filter(opts.get_input_filter());
     }
 
-    for (const auto &it : opts.get_input_files()) {
+    for (const auto &it : glob_files(opts.get_input_file_patterns())) {
         flows.add_file(it);
     }
 
     if (opts.get_order_by().empty()) {
-        mode_list_unordered(iemgr, opts, flows);
+        mode_list_unordered(opts, flows);
     } else {
-        mode_list_ordered(iemgr, opts, flows);
+        mode_list_ordered(opts, flows);
     }
 }
 
