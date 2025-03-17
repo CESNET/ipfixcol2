@@ -77,7 +77,7 @@ void
 ipx_msg_terminate_destroy(ipx_msg_terminate_t *msg)
 {
     ipx_msg_header_destroy((ipx_msg_t *) msg);
-    ipx_cpipe_send_term(NULL, IPX_CPIPE_TYPE_TERM_DONE);
+    ipx_cpipe_send(NULL, IPX_CPIPE_TYPE_TERM_DONE);
     free(msg);
 }
 

@@ -71,7 +71,7 @@ IPX_API struct ipx_plugin_info ipx_plugin_info = {
 int
 ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
 {
-    ipx_msg_mask_t mask = IPX_MSG_IPFIX | IPX_MSG_SESSION;
+    ipx_msg_mask_t mask = IPX_MSG_IPFIX | IPX_MSG_SESSION | IPX_MSG_PERIODIC;
     if (ipx_ctx_subscribe(ctx, &mask, nullptr) != IPX_OK) {
         IPX_CTX_ERROR(ctx, "Error subscribing to messages", 0);
         return IPX_ERR_DENIED;
@@ -124,6 +124,8 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
             instance->ipfix_output->on_session_message(ipx_msg_base2session(msg));
         } else if (msg_type == IPX_MSG_IPFIX) {
             instance->ipfix_output->on_ipfix_message(ipx_msg_base2ipfix(msg));
+        } else if (msg_type == IPX_MSG_PERIODIC) {
+            instance->ipfix_output->on_periodic_message(ipx_msg_base2periodic(msg));
         }
 
     } catch (std::exception &ex) {

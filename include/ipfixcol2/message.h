@@ -77,6 +77,8 @@ enum ipx_msg_type {
     IPX_MSG_TERMINATE = (1 << 3),
     // An internal configuration message (only for internal usage)
     //IPX_MSG_CONFIG  = (1 << 4)
+    /** A periodic message                                                          */
+    IPX_MSG_PERIODIC = (1 << 5)
 };
 
 /** The data type of the base message                                               */
@@ -107,6 +109,7 @@ ipx_msg_destroy(ipx_msg_t *msg);
 #include <ipfixcol2/message_ipfix.h>
 #include <ipfixcol2/message_garbage.h>
 #include <ipfixcol2/message_session.h>
+#include <ipfixcol2/message_periodic.h>
 
 /**
  * \brief Cast from a base message to a session message
@@ -145,6 +148,19 @@ ipx_msg_base2ipfix(ipx_msg_t *msg)
 {
     assert(ipx_msg_get_type(msg) == IPX_MSG_IPFIX);
     return (ipx_msg_ipfix_t *) msg;
+}
+
+/**
+ * \brief Cast base message to periodic message
+ *
+ * \param[in] msg   Pointer to the base message
+ * \return A pointer to a periodic message
+ */
+static inline ipx_msg_periodic_t *
+ipx_msg_base2periodic(ipx_msg_t *msg)
+{
+    assert(ipx_msg_get_type(msg) == IPX_MSG_PERIODIC);
+    return (ipx_msg_periodic_t *) msg;
 }
 
 /**@}*/

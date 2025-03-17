@@ -41,6 +41,8 @@ set(CORE_SOURCE
     message_garbage.c
     message_ipfix.c
     message_ipfix.h
+    message_periodic.c
+    message_periodic.h
     message_session.c
     message_terminate.c
     message_terminate.h

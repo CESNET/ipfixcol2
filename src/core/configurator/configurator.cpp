@@ -46,12 +46,14 @@
 #include <cstdlib>
 #include <dlfcn.h>
 #include <signal.h>
+#include <sys/time.h>
 
 #include "configurator.hpp"
 #include "extensions.hpp"
 
 extern "C" {
 #include "../message_terminate.h"
+#include "../message_periodic.h"
 #include "../plugin_parser.h"
 #include "../plugin_output_mgr.h"
 #include "../verbose.h"
@@ -88,7 +90,7 @@ termination_handler(int sig)
     cnt++;
 
     // Send a termination request to the configurator
-    int rc = ipx_cpipe_send_term(NULL, request_type);
+    int rc = ipx_cpipe_send(NULL, request_type);
     if (rc != IPX_OK) {
         static const char *msg = "ERROR: Signal handler: failed to send a termination request";
         write(STDOUT_FILENO, msg, strlen(msg));
@@ -568,6 +570,22 @@ ipx_configurator::termination_send_msg()
     m_term_sent = m_running_inputs.size();
 }
 
+void
+ipx_configurator::periodic_send_msg(uint32_t *periodic_message_sequence)
+{
+    for (auto &input : m_running_inputs) {
+        ipx_msg_periodic_t *msg = ipx_msg_periodic_create(*periodic_message_sequence);
+        if (!msg) {
+            IPX_ERROR(comp_str, "Can't create periodic message!", '\0');
+            termination_send_msg();
+            return;
+        }
+
+        ipx_fpipe_write(input->get_feedback(), ipx_msg_periodic2base(msg));
+    }
+    (*periodic_message_sequence)++;
+}
+
 int
 ipx_configurator::run(ipx_controller *ctrl)
 {
@@ -595,6 +613,9 @@ ipx_configurator::run(ipx_controller *ctrl)
     // Collector is running -> process termination/reconfiguration requests
     m_state = STATUS::RUNNING;
     bool terminate = false;
+
+    uint32_t periodic_message_sequence = 0;
+
     while (!terminate) {
         struct ipx_cpipe_req req;
         if (ipx_cpipe_receive(&req) != IPX_OK) {
@@ -608,6 +629,9 @@ ipx_configurator::run(ipx_controller *ctrl)
         case IPX_CPIPE_TYPE_TERM_FAST:
         case IPX_CPIPE_TYPE_TERM_DONE:
             terminate = termination_handle(req, ctrl);
+            break;
+        case IPX_CPIPE_TYPE_PERIODIC:
+            periodic_send_msg(&periodic_message_sequence);
             break;
         default:
             IPX_ERROR(comp_str, "Ignoring unknown configuration request!", '\0');

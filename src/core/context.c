@@ -45,6 +45,7 @@
 #include <pthread.h>
 #include <errno.h>
 #include <signal.h>
+#include <sys/time.h>
 #if defined(__OpenBSD__) || defined(__FreeBSD__)
 #include <pthread_np.h>
 #else
@@ -58,6 +59,7 @@
 #include "fpipe.h"
 #include "ring.h"
 #include "message_ipfix.h"
+#include "message_periodic.h"
 #include "configurator/cpipe.h"
 
 /** Identification of this component (for log) */
@@ -191,7 +193,7 @@ ipx_ctx_create(const char *name, const struct ipx_ctx_callbacks *callbacks)
     ctx->cfg_system.vlevel = ipx_verb_level_get();
     ctx->cfg_system.rec_size = IPX_MSG_IPFIX_BASE_REC_SIZE;
     ctx->cfg_system.msg_mask_selected = 0; // No messages to process selected
-    ctx->cfg_system.msg_mask_allowed = IPX_MSG_IPFIX | IPX_MSG_SESSION;
+    ctx->cfg_system.msg_mask_allowed = IPX_MSG_IPFIX | IPX_MSG_SESSION | IPX_MSG_PERIODIC;
     ctx->cfg_system.term_msg_cnt = 1; // By default, wait for 1 termination message
 
     ctx->cfg_extension.items = NULL;
@@ -816,14 +818,14 @@ thread_handle_rc(struct ipx_ctx *ctx, int rc)
         // No more data -> stop the collector
         IPX_CTX_DEBUG(ctx, "The instance has signalized end-of-file/stream.", '\0');
         ipx_ctx_processing_set(ctx, false);
-        ipx_cpipe_send_term(ctx, IPX_CPIPE_TYPE_TERM_SLOW);
+        ipx_cpipe_send(ctx, IPX_CPIPE_TYPE_TERM_SLOW);
         break;
     case IPX_ERR_DENIED:
         // Fatal error -> stop the collector as fast as possible
         IPX_CTX_ERROR(ctx, "ipx_plugin_get()/ipx_plugin_process() failed! The collector cannot "
             "work properly anymore!", '\0');
         ipx_ctx_processing_set(ctx, false);
-        ipx_cpipe_send_term(ctx, IPX_CPIPE_TYPE_TERM_FAST);
+        ipx_cpipe_send(ctx, IPX_CPIPE_TYPE_TERM_FAST);
         break;
     default:
         IPX_CTX_ERROR(ctx, "ipx_plugin_get()/ipx_plugin_process() returned unexpected return "
@@ -873,6 +875,13 @@ thread_input_process_pipe(struct ipx_ctx *ctx)
         const struct ipx_session *session = ipx_msg_session_get_session(session_msg);
         ctx->plugin_cbs->ts_close(ctx, ctx->cfg_plugin.private, session);
         ipx_msg_session_destroy(session_msg);
+        return IPX_OK;
+    }
+
+    if (msg_type == IPX_MSG_PERIODIC) {
+        ipx_msg_periodic_t *periodic_message = ipx_msg_base2periodic(msg_ptr);
+        ipx_msg_periodic_update_last_processed(periodic_message);
+        ipx_ctx_msg_pass(ctx, msg_ptr);
         return IPX_OK;
     }
 
@@ -954,6 +963,8 @@ thread_intermediate(void *arg)
     ipx_msg_t *msg_ptr;
     enum ipx_msg_type msg_type;
 
+    uint64_t waiting_for_seq = 0;
+
     bool terminate = false;
     while (!terminate) {
         // Get a new message for the buffer
@@ -976,6 +987,16 @@ thread_intermediate(void *arg)
             if (type == IPX_MSG_TERMINATE_INSTANCE) {
                 terminate = true;
             }
+        }
+
+        if (msg_type == IPX_MSG_PERIODIC) {
+            ipx_msg_periodic_t *periodic_message = ipx_msg_base2periodic(msg_ptr);
+            if (ipx_msg_periodic_get_seq_num(periodic_message) != waiting_for_seq) {
+                ipx_msg_periodic_destroy(periodic_message);
+                continue;
+            }
+            waiting_for_seq++;
+            ipx_msg_periodic_update_last_processed(periodic_message);
         }
 
         if (!ipx_ctx_processing_get(ctx)
@@ -1046,6 +1067,11 @@ thread_output(void *arg)
             // Process the message by the plugin
             int rc = ctx->plugin_cbs->process(ctx, ctx->cfg_plugin.private, msg_ptr);
             thread_handle_rc(ctx, rc);
+        }
+
+        if (msg_type == IPX_MSG_PERIODIC) {
+            ipx_msg_periodic_t *periodic_message = ipx_msg_base2periodic(msg_ptr);
+            ipx_msg_periodic_update_last_processed(periodic_message);
         }
 
         if (msg_type == IPX_MSG_TERMINATE) {

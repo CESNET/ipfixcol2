@@ -42,6 +42,7 @@
 #include <ipfixcol2.h>
 #include "message_base.h"
 #include "message_terminate.h"
+#include "message_periodic.h"
 
 // Get the type of a message for the collector pipeline
 enum ipx_msg_type
@@ -66,6 +67,9 @@ ipx_msg_destroy(ipx_msg_t *msg)
         break;
     case IPX_MSG_TERMINATE:
         ipx_msg_terminate_destroy(ipx_msg_base2terminate(msg));
+        break;
+    case IPX_MSG_PERIODIC:
+        ipx_msg_periodic_destroy(ipx_msg_base2periodic(msg));
         break;
     }
 }
