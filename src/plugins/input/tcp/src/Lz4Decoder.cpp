@@ -177,7 +177,8 @@ void Lz4Decoder::decompress() {
 }
 
 bool Lz4Decoder::read_until_n(size_t n) {
-    return ::read_until_n(n, m_fd, m_compressed, m_decoded);
+    auto reader = tcp_reader(m_fd);
+    return ::read_until_n(n, reader, m_compressed, m_decoded);
 }
 
 void Lz4Decoder::reset_stream(size_t buffer_size) {

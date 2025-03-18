@@ -17,6 +17,8 @@
 
 #include <ipfixcol2.h> // fds_ipfix_msg_hdr
 
+#include "read_until_n.hpp"
+
 namespace tcp_in {
 
 void DecodeBuffer::read_from(const uint8_t *data, size_t size) {
@@ -31,6 +33,18 @@ void DecodeBuffer::read_from(const uint8_t *data, size_t size) {
         // Read the body of the message.
         if (!read_body(&data, &size)) {
             // There is not enough data to read the whole body of the message.
+            break;
+        }
+    }
+}
+
+void DecodeBuffer::read_from(Reader &reader) {
+    while (!enough_data()) {
+        if (!read_header(reader)) {
+            break;
+        }
+
+        if (!read_body(reader)) {
             break;
         }
     }
@@ -63,14 +77,15 @@ void DecodeBuffer::signal_eof() {
     m_eof_reached = true;
 }
 
-bool DecodeBuffer::read_header(const uint8_t **data, size_t *size) {
+template<typename... State>
+bool DecodeBuffer::read_header(State &&...state) {
     if (m_decoded_size != 0) {
         // The header is already read, but the message body is incomplete.
         return true;
     }
 
     // Read the header.
-    if (!read_until_n(sizeof(fds_ipfix_msg_hdr), data, size)) {
+    if (!read_until_n(sizeof(fds_ipfix_msg_hdr), std::forward<State>(state)...)) {
         // There is not enough data to read the whole header.
         return false;
     }
@@ -86,9 +101,10 @@ bool DecodeBuffer::read_header(const uint8_t **data, size_t *size) {
     return true;
 }
 
-bool DecodeBuffer::read_body(const uint8_t **data, size_t *size) {
+template<typename... State>
+bool DecodeBuffer::read_body(State &&...state) {
     // Read the body
-    if (!read_until_n(m_decoded_size, data, size)) {
+    if (!read_until_n(m_decoded_size, std::forward<State>(state)...)) {
         // There is not enough data to read the whole body.
         return false;
     }
@@ -105,6 +121,10 @@ bool DecodeBuffer::read_until_n(size_t n, const uint8_t **data, size_t *data_len
     *data_len -= cnt;
     *data += cnt;
     return m_part_decoded.size() == n;
+}
+
+bool DecodeBuffer::read_until_n(size_t n, Reader &reader) {
+    return ::read_until_n(n, reader, m_part_decoded, *this);
 }
 
 size_t DecodeBuffer::read_min(const uint8_t *data, size_t size1, size_t size2) {

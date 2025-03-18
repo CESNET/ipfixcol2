@@ -10,11 +10,12 @@
 
 #pragma once
 
-#include <vector>  // std::vector
 #include <cstdint> // uint8_t, UINT16_MAX
 #include <cstddef> // size_t
+#include <vector>  // std::vector
 
 #include "ByteVector.hpp" // ByteVector
+#include "Reader.hpp"
 
 namespace tcp_in {
 
@@ -61,6 +62,12 @@ public:
     void read_from(const uint8_t *data, size_t size);
 
     /**
+     * @brief Read data using generic reader function.
+     * @param reader generic reader function.
+     */
+    void read_from(Reader &reader);
+
+    /**
      * @brief Copies IPFIX data from circular buffer.
      *
      * The data may be any part of message (possibly incomplete or even multiple messages) but
@@ -104,18 +111,18 @@ public:
 private:
     /**
      * @brief Reads the length from ipfix header to `m_decoded_size`.
-     * @param[in,out] data Pointer to data. It is modified by the amount of read data.
-     * @param[in,out] size Size of the data. It is modified by the amount of read data.
+     * @param state state of the reader. This may be anything for which is read_unitl_n implemented.
      * @return `true` if the whole header could be read.
      */
-    bool read_header(const uint8_t **data, size_t *size);
+    template<typename... State>
+    bool read_header(State &&...state);
     /**
      * @brief Reads the body of ipfix message.
-     * @param data Pointer to data. It is modified by the amount of read data.
-     * @param size Size of the data. It is modified by the amount of read data.
+     * @param state state of the reader. This may be anything for which is read_unitl_n implemented.
      * @return `true` if the whole header could be read.
      */
-    bool read_body(const uint8_t **data, size_t *size);
+    template<typename... State>
+    bool read_body(State &&...state);
     /**
      * @brief Reads to `m_part_decoded` until it reaches length of `n`.
      * @param n Target length for `m_part_decoded`.
@@ -124,6 +131,13 @@ private:
      * @return `true` if `m_part_decoded` has reached length of `n`.
      */
     bool read_until_n(size_t n, const uint8_t **data, size_t *data_len);
+    /**
+     * @brief Reads to `m_part_decoded` until it reaches length of `n`.
+     * @param n Target length for `m_part_decoded`.
+     * @param reader Generic reader from which to read.
+     * @return `true` if `m_part_decoded` has reached length of `n`.
+     */
+    bool read_until_n(size_t n, Reader &reader);
     /**
      * @brief Adds N elements from `src` to `m_part_decoded` where N is the smaller of the two
      * sizes.
