@@ -23,28 +23,16 @@ void DecodeBuffer::read_from(const uint8_t *data, size_t size) {
     // read until there is something to read
     while (size) {
         // get the message size
-        if (m_part_decoded.size() < sizeof(struct fds_ipfix_msg_hdr)) {
-            auto new_data = read_header(data, size);
-            size -= new_data - data;
-            data = new_data;
+        if (!read_header(&data, &size)) {
+            // There is not enough data to read the whole header.
+            break;
         }
 
-        if (size == 0) {
-            return;
+        // Read the body of the message.
+        if (!read_body(&data, &size)) {
+            // There is not enough data to read the whole body of the message.
+            break;
         }
-
-        auto remaining = m_decoded_size - m_part_decoded.size();
-
-        if (read_min(data, size, remaining) != remaining) {
-            // all data is readed
-            return;
-        }
-
-        data += remaining;
-        size -= remaining;
-
-        add(std::move(m_part_decoded));
-        m_part_decoded = ByteVector();
     }
 }
 
@@ -75,26 +63,49 @@ void DecodeBuffer::signal_eof() {
     m_eof_reached = true;
 }
 
-const uint8_t *DecodeBuffer::read_header(const uint8_t *data, size_t size) {
-    constexpr size_t HDR_SIZE = sizeof(fds_ipfix_msg_hdr);
-
-    auto filled = m_part_decoded.size();
-    auto remaining = 0;
-    if (filled < HDR_SIZE) {
-        remaining = HDR_SIZE - filled;
-        if (read_min(data, size, remaining) == size) {
-            // not enough data for the whole header
-            return data + size;
-        }
+bool DecodeBuffer::read_header(const uint8_t **data, size_t *size) {
+    if (m_decoded_size != 0) {
+        // The header is already read, but the message body is incomplete.
+        return true;
     }
 
+    // Read the header.
+    if (!read_until_n(sizeof(fds_ipfix_msg_hdr), data, size)) {
+        // There is not enough data to read the whole header.
+        return false;
+    }
+
+    // The header has been successfully read. Load the size of the message.
     auto hdr = reinterpret_cast<const fds_ipfix_msg_hdr *>(m_part_decoded.data());
     m_decoded_size = ntohs(hdr->length);
 
-    m_part_decoded.reserve(m_decoded_size);
-    return data + remaining;
+    if (m_decoded_size < sizeof(fds_ipfix_msg_hdr)) {
+        throw std::runtime_error("Invalid IPFIX message header size.");
+    }
+
+    return true;
 }
 
+bool DecodeBuffer::read_body(const uint8_t **data, size_t *size) {
+    // Read the body
+    if (!read_until_n(m_decoded_size, data, size)) {
+        // There is not enough data to read the whole body.
+        return false;
+    }
+
+    m_decoded.push_back(std::move(m_part_decoded));
+    m_part_decoded = ByteVector();
+    m_decoded_size = 0;
+    return true;
+}
+
+bool DecodeBuffer::read_until_n(size_t n, const uint8_t **data, size_t *data_len) {
+    m_part_decoded.reserve(n);
+    auto cnt = read_min(*data, n, *data_len);
+    *data_len -= cnt;
+    *data += cnt;
+    return m_part_decoded.size() == n;
+}
 
 size_t DecodeBuffer::read_min(const uint8_t *data, size_t size1, size_t size2) {
     auto size = std::min(size1, size2);
