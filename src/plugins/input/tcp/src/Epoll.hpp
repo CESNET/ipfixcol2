@@ -11,6 +11,8 @@
 #pragma once
 
 #include <sys/epoll.h> // epoll_event
+#undef close           // fix FreeBSD build: (tcp_in::Connection has own close(),
+                       // but preprocesor changes it for epoll_shim_close())
 
 #include "UniqueFd.hpp" // UniqueFd
 

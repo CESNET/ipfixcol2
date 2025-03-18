@@ -14,8 +14,6 @@
 #include <cerrno>    // errno, EINTR
 #include <string>    // string
 
-#include <sys/epoll.h> // epoll_event, epoll_create, EPOLLIN, EPOLL_CT_ADD, epoll_ctl, EPOLL_CTL_DEL
-
 #include <ipfixcol2.h> // ipx_strerror
 
 #include "UniqueFd.hpp" // UniqueFd
