@@ -1,6 +1,7 @@
 /**
  * \file src/plugins/output/fds/src/Storage.cpp
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
+ * \author Michal Sedlak <sedlakm@cesnet.cz>
  * \brief FDS file storage (source file)
  * \date June 2019
  *
@@ -13,13 +14,176 @@
 #include <cstdio>
 #include <cstring>
 #include <sys/stat.h>
+#include <netinet/in.h>
 #include <ipfixcol2.h>
 #include <libgen.h>
 #include "Storage.hpp"
 
 const std::string TMP_SUFFIX = ".tmp";
 
-Storage::Storage(ipx_ctx_t *ctx, const Config &cfg) : m_ctx(ctx), m_path(cfg.m_path)
+static void
+buf_write(std::vector<uint8_t> &buffer, const uint8_t *data, std::size_t data_len)
+{
+    if (data_len == 0) {
+        return;
+    }
+    std::size_t idx = buffer.size();
+    buffer.resize(idx + data_len);
+    std::memcpy(&buffer[idx], data, data_len);
+}
+
+template <typename T>
+static void
+buf_write(std::vector<uint8_t> &buffer, T &&value)
+{
+    buf_write(buffer, reinterpret_cast<const uint8_t *>(&value), sizeof(value));
+}
+
+static bool
+contains_element(const std::vector<Config::element> &elements, const fds_tfield &field)
+{
+    auto it = std::find_if(elements.begin(), elements.end(),
+        [&](const Config::element &elem) { return elem.id == field.id && elem.pen == field.en; });
+    return it != elements.end();
+}
+
+void
+create_modified_template(const fds_template *tmplt,
+                         const std::vector<Config::element> &selected_elements,
+                         std::vector<uint8_t> &out_buffer)
+{
+    out_buffer.clear();
+
+    // Collect the fields we want in the resulting template
+    std::vector<const fds_tfield *> fields;
+    for (uint16_t i = 0; i < tmplt->fields_cnt_total; i++) {
+        const fds_tfield &field = tmplt->fields[i];
+        if (contains_element(selected_elements, field)) {
+            fields.push_back(&field);
+        }
+    }
+
+
+    /**
+    * Build the template definition...
+    *
+    * Template:
+    *   [Template Record Header]
+    *   [Field Specifier]
+    *   [Field Specifier]
+    *   ...
+    *   [Field Specifier]
+    *
+    * Template Record Header:
+    *   [Template ID : 16 bit] [Field Count : 16 bit]
+    *
+    * Example:
+    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    *   |      Template ID = 256        |         Field Count = N       |
+    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    *   |1| Information Element id. 1.1 |        Field Length 1.1       |
+    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    *   |                    Enterprise Number  1.1                     |
+    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    *   |0| Information Element id. 1.2 |        Field Length 1.2       |
+    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    *   |             ...               |              ...              |
+    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    *   |1| Information Element id. 1.N |        Field Length 1.N       |
+    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    *   |                    Enterprise Number  1.N                     |
+    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    *   |      Template ID = 257        |         Field Count = M       |
+    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    *   |0| Information Element id. 2.1 |        Field Length 2.1       |
+    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    *   |1| Information Element id. 2.2 |        Field Length 2.2       |
+    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    *   |                    Enterprise Number  2.2                     |
+    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    *   |             ...               |              ...              |
+    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    *   |1| Information Element id. 2.M |        Field Length 2.M       |
+    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    *   |                    Enterprise Number  2.M                     |
+    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    *   |                          Padding (opt)                        |
+    *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+    */
+
+    // Write the header
+    buf_write(out_buffer, htons(tmplt->id));
+    buf_write(out_buffer, htons(fields.size()));
+
+    // Write the template fields
+    for (const fds_tfield *field : fields) {
+        if (field->en == 0) {
+            buf_write(out_buffer, htons(field->id));
+            buf_write(out_buffer, htons(field->length));
+        } else {
+            // If PEN is specified, MSB of element ID is set to 1
+            buf_write(out_buffer, htons(field->id | 0x8000));
+            buf_write(out_buffer, htons(field->length));
+            buf_write(out_buffer, htonl(field->en));
+        }
+    }
+}
+
+static void
+create_modified_data_record(fds_drec &drec,
+                            const std::vector<Config::element> &selected_elements,
+                            std::vector<uint8_t> &out_buffer)
+{
+    out_buffer.clear();
+
+    /**
+     * Data record consists of a sequence of field values.
+     *
+     * Data Record:
+     *    +--------------------------------------------------+
+     *    | Field Value                                      |
+     *    +--------------------------------------------------+
+     *    | Field Value                                      |
+     *    +--------------------------------------------------+
+     *     ...
+     *    +--------------------------------------------------+
+     *    | Field Value                                      |
+     *    +--------------------------------------------------+
+     */
+
+    fds_drec_iter iter;
+    fds_drec_iter_init(&iter, &drec, 0);
+    while (fds_drec_iter_next(&iter) != FDS_EOC) {
+        if (contains_element(selected_elements, *iter.field.info)) {
+            if (iter.field.info->length == FDS_IPFIX_VAR_IE_LEN) {
+              /**
+               * Variable length fields are specified with 65535 in their
+               * template field length. In this case, the first octet of the
+               * field value in the data record specifies its length (of the
+               * data only, the extra octet is not included in this length).
+               *
+               * If the data were to be longer than 254, the octet is 255 and the
+               * next 2 octets are uint16 of the length.
+               */
+              if (iter.field.size < 255) {
+                buf_write(out_buffer, uint8_t(iter.field.size));
+                } else {
+                    buf_write(out_buffer, uint8_t(255));
+                    buf_write(out_buffer, htons(uint16_t(iter.field.size)));
+                }
+                buf_write(out_buffer, iter.field.data, iter.field.size);
+            } else {
+                buf_write(out_buffer, iter.field.data, iter.field.size);
+            }
+        }
+    }
+}
+
+Storage::Storage(ipx_ctx_t *ctx, const Config &cfg) :
+    m_ctx(ctx),
+    m_path(cfg.m_path),
+    m_selection_used(cfg.m_selection_used),
+    m_selection(cfg.m_selection)
 {
     // Check if the directory exists
     struct stat file_info;
@@ -142,6 +306,16 @@ Storage::process_msg(ipx_msg_ipfix_t *msg)
         uint16_t rec_size = rec_ptr->rec.size;
         uint16_t tmplt_id = rec_ptr->rec.tmplt->id;
 
+        if (m_selection_used) {
+            create_modified_data_record(rec_ptr->rec, m_selection, m_buffer);
+            rec_data = m_buffer.data();
+            rec_size = m_buffer.size();
+            if (rec_size == 0) {
+                // No record fields were selected -> the record is empty, skip
+                continue;
+            }
+        }
+
         if (fds_file_write_rec(m_file.get(), tmplt_id, rec_data, rec_size) != FDS_OK) {
             const char *err_msg = fds_file_error(m_file.get());
             throw FDS_exception("Failed to add a Data Record: " + std::string(err_msg));
@@ -160,6 +334,12 @@ struct tmplt_update_data {
     fds_file_t *file;
     /// Set of processed Templates in the snapshot
     std::set<uint16_t> ids;
+    /// Whether selection is used
+    bool selection_used;
+    /// The selection
+    std::vector<Config::element> *selection;
+    /// Buffer for building modified templates
+    std::vector<uint8_t> *buffer;
 };
 
 /**
@@ -175,21 +355,40 @@ struct tmplt_update_data {
 static bool
 tmplt_update_cb(const struct fds_template *tmplt, void *data)
 {
-    // Template type, raw data and size
-    enum fds_template_type t_type;
-    const uint8_t *t_data;
-    uint16_t t_size;
-
     auto info = reinterpret_cast<tmplt_update_data *>(data);
 
     // No exceptions can be thrown in the C callback!
     try {
-        uint16_t t_id = tmplt->id;
-        info->ids.emplace(t_id);
+        if (info->selection_used && tmplt->type != FDS_TYPE_TEMPLATE) {
+            // Skip Option Templates in case field selection is used
+            return info->is_ok;
+        }
+
+        // Get definition of the template we want to store
+        fds_template_type new_t_type = tmplt->type;
+        const uint8_t *new_t_data = tmplt->raw.data;
+        uint16_t new_t_size = tmplt->raw.length;
+
+        if (info->selection_used) {
+            create_modified_template(tmplt, *info->selection, *info->buffer);
+            new_t_data = info->buffer->data();
+            new_t_size = info->buffer->size();
+
+            if (new_t_size == 0) {
+                // None of the template fields have been selected -> skip this template
+                return info->is_ok;
+            }
+        }
+
+        // Only now store the template ID as we're now sure that this is an active template
+        info->ids.emplace(tmplt->id);
 
         // Get definition of the Template specified in the file
-        int res = fds_file_write_tmplt_get(info->file, t_id, &t_type, &t_data, &t_size);
+        fds_template_type old_t_type;
+        const uint8_t *old_t_data;
+        uint16_t old_t_size;
 
+        int res = fds_file_write_tmplt_get(info->file, tmplt->id, &old_t_type, &old_t_data, &old_t_size);
         if (res != FDS_OK && res != FDS_ERR_NOTFOUND) {
             // Something bad happened
             const char *err_msg = fds_file_error(info->file);
@@ -198,21 +397,17 @@ tmplt_update_cb(const struct fds_template *tmplt, void *data)
 
         // Should we add/redefine the definition of the Template
         if (res == FDS_OK
-                && tmplt->type == t_type
-                && tmplt->raw.length == t_size
-                && memcmp(tmplt->raw.data, t_data, t_size) == 0) {
+                && old_t_type == new_t_type
+                && old_t_size == new_t_size
+                && memcmp(old_t_data, new_t_data, new_t_size) == 0) {
             // The same -> nothing to do
             return info->is_ok;
         }
 
         // Add the definition (i.e. templates are different or the template hasn't been defined)
-        IPX_CTX_DEBUG(info->ctx, "Adding/updating definition of Template ID %" PRIu16, t_id);
+        IPX_CTX_DEBUG(info->ctx, "Adding/updating definition of Template ID %" PRIu16, tmplt->id);
 
-        t_type = tmplt->type;
-        t_data = tmplt->raw.data;
-        t_size = tmplt->raw.length;
-
-        if (fds_file_write_tmplt_add(info->file, t_type, t_data, t_size) != FDS_OK) {
+        if (fds_file_write_tmplt_add(info->file, new_t_type, new_t_data, new_t_size) != FDS_OK) {
             const char *err_msg = fds_file_error(info->file);
             throw FDS_exception("fds_file_write_tmplt_add() failed: " + std::string(err_msg));
         }
@@ -258,6 +453,9 @@ Storage::tmplts_update(struct snap_info &info, const fds_tsnapshot_t *snap)
     data.ctx = m_ctx;
     data.file = m_file.get();
     data.ids.clear();
+    data.selection_used = m_selection_used;
+    data.selection = &m_selection;
+    data.buffer = &m_buffer;
 
     // Update templates
     fds_tsnapshot_for(snap, &tmplt_update_cb, &data);
@@ -436,4 +634,3 @@ Storage::session_ipx2fds(const struct ipx_session *ipx_desc, struct fds_file_ses
         memcpy(&fds_desc->ip_dst, &net_desc->addr_dst.ipv6, sizeof fds_desc->ip_dst);
     }
 }
-
