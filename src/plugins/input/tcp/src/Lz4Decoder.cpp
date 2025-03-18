@@ -14,6 +14,7 @@
 #include <stdexcept> // runtime_error
 #include <cstddef>   // size_t
 #include <cerrno>    // errno, EWOULDBLOCK, EAGAIN
+#include <cstring>
 #include <string>    // string
 
 #include <netinet/in.h> // ntohl, ntohs
@@ -36,6 +37,56 @@ struct __attribute__((__packed__)) ipfix_start_compress_header {
     uint32_t magic;
     uint32_t buffer_size;
 };
+
+/**
+ * @brief Creates reader that reads from circullar buffer. The reader will return WAIT when all data
+ * is read.
+ * @param buf Circullar buffer to read from.
+ * @param buf_len Length of the circullar buffer.
+ * @param data_len Length of data in the circullar buffer.
+ * @param data_pos Position of first byte of data in the circullar buffer.
+ * @return Reader that reads from circullar buffer.
+ */
+Reader circullar_buffer_reader(
+    std::uint8_t *buf,
+    std::size_t buf_len,
+    std::size_t data_len,
+    std::size_t data_pos
+) {
+    // Split it into the two buffers.
+    std::uint8_t *buf1, *buf2;
+    std::size_t len1, len2;
+    if (data_pos + data_len > buf_len) {
+        buf1 = buf + data_pos;
+        len1 = buf_len - data_pos;
+        buf2 = buf;
+        len2 = data_len - len1;
+    } else {
+        buf1 = buf;
+        len1 = 0;
+        buf2 = buf + data_pos;
+        len2 = data_len;
+    }
+
+    return [=](std::uint8_t *data, std::size_t &length) mutable -> ReadResult {
+        if (len1 == 0 && len2 == 0) {
+            return ReadResult::WAIT;
+        }
+
+        auto r1 = std::min(len1, length);
+        std::memcpy(data, buf1, r1);
+        buf1 += r1;
+        len1 -= r1;
+
+        auto r2 = std::min(len2, length - r1);
+        std::memcpy(data + r1, buf2, r2);
+        buf2 += r2;
+        len2 += r2;
+
+        length = r1 + r2;
+        return ReadResult::READ;
+    };
+}
 
 Lz4Decoder::Lz4Decoder(int fd) :
     m_fd(fd),
@@ -160,12 +211,13 @@ void Lz4Decoder::decompress() {
     }
 
     // Copy the decompressed data into the decode buffer
-    m_decoded.read_from(
+    auto reader = circullar_buffer_reader(
         m_decompressed.data(),
         m_decompressed.size(),
         m_decompressed_size,
         m_decompressed_pos
     );
+    m_decoded.read_from(reader, m_decompressed_size);
 
     m_decompressed_pos += m_decompressed_size;
     if (m_decompressed_pos >= m_decompressed.size()) {
@@ -177,7 +229,8 @@ void Lz4Decoder::decompress() {
 }
 
 bool Lz4Decoder::read_until_n(size_t n) {
-    return ::read_until_n(n, m_fd, m_compressed, m_decoded);
+    auto reader = tcp_reader(m_fd);
+    return ::read_until_n(n, reader, m_compressed, m_decoded);
 }
 
 void Lz4Decoder::reset_stream(size_t buffer_size) {

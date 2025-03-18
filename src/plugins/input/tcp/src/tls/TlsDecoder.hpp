@@ -10,8 +10,6 @@
 
 #pragma once
 
-#include <vector>
-
 #include "../Decoder.hpp"
 #include "../UniqueFd.hpp"
 #include "SslCtx.hpp"
@@ -50,7 +48,6 @@ private:
     Ssl m_ssl;
     bool m_handshake_complete = false;
     DecodeBuffer m_decoded;
-    std::vector<std::uint8_t> m_buffer;
 };
 
 } // namespace tls

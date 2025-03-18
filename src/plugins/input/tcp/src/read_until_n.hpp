@@ -10,59 +10,47 @@
 
 #pragma once
 
-#include <cstddef>   // size_t
 #include <cerrno>    // errno, EWOULDBLOCK, EAGAIN
-#include <string>    // std::string
+#include <cstddef>   // size_t
 #include <stdexcept> // std::runtime_error
-
-#include <sys/socket.h> // recv
+#include <string>    // std::string
 
 #include <ipfixcol2.h> // ipx_strerror
 
+#include "Reader.hpp"
+
 /**
- * @brief Reads to vector from file descriptor until the vector has the desired number of bytes
+ * @brief Reads to vector from file descriptor until the vector has the desired number of bytes.
  *
- * @tparam Vec vector like object
- * @tparam EofSig `EofSig::signal_eof()` is called when eof is reached
- * @param n number of bytes that should be in the vector
- * @param fd file descriptor to read from
- * @param result where to read the bytes to
- * @param eofSignaler has method to signal eof
- * @return true if the vector has at least `n` bytes after the call
- * @throws when fails to read from the file descriptor
+ * If the vector doesn't have n bytes after calling this function, it means that the reader doesn't
+ * have any more available data, but may have in future.
+ *
+ * @tparam Vec vector like object.
+ * @tparam EofSig `EofSig::signal_eof()` is called when eof is reached.
+ * @param n Number of bytes that should be in the vector.
+ * @param reader Generic read function.
+ * @param result Where to read the bytes to.
+ * @param eofSignaler Has method to signal eof.
+ * @return Number of new read bytes.
+ * @throws When `reader` throws.
  */
 template<typename Vec, typename EofSig>
-bool read_until_n(size_t n, int fd, Vec &result, EofSig &eofSignaler) {
+std::size_t read_until_n(size_t n, Reader &reader, Vec &result, EofSig &eofSignaler) {
     auto filled = result.size();
     if (filled >= n) {
         return true;
     }
 
-    auto remaining = n - filled;
     result.resize(n);
 
-    int res = recv(fd, result.data() + filled, remaining, 0);
-    if (res == -1) {
-        result.resize(filled);
-        int err = errno;
-        if (err == EWOULDBLOCK || err == EAGAIN) {
-            return false;
-        }
+    auto remaining = n - filled;
+    auto res = reader(result.data() + filled, remaining);
 
-        const char *err_str;
-        ipx_strerror(err, err_str);
-        throw std::runtime_error("Failed to read from descriptor: " + std::string(err_str));
-    }
+    result.resize(filled + remaining);
 
-    result.resize(filled + res);
-
-    if (res == 0) {
+    if (res == ReadResult::END) {
         eofSignaler.signal_eof();
     }
 
-    if (static_cast<size_t>(res) != remaining) {
-        return false;
-    }
-
-    return true;
+    return result.size() == n;
 }

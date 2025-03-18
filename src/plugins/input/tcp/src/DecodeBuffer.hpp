@@ -10,11 +10,12 @@
 
 #pragma once
 
-#include <vector>  // std::vector
 #include <cstdint> // uint8_t, UINT16_MAX
 #include <cstddef> // size_t
+#include <vector>  // std::vector
 
 #include "ByteVector.hpp" // ByteVector
+#include "Reader.hpp"
 
 namespace tcp_in {
 
@@ -50,28 +51,11 @@ public:
     }
 
     /**
-     * @brief Copies IPFIX data from buffer.
-     *
-     * The data may be any part of message (possibly incomplete or even multiple messages) but
-     * multiple calls to this method must be with the message data in correct order so that it can
-     * be reconstructed.
-     * @param data data with the message
-     * @param size size of the data in `data`
+     * @brief Read data using generic reader function.
+     * @param reader Generic reader function.
+     * @param consume Minimum number of bytes that should be read from reader if possible.
      */
-    void read_from(const uint8_t *data, size_t size);
-
-    /**
-     * @brief Copies IPFIX data from circular buffer.
-     *
-     * The data may be any part of message (possibly incomplete or even multiple messages) but
-     * multiple calls to this metod must be with the message data in correct order so that it can be
-     * reconstructed.
-     * @param data data of the circullar buffer
-     * @param buffer_size size of the circullar buffer (allocated space)
-     * @param data_size size of data to copy from the buffer
-     * @param position start position of the data in the buffer.
-     */
-    void read_from(const uint8_t *data, size_t buffer_size, size_t data_size, size_t position);
+    void read_from(Reader &reader, std::size_t consume = 0);
 
     /**
      * @brief Checks whether enough data has been read since last time. When this returns true,
@@ -104,32 +88,23 @@ public:
 private:
     /**
      * @brief Reads the length from ipfix header to `m_decoded_size`.
-     * @param[in,out] data Pointer to data. It is modified by the amount of read data.
-     * @param[in,out] size Size of the data. It is modified by the amount of read data.
+     * @param reader Reader from which to read.
      * @return `true` if the whole header could be read.
      */
-    bool read_header(const uint8_t **data, size_t *size);
+    bool read_header(Reader &reader);
     /**
      * @brief Reads the body of ipfix message.
-     * @param data Pointer to data. It is modified by the amount of read data.
-     * @param size Size of the data. It is modified by the amount of read data.
+     * @param reader Reader from which to read.
      * @return `true` if the whole header could be read.
      */
-    bool read_body(const uint8_t **data, size_t *size);
+    bool read_body(Reader &reader);
     /**
      * @brief Reads to `m_part_decoded` until it reaches length of `n`.
      * @param n Target length for `m_part_decoded`.
-     * @param[in,out] data Data to read from. It is modified by the read amount.
-     * @param[in,out] data_len Length of data to read. It is modified by the read amount.
+     * @param reader Generic reader from which to read.
      * @return `true` if `m_part_decoded` has reached length of `n`.
      */
-    bool read_until_n(size_t n, const uint8_t **data, size_t *data_len);
-    /**
-     * @brief Adds N elements from `src` to `m_part_decoded` where N is the smaller of the two
-     * sizes.
-     * @return The smaller of the two sizes.
-     */
-    size_t read_min(const uint8_t *data, size_t size1, size_t size2);
+    bool read_until_n(size_t n, Reader &reader);
 
     /** number of bytes readed since last call to `get_decoded` */
     size_t m_total_bytes_decoded;
