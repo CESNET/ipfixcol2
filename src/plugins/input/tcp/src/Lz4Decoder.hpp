@@ -19,6 +19,7 @@
 
 #include "Decoder.hpp"      // Decoder
 #include "DecodeBuffer.hpp" // DecodeBuffer
+#include "TcpReader.hpp"
 
 namespace tcp_in {
 
@@ -92,7 +93,7 @@ private:
      */
     void reset_stream(size_t buffer_size);
 
-    int m_fd;
+    TcpReader m_reader;
     DecodeBuffer m_decoded;
 
     std::unique_ptr<LZ4_streamDecode_t, Lz4DecodeDestructor> m_decoder;

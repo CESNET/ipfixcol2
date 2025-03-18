@@ -14,6 +14,7 @@
 #include <stdexcept> // runtime_error
 #include <cstddef>   // size_t
 #include <cerrno>    // errno, EWOULDBLOCK, EAGAIN
+#include <cstring>
 #include <string>    // string
 
 #include <netinet/in.h> // ntohl, ntohs
@@ -23,7 +24,7 @@
 #include <ipfixcol2.h> // ipx_strerror
 
 #include "DecodeBuffer.hpp" // DecodeBuffer
-#include "read_until_n.hpp" // read_until_n
+#include "RingBufferReader.hpp"
 
 namespace tcp_in {
 
@@ -38,7 +39,7 @@ struct __attribute__((__packed__)) ipfix_start_compress_header {
 };
 
 Lz4Decoder::Lz4Decoder(int fd) :
-    m_fd(fd),
+    m_reader(fd),
     m_decoded(),
     m_decoder(LZ4_createStreamDecode()),
     m_decompressed(),
@@ -158,12 +159,13 @@ void Lz4Decoder::decompress() {
     }
 
     // Copy the decompressed data into the decode buffer
-    m_decoded.read_from(
+    auto reader = RingBufferReader(
         m_decompressed.data(),
         m_decompressed.size(),
         m_decompressed_size,
         m_decompressed_pos
     );
+    m_decoded.read_from(reader, m_decompressed_size);
 
     m_decompressed_pos += m_decompressed_size;
     if (m_decompressed_pos >= m_decompressed.size()) {
@@ -175,7 +177,8 @@ void Lz4Decoder::decompress() {
 }
 
 bool Lz4Decoder::read_until_n(size_t n) {
-    return ::read_until_n(n, m_fd, m_compressed, m_decoded);
+    m_reader.read_until_n(n, m_compressed, m_decoded);
+    return m_compressed.size() == n;
 }
 
 void Lz4Decoder::reset_stream(size_t buffer_size) {

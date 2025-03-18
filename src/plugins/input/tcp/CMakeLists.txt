@@ -13,6 +13,8 @@ add_library(tcp-input MODULE
     src/Acceptor.cpp
     src/Plugin.cpp
     src/IpxPlugin.cpp
+    src/TcpReader.cpp
+    src/RingBufferReader.cpp
     src/tls/Ssl.cpp
     src/tls/TlsDecoder.cpp
     src/tls/DecoderFactory.cpp

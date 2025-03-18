@@ -16,30 +16,19 @@
 
 #include <openssl/ssl.h>
 
+#include "../Reader.hpp"
 #include "SslBio.hpp"
 #include "throw_ssl_err.hpp"
 
 namespace tcp_in {
 namespace tls {
 
-/** Describes result of read operation. */
-enum class ReadResult {
-    /** Successufully read some data. */
-    READ,
-    /** Non blocking socket needs to wait for more data. */
-    WAIT,
-    /** Peer will not send any further data. */
-    FINISHED,
-    /** The connection has been closed. (socket cannot read) */
-    CLOSED,
-};
-
 /**
  * @brief Wrapper around `SSL` from OpenSSL.
  *
  * This is basically io stream for data encrypted with TLS.
  */
-class Ssl {
+class Ssl : public Reader {
 public:
     /**
      * @brief Construct `Ssl` from the given `SSL_CTX`.
@@ -97,17 +86,12 @@ public:
 
     /**
      * @brief Read application data from the TLS connection.
-     *
-     * @param [out] buf Will be cleared. The read data will be put here. Up to the capacity of the
-     * buffer will be used.
-     * @return result of the read operation:
-     * - `READ`: Successfully read some data. `buf` shouldn't be empty.
-     * - `WAIT`: Non blocking socket needs to wait for more data. `buf` should be empty.
-     * - `FINISHED`: Peer will not send any further data. `buf` should be empty.
-     * - `CLOSED`: The connection has been closed. (socket cannot read) `buf` should be empty.
+     * @param [out] data Where to write the data.
+     * @param [out,in] length Maximum length of data to write. It will be set to the actual number
+     * of read bytes.
      * @throws `std::runtime_error` on failure.
      */
-    ReadResult read_ex(std::vector<std::uint8_t> &buf);
+    ReadResult read(std::uint8_t *data, std::size_t &length) override;
 
     /**
      * @brief Shuts the connection down.

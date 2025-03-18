@@ -10,15 +10,13 @@
 
 #include "TlsDecoder.hpp"
 
+#include "../Reader.hpp"
+
 namespace tcp_in {
 namespace tls {
 
-// Size of buffer for copying data from OpenSSL to DecodeBuffer.
-constexpr std::size_t BUFFER_SIZE = 4096;
-
 TlsDecoder::TlsDecoder(SslCtx &ctx, int fd) :
-    m_ssl(ctx.create_ssl()),
-    m_buffer(BUFFER_SIZE)
+    m_ssl(ctx.create_ssl())
 {
     SslBio bio(BIO_s_socket());
     bio.set_fd(fd);
@@ -35,26 +33,7 @@ void TlsDecoder::progress() {
         }
     }
 
-    // XXX: The copy to intermidiate `m_buffer` can be avoided by extending `DecodeBuffer` to be
-    //      able to read with generic read function.
-
-    while (!m_decoded.enough_data()) {
-        auto res = m_ssl.read_ex(m_buffer);
-        m_decoded.read_from(m_buffer.data(), m_buffer.size());
-        switch (res) {
-            case ReadResult::READ:
-                break;
-            case ReadResult::WAIT:
-                return;
-            case ReadResult::FINISHED:
-                // FIXME: properly check that the shutdown is complete.
-                m_ssl.shutdown();
-                // Intentional falltrough
-            case ReadResult::CLOSED:
-                m_decoded.signal_eof();
-                return;
-        }
-    }
+    m_decoded.read_from(m_ssl);
 }
 
 } // namespace tls

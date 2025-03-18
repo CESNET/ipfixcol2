@@ -10,6 +10,8 @@
 
 #include "Ssl.hpp"
 
+#include "../Reader.hpp"
+
 namespace tcp_in {
 namespace tls {
 
@@ -26,21 +28,21 @@ bool Ssl::accept() {
     return true;
 }
 
-ReadResult Ssl::read_ex(std::vector<std::uint8_t> &buf) {
-    buf.resize(buf.capacity());
+ReadResult Ssl::read(std::uint8_t *data, std::size_t &length) {
     std::size_t len;
-    auto ret = SSL_read_ex(m_ssl.get(), buf.data(), buf.size(), &len);
+    auto ret = SSL_read_ex(m_ssl.get(), data, length, &len);
 
     if (ret <= 0) {
         auto err = SSL_get_error(m_ssl.get(), ret);
-        buf.resize(0);
+        length = 0;
         switch (err) {
             case SSL_ERROR_SSL:
                 // The TLS connection is broken.
             case SSL_ERROR_ZERO_RETURN:
-                return ReadResult::FINISHED;
+                // Don't bother properly closing the connection. We only care about the received
+                // data but there will be no more data. Peer will handle this.
             case SSL_ERROR_SYSCALL:
-                return ReadResult::CLOSED;
+                return ReadResult::END;
             case SSL_ERROR_WANT_READ:
             case SSL_ERROR_WANT_WRITE:
                 return ReadResult::WAIT;
@@ -49,7 +51,7 @@ ReadResult Ssl::read_ex(std::vector<std::uint8_t> &buf) {
         }
     }
 
-    buf.resize(std::min(len, buf.size()));
+    length = len;
     return ReadResult::READ;
 }
 

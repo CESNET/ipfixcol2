@@ -15,7 +15,7 @@
 
 #include "Decoder.hpp"      // Decoder
 #include "DecodeBuffer.hpp" // DecodeBuffer
-#include "ByteVector.hpp"   // ByteVector
+#include "TcpReader.hpp"
 
 namespace tcp_in {
 
@@ -29,7 +29,7 @@ public:
      * @brief Creates ipfix decoder.
      * @param fd TCP connection file descriptor.
      */
-    IpfixDecoder(int fd) : m_fd(fd), m_decoded(), m_part_readed(), m_msg_size(0) {}
+    IpfixDecoder(int fd) : m_reader(fd), m_decoded() {}
 
     virtual void progress() override;
 
@@ -40,19 +40,8 @@ public:
     }
 
 private:
-    /** returns true if there was enough data to read the header or if the header is already read */
-    bool read_header();
-    /** returns true if there was enough data to read the body */
-    bool read_body();
-    /** returns true if there was enough data to read to the given amount */
-    bool read_until_n(size_t n);
-
-    int m_fd;
+    TcpReader m_reader;
     DecodeBuffer m_decoded;
-
-    ByteVector m_part_readed;
-    /** Final size of the whole IPFIX message. When 0 IPIFX header is not fully read. */
-    size_t m_msg_size;
 };
 
 } // namespace tcp_in

@@ -19,41 +19,17 @@
 
 namespace tcp_in {
 
-void DecodeBuffer::read_from(const uint8_t *data, size_t size) {
-    // read until there is something to read
-    while (size) {
-        // get the message size
-        if (!read_header(&data, &size)) {
-            // There is not enough data to read the whole header.
+void DecodeBuffer::read_from(Reader &reader, std::size_t consume) {
+    consume += m_total_bytes_decoded;
+    while (!enough_data() || consume < m_total_bytes_decoded) {
+        if (!read_header(reader)) {
             break;
         }
 
-        // Read the body of the message.
-        if (!read_body(&data, &size)) {
-            // There is not enough data to read the whole body of the message.
+        if (!read_body(reader)) {
             break;
         }
     }
-}
-
-void DecodeBuffer::read_from(
-    const uint8_t *data,
-    size_t buffer_size,
-    size_t data_size,
-    size_t position
-) {
-    // read until wrap
-    auto block = data + position;
-    auto block_size = std::min(data_size, buffer_size - position);
-    read_from(block, block_size);
-
-    if (block_size == data_size) {
-        // there was no need to wrap
-        return;
-    }
-
-    // read the second block (after wrap)
-    read_from(data, data_size - block_size);
 }
 
 void DecodeBuffer::signal_eof() {
@@ -63,14 +39,14 @@ void DecodeBuffer::signal_eof() {
     m_eof_reached = true;
 }
 
-bool DecodeBuffer::read_header(const uint8_t **data, size_t *size) {
+bool DecodeBuffer::read_header(Reader &reader) {
     if (m_decoded_size != 0) {
         // The header is already read, but the message body is incomplete.
         return true;
     }
 
     // Read the header.
-    if (!read_until_n(sizeof(fds_ipfix_msg_hdr), data, size)) {
+    if (!read_until_n(sizeof(fds_ipfix_msg_hdr), reader)) {
         // There is not enough data to read the whole header.
         return false;
     }
@@ -86,9 +62,9 @@ bool DecodeBuffer::read_header(const uint8_t **data, size_t *size) {
     return true;
 }
 
-bool DecodeBuffer::read_body(const uint8_t **data, size_t *size) {
+bool DecodeBuffer::read_body(Reader &reader) {
     // Read the body
-    if (!read_until_n(m_decoded_size, data, size)) {
+    if (!read_until_n(m_decoded_size, reader)) {
         // There is not enough data to read the whole body.
         return false;
     }
@@ -99,21 +75,9 @@ bool DecodeBuffer::read_body(const uint8_t **data, size_t *size) {
     return true;
 }
 
-bool DecodeBuffer::read_until_n(size_t n, const uint8_t **data, size_t *data_len) {
-    m_part_decoded.reserve(n);
-    auto cnt = read_min(*data, n, *data_len);
-    *data_len -= cnt;
-    *data += cnt;
+bool DecodeBuffer::read_until_n(size_t n, Reader &reader) {
+    m_total_bytes_decoded += reader.read_until_n(n, m_part_decoded, *this);
     return m_part_decoded.size() == n;
-}
-
-size_t DecodeBuffer::read_min(const uint8_t *data, size_t size1, size_t size2) {
-    auto size = std::min(size1, size2);
-    auto filled = m_part_decoded.size();
-    m_part_decoded.resize(filled + size);
-    std::copy_n(data, size, m_part_decoded.data() + filled);
-    m_total_bytes_decoded += size;
-    return size;
 }
 
 } // namespace tcp_in
