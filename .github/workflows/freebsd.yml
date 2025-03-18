@@ -1,0 +1,64 @@
+name: Build and tests (FreeBSD)
+
+on:
+  # Ignore changes in extra plugins (as they are not tested here)
+  push:
+    paths-ignore:
+      - 'extra_plugins/**'
+  pull_request:
+    paths-ignore:
+      - 'extra_plugins/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Build and run tests on FreeBSD
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build on FreeBSD 14.2
+      uses: vmactions/freebsd-vm@v1
+      with:
+        release: "14.2"
+        usesh: true
+        run: |
+          set -euox pipefail
+
+          # install dependencies
+          pkg install -y \
+            git \
+            devel/cmake-core \
+            devel/ninja \
+            devel/pkgconf \
+            textproc/py-docutils \
+            archivers/liblz4 \
+            archivers/zstd \
+            textproc/libxml2 \
+            net/librdkafka \
+            devel/libepoll-shim
+
+          # clone libfds
+          git clone --branch master https://github.com/CESNET/libfds.git libfds_build
+
+          # build libfds
+          cd libfds_build
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_INSTALL_PREFIX=/usr
+          make
+          make install
+          cd ../..
+
+          # build ipfixcol2
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_TESTS=1
+          make
+          make install
+
+          # run ipfixcol2 tests
+          make test
+
+          # try to run ipfixcol2
+          ipfixcol2 -V
+          ipfixcol2 -h
+          ipfixcol2 -L -v
