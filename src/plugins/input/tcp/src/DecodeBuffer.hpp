@@ -103,10 +103,27 @@ public:
 
 private:
     /**
-     * @brief reads the length from ipfix header to `m_decoded_size`
-     * @return Pointer to the first unreaded byte from `data`
+     * @brief Reads the length from ipfix header to `m_decoded_size`.
+     * @param[in,out] data Pointer to data. It is modified by the amount of read data.
+     * @param[in,out] size Size of the data. It is modified by the amount of read data.
+     * @return `true` if the whole header could be read.
      */
-    const uint8_t *read_header(const uint8_t *data, size_t size);
+    bool read_header(const uint8_t **data, size_t *size);
+    /**
+     * @brief Reads the body of ipfix message.
+     * @param data Pointer to data. It is modified by the amount of read data.
+     * @param size Size of the data. It is modified by the amount of read data.
+     * @return `true` if the whole header could be read.
+     */
+    bool read_body(const uint8_t **data, size_t *size);
+    /**
+     * @brief Reads to `m_part_decoded` until it reaches length of `n`.
+     * @param n Target length for `m_part_decoded`.
+     * @param[in,out] data Data to read from. It is modified by the read amount.
+     * @param[in,out] data_len Length of data to read. It is modified by the read amount.
+     * @return `true` if `m_part_decoded` has reached length of `n`.
+     */
+    bool read_until_n(size_t n, const uint8_t **data, size_t *data_len);
     /**
      * @brief Adds N elements from `src` to `m_part_decoded` where N is the smaller of the two
      * sizes.
