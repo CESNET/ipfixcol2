@@ -9,9 +9,14 @@
 
 #pragma once
 
+#define XXH_INLINE_ALL
+
+#include <3rd_party/xxhash/xxhash.h>
 #include <aggregator/field.hpp>
+#include <common/common.hpp>
 
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -28,6 +33,10 @@ public:
     /**
      * @brief The ordering/sorting direction
      */
+    using KeyHashFnType = std::function<uint64_t(const uint8_t *)>;
+    using KeyEqualsFnType = std::function<bool(const uint8_t *, const uint8_t *)>;
+    using RecOrdFnType = std::function<bool(const uint8_t *, const uint8_t *)>;
+
     enum class OrderDirection {
         Ascending,
         Descending
@@ -333,6 +342,8 @@ public:
     /**
      * @brief Get the field definitions the view consists of
      */
+    size_t record_size(const uint8_t *ptr) const { return key_size(ptr) + value_size(); }
+
     const std::vector<std::unique_ptr<Field>> &fields() const { return m_fields; }
 
     /**
@@ -354,6 +365,11 @@ public:
      *
      * @return true if key1 comes before key2 in an ordered sequence, else false
      */
+    void
+    set_output_limit(size_t n);
+
+    size_t output_limit() const { return m_output_limit; }
+
     bool
     ordered_before(uint8_t *key1, uint8_t *key2) const;
 
@@ -394,6 +410,45 @@ public:
      */
     bool is_fixed_size() const { return m_is_fixed_size; }
 
+    uint64_t key_hash(const uint8_t *key) const
+    {
+        return XXH3_64bits(key, key_size(key));
+    }
+
+    bool key_equals(const uint8_t *key1, const uint8_t *key2) const
+    {
+        std::size_t key1_size = key_size(key1);
+        std::size_t key2_size = key_size(key2);
+        return key1_size == key2_size && std::memcmp(key1, key2, key1_size) == 0;
+    }
+
+    KeyHashFnType key_hasher() const
+    {
+        return [this](const uint8_t *key) { return key_hash(key); };
+    }
+
+    KeyEqualsFnType key_equaler() const
+    {
+        return [this](const uint8_t *key1, const uint8_t *key2) { return key_equals(key1, key2); };
+    }
+
+    RecOrdFnType rec_orderer() const
+    {
+        return [this](const uint8_t *rec1, const uint8_t *rec2) {
+            return compare(rec1, rec2) == CmpResult::Lt;
+        };
+    }
+
+    RecOrdFnType rec_reverse_orderer() const
+    {
+        return [this](const uint8_t *rec1, const uint8_t *rec2) {
+            return compare(rec1, rec2) == CmpResult::Gt;
+        };
+    }
+
+    CmpResult
+    compare(const uint8_t *rec1, const uint8_t *rec2) const;
+
 private:
     View() = default;
 
@@ -402,6 +457,7 @@ private:
     size_t m_value_count = 0;
     size_t m_key_size = 0;
     size_t m_value_size = 0;
+    size_t m_output_limit = 0; // 0 = no limit
     std::vector<OrderField> m_order_fields;
     bool m_has_inout_fields = false;
     bool m_is_fixed_size = true;

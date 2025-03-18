@@ -28,6 +28,38 @@
 namespace fdsdump {
 namespace aggregator {
 
+// Merge two hash tables containing records defined by view
+void merge_hash_tables(const View &view, HashTable &dst_table, HashTable &src_table)
+{
+    uint8_t *dst_record = nullptr;
+    for (uint8_t *src_record : src_table.items()) {
+        bool found = dst_table.find_or_create(src_record, dst_record);
+        if (found) {
+            // If found - merge
+            for (auto x : view.iter_values(dst_record, src_record)) {
+                x.field.merge(x.value1, x.value2);
+            }
+        } else {
+            // If not found - copy over
+            // Key is already copied by find_or_create, so only value needs to be copied
+            unsigned int key_size = view.key_size(src_record);
+            unsigned int value_size = view.value_size();
+            //TODO: Possible optimalization: Can we just move pointers instead of memcpy?
+            std::memcpy(dst_record + key_size, src_record + key_size, value_size);
+        }
+    }
+}
+
+// Sort records
+void sort_records(const View &view, std::vector<uint8_t *>& records)
+{
+    if (view.order_fields().empty()) {
+        return;
+    }
+    std::sort(records.begin(), records.end(),
+            [&view](uint8_t *a, uint8_t *b) { return view.ordered_before(a, b); });
+}
+
 Aggregator::Aggregator(const View &view) :
     m_table(view),
     m_key_buffer(65535),
@@ -104,45 +136,14 @@ Aggregator::aggregate(FlowContext &ctx)
 void
 Aggregator::sort_items()
 {
-    if (!m_view.order_fields().empty()) {
-        std::sort(items().begin(), items().end(),
-            [this](uint8_t *a, uint8_t *b) { return m_view.ordered_before(a, b); });
-    }
+	sort_records(m_view, items());
 }
 
-
-//     uint8_t *record;
-
-//     if (!m_table.find_or_create(&m_key_buffer[0], record)) {
-//         init_values(*m_view_def.get(), record + m_view_def->keys_size);
-//     }
-
-//     for (const auto &iter : m_view_def->iter_values(record + m_view_def->keys_size)) {
-//         aggregate_value(iter.field, drec, &iter.value, direction, drec_find_flags);
-//     }
-// }
-
-// void
-// Aggregator::merge(Aggregator &other, unsigned int max_num_items)
-// {
-//     unsigned int n = 0;
-//     for (uint8_t *other_record : other.items()) {
-//         if (max_num_items != 0 && n == max_num_items) {
-//             break;
-//         }
-
-//         uint8_t *record;
-
-//         if (!m_table.find_or_create(other_record, record)) {
-//             //TODO: this copy is unnecessary, we could just take the already allocated record from the other table instead
-//             memcpy(record, other_record, m_view_def->keys_size + m_view_def->values_size);
-//         } else {
-//             merge_records(*m_view_def.get(), record, other_record);
-//         }
-
-//         n++;
-//     }
-// }
+void
+Aggregator::merge(Aggregator &other)
+{
+	merge_hash_tables(m_view, m_table, other.m_table);
+}
 
 } // aggregator
 } // fdsdump

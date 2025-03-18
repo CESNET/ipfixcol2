@@ -34,6 +34,7 @@ void Options::print_usage()
     std::cerr << "  -S, --aggregation-values FIELDS  Fields that will be aggregated (default = flows,packets,bytes)\n";
     std::cerr << "  -I, --stats-mode                 Run in statistics mode\n";
     std::cerr << "  --no-biflow-autoignore           Turn off smart ignoring of empty biflow records\n";
+    std::cerr << "  -t, --threads NUM                Number of threads to use\n";
     std::cerr << "  -v, --verbose                    Increase logging verbosity\n";
     std::cerr << "  -q, --quiet                      Decrease logging verbosity\n";
 }
@@ -69,6 +70,8 @@ void Options::reset()
     m_order_by.clear();
 
     m_log_level = LogLevel::warning;
+
+    m_num_threads = 1;
 }
 
 /**
@@ -92,6 +95,7 @@ void Options::parse(int argc, char *argv[])
 	parser.add('S', "aggregation-values", true);
 	parser.add("no-biflow-autoignore", false);
 	parser.add('I', "stats-mode", false);
+	parser.add('t', "threads", true);
 	parser.add('v', "verbose", false);
 	parser.add('q', "quiet", false);
 
@@ -147,6 +151,14 @@ void Options::parse(int argc, char *argv[])
 	if (args.has('I')) {
 		m_mode = Mode::stats;
 	}
+
+    if (args.has('t')) {
+        auto value = parse_number<unsigned int>(args.get('t'));
+        if (!value) {
+            throw OptionsException("invalid -t/--threads value - not a number");
+        }
+        m_num_threads = *value;
+    }
 
     for (int i = 0; i < args.count('v'); i++) {
         m_log_level++;

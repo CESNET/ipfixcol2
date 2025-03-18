@@ -77,6 +77,13 @@ View::find_field(const std::string &name)
     return nullptr;
 }
 
+
+void
+View::set_output_limit(size_t n)
+{
+    m_output_limit = n;
+}
+
 Value &
 View::access_field(const Field &field, uint8_t *record_ptr) const
 {
@@ -126,6 +133,25 @@ View::ordered_before(uint8_t *key1, uint8_t *key2) const
         }
     }
     return false;
+}
+
+CmpResult
+View::compare(const uint8_t *rec1, const uint8_t *rec2) const
+{
+    assert(!m_order_fields.empty());
+    for (const auto &item : m_order_fields) {
+        const Value &value1 = access_field(*item.field, rec1);
+        const Value &value2 = access_field(*item.field, rec2);
+        CmpResult res = item.field->compare(value1, value2);
+        if (res != CmpResult::Eq) {
+            if (item.dir == OrderDirection::Ascending) {
+                return res;
+            } else {
+                return res == CmpResult::Lt ? CmpResult::Gt : CmpResult::Lt;
+            }
+        }
+    }
+    return CmpResult::Eq;
 }
 
 } // aggregator

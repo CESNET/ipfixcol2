@@ -21,6 +21,10 @@
 namespace fdsdump {
 namespace aggregator {
 
+void merge_hash_tables(const View &view, HashTable &dst_table, HashTable &src_table);
+
+void sort_records(const View &view, std::vector<uint8_t *>& records);
+
 /**
  * @brief A class performing aggregation of fds data records based on a view definition.
  */
@@ -43,8 +47,8 @@ public:
      * @brief Merge other aggregator into this one.
      * @param other The other aggregator
      */
-    // void
-    // merge(Aggregator &other, unsigned int max_num_items = 0);
+    void
+    merge(Aggregator &other);
 
     /**
      * @brief The underlying hash table.

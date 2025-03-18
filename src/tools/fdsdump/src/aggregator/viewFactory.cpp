@@ -288,10 +288,23 @@ View
 ViewFactory::create_view(
     const std::string &key_def,
     const std::string &value_def,
-    const std::string &order_def)
+    const std::string &order_def,
+    unsigned int output_limit)
 {
     View view;
-    create_view(view, key_def, value_def, order_def);
+    create_view(view, key_def, value_def, order_def, output_limit);
+    return view;
+}
+
+std::unique_ptr<View>
+ViewFactory::create_unique_view(
+    const std::string &key_def,
+    const std::string &value_def,
+    const std::string &order_def,
+    unsigned int output_limit)
+{
+    std::unique_ptr<View> view(new View);
+    create_view(*view.get(), key_def, value_def, order_def, output_limit);
     return view;
 }
 
@@ -300,7 +313,8 @@ ViewFactory::create_view(
     View &view,
     const std::string &key_def,
     const std::string &value_def,
-    const std::string &order_def)
+    const std::string &order_def,
+    unsigned int output_limit)
 {
     for (auto def : split_args(key_def)) {
         string_trim(def);
@@ -368,6 +382,8 @@ ViewFactory::create_view(
             view.m_order_fields.push_back({field, dir});
         }
     }
+
+    view.m_output_limit = output_limit;
 }
 
 } // namespace aggregator

@@ -17,6 +17,8 @@ set(AGGREGATOR_SRC
     stdAllocator.cpp
     stdHashTable.cpp
     tablePrinter.cpp
+    threadedAggregator.cpp
+    thresholdAlgorithm.cpp
     value.cpp
     view.cpp
     viewFactory.cpp

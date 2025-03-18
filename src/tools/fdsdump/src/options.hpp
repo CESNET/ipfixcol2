@@ -94,6 +94,9 @@ public:
     /** @brief Get the logging level */
     LogLevel get_log_level() const { return m_log_level; }
 
+    /** @brief Get the number of threads to use */
+    unsigned int get_num_threads() const { return m_num_threads; }
+
 private:
     Mode m_mode;
 
@@ -113,6 +116,8 @@ private:
     bool        m_biflow_autoignore;
 
     LogLevel    m_log_level;
+
+    unsigned int m_num_threads;
 
     void parse(int argc, char *argv[]);
     void validate();
