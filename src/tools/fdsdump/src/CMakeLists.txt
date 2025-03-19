@@ -10,7 +10,7 @@ add_executable(fdsdump
     main.cpp
     options.cpp
     $<TARGET_OBJECTS:common_obj>
-	$<TARGET_OBJECTS:lister_obj>
+    $<TARGET_OBJECTS:lister_obj>
     $<TARGET_OBJECTS:aggregator_obj>
     $<TARGET_OBJECTS:statistics_obj>
 )

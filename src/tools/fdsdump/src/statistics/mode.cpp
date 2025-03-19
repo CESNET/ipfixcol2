@@ -49,7 +49,7 @@ void
 mode_statistics(const Options &opts)
 {
     auto printer = printer_factory(opts.get_output_specifier());
-	std::vector<std::string> file_names = glob_files(opts.get_input_file_patterns());
+    std::vector<std::string> file_names = glob_files(opts.get_input_file_patterns());
     unique_file file {nullptr, &fds_file_close};
     fds_file_stats stats {};
 

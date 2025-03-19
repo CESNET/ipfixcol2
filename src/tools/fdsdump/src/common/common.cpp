@@ -173,13 +173,13 @@ glob_files(const std::string &pattern)
 std::vector<std::string>
 glob_files(const std::vector<std::string> &patterns)
 {
-	std::vector<std::string> files;
-	for (const auto &pattern : patterns) {
-		for (const auto &file : glob_files(pattern)) {
-			files.push_back(file);
-		}
-	}
-	return files;
+    std::vector<std::string> files;
+    for (const auto &pattern : patterns) {
+        for (const auto &file : glob_files(pattern)) {
+            files.push_back(file);
+        }
+    }
+    return files;
 }
 
 } // fdsdump

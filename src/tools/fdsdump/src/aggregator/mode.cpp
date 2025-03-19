@@ -56,23 +56,23 @@ static void print_results(const Options &opts, std::vector<uint8_t *> items)
 void
 mode_aggregate(const Options &opts)
 {
-	Channel<ThreadedAggregator *> notify_channel;
-	ThreadedAggregator aggregator(
-			opts.get_aggregation_keys(),
-			opts.get_aggregation_values(),
-			opts.get_input_filter(),
-			opts.get_input_file_patterns(),
-			opts.get_order_by(),
-			opts.get_num_threads(),
-			opts.get_biflow_autoignore(),
-			true,
-			opts.get_output_limit(),
-			notify_channel);
-	aggregator.start();
+    Channel<ThreadedAggregator *> notify_channel;
+    ThreadedAggregator aggregator(
+        opts.get_aggregation_keys(),
+        opts.get_aggregation_values(),
+        opts.get_input_filter(),
+        opts.get_input_file_patterns(),
+        opts.get_order_by(),
+        opts.get_num_threads(),
+        opts.get_biflow_autoignore(),
+        true,
+        opts.get_output_limit(),
+        notify_channel);
+    aggregator.start();
 
-	while (true) {
-		notify_channel.get(std::chrono::milliseconds(1000));
-		auto state = aggregator.get_aggregator_state();
+    while (true) {
+        notify_channel.get(std::chrono::milliseconds(1000));
+        auto state = aggregator.get_aggregator_state();
 
         auto state_str = aggregator_state_to_str(state);
         if (state == AggregatorState::aggregating) {
@@ -82,18 +82,18 @@ mode_aggregate(const Options &opts)
             LOG_INFO << "Status: " << state_str;
         }
 
-		if (state == AggregatorState::errored) {
-			std::rethrow_exception(aggregator.get_exception());
-		}
+        if (state == AggregatorState::errored) {
+            std::rethrow_exception(aggregator.get_exception());
+        }
 
-		if (state == AggregatorState::finished) {
-			break;
-		}
-	}
+        if (state == AggregatorState::finished) {
+            break;
+        }
+    }
 
-	aggregator.join();
+    aggregator.join();
 
-	print_results(opts, aggregator.get_results());
+    print_results(opts, aggregator.get_results());
 }
 
 } // aggregator
