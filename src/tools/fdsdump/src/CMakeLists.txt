@@ -21,7 +21,8 @@ target_include_directories(fdsdump
 
 target_link_libraries(fdsdump
     PUBLIC
-        ${FDS_LIBRARIES})
+        ${FDS_LIBRARIES}
+        Threads::Threads)
 
 # Installation targets
 install(
