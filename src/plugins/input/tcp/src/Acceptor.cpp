@@ -74,9 +74,10 @@ void Acceptor::add_address(IpAddress &adr, uint16_t port, bool ipv6_only) {
 }
 
 UniqueFd Acceptor::bind_address(IpAddress &addr, uint16_t port, bool ipv6_only) {
-    sockaddr saddr{};
-    auto v4 = reinterpret_cast<sockaddr_in *>(&saddr);
-    auto v6 = reinterpret_cast<sockaddr_in6 *>(&saddr);
+    sockaddr_storage saddr_storage{};
+    auto *saddr = reinterpret_cast<sockaddr *>(&saddr_storage);
+    auto *v4 = reinterpret_cast<sockaddr_in *>(&saddr_storage);
+    auto *v6 = reinterpret_cast<sockaddr_in6 *>(&saddr_storage);
     size_t addr_len;
 
     if (addr.version == IpVersion::IP4) {
@@ -94,7 +95,7 @@ UniqueFd Acceptor::bind_address(IpAddress &addr, uint16_t port, bool ipv6_only) 
 
     const char *err_str;
 
-    UniqueFd sd(socket(saddr.sa_family, SOCK_STREAM, 0));
+    UniqueFd sd(socket(saddr->sa_family, SOCK_STREAM, 0));
     if (!sd) {
         ipx_strerror(errno, err_str);
         throw std::runtime_error("Failed to create socket: " + std::string(err_str));
@@ -128,7 +129,7 @@ UniqueFd Acceptor::bind_address(IpAddress &addr, uint16_t port, bool ipv6_only) 
     std::array<char, INET6_ADDRSTRLEN> addr_str{};
     inet_ntop(static_cast<int>(addr.version), &addr.v6, addr_str.begin(), INET6_ADDRSTRLEN);
 
-    if (bind(sd.get(), &saddr, addr_len) == -1) {
+    if (bind(sd.get(), saddr, addr_len) == -1) {
         ipx_strerror(errno, err_str);
         throw std::runtime_error(
             "Failed to bind to socket (local IP: "
