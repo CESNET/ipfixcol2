@@ -4,6 +4,8 @@
 #include <stdexcept>
 #include <iomanip>
 #include <iostream>
+#include <netinet/in.h>
+#include <sys/socket.h>
 
 #include <core/netflow2ipfix/netflow_structs.h>
 

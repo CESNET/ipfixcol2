@@ -15,6 +15,10 @@ add_library(tcp-input MODULE
     src/IpxPlugin.cpp
 )
 
+find_package(LibLz4 REQUIRED)
+include_directories(${LIBLZ4_INCLUDE_DIRS})
+target_link_libraries(tcp-input ${LIBLZ4_LIBRARIES})
+
 if (CMAKE_HOST_SYSTEM_NAME STREQUAL "FreeBSD" OR CMAKE_HOST_SYSTEM_NAME STREQUAL "OpenBSD")
     find_package(LibEpollShim REQUIRED)
     include_directories(
