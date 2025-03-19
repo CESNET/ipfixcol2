@@ -84,73 +84,73 @@ void Options::reset()
  */
 void Options::parse(int argc, char *argv[])
 {
-	ArgParser parser;
-	parser.add('h', "help", false);
-	parser.add('r', "input", true);
-	parser.add('F', "filter", true);
-	parser.add('o', "output", true);
-	parser.add('O', "order", true);
-	parser.add('c', "limit", true);
-	parser.add('A', "aggregation-keys", true);
-	parser.add('S', "aggregation-values", true);
-	parser.add("no-biflow-autoignore", false);
-	parser.add('I', "stats-mode", false);
-	parser.add('t', "threads", true);
-	parser.add('v', "verbose", false);
-	parser.add('q', "quiet", false);
+    ArgParser parser;
+    parser.add('h', "help", false);
+    parser.add('r', "input", true);
+    parser.add('F', "filter", true);
+    parser.add('o', "output", true);
+    parser.add('O', "order", true);
+    parser.add('c', "limit", true);
+    parser.add('A', "aggregation-keys", true);
+    parser.add('S', "aggregation-values", true);
+    parser.add("no-biflow-autoignore", false);
+    parser.add('I', "stats-mode", false);
+    parser.add('t', "threads", true);
+    parser.add('v', "verbose", false);
+    parser.add('q', "quiet", false);
 
     Args args;
-	try {
-		args = parser.parse(argc, argv);
-	} catch (const ArgParser::MissingArgument& missing) {
-		throw OptionsException("Missing argument for " + missing.arg);
-	} catch (const ArgParser::UnknownArgument& unknown) {
-		throw OptionsException("Unknown argument " + unknown.arg);
-	}
+    try {
+        args = parser.parse(argc, argv);
+    } catch (const ArgParser::MissingArgument& missing) {
+        throw OptionsException("Missing argument for " + missing.arg);
+    } catch (const ArgParser::UnknownArgument& unknown) {
+        throw OptionsException("Unknown argument " + unknown.arg);
+    }
 
-	if (args.has('h')) {
-		m_help_flag = true;
-	}
+    if (args.has('h')) {
+        m_help_flag = true;
+    }
 
-	if (args.has('r')) {
+    if (args.has('r')) {
         m_input_file_patterns = args.get_all('r');
-	}
+    }
 
-	if (args.has('c')) {
-		auto maybe_value = parse_number<unsigned int>(args.get('c'));
-		if (!maybe_value) {
-			throw OptionsException("invalid -c/--limit value - not a number");
-		}
-		m_output_limit = *maybe_value;
-	}
+    if (args.has('c')) {
+        auto maybe_value = parse_number<unsigned int>(args.get('c'));
+        if (!maybe_value) {
+            throw OptionsException("invalid -c/--limit value - not a number");
+        }
+        m_output_limit = *maybe_value;
+    }
 
-	if (args.has('o')) {
-		m_output_specifier = args.get('o');
-	}
+    if (args.has('o')) {
+        m_output_specifier = args.get('o');
+    }
 
-	if (args.has('O')) {
-		m_order_by = args.get('O');
-	}
+    if (args.has('O')) {
+        m_order_by = args.get('O');
+    }
 
-	if (args.has('F')) {
-		m_input_filter = args.get('F');
-	}
+    if (args.has('F')) {
+        m_input_filter = args.get('F');
+    }
 
-	if (args.has('A')) {
-		m_aggregation_keys = args.get('A');
-	}
+    if (args.has('A')) {
+        m_aggregation_keys = args.get('A');
+    }
 
-	if (args.has('S')) {
-		m_aggregation_values = args.get('S');
-	}
+    if (args.has('S')) {
+        m_aggregation_values = args.get('S');
+    }
 
-	if (args.has("no-biflow-autoignore")) {
-		m_biflow_autoignore = false;
-	}
+    if (args.has("no-biflow-autoignore")) {
+        m_biflow_autoignore = false;
+    }
 
-	if (args.has('I')) {
-		m_mode = Mode::stats;
-	}
+    if (args.has('I')) {
+        m_mode = Mode::stats;
+    }
 
     if (args.has('t')) {
         auto value = parse_number<unsigned int>(args.get('t'));

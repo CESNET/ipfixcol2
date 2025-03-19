@@ -90,17 +90,17 @@ public:
     void
     init(Value &value) const override;
 
-	/**
-	 * @brief Aggregate the value retrieved from the provided flow record into the provided
-	 *        aggregated value
-	 *
-	 * @param ctx  The flow record to retrieve the value that will be aggregated from
-	 * @param aggregated_value  The currently accumulated value that the retrieved value will be
-	 *                          aggregated towards
-	 *
-	 * @return true if the field was found in the flow record and the aggregated value was updated,
-	 * false otherwise
-	 */
+    /**
+     * @brief Aggregate the value retrieved from the provided flow record into the provided
+     *        aggregated value
+     *
+     * @param ctx  The flow record to retrieve the value that will be aggregated from
+     * @param aggregated_value  The currently accumulated value that the retrieved value will be
+     *                          aggregated towards
+     *
+     * @return true if the field was found in the flow record and the aggregated value was updated,
+     * false otherwise
+     */
     bool
     aggregate(FlowContext &ctx, Value &aggregated_value) const override;
 

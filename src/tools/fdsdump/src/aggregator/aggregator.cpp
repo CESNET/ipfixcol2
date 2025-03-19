@@ -136,13 +136,13 @@ Aggregator::aggregate(FlowContext &ctx)
 void
 Aggregator::sort_items()
 {
-	sort_records(m_view, items());
+    sort_records(m_view, items());
 }
 
 void
 Aggregator::merge(Aggregator &other)
 {
-	merge_hash_tables(m_view, m_table, other.m_table);
+    merge_hash_tables(m_view, m_table, other.m_table);
 }
 
 } // aggregator
