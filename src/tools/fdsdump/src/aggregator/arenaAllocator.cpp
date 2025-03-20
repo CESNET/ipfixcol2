@@ -2,8 +2,11 @@
  * @file
  * @author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
  * @brief Simple arena allocator
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
-#include "arenaAllocator.hpp"
+#include <aggregator/arenaAllocator.hpp>
 
 #include <cassert>
 

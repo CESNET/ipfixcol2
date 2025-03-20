@@ -1,10 +1,43 @@
+/**
+ * @file
+ * @author Lukas Hutak <hutak@cesnet.cz>
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief Command line options
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+#include <iostream>
 
 #include <getopt.h>
 #include <unistd.h>
 
-#include "options.hpp"
+#include <common/common.hpp>
+#include <common/argParser.hpp>
+#include <options.hpp>
 
 namespace fdsdump {
+
+void Options::print_usage()
+{
+    std::cerr << "Usage: fdsdump [OPTIONS]\n";
+    std::cerr << "\n";
+    std::cerr << "Options:\n";
+    std::cerr << "  -h, --help                       Show this help message\n";
+    std::cerr << "  -r, --input FILE                 File or glob pattern of files to read\n";
+    std::cerr << "  -f, --filter EXPR                Select only records matching filter expression (default = all records)\n";
+    std::cerr << "  -o, --output FMT                 Output format - TABLE, JSON, JSON-RAW\n";
+    std::cerr << "  -O, --order FIELDS               Record fields and order direction to order by\n";
+    std::cerr << "  -c, --limit NUM                  Max number of output records (default = infinite)\n";
+    std::cerr << "  -A, --aggregation-keys FIELDS    Fields making up the aggregation key (default = none)\n";
+    std::cerr << "  -S, --aggregation-values FIELDS  Fields that will be aggregated (default = flows,packets,bytes)\n";
+    std::cerr << "  -I, --stats-mode                 Run in statistics mode\n";
+    std::cerr << "  --no-biflow-autoignore           Turn off smart ignoring of empty biflow records\n";
+    std::cerr << "  -t, --threads NUM                Number of threads to use\n";
+    std::cerr << "  -v, --verbose                    Increase logging verbosity\n";
+    std::cerr << "  -q, --quiet                      Decrease logging verbosity\n";
+}
 
 Options::Options()
 {
@@ -20,20 +53,25 @@ Options::Options(int argc, char *argv[])
 
 void Options::reset()
 {
+    m_help_flag = false;
     m_mode = Mode::undefined;
 
-    m_input_files.clear();
+    m_input_file_patterns.clear();
     m_input_filter.clear();
 
     m_output_limit = 0;
     m_output_specifier.clear();
 
     m_aggregation_keys.clear();
-    m_aggregation_fields = "packets,bytes,flows";
+    m_aggregation_values = "packets,bytes,flows";
 
     m_biflow_autoignore = true;
 
     m_order_by.clear();
+
+    m_log_level = LogLevel::warning;
+
+    m_num_threads = 1;
 }
 
 /**
@@ -46,59 +84,88 @@ void Options::reset()
  */
 void Options::parse(int argc, char *argv[])
 {
-    enum long_opts_vals {
-        OPT_BIFLOW_AUTOIGNORE_OFF = 256, // Value that cannot colide with chars
-    };
-    const struct option long_opts[] = {
-        {"filter",               required_argument, NULL, 'F'},
-        {"output",               required_argument, NULL, 'o'},
-        {"order",                required_argument, NULL, 'O'},
-        {"limit",                required_argument, NULL, 'c'},
-        {"no-biflow-autoignore", no_argument,       NULL, OPT_BIFLOW_AUTOIGNORE_OFF},
-        {0, 0, 0, 0},
-    };
-    const char *short_opts = "r:c:o:O:F:A:S:I";
-    int opt;
+    ArgParser parser;
+    parser.add('h', "help", false);
+    parser.add('r', "input", true);
+    parser.add('F', "filter", true);
+    parser.add('o', "output", true);
+    parser.add('O', "order", true);
+    parser.add('c', "limit", true);
+    parser.add('A', "aggregation-keys", true);
+    parser.add('S', "aggregation-values", true);
+    parser.add("no-biflow-autoignore", false);
+    parser.add('I', "stats-mode", false);
+    parser.add('t', "threads", true);
+    parser.add('v', "verbose", false);
+    parser.add('q', "quiet", false);
 
-    while ((opt = getopt_long(argc, argv, short_opts, long_opts, NULL)) != -1) {
-        switch (opt) {
-        case 'r':
-            m_input_files.add_files(optarg);
-            break;
-        case 'c':
-            m_output_limit = std::stoull(optarg);
-            break;
-        case 'o':
-            m_output_specifier = optarg;
-            break;
-        case 'O':
-            m_order_by = optarg;
-            break;
-        case 'F':
-            m_input_filter = optarg;
-            break;
-        case 'A':
-            m_aggregation_keys = optarg;
-            break;
-        case 'I':
-            m_mode = Mode::stats;
-            break;
-        case 'S':
-            m_aggregation_fields = optarg;
-            break;
-        case OPT_BIFLOW_AUTOIGNORE_OFF:
-            m_biflow_autoignore = false;
-            break;
-        case '?':
-            throw OptionsException("invalid command line option(s)");
-        default:
-            throw OptionsException("getopts_long() returned unexpected value " + std::to_string(opt));
-        }
+    Args args;
+    try {
+        args = parser.parse(argc, argv);
+    } catch (const ArgParser::MissingArgument& missing) {
+        throw OptionsException("Missing argument for " + missing.arg);
+    } catch (const ArgParser::UnknownArgument& unknown) {
+        throw OptionsException("Unknown argument " + unknown.arg);
     }
 
-    if (optind < argc) {
-        const char *arg = argv[optind];
-        throw OptionsException("unknown argument '" + std::string(arg) + "'");
+    if (args.has('h')) {
+        m_help_flag = true;
+    }
+
+    if (args.has('r')) {
+        m_input_file_patterns = args.get_all('r');
+    }
+
+    if (args.has('c')) {
+        auto maybe_value = parse_number<unsigned int>(args.get('c'));
+        if (!maybe_value) {
+            throw OptionsException("invalid -c/--limit value - not a number");
+        }
+        m_output_limit = *maybe_value;
+    }
+
+    if (args.has('o')) {
+        m_output_specifier = args.get('o');
+    }
+
+    if (args.has('O')) {
+        m_order_by = args.get('O');
+    }
+
+    if (args.has('F')) {
+        m_input_filter = args.get('F');
+    }
+
+    if (args.has('A')) {
+        m_aggregation_keys = args.get('A');
+    }
+
+    if (args.has('S')) {
+        m_aggregation_values = args.get('S');
+    }
+
+    if (args.has("no-biflow-autoignore")) {
+        m_biflow_autoignore = false;
+    }
+
+    if (args.has('I')) {
+        m_mode = Mode::stats;
+    }
+
+    if (args.has('t')) {
+        auto value = parse_number<unsigned int>(args.get('t'));
+        if (!value) {
+            throw OptionsException("invalid -t/--threads value - not a number");
+        }
+        m_num_threads = *value;
+    }
+
+    for (int i = 0; i < args.count('v'); i++) {
+        m_log_level++;
+    }
+
+    for (int i = 0; i < args.count('q'); i++) {
+        m_log_level--;
     }
 }
 
@@ -126,6 +193,7 @@ void Options::validate()
             m_output_specifier = "JSON-RAW";
         }
     }
+
 }
 
 } // fdsdump

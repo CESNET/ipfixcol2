@@ -58,7 +58,6 @@ static const struct ipx_ctx_callbacks output_mgr_callbacks = {
     nullptr  // No feedback
 };
 
-
 ipx_instance_outmgr::ipx_instance_outmgr(uint32_t bsize)
     : ipx_instance_intermediate("Output manager", &output_mgr_callbacks, bsize)
 {

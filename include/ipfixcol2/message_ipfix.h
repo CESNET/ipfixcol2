@@ -225,6 +225,15 @@ ipx_msg_ipfix_add_set_ref(struct ipx_msg_ipfix *msg);
 IPX_API struct ipx_ipfix_record *
 ipx_msg_ipfix_add_drec_ref(struct ipx_msg_ipfix **msg_ref);
 
+/**
+ * \brief Set the raw size of an IPFIX message.
+ *
+ * \param[in] msg IPFIX Message wrapper.
+ * \param[in] new_raw_size The new raw_size value.
+ */
+IPX_API void
+ipx_msg_ipfix_set_raw_size(ipx_msg_ipfix_t *msg, uint16_t new_raw_size);
+
 /**@}*/
 #ifdef __cplusplus
 }

@@ -4,12 +4,14 @@
  * @brief Efficient hash table implementation
  */
 
+#ifdef __SSE2__
+
 #define XXH_INLINE_ALL
 
 #include <xmmintrin.h>
 
-#include "hashTable.hpp"
-#include "3rd_party/xxhash/xxhash.h"
+#include <3rd_party/xxhash/xxhash.h>
+#include <aggregator/fastHashTable.hpp>
 
 namespace fdsdump {
 namespace aggregator {
@@ -18,14 +20,14 @@ static constexpr double EXPAND_WHEN_THIS_FULL = 0.95;
 static constexpr unsigned int EXPAND_WITH_FACTOR_OF = 2;
 static constexpr uint8_t EMPTY_BIT = 0x80;
 
-HashTable::HashTable(std::size_t key_size, std::size_t value_size) :
-    m_key_size(key_size), m_value_size(value_size)
+FastHashTable::FastHashTable(const View &view) :
+    m_view(view)
 {
     init_blocks();
 }
 
 void
-HashTable::init_blocks()
+FastHashTable::init_blocks()
 {
     HashTableBlock zeroed_block;
 
@@ -41,9 +43,10 @@ HashTable::init_blocks()
 }
 
 bool
-HashTable::lookup(uint8_t *key, uint8_t *&item, bool create_if_not_found)
+FastHashTable::lookup(uint8_t *key, uint8_t *&item, bool create_if_not_found)
 {
-    uint64_t hash = XXH3_64bits(key, m_key_size); // The hash of the key
+    auto key_size = m_view.key_size(key);
+    uint64_t hash = XXH3_64bits(key, key_size); // The hash of the key
     uint64_t index = (hash >> 7) & (m_block_count - 1); // The starting block index
 
     for (;;) {
@@ -64,7 +67,7 @@ HashTable::lookup(uint8_t *key, uint8_t *&item, bool create_if_not_found)
             item_index += one_index;
 
             uint8_t *record = block.items[item_index]; // The record whose item tag matched
-            if (memcmp(record, key, m_key_size) == 0) { // Does the key match as well or was it just a hash collision?
+            if (m_view.key_size(record) == key_size && memcmp(record, key, key_size) == 0) { // Does the key match as well or was it just a hash collision?
                 item = record;
                 return true; // We found the item
             }
@@ -88,12 +91,12 @@ HashTable::lookup(uint8_t *key, uint8_t *&item, bool create_if_not_found)
             auto empty_index = __builtin_ctz(empty_match);
             block.tags[empty_index] = item_tag;
 
-            uint8_t *record = m_allocator.allocate(m_key_size + m_value_size);
+            uint8_t *record = m_allocator.allocate(key_size + m_view.value_size());
             block.items[empty_index] = record;
             m_items.push_back(record);
             m_record_count++;
 
-            memcpy(record, key, m_key_size); // Copy the key, leave the value part uninitialized
+            memcpy(record, key, key_size); // Copy the key, leave the value part uninitialized
             item = record;
 
             // If the hash table has reached a specified percentage of fullness, expand the hash table
@@ -109,7 +112,7 @@ HashTable::lookup(uint8_t *key, uint8_t *&item, bool create_if_not_found)
 }
 
 void
-HashTable::expand()
+FastHashTable::expand()
 {
     // Grow the amount of blocks by a specified factor
     m_block_count *= EXPAND_WITH_FACTOR_OF;
@@ -119,7 +122,8 @@ HashTable::expand()
 
     // Reassign all the items to the newly initialized blocks
     for (uint8_t *item : m_items) {
-        uint64_t hash = XXH3_64bits(item, m_key_size);
+        auto key_size = m_view.key_size(item);
+        uint64_t hash = XXH3_64bits(item, key_size);
         uint64_t index = (hash >> 7) & (m_block_count - 1);
         uint8_t item_tag = (hash & 0xFF) & ~EMPTY_BIT;
 
@@ -144,16 +148,18 @@ HashTable::expand()
 }
 
 bool
-HashTable::find(uint8_t *key, uint8_t *&item)
+FastHashTable::find(uint8_t *key, uint8_t *&item)
 {
     return lookup(key, item, false);
 }
 
 bool
-HashTable::find_or_create(uint8_t *key, uint8_t *&item)
+FastHashTable::find_or_create(uint8_t *key, uint8_t *&item)
 {
     return lookup(key, item, true);
 }
 
 } // aggregator
 } // fdsdump
+
+#endif // ifdef __SSE2__

@@ -1,9 +1,11 @@
 /**
- * \file
+ * \file src/plugins/intermediate/filter/config.h
  * \author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
- * \brief Thread safe file list
- *
- * Copyright (C) 2021 CESNET, z.s.p.o.
+ * \brief The filter plugin config header
+ * \date 2020
+ */
+
+/* Copyright (C) 2020 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,7 +25,7 @@
  * License (GPL) version 2 or later, in which case the provisions
  * of the GPL apply INSTEAD OF those given above.
  *
- * This software is provided ``as is, and any express or implied
+ * This software is provided ``as is'', and any express or implied
  * warranties, including, but not limited to, the implied warranties of
  * merchantability and fitness for a particular purpose are disclaimed.
  * In no event shall the company or contributors be liable for any
@@ -36,68 +38,20 @@
  * if advised of the possibility of such damage.
  *
  */
-#pragma once
 
-#include <string>
-#include <mutex>
-#include <vector>
+#ifndef CONFIG_H
+#define CONFIG_H
 
-namespace fdsdump {
+#include <ipfixcol2.h>
 
-/**
- * \brief  A file list that allows thread safe retrieval of items;
- */
-class FileList {
-public:
-    using Iterator = std::vector<std::string>::const_iterator;
-
-	/**
-     * \brief Add files matching the specified pattern onto the list.
-     * \param[in] pattern The file path glob pattern.
-     */
-    void
-	add_files(const std::string &pattern);
-
-    /**
-     * \brief A thread safe method to retrieve a filename off the list.
-     * \param[out] filename  The filename
-     * \return true if the filename was retrieved, false if the list was empty
-     */
-    bool
-    pop(std::string &filename);
-
-    /**
-     * \brief Clear all files in the list.
-     */
-    void clear();
-
-    /**
-     * \brief  Get the length of the list
-     * \return The length of the list
-     */
-    size_t length() const { return m_files.size(); }
-
-    /**
-     * \brief Check whether the list is empty
-     * \return true or false
-     */
-    bool empty() const { return m_files.empty(); }
-
-    /**
-     * \brief  Get an iterator to the beginning of the list
-     * \return The constant iterator
-     */
-    Iterator begin() const { return m_files.cbegin(); }
-
-    /**
-     * \brief  Get an iterator representing the end of the list
-     * \return The constant iterator
-     */
-    Iterator end() const { return m_files.cend(); }
-
-private:
-    std::mutex m_mutex;
-	std::vector<std::string> m_files;
+struct config {
+    char *expr;
 };
 
-} // fdsdump
+struct config *
+config_parse(ipx_ctx_t *ctx, const char *params);
+
+void
+config_destroy(struct config *cfg);
+
+#endif // CONFIG_H

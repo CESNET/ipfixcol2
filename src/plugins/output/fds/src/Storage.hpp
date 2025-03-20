@@ -110,6 +110,13 @@ private:
     /// Mapping of Transport Sessions to FDS specific parameters
     std::map<const struct ipx_session *, struct session_ctx> m_session2params;
 
+    /// Whether field selection is used
+    bool m_selection_used;
+    /// The fields to select
+    std::vector<Config::element> m_selection;
+    /// Data buffer for preparing modified template/data records if necessary
+    std::vector<uint8_t> m_buffer;
+
     std::string
     filename_gen(const time_t &ts);
     static void

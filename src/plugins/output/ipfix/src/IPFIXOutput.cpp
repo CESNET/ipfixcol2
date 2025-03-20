@@ -527,6 +527,19 @@ IPFIXOutput::on_session_message(ipx_msg_session *message)
     }
 }
 
+void
+IPFIXOutput::on_periodic_message(ipx_msg_periodic_t *message)
+{
+    if (config->split_on_export_time) {
+        return;
+    }
+    // Start a new file, if needed
+    std::time_t time_now = std::time(NULL);
+    if (should_start_new_file(time_now)) {
+        new_file(time_now); // This will make sure that templates will be written to the file
+    }
+}
+
 IPFIXOutput::IPFIXOutput(const Config *config, const ipx_ctx *ctx) : plugin_context(ctx), config(config)
 {
     buffer.reset(new uint8_t[UINT16_MAX]);

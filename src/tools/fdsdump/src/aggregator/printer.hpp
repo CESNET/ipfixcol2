@@ -2,14 +2,18 @@
  * @file
  * @author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
  * @brief Printer interface
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #pragma once
 
 #include <cstdint>
+#include <memory>
 
-#include "common/common.hpp"
-#include "view.hpp"
+#include <aggregator/view.hpp>
+#include <common/common.hpp>
 
 namespace fdsdump {
 namespace aggregator {
@@ -34,7 +38,7 @@ public:
 };
 
 std::unique_ptr<Printer>
-printer_factory(ViewDefinition view_def, const std::string &manual);
+printer_factory(const View &view, const std::string &manual);
 
 } // aggregator
 } // fdsdump

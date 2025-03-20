@@ -120,6 +120,13 @@ public:
      */
     void
     on_session_message(ipx_msg_session *message);
+
+    /**
+     * \brief Processes an incoming periodic message from the collector
+     * \param[in] message The periodic message
+     */
+    void
+    on_periodic_message(ipx_msg_periodic_t *message);
 };
 
 

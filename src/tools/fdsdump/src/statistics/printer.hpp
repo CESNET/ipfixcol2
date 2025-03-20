@@ -1,10 +1,19 @@
+/**
+ * @file
+ * @author Lukas Hutak <hutak@cesnet.cz>
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief Statistics printer
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 
 #pragma once
 
 #include <string>
 #include <libfds.h>
 
-#include "common/common.hpp"
+#include <common/common.hpp>
 
 namespace fdsdump {
 namespace statistics {

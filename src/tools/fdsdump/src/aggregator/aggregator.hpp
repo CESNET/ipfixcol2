@@ -2,21 +2,28 @@
  * @file
  * @author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
  * @brief Aggregator
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 #pragma once
 
 #include <array>
 #include <vector>
 #include <cstdint>
+#include <aggregator/hashTable.hpp>
 
 #include <libfds.h>
 
-#include "common/flowProvider.hpp"
-#include "hashTable.hpp"
-#include "sort.hpp"
+#include <aggregator/view.hpp>
+#include <common/flowProvider.hpp>
 
 namespace fdsdump {
 namespace aggregator {
+
+void merge_hash_tables(const View &view, HashTable &dst_table, HashTable &src_table);
+
+void sort_records(const View &view, std::vector<uint8_t *>& records);
 
 /**
  * @brief A class performing aggregation of fds data records based on a view definition.
@@ -27,7 +34,7 @@ public:
      * @brief Constructs a new instance.
      * @param view_def  The view definition
      */
-    Aggregator(ViewDefinition view_def);
+    Aggregator(const View &view);
 
     /**
      * @brief Process a data record.
@@ -41,7 +48,7 @@ public:
      * @param other The other aggregator
      */
     void
-    merge(Aggregator &other, unsigned int max_num_items = 0);
+    merge(Aggregator &other);
 
     /**
      * @brief The underlying hash table.
@@ -59,12 +66,18 @@ public:
      */
     std::vector<uint8_t *> &items() { return m_table.items(); }
 
+    void
+    sort_items();
+
 private:
-    ViewDefinition m_view_def;
     std::vector<uint8_t> m_key_buffer;
+    const View &m_view;
 
     void
-    aggregate(fds_drec &drec, ViewDirection direction, uint16_t drec_find_flags);
+    aggregate(FlowContext &ctx);
+
+    // void
+    // aggregate(fds_drec &drec, ViewDirection direction, uint16_t drec_find_flags);
 };
 
 } // aggregator

@@ -1,9 +1,18 @@
+/**
+ * @file
+ * @author Lukas Hutak <hutak@cesnet.cz>
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief Storage record
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 
 #include <cstring>
 #include <cstdint>
 #include <stdexcept>
 
-#include "storageRecord.hpp"
+#include <lister/storageRecord.hpp>
 
 namespace fdsdump {
 namespace lister {

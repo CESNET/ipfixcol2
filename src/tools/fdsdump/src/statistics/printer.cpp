@@ -1,12 +1,19 @@
+/**
+ * @file
+ * @author Lukas Hutak <hutak@cesnet.cz>
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief Statistics printer
+ */
+
 #include <algorithm>
 #include <cassert>
 #include <functional>
 #include <stdexcept>
 #include <vector>
 
-#include "printer.hpp"
-#include "jsonPrinter.hpp"
-#include "tablePrinter.hpp"
+#include <statistics/printer.hpp>
+#include <statistics/jsonPrinter.hpp>
+#include <statistics/tablePrinter.hpp>
 
 namespace fdsdump {
 namespace statistics {

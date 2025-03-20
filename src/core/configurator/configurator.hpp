@@ -151,6 +151,9 @@ private:
     termination_send_msg();
 
     void
+    periodic_send_msg(uint32_t *periodic_message_sequence);
+
+    void
     termination_stop_all();
     void
     termination_stop_partly(const ipx_ctx_t *ctx);

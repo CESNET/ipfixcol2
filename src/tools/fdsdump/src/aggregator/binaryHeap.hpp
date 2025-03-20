@@ -1,8 +1,12 @@
 /**
- * \file
- * \author Michal Sedlak <xsedla0v@stud.fit.vutbr.cz>
- * \brief Generic binary heap
+ * @file
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief Binary heap implementation
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
+
 #pragma once
 
 #include <vector>

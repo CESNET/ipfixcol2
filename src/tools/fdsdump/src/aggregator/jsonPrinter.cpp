@@ -1,13 +1,22 @@
+/**
+ * @file
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief JSON printer for aggregated records
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 #include <iostream>
 
-#include "jsonPrinter.hpp"
-#include "print.hpp"
+#include <aggregator/jsonPrinter.hpp>
+#include <aggregator/print.hpp>
 
 namespace fdsdump {
 namespace aggregator {
 
-JSONPrinter::JSONPrinter(ViewDefinition view_def)
-    : m_view_def(view_def)
+JSONPrinter::JSONPrinter(const View &view)
+    : m_view(view)
 {
     m_buffer.reserve(1024);
 }
@@ -25,28 +34,16 @@ JSONPrinter::print_prologue()
 void
 JSONPrinter::print_record(uint8_t *record)
 {
-    ViewValue *value = (ViewValue *) record;
-    size_t field_cnt = 0;
-
     m_buffer.clear();
     m_buffer.push_back('{');
 
-    for (const auto &field : m_view_def.key_fields) {
+    size_t field_cnt = 0;
+
+    for (const auto &pair : m_view.iter_fields(record)) {
         if (field_cnt++ > 0) {
             m_buffer.push_back(',');
         }
-
-        append_field(field, value);
-        advance_value_ptr(value, field.size);
-    }
-
-    for (const auto &field : m_view_def.value_fields) {
-        if (field_cnt++ > 0) {
-            m_buffer.push_back(',');
-        }
-
-        append_field(field, value);
-        advance_value_ptr(value, field.size);
+        append_field(pair.field, &pair.value);
     }
 
     m_buffer.push_back('}');
@@ -61,10 +58,10 @@ JSONPrinter::print_epilogue()
 }
 
 void
-JSONPrinter::append_field(const ViewField &field, ViewValue *value)
+JSONPrinter::append_field(const Field &field, Value *value)
 {
     m_buffer.push_back('"');
-    m_buffer.append(field.name);
+    m_buffer.append(field.name());
     m_buffer.push_back('"');
 
     m_buffer.push_back(':');
@@ -73,9 +70,9 @@ JSONPrinter::append_field(const ViewField &field, ViewValue *value)
 }
 
 void
-JSONPrinter::append_value(const ViewField &field, ViewValue *value)
+JSONPrinter::append_value(const Field &field, Value *value)
 {
-    switch (field.data_type) {
+    switch (field.data_type()) {
     case DataType::IPAddress:
     case DataType::IPv4Address:
     case DataType::IPv6Address:
@@ -105,6 +102,11 @@ JSONPrinter::append_value(const ViewField &field, ViewValue *value)
         append_octet_value(value);
         m_buffer.push_back('"');
         return;
+    case DataType::VarString:
+        m_buffer.push_back('"');
+        append_varstring_value(value);
+        m_buffer.push_back('"');
+        return;
     case DataType::Unassigned:
         m_buffer.append("null");
         return;
@@ -112,7 +114,7 @@ JSONPrinter::append_value(const ViewField &field, ViewValue *value)
 }
 
 void
-JSONPrinter::append_string_value(const ViewValue *value)
+JSONPrinter::append_string_value(const Value *value)
 {
     size_t last_byte;
 
@@ -164,7 +166,51 @@ JSONPrinter::append_string_value(const ViewValue *value)
 }
 
 void
-JSONPrinter::append_octet_value(const ViewValue *value)
+JSONPrinter::append_varstring_value(const Value *value)
+{
+    for (uint32_t i = 0; i < value->varstr.len; ++i) {
+        const char byte = value->varstr.text[i];
+
+        // Escape characters
+        switch (byte) {
+        case '"':
+            m_buffer.append("\\\"");
+            continue;
+        case '\'':
+            m_buffer.append("\\\\");
+            continue;
+        case '/':
+            m_buffer.append("\\/");
+            continue;;
+        case '\b':
+            m_buffer.append("\\b");
+            continue;
+        case '\f':
+            m_buffer.append("\\f");
+            continue;
+        case '\n':
+            m_buffer.append("\\n");
+            continue;
+        case '\r':
+            m_buffer.append("\\r");
+            continue;
+        case '\t':
+            m_buffer.append("\\t");
+            continue;
+        default:
+            break;
+        }
+
+        if (byte >= '\x00' && byte <= '\x1F') {
+            m_buffer.append(char2hex(byte));
+        } else {
+            m_buffer.append(1, byte);
+        }
+    }
+}
+
+void
+JSONPrinter::append_octet_value(const Value *value)
 {
     size_t last_byte;
 

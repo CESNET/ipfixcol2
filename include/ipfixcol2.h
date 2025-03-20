@@ -60,6 +60,7 @@
 #include <ipfixcol2/message_garbage.h>
 #include <ipfixcol2/message_session.h>
 #include <ipfixcol2/message_ipfix.h>
+#include <ipfixcol2/message_periodic.h>
 
 #include <ipfixcol2/plugins.h>
 #include <ipfixcol2/session.h>

@@ -3,13 +3,13 @@
 #include <stdexcept>
 #include <iostream>
 
-#include "fieldView.hpp"
-#include "flowProvider.hpp"
+#include <common/fieldView.hpp>
+#include <common/flowProvider.hpp>
+#include <common/ieMgr.hpp>
 
 namespace fdsdump {
 
-FlowProvider::FlowProvider(const shared_iemgr &iemgr)
-    : m_iemgr(iemgr)
+FlowProvider::FlowProvider()
 {
     int ret;
 
@@ -18,7 +18,7 @@ FlowProvider::FlowProvider(const shared_iemgr &iemgr)
         throw std::runtime_error("fds_file_init() has failed");
     }
 
-    ret = fds_file_set_iemgr(m_file.get(), m_iemgr.get());
+    ret = fds_file_set_iemgr(m_file.get(), IEMgr::instance().ptr());
     if (ret != FDS_OK) {
         throw std::runtime_error("fds_file_set_iemgr() has failed: " + std::to_string(ret));
     }
@@ -28,6 +28,26 @@ void
 FlowProvider::add_file(const std::string &file)
 {
     m_remains.push_back(file);
+
+    unique_file file_obj(fds_file_init(), &fds_file_close);
+    if (!file_obj) {
+        throw std::runtime_error("fds_file_init() has failed");
+    }
+
+    int ret;
+    ret = fds_file_open(file_obj.get(), file.c_str(), FDS_FILE_READ);
+    if (ret != FDS_OK) {
+        const std::string err_msg = fds_file_error(file_obj.get());
+
+        std::cerr << "fds_file_open('" << file << "') failed: " << err_msg << std::endl;
+    }
+
+    const fds_file_stats *stats = fds_file_stats_get(file_obj.get());
+    if (stats) {
+        m_total_flow_count += stats->recs_total;
+    } else {
+        std::cerr << "WARNING: " << file << " has no stats" << std::endl;
+    }
 }
 
 void
@@ -36,7 +56,7 @@ FlowProvider::set_filter(const std::string &expr)
     fds_ipfix_filter_t *filter;
     int ret;
 
-    ret = fds_ipfix_filter_create(&filter, m_iemgr.get(), expr.c_str());
+    ret = fds_ipfix_filter_create(&filter, IEMgr::instance().ptr(), expr.c_str());
     m_filter.reset(filter);
 
     if (ret != FDS_OK) {
@@ -88,6 +108,7 @@ FlowProvider::prepare_next_record()
     ret = fds_file_read_rec(m_file.get(), &m_flow.rec, NULL);
     switch (ret) {
     case FDS_OK:
+        m_processed_flow_count++;
         return true;
     case FDS_EOC:
         return false;
@@ -226,6 +247,13 @@ FlowProvider::next_record()
         m_flow.dir = static_cast<enum Direction>(dir);
         return &m_flow;
     }
+}
+
+void
+FlowProvider::reset_counters()
+{
+    m_processed_flow_count = 0;
+    m_total_flow_count = 0;
 }
 
 } // fdsdump

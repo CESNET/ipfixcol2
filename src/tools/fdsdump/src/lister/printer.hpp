@@ -1,3 +1,12 @@
+/**
+ * @file
+ * @author Lukas Hutak <hutak@cesnet.cz>
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief Lister printer
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 
 #pragma once
 
@@ -33,7 +42,7 @@ public:
 };
 
 std::unique_ptr<Printer>
-printer_factory(const shared_iemgr &iemgr, const std::string &manual);
+printer_factory(const std::string &manual);
 
 } // lister
 } // fdsdump

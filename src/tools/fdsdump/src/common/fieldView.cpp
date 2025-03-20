@@ -1,8 +1,18 @@
-
+/**
+ * @file
+ * @author Lukas Hutak <hutak@cesnet.cz>
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief Field view
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 
 #include <stdexcept>
 
-#include "fieldView.hpp"
+#include <common/fieldView.hpp>
+
+#include <libfds/converters.h>
 
 namespace fdsdump {
 
@@ -104,15 +114,45 @@ IPAddr
 FieldView::as_ipaddr() const
 {
     if (m_field.size == 4U) {
-        const uint32_t *value = reinterpret_cast<uint32_t *>(m_field.data);
-        return IPAddr(*value);
+        return IPAddr::ip4(m_field.data);
     }
 
     if (m_field.size == 16U) {
-        return IPAddr(m_field.data);
+        return IPAddr::ip6(m_field.data);
     }
 
     throw std::invalid_argument("Conversion error (ipaddr)");
+}
+
+std::string
+FieldView::as_string() const
+{
+    std::string value;
+
+    if (m_field.size > 0) {
+        // &value[0] doesn't work for zero-sized strings, so we have to handle this specially
+        value.resize(m_field.size);
+        int ret = fds_get_string(m_field.data, m_field.size, &value[0]);
+        if (ret != FDS_OK) {
+            throw std::invalid_argument("Conversion error (string)");
+        }
+    }
+
+    return value;
+}
+
+std::vector<uint8_t>
+FieldView::as_bytes() const
+{
+    std::vector<uint8_t> value;
+
+    value.resize(m_field.size);
+    int ret = fds_get_octet_array(m_field.data, m_field.size, value.data());
+    if (ret != FDS_OK) {
+        throw std::invalid_argument("Conversion error (bytes)");
+    }
+
+    return value;
 }
 
 } // fdsdump

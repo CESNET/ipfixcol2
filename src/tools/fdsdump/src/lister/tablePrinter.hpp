@@ -1,3 +1,12 @@
+/**
+ * @file
+ * @author Lukas Hutak <hutak@cesnet.cz>
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief Lister table printer
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 
 #pragma once
 
@@ -7,14 +16,14 @@
 #include <common/common.hpp>
 #include <common/field.hpp>
 
-#include "printer.hpp"
+#include <lister/printer.hpp>
 
 namespace fdsdump {
 namespace lister {
 
 class TablePrinter : public Printer {
 public:
-    TablePrinter(const shared_iemgr &iemgr, const std::string &args);
+    TablePrinter(const std::string &args);
 
     virtual
     ~TablePrinter() = default;
@@ -38,7 +47,7 @@ private:
             : m_field(field), m_name(name), m_width(width) {};
     };
 
-    void parse_fields(const std::string &str, const shared_iemgr &iemgr);
+    void parse_fields(const std::string &str);
     void parse_opts(const std::string &str);
 
     size_t data_length(fds_iemgr_element_type type);

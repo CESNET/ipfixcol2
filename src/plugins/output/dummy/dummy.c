@@ -155,6 +155,12 @@ stats_print(const struct instance_data *inst)
     printf("- total packets:   %10" PRIu64 "\n", inst->cnt_pkts);
 }
 
+uint64_t
+difftime_periodic(struct timespec start, struct timespec end)
+{
+    return (end.tv_sec - start.tv_sec) * 1000 + (end.tv_nsec - start.tv_nsec) / 1000000;
+}
+
 int
 ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
 {
@@ -172,7 +178,7 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *params)
     ipx_ctx_private_set(ctx, data);
 
     // Subscribe to receive IPFIX messages and Transport Session events
-    uint16_t new_mask = IPX_MSG_IPFIX | IPX_MSG_SESSION;
+    uint16_t new_mask = IPX_MSG_IPFIX | IPX_MSG_SESSION | IPX_MSG_PERIODIC;
     ipx_ctx_subscribe(ctx, &new_mask, NULL);
     return IPX_OK;
 }
@@ -197,6 +203,15 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *cfg, ipx_msg_t *msg)
     struct instance_data *data = (struct instance_data *) cfg;
 
     int type = ipx_msg_get_type(msg);
+
+    if (type == IPX_MSG_PERIODIC) {
+        ipx_msg_periodic_t *periodic_message = ipx_msg_base2periodic(msg);
+        IPX_CTX_INFO(ctx, "Periodic message %lu: %lu ms",
+            ipx_msg_periodic_get_seq_num(periodic_message),
+            difftime_periodic(ipx_msg_periodic_get_created(periodic_message),
+                ipx_msg_periodic_get_last_processed(periodic_message)));
+    }
+
     if (type == IPX_MSG_IPFIX) {
         // Process IPFIX message
         ipx_msg_ipfix_t *ipfix_msg = ipx_msg_base2ipfix(msg);

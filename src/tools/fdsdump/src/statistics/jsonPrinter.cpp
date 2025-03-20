@@ -1,9 +1,18 @@
+/**
+ * @file
+ * @author Lukas Hutak <hutak@cesnet.cz>
+ * @author Michal Sedlak <sedlakm@cesnet.cz>
+ * @brief JSON statistics printer
+ *
+ * Copyright: (C) 2024 CESNET, z.s.p.o.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 
 #include <iostream>
 #include <stdexcept>
 #include <string>
 
-#include "jsonPrinter.hpp"
+#include <statistics/jsonPrinter.hpp>
 
 namespace fdsdump {
 namespace statistics {
