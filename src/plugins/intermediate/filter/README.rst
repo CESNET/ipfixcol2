@@ -69,6 +69,21 @@ Example configuration
         </params>
     </intermediate>
 
+The most common use case would be filtering based on a list of allowed IP
+address ranges. In such case, it is recommended to use the following construct
+for optimal performance:
+
+.. code-block:: xml
+
+    <intermediate>
+        <name>Filter</name>
+        <plugin>filter</plugin>
+        <params>
+            <expr>srcip in [1.0.0.0/8, 2.2.0.0/16, 3.3.3.0/24] or dstip in [4.4.4.0/24]</expr>
+        </params>
+    </intermediate>
+
+
 Parameters
 ----------
 
