@@ -90,6 +90,7 @@ target_link_libraries(ipfixcol2 ${BASE_LIB})
 set_target_properties(ipfixcol2 PROPERTIES  # by default, hide all symbols
     C_VISIBILITY_PRESET hidden
     CXX_VISIBILITY_PRESET hidden
+    ENABLE_EXPORTS on # Export symbols from executable for use by plugins
 )
 
 # Installation targets
