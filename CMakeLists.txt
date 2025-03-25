@@ -95,6 +95,9 @@ set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads REQUIRED)
 
+# Find OpenSSL
+find_package(OpenSSL REQUIRED)
+
 # ------------------------------------------------------------------------------
 # Project components
 add_subdirectory(include)
