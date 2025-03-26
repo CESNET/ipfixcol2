@@ -232,6 +232,13 @@ void Inserter::check_error()
 Plugin::Plugin(ipx_ctx_t *ctx, const char *xml_config)
     : m_logger(ctx)
 {
+    // Subscribe to periodic messages aswell to ensure data export even when no data is coming
+    ipx_msg_mask_t new_mask = IPX_MSG_IPFIX | IPX_MSG_PERIODIC;
+    int rc = ipx_ctx_subscribe(ctx, &new_mask, nullptr);
+    if (rc != IPX_OK) {
+        throw Error("ipx_ctx_subscribe() failed with error code {}", rc);
+    }
+
     m_config = parse_config(xml_config, ipx_ctx_iemgr_get(ctx));
 
     m_columns = prepare_columns(m_config.columns);
@@ -343,37 +350,40 @@ Plugin::process_record(ipx_msg_ipfix_t *msg, fds_drec &rec, uint16_t iter_flags)
 void
 Plugin::process(ipx_msg_t *msg)
 {
-    if (ipx_msg_get_type(msg) != IPX_MSG_IPFIX) {
-        return;
-    }
-    ipx_msg_ipfix_t *ipfix_msg = ipx_msg_base2ipfix(msg);
-
     // Get new empty block if there is no current block
     if (!m_current_block) {
         m_current_block = m_empty_blocks.get();
     }
 
     // Go through all the records and store them
-    uint32_t drec_cnt = ipx_msg_ipfix_get_drec_cnt(ipfix_msg);
-    uint32_t rows_count = 0;
+    if (ipx_msg_get_type(msg) == IPX_MSG_IPFIX) {
+        ipx_msg_ipfix_t *ipfix_msg = ipx_msg_base2ipfix(msg);
+        uint32_t drec_cnt = ipx_msg_ipfix_get_drec_cnt(ipfix_msg);
+        uint32_t rows_count = 0;
 
-    for (uint32_t idx = 0; idx < drec_cnt; idx++) {
-        ipx_ipfix_record *rec = ipx_msg_ipfix_get_drec(ipfix_msg, idx);
-        if ((rec->rec.tmplt->flags & FDS_TEMPLATE_BIFLOW) && m_config.split_biflow) {
-            // In case of biflow if splitBiflow option is set, go through the record twice.
-            // Once in forward direction, and the second time in reverse direction.
-            if (process_record(ipfix_msg, rec->rec, FDS_DREC_BIFLOW_FWD)) {
+        for (uint32_t idx = 0; idx < drec_cnt; idx++) {
+            ipx_ipfix_record *rec = ipx_msg_ipfix_get_drec(ipfix_msg, idx);
+            if ((rec->rec.tmplt->flags & FDS_TEMPLATE_BIFLOW) && m_config.split_biflow) {
+                // In case of biflow if splitBiflow option is set, go through the record twice.
+                // Once in forward direction, and the second time in reverse direction.
+                if (process_record(ipfix_msg, rec->rec, FDS_DREC_BIFLOW_FWD)) {
+                    rows_count += 1;
+                }
+                if (process_record(ipfix_msg, rec->rec, FDS_DREC_BIFLOW_REV)) {
+                    rows_count += 1;
+                }
+            } else {
+                process_record(ipfix_msg, rec->rec, 0);
                 rows_count += 1;
             }
-            if (process_record(ipfix_msg, rec->rec, FDS_DREC_BIFLOW_REV)) {
-                rows_count += 1;
-            }
-        } else {
-            process_record(ipfix_msg, rec->rec, 0);
-            rows_count += 1;
         }
+        m_current_block->rows += rows_count;
+
+        // Update stats
+        m_rows_written_total += rows_count;
+        m_recs_processed_total += drec_cnt;
+        m_recs_processed_since_last += drec_cnt;
     }
-    m_current_block->rows += rows_count;
 
     // Record current time for updating timers
     std::time_t now = std::time(nullptr);
@@ -391,10 +401,7 @@ Plugin::process(ipx_msg_t *msg)
         m_last_insert_time = now;
     }
 
-    // Update stats
-    m_rows_written_total += rows_count;
-    m_recs_processed_total += drec_cnt;
-    m_recs_processed_since_last += drec_cnt;
+    // Print stats
     if ((now - m_last_stats_print_time) > STATS_PRINT_INTERVAL_SECS) {
         double total_rps = m_recs_processed_total / std::max<double>(1, now - m_start_time);
         double immediate_rps = m_recs_processed_since_last / std::max<double>(1, now - m_last_stats_print_time);
