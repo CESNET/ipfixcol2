@@ -68,6 +68,8 @@ set(CORE_SOURCE
 
 # Create a static library from all source code (useful for building
 # the main application and unit tests separately)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 add_library(
     ipfixcol2base STATIC
     ${CORE_SOURCE}

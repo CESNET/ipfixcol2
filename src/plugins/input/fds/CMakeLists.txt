@@ -10,6 +10,10 @@ add_library(fds-input MODULE
     Reader.hpp
 )
 
+target_link_libraries(fds-input
+    ipfixcol2base               # Link against the core library
+)
+
 install(
     TARGETS fds-input
     LIBRARY DESTINATION "${INSTALL_DIR_LIB}/ipfixcol2/"

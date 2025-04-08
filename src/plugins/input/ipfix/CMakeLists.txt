@@ -5,6 +5,10 @@ add_library(ipfix-input MODULE
     config.h
 )
 
+target_link_libraries(ipfix-input
+    ipfixcol2base               # Link against the core library
+)
+
 install(
     TARGETS ipfix-input
     LIBRARY DESTINATION "${INSTALL_DIR_LIB}/ipfixcol2/"

@@ -15,6 +15,10 @@ if (CMAKE_HOST_SYSTEM_NAME STREQUAL "FreeBSD" OR CMAKE_HOST_SYSTEM_NAME STREQUAL
     )
 endif()
 
+target_link_libraries(udp-input
+    ipfixcol2base               # Link against the core library
+)
+
 install(
     TARGETS udp-input
     LIBRARY DESTINATION "${INSTALL_DIR_LIB}/ipfixcol2/"

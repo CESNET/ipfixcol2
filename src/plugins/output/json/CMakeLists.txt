@@ -29,6 +29,7 @@ include_directories(
     ${LIBRDKAFKA_INCLUDE_DIRS}   # librdkafka
 )
 target_link_libraries(json-output
+    ipfixcol2base               # Link against the core library
     ${ZLIB_LIBRARIES}
     ${LIBRDKAFKA_LIBRARIES}
 )
