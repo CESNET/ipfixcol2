@@ -27,11 +27,11 @@ TlsDecoder::TlsDecoder(SslCtx &ctx, int fd) :
     m_handshake_complete = m_ssl.accept();
 }
 
-DecodeBuffer &TlsDecoder::decode() {
+void TlsDecoder::progress() {
     if (!m_handshake_complete) {
         m_handshake_complete = m_ssl.accept();
         if (!m_handshake_complete) {
-            return m_decoded;
+            return;
         }
     }
 
@@ -45,18 +45,16 @@ DecodeBuffer &TlsDecoder::decode() {
             case ReadResult::READ:
                 break;
             case ReadResult::WAIT:
-                return m_decoded;
+                return;
             case ReadResult::FINISHED:
                 // FIXME: properly check that the shutdown is complete.
                 m_ssl.shutdown();
                 // Intentional falltrough
             case ReadResult::CLOSED:
                 m_decoded.signal_eof();
-                return m_decoded;
+                return;
         }
     }
-
-    return m_decoded;
 }
 
 } // namespace tls

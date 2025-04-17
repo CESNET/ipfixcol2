@@ -36,9 +36,10 @@ public:
 
     /**
      * @brief Reads all available data from TLS stream and returns buffer with decoded messages.
-     * @returns Buffer with decoded messages.
      */
-    virtual DecodeBuffer &decode() override;
+    virtual void progress() override;
+
+    virtual DecodeBuffer &buffer() override { return m_decoded; }
 
     /**
      * @brief Gets the name of the decoder.

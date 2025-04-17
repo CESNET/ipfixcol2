@@ -17,11 +17,14 @@ namespace tcp_in {
 /** Interface for IPFIX message decoders. */
 class Decoder {
 public:
+    /** Reads all available data from TCP stream and returns buffer with decoded messages. */
+    virtual void progress() = 0;
+
     /**
-     * @brief Reads all available data from TCP stream and returns buffer with decoded messages.
-     * @returns Buffer with decoded messages.
+     * @brief Retrieves decode buffer with decoded data.
+     * @return Buffer with decoded data.
      */
-    virtual DecodeBuffer &decode() = 0;
+    virtual DecodeBuffer &buffer() = 0;
 
     /** Gets the name of the decoder. */
     virtual const char *get_name() const = 0;

@@ -105,7 +105,8 @@ bool Connection::receive(ipx_ctx_t *ctx) {
         );
     }
 
-    auto &buffer = m_decoder->decode();
+    m_decoder->progress();
+    auto &buffer = m_decoder->buffer();
     buffer.process_decoded([=](ByteVector &&msg) { send_msg(ctx, std::move(msg)); });
     return !buffer.is_eof_reached();
 }

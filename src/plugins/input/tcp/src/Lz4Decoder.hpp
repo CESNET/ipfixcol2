@@ -43,11 +43,12 @@ public:
 
     /**
      * @brief Decodes the next blocks of data until there is no data or when enough data is readed
-     * @return decoded data
      * @throws when fails to read from file descriptor
      * @throws when fails to decompress the data
      */
-    virtual DecodeBuffer &decode() override;
+    virtual void progress() override;
+
+    virtual DecodeBuffer &buffer() override { return m_decoded; }
 
     virtual const char *get_name() const override {
         return "LZ4";

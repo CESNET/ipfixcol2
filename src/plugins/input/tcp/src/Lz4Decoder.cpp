@@ -52,7 +52,7 @@ Lz4Decoder::Lz4Decoder(int fd) :
     }
 }
 
-DecodeBuffer &Lz4Decoder::decode() {
+void Lz4Decoder::progress() {
     while (!m_decoded.enough_data()) {
         // Read the header.
         if (!read_header()) {
@@ -73,8 +73,6 @@ DecodeBuffer &Lz4Decoder::decode() {
     if (m_decoded.is_eof_reached() && m_compressed.size() != 0) {
         throw std::runtime_error("Incomplete compressed message received");
     }
-
-    return m_decoded;
 }
 
 bool Lz4Decoder::read_header() {

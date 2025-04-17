@@ -24,7 +24,7 @@
 
 namespace tcp_in {
 
-DecodeBuffer &IpfixDecoder::decode() {
+void IpfixDecoder::progress() {
     while (!m_decoded.enough_data()) {
         // Read the header of the message.
         if (!read_header()) {
@@ -42,8 +42,6 @@ DecodeBuffer &IpfixDecoder::decode() {
     if (m_decoded.is_eof_reached() && m_part_readed.size() != 0) {
         throw std::runtime_error("Received incomplete message.");
     }
-
-    return m_decoded;
 }
 
 bool IpfixDecoder::read_header() {

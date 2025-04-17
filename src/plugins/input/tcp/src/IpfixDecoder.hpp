@@ -31,7 +31,9 @@ public:
      */
     IpfixDecoder(int fd) : m_fd(fd), m_decoded(), m_part_readed(), m_msg_size(0) {}
 
-    virtual DecodeBuffer &decode() override;
+    virtual void progress() override;
+
+    virtual DecodeBuffer &buffer() override { return m_decoded; };
 
     virtual const char *get_name() const override {
         return "IPFIX";
