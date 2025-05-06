@@ -40,6 +40,13 @@ public:
     }
 
 private:
+    bool read_header();
+    bool read_body();
+    bool read_until_n(size_t n);
+
+    ByteVector m_part_decoded;
+    size_t m_decoded_size = 0;
+
     TcpReader m_reader;
     DecodeBuffer m_decoded;
 };
