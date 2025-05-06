@@ -32,7 +32,7 @@ To build the plugin, IPFIXcol2 (and its header files) must be installed on your 
 
 Finally, compile and install the plugin:
 
-.. code-block:: sh
+::
 
     $ mkdir build && cd build && cmake ..
     $ make
@@ -46,6 +46,9 @@ appropriate schema corresponding to the configuration entered. The existence
 and schema of the table is checked after initiating connection to the database
 and an error is displayed if there is a mismatch. The table is not
 automatically created.
+
+To aid in initial setup, a script `schema-helper.py` is included. For more information,
+see `Schema helper script <#schema-helper>`_.
 
 To run the example configuration below, you can create the ClickHouse table
 using the following SQL query:
@@ -307,9 +310,53 @@ performance at the cost of higher memory usage:
 
 .. code-block:: xml
 
-            <inserterThreads>16</inserterThreads>
-            <blocks>128</blocks>
-            <blockInsertThreshold>500000</blockInsertThreshold>
+    <inserterThreads>16</inserterThreads>
+    <blocks>128</blocks>
+    <blockInsertThreshold>500000</blockInsertThreshold>
 
 You can further experiment with the values based on your input characteristics
 and your machine specifications.
+
+Schema helper
+--------------
+
+To aid in initial setup, a script `schema-helper.py` is included. The script
+runs ipfixcol2 for a brief period of time to observe structure of the flow data
+that is being received, and then generates a ClickHouse schema SQL and a
+ipfixcol2 config XML. The generated files can be used as an easier starting
+point as opposed to doing everything manually.
+
+::
+
+    usage: schema-helper.py [-h] [-a ADDRESS] [-p PORT] [-i INTERVAL] [-t {tcp,udp}] [-s SCHEMA_FILE] [-c CONFIG_FILE] [-o OVERWRITE]
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -a ADDRESS, --address ADDRESS
+                            the local IP address, i.e. interface address; empty = all interfaces (default: )
+      -p PORT, --port PORT  the local port (default: 4739)
+      -i INTERVAL, --interval INTERVAL
+                            the collection interval in seconds (default: 60)
+      -t {tcp,udp}, --type {tcp,udp}
+                            the input protocol type (default: udp)
+      -s SCHEMA_FILE, --schema-file SCHEMA_FILE
+                            the output schema file (default: schema.sql)
+      -c CONFIG_FILE, --config-file CONFIG_FILE
+                            the output config file (default: config.xml)
+      -o OVERWRITE, --overwrite OVERWRITE
+                            overwrite the output files without asking if they already exist (default: False)
+
+**Note:**
+In case UDP is used, you might need to increase the interval up to several
+minutes for the collector to gather and decode enough data. If you are using
+UDP and are getting no results, try running the script with interval set to 300
+or even 600.
+
+
+**Example usage:**
+
+::
+
+        $ schema-helper.py -i 60 -p 4739 -t tcp
+
+Collect data for 60 seconds, listen on port 4739 using TCP.
