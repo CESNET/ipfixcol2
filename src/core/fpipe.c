@@ -93,9 +93,19 @@ ipx_fpipe_create()
 void
 ipx_fpipe_destroy(ipx_fpipe_t *fpipe)
 {
-    if (fpipe->cnt != 0) {
+    // Destroy any leftover periodic messages
+    ipx_msg_t *msg;
+    int err_cnt = 0;
+    while ((msg = ipx_fpipe_read(fpipe)) != NULL) {
+        if (ipx_msg_get_type(msg) != IPX_MSG_PERIODIC) {
+            err_cnt++;
+        }
+        ipx_msg_destroy(msg);
+    }
+
+    if (err_cnt > 0) {
         IPX_WARNING(fpipe_str, "Destroying of a pipe that still contains %" PRIu32 " unprocessed "
-            "message(s)!", fpipe->cnt);
+            "non-periodic message(s)!", fpipe->cnt);
     }
 
     // Close the pipe and destroy the structure
