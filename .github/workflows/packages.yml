@@ -148,6 +148,7 @@ jobs:
         yum -y install git gcc gcc-c++ cmake make libxml2-devel lz4-devel libzstd-devel
         yum -y install zlib-devel pkgconfig rpm-build librdkafka-devel
         yum -y install python3-docutils || yum -y install python-docutils
+        yum -y install rpmdevtools
 
     # Checkout repository --------------------------------------------------------------------
     - uses: actions/checkout@v2
@@ -179,6 +180,21 @@ jobs:
         ipfixcol2 -V
         ipfixcol2 -h
         ipfixcol2 -L -v
+    - name: Build IPFIXcol2 ClickHouse Output RPMs
+      run: |
+        if [ ! -d ./extra_plugins/output/clickhouse/ ]; then
+          echo "ClickHouse plugin not found"
+          exit 0
+        fi
+        rpmdev-setuptree
+        cp -r ./extra_plugins/output/clickhouse/ ./ipfixcol2-clickhouse-output-1.0.0/
+        tar -czvf ~/rpmbuild/SOURCES/ipfixcol2-clickhouse-output-1.0.0.tar.gz ./ipfixcol2-clickhouse-output-1.0.0
+        cp ./extra_plugins/output/clickhouse/*.spec ~/rpmbuild/SPECS/
+        sed -i '/Packager:/c\Packager:       Github actions <no-reply@example.com>' ~/rpmbuild/SPECS/*.spec
+        rpmbuild -bs ~/rpmbuild/SPECS/*.spec
+        rpmbuild -bb ~/rpmbuild/SPECS/*.spec
+        find ~/rpmbuild -iname '*.rpm' -exec mv {} ./build/ \;
+
     - name: Archive RPM packages
       if: github.event_name == 'push'
       uses: actions/upload-artifact@v4
