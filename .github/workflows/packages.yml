@@ -22,7 +22,6 @@ jobs:
     container: ${{ matrix.image }}
 
     steps:
-    - uses: actions/checkout@v2
     - name: Define variables
       uses: actions/github-script@v5
       with:
@@ -45,6 +44,9 @@ jobs:
         apt-get -y install debhelper devscripts build-essential fakeroot zip
       env:
         DEBIAN_FRONTEND: noninteractive
+
+    # Checkout repository --------------------------------------------------------------------
+    - uses: actions/checkout@v2
 
     # Build LIBFDS DEB package ---------------------------------------------------------------
     - name: Checkout libfds library - master branch
