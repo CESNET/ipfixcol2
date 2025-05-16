@@ -22,7 +22,6 @@ jobs:
     container: ${{ matrix.image }}
 
     steps:
-    - uses: actions/checkout@v2
     - name: Define variables
       uses: actions/github-script@v5
       with:
@@ -45,6 +44,9 @@ jobs:
         apt-get -y install debhelper devscripts build-essential fakeroot zip
       env:
         DEBIAN_FRONTEND: noninteractive
+
+    # Checkout repository --------------------------------------------------------------------
+    - uses: actions/checkout@v2
 
     # Build LIBFDS DEB package ---------------------------------------------------------------
     - name: Checkout libfds library - master branch
@@ -83,6 +85,23 @@ jobs:
           build/pkg/deb/debbuild/*.ddeb
           build/pkg/deb/debbuild/*.tar.gz
           build/pkg/deb/debbuild/*.dsc
+    - name: Publish DEB packages to GitHub releases
+      if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/ci-publish-packages-to-releases'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        IMAGE_NAME: ${{ matrix.image }}
+      run: |
+        curl -sL "$(curl -sL "https://api.github.com/repos/cli/cli/releases" | grep _linux_amd64.tar.gz | grep https | head -n1 | cut -d'"' -f4)" -o gh.tar.gz \
+          && tar xzf gh.tar.gz \
+          && find gh*/ -name gh -exec mv {} /usr/local/bin/ \;
+        git config --global --add safe.directory "$PWD" \
+          && git tag -f ci-latest HEAD \
+          && git push -f origin tag ci-latest
+        find build/ -iname '*.deb' | while read -r f; do
+          newf="$IMAGE_NAME-$(basename "$f")"
+          mv "$f" "$newf"
+          gh release upload --clobber ci-latest "$newf"
+        done
 
   rpm:
     # Try to build RPM packages
@@ -146,6 +165,7 @@ jobs:
         yum -y install git gcc gcc-c++ cmake make libxml2-devel lz4-devel libzstd-devel
         yum -y install zlib-devel pkgconfig rpm-build librdkafka-devel
         yum -y install python3-docutils || yum -y install python-docutils
+        yum -y install rpmdevtools
 
     # Checkout repository --------------------------------------------------------------------
     - uses: actions/checkout@v2
@@ -177,6 +197,18 @@ jobs:
         ipfixcol2 -V
         ipfixcol2 -h
         ipfixcol2 -L -v
+    - name: Build IPFIXcol2 ClickHouse Output RPMs
+      run: |
+        set -xe
+        rpmdev-setuptree
+        cp -r ./extra_plugins/output/clickhouse/ ./ipfixcol2-clickhouse-output-1.0.0/
+        tar -czvf ~/rpmbuild/SOURCES/ipfixcol2-clickhouse-output-1.0.0.tar.gz ./ipfixcol2-clickhouse-output-1.0.0
+        cp ./extra_plugins/output/clickhouse/*.spec ~/rpmbuild/SPECS/
+        sed -i '/Packager:/c\Packager:       Github actions <no-reply@example.com>' ~/rpmbuild/SPECS/*.spec
+        rpmbuild -bs ~/rpmbuild/SPECS/*.spec
+        rpmbuild -bb ~/rpmbuild/SPECS/*.spec
+        find ~/rpmbuild -iname '*.rpm' -exec mv {} ./build/ \;
+
     - name: Archive RPM packages
       if: github.event_name == 'push'
       uses: actions/upload-artifact@v4
@@ -185,3 +217,20 @@ jobs:
         path: |
           build/pkg/rpm/rpmbuild/RPMS/
           build/pkg/rpm/rpmbuild/SRPMS/
+    - name: Publish RPM packages to GitHub releases
+      if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/ci-publish-packages-to-releases'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        IMAGE_NAME: ${{ matrix.image }}
+      run: |
+        curl -sL "$(curl -sL "https://api.github.com/repos/cli/cli/releases" | grep _linux_amd64.tar.gz | grep https | head -n1 | cut -d'"' -f4)" -o gh.tar.gz \
+          && tar xzf gh.tar.gz \
+          && find gh*/ -name gh -exec mv {} /usr/local/bin/ \;
+        git config --global --add safe.directory "$PWD" \
+          && git tag -f ci-latest HEAD \
+          && git push -f origin tag ci-latest
+        find build/ -iname '*.rpm' | while read -r f; do
+          newf="$IMAGE_NAME-$(basename "$f")"
+          mv "$f" "$newf"
+          gh release upload --clobber ci-latest "$newf"
+        done
