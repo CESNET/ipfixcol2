@@ -85,6 +85,23 @@ jobs:
           build/pkg/deb/debbuild/*.ddeb
           build/pkg/deb/debbuild/*.tar.gz
           build/pkg/deb/debbuild/*.dsc
+    - name: Publish DEB packages to GitHub releases
+      if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/ci-publish-packages-to-releases'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        IMAGE_NAME: ${{ matrix.image }}
+      run: |
+        curl -sL "$(curl -sL "https://api.github.com/repos/cli/cli/releases" | grep _linux_amd64.tar.gz | grep https | head -n1 | cut -d'"' -f4)" -o gh.tar.gz \
+          && tar xzf gh.tar.gz \
+          && find gh*/ -name gh -exec mv {} /usr/local/bin/ \;
+        git config --global --add safe.directory "$PWD" \
+          && git tag -f ci-latest HEAD \
+          && git push -f origin tag ci-latest
+        find build/ -iname '*.deb' | while read -r f; do
+          newf="$IMAGE_NAME-$(basename "$f")"
+          mv "$f" "$newf"
+          gh release upload --clobber ci-latest "$newf"
+        done
 
   rpm:
     # Try to build RPM packages
@@ -200,3 +217,20 @@ jobs:
         path: |
           build/pkg/rpm/rpmbuild/RPMS/
           build/pkg/rpm/rpmbuild/SRPMS/
+    - name: Publish RPM packages to GitHub releases
+      if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/ci-publish-packages-to-releases'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        IMAGE_NAME: ${{ matrix.image }}
+      run: |
+        curl -sL "$(curl -sL "https://api.github.com/repos/cli/cli/releases" | grep _linux_amd64.tar.gz | grep https | head -n1 | cut -d'"' -f4)" -o gh.tar.gz \
+          && tar xzf gh.tar.gz \
+          && find gh*/ -name gh -exec mv {} /usr/local/bin/ \;
+        git config --global --add safe.directory "$PWD" \
+          && git tag -f ci-latest HEAD \
+          && git push -f origin tag ci-latest
+        find build/ -iname '*.rpm' | while read -r f; do
+          newf="$IMAGE_NAME-$(basename "$f")"
+          mv "$f" "$newf"
+          gh release upload --clobber ci-latest "$newf"
+        done
