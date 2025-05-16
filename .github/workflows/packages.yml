@@ -48,6 +48,29 @@ jobs:
     # Checkout repository --------------------------------------------------------------------
     - uses: actions/checkout@v2
 
+    # Fix repository permissions
+    - name: Fix repository permissions
+      run: git config --global --add safe.directory "$PWD"
+
+    # Install GitHub CLI
+    - name: Install GitHub CLI
+      run: .github/workflows/scripts/install-gh-cli.sh
+
+    # Checkout release tag (if on release branch)
+    - name: Checkout release tag (if on release branch)
+      if: github.ref == 'refs/heads/ci-release'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        IMAGE_NAME: ${{ matrix.image }}
+      run: |
+        git fetch --tags
+        latest_tag="$(git tag | grep 'v[0-9]*\.[0-9]*\.[0-9]*' | sort -rn | head -n1)"
+        if [ -z "$latest_tag" ]; then
+          echo "could not find latest tag"
+          exit 1
+        fi
+        git checkout "$latest_tag"
+
     # Build LIBFDS DEB package ---------------------------------------------------------------
     - name: Checkout libfds library
       run: git clone https://github.com/CESNET/libfds.git build/libfds_repo
@@ -81,6 +104,29 @@ jobs:
           build/pkg/deb/debbuild/*.ddeb
           build/pkg/deb/debbuild/*.tar.gz
           build/pkg/deb/debbuild/*.dsc
+
+    - name: Publish DEB packages to GitHub releases (latest)
+      if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/ci-publish-packages-to-releases'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        IMAGE_NAME: ${{ matrix.image }}
+      run: |
+        git tag -f ci-latest HEAD && git push -f origin tag ci-latest
+        TAG_NAME="ci-latest" ./.github/workflows/scripts/upload-packages.sh
+
+    - name: Publish DEB packages to GitHub releases (stable)
+      if: github.ref == 'refs/heads/ci-release'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        IMAGE_NAME: ${{ matrix.image }}
+      run: |
+        latest_tag="$(git describe --exact-match --tags)"
+        if ! gh release view "$latest_tag"; then
+          echo "could not find release for tag $latest_tag"
+          exit 1
+        fi
+        git checkout ci-release
+        TAG_NAME="$latest_tag" ./.github/workflows/scripts/upload-packages.sh
 
   rpm:
     # Try to build RPM packages
@@ -155,6 +201,29 @@ jobs:
     # Checkout repository --------------------------------------------------------------------
     - uses: actions/checkout@v2
 
+    # Fix repository permissions
+    - name: Fix repository permissions
+      run: git config --global --add safe.directory "$PWD"
+
+    # Install GitHub CLI
+    - name: Install GitHub CLI
+      run: .github/workflows/scripts/install-gh-cli.sh
+
+    # Checkout release tag (if on release branch)
+    - name: Checkout release tag (if on release branch)
+      if: github.ref == 'refs/heads/ci-release'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        IMAGE_NAME: ${{ matrix.image }}
+      run: |
+        git fetch --tags
+        latest_tag="$(git tag | grep 'v[0-9]*\.[0-9]*\.[0-9]*' | sort -rn | head -n1)"
+        if [ -z "$latest_tag" ]; then
+          echo "could not find latest tag"
+          exit 1
+        fi
+        git checkout "$latest_tag"
+
     # Build LIBFDS RPM package ---------------------------------------------------------------
     - name: Checkout libfds library
       run: git clone --branch master https://github.com/CESNET/libfds.git build/libfds_repo
@@ -201,3 +270,26 @@ jobs:
         path: |
           build/pkg/rpm/rpmbuild/RPMS/
           build/pkg/rpm/rpmbuild/SRPMS/
+
+    - name: Publish RPM packages to GitHub releases (latest)
+      if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/ci-publish-packages-to-releases'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        IMAGE_NAME: ${{ matrix.image }}
+      run: |
+        git tag -f ci-latest HEAD && git push -f origin tag ci-latest
+        TAG_NAME="ci-latest" ./.github/workflows/scripts/upload-packages.sh
+
+    - name: Publish RPM packages to GitHub releases (stable)
+      if: github.ref == 'refs/heads/ci-release'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        IMAGE_NAME: ${{ matrix.image }}
+      run: |
+        latest_tag="$(git describe --exact-match --tags)"
+        if ! gh release view "$latest_tag"; then
+          echo "could not find release for tag $latest_tag"
+          exit 1
+        fi
+        git checkout ci-release
+        TAG_NAME="$latest_tag" ./.github/workflows/scripts/upload-packages.sh
