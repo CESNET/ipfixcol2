@@ -81,7 +81,7 @@ jobs:
         yum -y install python3-docutils || yum -y install python-docutils
 
     # Checkout repository --------------------------------------------------------------------
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     # Build libfds library  ------------------------------------------------------------------
     # Note: Master against master branch. Otherwise against debug branch.

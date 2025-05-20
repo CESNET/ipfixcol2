@@ -46,7 +46,7 @@ jobs:
         DEBIAN_FRONTEND: noninteractive
 
     # Checkout repository --------------------------------------------------------------------
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     # Fix repository permissions
     - name: Fix repository permissions
@@ -199,7 +199,7 @@ jobs:
         yum -y install rpmdevtools
 
     # Checkout repository --------------------------------------------------------------------
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     # Fix repository permissions
     - name: Fix repository permissions
