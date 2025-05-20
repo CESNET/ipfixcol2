@@ -85,12 +85,8 @@ jobs:
 
     # Build libfds library  ------------------------------------------------------------------
     # Note: Master against master branch. Otherwise against debug branch.
-    - name: Checkout libfds library - master branch
-      if: github.ref == 'refs/heads/master'
+    - name: Checkout libfds library
       run: git clone --branch master https://github.com/CESNET/libfds.git libfds_build
-    - name: Checkout libfds library - devel branch
-      if: github.ref != 'refs/heads/master'
-      run: git clone --branch devel https://github.com/CESNET/libfds.git libfds_build
     - name: Build and install libfds library
       working-directory: libfds_build
       run: |
