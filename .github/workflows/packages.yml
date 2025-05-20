@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: ['ubuntu:20.04', 'ubuntu:22.04', 'debian:buster', 'debian:bullseye', 'debian:bookworm']
+        image: ['ubuntu:20.04', 'ubuntu:22.04', 'ubuntu:24.04', 'debian:buster', 'debian:bullseye', 'debian:bookworm']
 
     name: Build DEBs on ${{ matrix.image }}
     container: ${{ matrix.image }}
@@ -94,6 +94,7 @@ jobs:
       matrix:
         image:
           - 'rockylinux:8'
+          - 'rockylinux:9'
           - 'oraclelinux:8'
           - 'oraclelinux:9'
 
@@ -115,11 +116,16 @@ jobs:
         mkdir -p build/libfds_repo
 
     # Dependencies ---------------------------------------------------------------------------
-    - name: Enable additional repositories (Rocky Linux)
-      if: contains(matrix.image, 'rockylinux')
+    - name: Enable additional repositories (Rocky Linux 8)
+      if: contains(matrix.image, 'rockylinux:8')
       run: |
         dnf -y install 'dnf-command(config-manager)'
         dnf config-manager --set-enabled appstream powertools
+    - name: Enable additional repositories (Rocky Linux 9)
+      if: contains(matrix.image, 'rockylinux:9')
+      run: |
+        dnf -y install 'dnf-command(config-manager)'
+        dnf config-manager --set-enabled appstream crb
     - name: Enable additional repositories (Oracle Linux 8)
       if: contains(matrix.image, 'oraclelinux:8')
       run: |
