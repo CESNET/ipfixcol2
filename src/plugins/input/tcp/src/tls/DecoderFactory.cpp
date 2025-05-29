@@ -73,23 +73,33 @@ static void load_ca(const Config &conf, SslCtx &ctx) {
         return;
     }
 
+    const char *ca_file = nullptr;
+    const char *ca_dir = nullptr;
+
     if (conf.default_ca_file) {
         ctx.set_default_verify_file();
     } else if (!conf.ca_file.empty()) {
-        ctx.load_verify_file(conf.ca_file.c_str());
+        ca_file = conf.ca_file.c_str();
     }
 
     if (conf.default_ca_dir) {
         ctx.set_default_verify_dir();
     } else if (!conf.ca_dir.empty()) {
-        ctx.load_verify_dir(conf.ca_dir.c_str());
+        ca_dir = conf.ca_dir.c_str();
     }
 
+    if (ca_file != nullptr || ca_dir != nullptr) {
+        ctx.load_verify_locations(ca_file, ca_dir);
+    }
+
+// Supported only from OpenSSL  3.0.0-0 release
+#if OPENSSL_VERSION_NUMBER >= 0x03000000f
     if (conf.default_ca_store) {
         ctx.set_default_verify_store();
     } else if (!conf.ca_store.empty()) {
         ctx.load_verify_store(conf.ca_store.c_str());
     }
+#endif // OPENSSL_VERSION_NUMBER >= 0x03000000f
 }
 
 } // namespace tls

@@ -75,16 +75,6 @@ public:
     }
 
     /**
-     * @brief Sets the path to trusted certificate file.
-     * @throws `std::runtime_error` on failure.
-     */
-    void load_verify_file(const char *path) {
-        if (!SSL_CTX_load_verify_file(m_ctx.get(), path)) {
-            throw_ssl_err("Failed to set default trusted certificate file `", path, "`.");
-        }
-    }
-
-    /**
      * @brief Sets the path to trusted certificates directory.
      *
      * This will try to set the path from environment variable `SSL_CERT_DIR`, and if that fails, it
@@ -98,12 +88,13 @@ public:
     }
 
     /**
-     * @brief Sets the path to trusted certificates directory.
-     * @throws `std::runtime_error` on failure.
+     * @brief Sets the path for trusted certificate file and directory.
+     * @param file Path to trusted certificate file.
+     * @param dir Path to trusted certificate directory.
      */
-    void load_verify_dir(const char *path) {
-        if (!SSL_CTX_load_verify_dir(m_ctx.get(), path)) {
-            throw_ssl_err("Failed to set default trusted certificate directory `", path, "`.");
+    void load_verify_locations(const char *file, const char *dir) {
+        if (!SSL_CTX_load_verify_locations(m_ctx.get(), file, dir)) {
+            throw_ssl_err("Failed to set default trusted certificate locations.");
         }
     }
 
@@ -111,22 +102,36 @@ public:
      * @brief Sets the path to trusted certificates store.
      *
      * It will use the OS defaults.
+     *
+     * This is not available before openssl 3.
      * @throws `std::runtime_error` on failure.
      */
     void set_default_verify_store() {
+// Available only from OpenSSL  3.0.0-0 release
+#if OPENSSL_VERSION_NUMBER >= 0x03000000f
         if (!SSL_CTX_set_default_verify_store(m_ctx.get())) {
             throw_ssl_err("Failed to set default trusted certificate store.");
         }
+#else // OPENSSL_VERSION_NUMBER >= 0x03000000f
+        throw std::runtime_error("`set_default_verify_store` is not available before OpenSSL 3.");
+#endif // OPENSSL_VERSION_NUMBER >= 0x03000000f
     }
 
     /**
      * @brief Sets the path to trusted certificates store.
+     *
+     * This is not available before openssl 3.
      * @throws `std::runtime_error` on failure.
      */
     void load_verify_store(const char *path) {
+// Available only from OpenSSL  3.0.0-0 release
+#if OPENSSL_VERSION_NUMBER >= 0x03000000f
         if (!SSL_CTX_load_verify_store(m_ctx.get(), path)) {
             throw_ssl_err("Failed to set default trusted certificate store `", path, "`.");
         }
+#else // OPENSSL_VERSION_NUMBER >= 0x03000000f
+        throw std::runtime_error("`load_verify_store` is not available before OpenSSL 3.");
+#endif // OPENSSL_VERSION_NUMBER >= 0x03000000f
     }
 
     /**

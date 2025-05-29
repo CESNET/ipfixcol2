@@ -18,6 +18,7 @@
 #include <cstring>
 
 #include <libfds.h> // fds_*, FDS_*
+#include <openssl/opensslv.h>
 
 #include <ipfixcol2.h> // ipx_ctx, IPX_CTX_WARNING
 
@@ -199,6 +200,13 @@ void Config::parse_tls(ipx_ctx *ctx, fds_xml_ctx_t *params) {
     use_default_ca = !default_ca_file && ca_file.empty()
         && !default_ca_dir && ca_dir.empty()
         && !default_ca_store && ca_store.empty();
+
+// Supported only from OpenSSL 3.0.0-0 release
+#if OPENSSL_VERSION_NUMBER < 0x03000000f
+    if (default_ca_store || !ca_store.empty()) {
+        throw std::invalid_argument("Certificate store is not supported before openssl 3.");
+    }
+#endif // OPENSSL_VERSION_MAJOR < 0x03000000f
 }
 
 } // namespace tcp_in

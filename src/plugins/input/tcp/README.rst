@@ -93,7 +93,8 @@ certificates (certificate authority) is relevant only if the option ``verifyPeer
 
 :``caStore``:
     Path to certificate store with trusted certificates (certificate authorities). Default uses
-    system defaults.
+    system defaults. This is available only when using OpenSSL 3 and newer. When used with older
+    OpenSSL, the plugin will return error.
 
 Notes
 -----
