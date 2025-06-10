@@ -60,6 +60,8 @@ network interface and a port. Multiple instances of these plugins can run concur
   it on standard output
 - `Time Check <src/plugins/output/timecheck>`_ - flow timestamp check
 - `Dummy <src/plugins/output/dummy>`_ - simple output module example
+- `Overview <src/plugins/output/overview>`_ - get a quick overview of the IPFIX
+  fields the collector is receiving from the probe
 - `lnfstore <extra_plugins/output/lnfstore>`_ (*) - store all flows in nfdump compatible
   format for long-term preservation
 - `UniRec <extra_plugins/output/unirec>`_ (*)  - send flow records in UniRec format
