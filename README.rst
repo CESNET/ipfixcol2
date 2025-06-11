@@ -7,8 +7,6 @@
 
 ============= =============
 Master branch |BuildMaster|
-------------- -------------
-Devel branch  |BuildDevel|
 ============= =============
 
 IPFIXcol2
@@ -201,7 +199,5 @@ be useful also for other users? Please, share your experiences and thoughts.
     or temporarily change an environment variable
     "``export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib64/``"
 
-.. |BuildMaster| image:: https://github.com/CESNET/ipfixcol2/workflows/Build%20and%20tests/badge.svg?branch=master
+.. |BuildMaster| image:: https://github.com/CESNET/ipfixcol2/actions/workflows/main.yml/badge.svg?branch=master
    :target: https://github.com/CESNET/ipfixcol2/tree/master
-.. |BuildDevel| image:: https://github.com/CESNET/ipfixcol2/workflows/Build%20and%20tests/badge.svg?branch=devel
-   :target: https://github.com/CESNET/ipfixcol2/tree/devel
