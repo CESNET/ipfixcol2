@@ -144,6 +144,13 @@ void Plugin::extract_values(ipx_msg_ipfix_t *msg, RecParser &parser, Block &bloc
 int
 Plugin::process_record(ipx_msg_ipfix_t *msg, fds_drec &rec, Block &block)
 {
+    if (rec.tmplt->type == FDS_TYPE_TEMPLATE_OPTS) {
+        // skip the data record if the template used is a options template
+        // currently we only want data records using "normal" templates
+        // this is to prevent empty records in the database and might be improved upon in the future
+        return 0;
+    }
+
     int ret = 0;
     RecParser &parser = m_rec_parsers->get_parser(rec.tmplt);
     parser.parse_record(rec);
