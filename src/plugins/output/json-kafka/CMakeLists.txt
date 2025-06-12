@@ -7,16 +7,20 @@ add_library(json-kafka-output MODULE
     src/Storage.hpp
     src/Kafka.cpp
     src/Kafka.hpp
+    src/pattern-matching/HyperscanCppInterface.hh
+    src/pattern-matching/PatternMatching.hh
 )
 
 find_package(LibRDKafka 0.9.3 REQUIRED)
 find_package(ZLIB REQUIRED)
+find_package(HS MODULE REQUIRED)
 
 include_directories(
     ${LIBRDKAFKA_INCLUDE_DIRS}   # librdkafka
 )
 target_link_libraries(json-kafka-output
     ${LIBRDKAFKA_LIBRARIES}
+    ${HS_LIBRARIES}
 )
 
 install(
