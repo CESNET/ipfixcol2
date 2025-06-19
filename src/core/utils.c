@@ -52,7 +52,14 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <ipfixcol2/api.h>
+#include <ipfixcol2/verbose.h>
+#ifdef __cplusplus
+}
+#endif
 
 
 int
