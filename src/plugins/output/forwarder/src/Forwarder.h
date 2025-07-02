@@ -81,6 +81,13 @@ public:
     handle_ipfix_message(ipx_msg_ipfix_t *msg);
 
     /**
+     * \brief Handle a periodic message
+     * \param msg  The periodic message
+     */
+    void
+    handle_periodic_message(ipx_msg_periodic_t *msg);
+
+    /**
      * \brief The destructor - finalize the forwarder
      */
     ~Forwarder() {}
@@ -101,4 +108,5 @@ private:
 
     void
     forward_round_robin(ipx_msg_ipfix_t *msg);
+
 };

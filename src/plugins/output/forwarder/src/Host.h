@@ -100,6 +100,12 @@ public:
     bool
     forward_message(ipx_msg_ipfix_t *msg);
 
+    /**
+     * \brief Advance the unfinished transfers
+     */
+    void
+    advance_transfers();
+
 private:
     const std::string &m_ident;
 
