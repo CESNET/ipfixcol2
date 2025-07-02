@@ -65,6 +65,7 @@ DNS_RR_RDATA                   bytes         cesnet:DNSRData                    
 DNS_PSIZE                      uint16        cesnet:DNSPSize                    # DNS payload size
 DNS_DO                         uint8         cesnet:DNSRDO                      # DNS DNSSEC OK bit
 DNS_ID                         uint16        cesnet:DNSTransactionID            # DNS transaction id
+DNS_ATYPE                      uint16        cesnet:DNSAType                    # DNS Answer Type
 
 FME_DNS_FLAGS                  uint16        flowmon:dnsFlagsCodes              # DNS header flags
 FME_DNS_CNT_QUESTIONS          uint16        flowmon:dnsQuestionCount           # DNS questions
@@ -129,6 +130,8 @@ FME_SIP_VIA                    string        flowmon:sipVia                     
 
 # --- HTTP elements ---
 HTTP_REQUEST_METHOD_ID         string        cesnet:httpMethod                  # HTTP request method
+HTTP_RESPONSE_SERVER           string        cesnet:httpServer                  # HTTP resp. server
+HTTP_RESPONSE_SET_COOKIE_NAMES string        cesnet:httpCookieNames             # HTTP resp. all set-cookie names separate with delimiter
 
 FME_HTTP_UA_OS                 uint16        flowmon:httpUaOs
 FME_HTTP_UA_OS_MAJ             uint16        flowmon:httpUaOsMaj
@@ -180,18 +183,57 @@ FME_TLS_SIGNATURE_ALG          uint16        flowmon:tlsSignatureAlg            
 FME_TLS_PUBLIC_KEYALG          uint16        flowmon:tlsPublicKeyAlg            # tlsPublicKeyAlg
 FME_TLS_PUBLIC_KEYLENGTH       int32         flowmon:tlsPublicKeyLength         # tlsPublicKeyLength
 
+STATS_TLS_SIZES                uint16*       e0id291/cesnet:statsTLSSize        # basicList of Sizes of TLS records
+STATS_TLS_TIMESTAMP            time*         e0id291/cesnet:statsTLSTimestamp   # basicList of Timestamps of TLS records
+STATS_TLS_DIR                  int8*         e0id291/cesnet:statsTLSDirection   # basicList of Directions of TLS records
+STATS_TLS_TYPE                 uint8*        e0id291/cesnet:statsTLSType        # basicList of Types of TLS records (e.g., CHANGE_CIPHER_SPEC, ALERT, etc.; see TLSSTATSPlugin:content_type in ipfixprobe)
+
+TLS_EXT_TYPES                  uint16*       e0id291/cesnet:tlsExtTypeField     # basicList of TLS ClientHello types extensions
+TLS_EXT_LENS                   uint16*       e0id291/cesnet:tlsExtLenField      # basicList of TLS ClientHello extension lengths
+
 TLS_SNI                        string        cesnet:TLSSNI                      # Server Name Indication https://en.wikipedia.org/wiki/Server_Name_Indication
 TLS_JA3_FINGERPRINT            bytes         flowmon:tlsJa3Fingerprint          # tlsJa3Fingerprint
 
+# --- QUIC protocol elements
 QUIC_SNI                       string        cesnet:quicSNI                     # Server Name Indication from QUIC
 QUIC_USER_AGENT                string        cesnet:quicUserAgent               # User-Agent value extracted from decrypted QUIC header
 QUIC_VERSION                   uint32        cesnet:quicVersion                 # Version of QUIC protocol extracted from decrypted QUIC header
+# ---- additional QUIC protocol elements proposed by https://github.com/jmuecke
+QUIC_CLIENT_VERSION            uint32        cesnet:quicClientVersion           # QUIC version from the Initial packet with the TLS Client Hello
+QUIC_TOKEN_LENGTH              uint64        cesnet:quicTokenLength             # Token length from Initial and Retry packets
+QUIC_OCCID                     bytes         cesnet:quicOCCID                   # Source Connection ID from Initial packet with the TLS Client Hello
+QUIC_OSCID                     bytes         cesnet:quicOSCID                   # Destination Connection ID from Initial packet
+QUIC_SCID                      bytes         cesnet:quicSCID                    # Source Connection ID from long header packets other than before.
+QUIC_RETRY_SCID                bytes         cesnet:quicRetrySCID               # Source Connection ID from Retry packet
+QUIC_MULTIPLEXED               uint8         cesnet:quicMultiplexed             # > 0 if multiplexed (at least two QUIC_OSCIDs or SNIs)
+QUIC_ZERO_RTT                  uint8         cesnet:quicZeroRTT                 # Number of 0-RTT packets in flow.
+QUIC_SERVER_PORT               uint16        cesnet:quicServerPort              # Server Port determined by packet type and TLS message
+QUIC_PACKETS                   uint8*        e0id291/cesnet:quicPackets         # QUIC long header packet type (v1 encoded), version negotiation, QUIC bit
+QUIC_CH_PARSED                 uint8         cesnet:quicCHParsed                # >0 if TLS Client Hello parsed without errors
+QUIC_TLS_EXT_TYPE              uint16*       e0id291/cesnet:quicTlsExtType      # Types of TLS extensions in the TLS Client Hello
+QUIC_TLS_EXT_LEN               uint16*       e0id291/cesnet:quicTlsExtLen       # Length of each TLS extension
+QUIC_TLS_EXT                   bytes         cesnet:quicTlsExt                  # Payload of ALPN and QUIC Transport params
 
 # --- Per-Packet Information elements ---
 PPI_PKT_LENGTHS                uint16*       e0id291/cesnet:packetLength         # basicList of packet lengths
 PPI_PKT_TIMES                  time*         e0id291/cesnet:packetTime           # basicList of packet timestamps
 PPI_PKT_FLAGS                  uint8*        e0id291/cesnet:packetFlag           # basicList of packet TCP flags
 PPI_PKT_DIRECTIONS             int8*         e0id291/cesnet:packetDirection      # basicList of packet directions
+
+# --- NetTiSA flow information - statistical representation of time series within communication
+NTS_MEAN                       float         cesnet:ntsMeanPacketPayload         # Mean of the payload lengths of packets.
+NTS_MIN                        uint16        cesnet:ntsMinPacketPayload          # Min value from all packet payload lengths.
+NTS_MAX                        uint16        cesnet:ntsMaxPacketPayload          # Max value from all packet payload lengths.
+NTS_STDEV                      float         cesnet:ntsStdevPacketPayload        # Measure of the variation of payload lenghts from the mean.
+NTS_KURTOSIS                   float         cesnet:ntsKurtosisPacketPayload     # Measure describing the extent to which the tails of a distribution differ from the tails of a normal distribution.
+NTS_ROOT_MEAN_SQUARE           float         cesnet:ntsRootMeanSquarePacketPayload        # Measure of the magnitude of payload lengths of packets.
+NTS_AVERAGE_DISPERSION         float         cesnet:ntsAverageDispersionPacketPayload     # Average absolute difference between each payload length of packet.
+NTS_MEAN_SCALED_TIME           float         cesnet:ntsMeanScaledTime            # Mean of times from which is subtracted the first time.
+NTS_MEAN_DIFFTIMES             float         cesnet:ntsMeanDifftimes             # Mean of time differences between packets.
+NTS_MAX_DIFFTIMES              float         cesnet:ntsMinDifftimes              # Min of time differences between packets.
+NTS_MIN_DIFFTIMES              float         cesnet:ntsMaxDifftimes              # Max of time differences between packets.
+NTS_TIME_DISTRIBUTION          float         cesnet:ntsTimeDistribution          # The distribution of time differences between individual packets.
+NTS_SWITCHING_RATIO            float         cesnet:ntsSwitchingRatio            # Represents a switching ratio between different values of the sequence of observation.
 
 # --- SSDP Information elements ---
 SSDP_LOCATION_PORT             uint16        cesnet:SSDPLocationPort,flowmon:SSDPLocationPort
@@ -288,4 +330,8 @@ OSQUERY_SYSTEM_HOSTNAME         string       cesnet:OSQuerySystemHostname
 
 # --- SYN-SYNACK-ACK (SSA) detection of new handshake within existing connection
 SSA_CONF_LEVEL                  uint8        cesnet:ssaConfLevel     # Confidence level of detected SSA
+
+# --- scitag plugin to represent fields SciTag in IPv6 header
+SCITAG_EXPERIMENT_ID            uint16       cesnet:scitagExperimentID    # ID experiment according to SciTag IPv6 flow label
+SCITAG_EXPERIMENT_ACTIVITY      uint8        cesnet:scitagExperimentAct   # ID of activity within the experiment from SciTag IPv6 flow label
 
