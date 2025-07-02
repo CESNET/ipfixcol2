@@ -87,8 +87,7 @@ Connection::forward_message(ipx_msg_ipfix_t *msg)
         sender.process_message(msg);
 
     } catch (const ConnectionError &err) {
-        // In case connection was lost, we have to resend templates when it reconnects
-        sender.clear_templates();
+        on_connection_lost();
         throw err;
     }
 }
@@ -107,31 +106,36 @@ Connection::advance_transfers()
 
     IPX_CTX_DEBUG(m_log_ctx, "Waiting transfers on connection %s: %zu", m_ident.c_str(), m_transfers.size());
 
-    for (auto it = m_transfers.begin(); it != m_transfers.end(); ) {
+    try {
+        for (auto it = m_transfers.begin(); it != m_transfers.end(); ) {
 
-        Transfer &transfer = *it;
+            Transfer &transfer = *it;
 
-        assert(transfer.data.size() <= UINT16_MAX); // The transfer consists of one IPFIX message which cannot be larger
+            assert(transfer.data.size() <= UINT16_MAX); // The transfer consists of one IPFIX message which cannot be larger
 
-        ssize_t ret = send(m_sockfd.get(), &transfer.data[transfer.offset],
-                           transfer.data.size() - transfer.offset, MSG_DONTWAIT | MSG_NOSIGNAL);
+            ssize_t ret = send(m_sockfd.get(), &transfer.data[transfer.offset],
+                               transfer.data.size() - transfer.offset, MSG_DONTWAIT | MSG_NOSIGNAL);
 
-        check_socket_error(ret);
+            check_socket_error(ret);
 
-        size_t sent = std::max<ssize_t>(0, ret);
-        IPX_CTX_DEBUG(m_log_ctx, "Sent %zu/%zu B to %s", sent, transfer.data.size(), m_ident.c_str());
+            size_t sent = std::max<ssize_t>(0, ret);
+            IPX_CTX_DEBUG(m_log_ctx, "Sent %zu/%zu B to %s", sent, transfer.data.size(), m_ident.c_str());
 
-        // Is the transfer done?
-        if (transfer.offset + sent == transfer.data.size()) {
-            it = m_transfers.erase(it);
-            // Remove the transfer and continue with the next one
+            // Is the transfer done?
+            if (transfer.offset + sent == transfer.data.size()) {
+                it = m_transfers.erase(it);
+                // Remove the transfer and continue with the next one
 
-        } else {
-            transfer.offset += sent;
+            } else {
+                transfer.offset += sent;
 
-            // Finish, cannot advance next transfer before the one before it is fully sent
-            break;
+                // Finish, cannot advance next transfer before the one before it is fully sent
+                break;
+            }
         }
+    } catch (ConnectionError& err) {
+        on_connection_lost();
+        throw err;
     }
 }
 
@@ -260,4 +264,17 @@ Connection::check_socket_error(ssize_t sock_ret)
 
         throw ConnectionError(errbuf);
     }
+}
+
+void
+Connection::on_connection_lost()
+{
+    for (auto& p : m_senders) {
+        // In case connection was lost, we have to resend templates when it reconnects
+        Sender& sender = *p.second.get();
+        sender.clear_templates();
+    }
+
+    // Do not continue any of the transfers that haven't been finished so we don't end up in the middle of a message
+    m_transfers.clear();
 }
