@@ -236,8 +236,8 @@ Connection::get_or_create_sender(ipx_msg_ipfix_t *msg)
                     send_message(msg);
                 },
                 m_con_params.protocol == Protocol::TCP,
-                m_tmplts_resend_pkts,
-                m_tmplts_resend_secs)));
+                m_con_params.protocol != Protocol::TCP ? m_tmplts_resend_pkts : 0,
+                m_con_params.protocol != Protocol::TCP ? m_tmplts_resend_secs : 0)));
     }
 
     Sender &sender = *m_senders[odid].get();
