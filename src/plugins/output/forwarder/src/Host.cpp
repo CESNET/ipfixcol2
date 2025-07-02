@@ -142,6 +142,17 @@ Host::forward_message(ipx_msg_ipfix_t *msg)
     return true;
 }
 
+void
+Host::advance_transfers()
+{
+    for (auto &p : m_session_to_connection) {
+        Connection &connection = *p.second.get();
+        if (connection.check_connected()) {
+            connection.advance_transfers();
+        }
+    }
+}
+
 Host::~Host()
 {
     for (auto &p : m_session_to_connection) {

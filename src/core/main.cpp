@@ -73,7 +73,7 @@ print_version()
         << "Build type:   " << IPX_BUILD_TYPE << "\n"
         << "Architecture: " << IPX_BUILD_ARCH << " (" << IPX_BUILD_BYTE_ORDER << ")" << "\n"
         << "Compiler:     " << IPX_BUILD_COMPILER << "\n"
-        << "Copyright (C) 2018 CESNET z.s.p.o.\n";
+        << "Copyright (C) 2025 CESNET z.s.p.o.\n";
 }
 
 /**

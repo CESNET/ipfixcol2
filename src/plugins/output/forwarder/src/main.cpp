@@ -88,7 +88,7 @@ ipx_plugin_init(ipx_ctx_t *ctx, const char *xml_config)
         return IPX_ERR_DENIED;
     }
 
-    ipx_msg_mask_t mask = IPX_MSG_IPFIX | IPX_MSG_SESSION;
+    ipx_msg_mask_t mask = IPX_MSG_IPFIX | IPX_MSG_SESSION | IPX_MSG_PERIODIC;
     ipx_ctx_subscribe(ctx, &mask, NULL);
     ipx_ctx_private_set(ctx, forwarder.release());
 
@@ -119,6 +119,10 @@ ipx_plugin_process(ipx_ctx_t *ctx, void *priv, ipx_msg_t *msg)
 
         case IPX_MSG_SESSION:
             forwarder.handle_session_message(ipx_msg_base2session(msg));
+            break;
+
+        case IPX_MSG_PERIODIC:
+            forwarder.handle_periodic_message(ipx_msg_base2periodic(msg));
             break;
 
         default: assert(0);

@@ -106,6 +106,14 @@ void Forwarder::handle_ipfix_message(ipx_msg_ipfix_t *msg)
 }
 
 void
+Forwarder::handle_periodic_message(ipx_msg_periodic_t *msg)
+{
+    for (auto &host : m_hosts) {
+        host->advance_transfers();
+    }
+}
+
+void
 Forwarder::forward_to_all(ipx_msg_ipfix_t *msg)
 {
     for (auto &host : m_hosts) {

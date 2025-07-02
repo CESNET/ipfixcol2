@@ -181,4 +181,7 @@ private:
 
     void
     check_socket_error(ssize_t sock_ret);
+
+    void
+    on_connection_lost();
 };
