@@ -45,6 +45,7 @@
 #include <unordered_map>
 #include <memory>
 #include <atomic>
+#include <exception>
 
 #include <ipfixcol2.h>
 
@@ -55,7 +56,7 @@
 class Connection;
 
 /// An error to be thrown on connection errors
-class ConnectionError {
+class ConnectionError : std::exception {
 public:
     ConnectionError(std::string message)
     : m_message(message) {}
@@ -66,7 +67,7 @@ public:
     ConnectionError with_connection(std::shared_ptr<Connection> &connection) const
     { return ConnectionError(m_message, connection); }
 
-    const char *what() const { return m_message.c_str(); }
+    const char *what() const noexcept { return m_message.c_str(); }
 
     std::shared_ptr<Connection> *connection() const { return m_connection; }
 
