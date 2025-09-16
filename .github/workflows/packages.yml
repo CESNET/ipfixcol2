@@ -16,13 +16,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: ['ubuntu:20.04', 'ubuntu:22.04', 'debian:buster', 'debian:bullseye', 'debian:bookworm']
+        image: ['ubuntu:20.04', 'ubuntu:22.04', 'ubuntu:24.04', 'debian:buster', 'debian:bullseye', 'debian:bookworm']
 
     name: Build DEBs on ${{ matrix.image }}
     container: ${{ matrix.image }}
 
     steps:
-    - uses: actions/checkout@v2
     - name: Define variables
       uses: actions/github-script@v5
       with:
@@ -46,13 +45,35 @@ jobs:
       env:
         DEBIAN_FRONTEND: noninteractive
 
+    # Checkout repository --------------------------------------------------------------------
+    - uses: actions/checkout@v4
+
+    # Fix repository permissions
+    - name: Fix repository permissions
+      run: git config --global --add safe.directory "$PWD"
+
+    # Install GitHub CLI
+    - name: Install GitHub CLI
+      run: .github/workflows/scripts/install-gh-cli.sh
+
+    # Checkout release tag (if on release branch)
+    - name: Checkout release tag (if on release branch)
+      if: github.ref == 'refs/heads/ci-release'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        IMAGE_NAME: ${{ matrix.image }}
+      run: |
+        git fetch --tags
+        latest_tag="$(git tag | grep 'v[0-9]*\.[0-9]*\.[0-9]*' | sort -rn | head -n1)"
+        if [ -z "$latest_tag" ]; then
+          echo "could not find latest tag"
+          exit 1
+        fi
+        git checkout "$latest_tag"
+
     # Build LIBFDS DEB package ---------------------------------------------------------------
-    - name: Checkout libfds library - master branch
-      if: github.ref == 'refs/heads/master'
-      run: git clone --branch master https://github.com/CESNET/libfds.git build/libfds_repo
-    - name: Checkout libfds library - devel branch
-      if: github.ref != 'refs/heads/master'
-      run: git clone --branch devel https://github.com/CESNET/libfds.git build/libfds_repo
+    - name: Checkout libfds library
+      run: git clone https://github.com/CESNET/libfds.git build/libfds_repo
     - name: Build DEBs of libfds library and install them
       working-directory: 'build/libfds_repo'
       run: |
@@ -84,6 +105,29 @@ jobs:
           build/pkg/deb/debbuild/*.tar.gz
           build/pkg/deb/debbuild/*.dsc
 
+    - name: Publish DEB packages to GitHub releases (latest)
+      if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/ci-publish-packages-to-releases'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        IMAGE_NAME: ${{ matrix.image }}
+      run: |
+        git tag -f ci-latest HEAD && git push -f origin tag ci-latest
+        TAG_NAME="ci-latest" ./.github/workflows/scripts/upload-packages.sh
+
+    - name: Publish DEB packages to GitHub releases (stable)
+      if: github.ref == 'refs/heads/ci-release'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        IMAGE_NAME: ${{ matrix.image }}
+      run: |
+        latest_tag="$(git describe --exact-match --tags)"
+        if ! gh release view "$latest_tag"; then
+          echo "could not find release for tag $latest_tag"
+          exit 1
+        fi
+        git checkout ci-release
+        TAG_NAME="$latest_tag" ./.github/workflows/scripts/upload-packages.sh
+
   rpm:
     # Try to build RPM packages
     runs-on: ubuntu-latest
@@ -92,6 +136,7 @@ jobs:
       matrix:
         image:
           - 'rockylinux:8'
+          - 'rockylinux:9'
           - 'oraclelinux:8'
           - 'oraclelinux:9'
 
@@ -113,11 +158,16 @@ jobs:
         mkdir -p build/libfds_repo
 
     # Dependencies ---------------------------------------------------------------------------
-    - name: Enable additional repositories (Rocky Linux)
-      if: contains(matrix.image, 'rockylinux')
+    - name: Enable additional repositories (Rocky Linux 8)
+      if: contains(matrix.image, 'rockylinux:8')
       run: |
         dnf -y install 'dnf-command(config-manager)'
         dnf config-manager --set-enabled appstream powertools
+    - name: Enable additional repositories (Rocky Linux 9)
+      if: contains(matrix.image, 'rockylinux:9')
+      run: |
+        dnf -y install 'dnf-command(config-manager)'
+        dnf config-manager --set-enabled appstream crb
     - name: Enable additional repositories (Oracle Linux 8)
       if: contains(matrix.image, 'oraclelinux:8')
       run: |
@@ -146,17 +196,37 @@ jobs:
         yum -y install git gcc gcc-c++ cmake make libxml2-devel lz4-devel libzstd-devel
         yum -y install zlib-devel pkgconfig rpm-build librdkafka-devel
         yum -y install python3-docutils || yum -y install python-docutils
+        yum -y install rpmdevtools
 
     # Checkout repository --------------------------------------------------------------------
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
+
+    # Fix repository permissions
+    - name: Fix repository permissions
+      run: git config --global --add safe.directory "$PWD"
+
+    # Install GitHub CLI
+    - name: Install GitHub CLI
+      run: .github/workflows/scripts/install-gh-cli.sh
+
+    # Checkout release tag (if on release branch)
+    - name: Checkout release tag (if on release branch)
+      if: github.ref == 'refs/heads/ci-release'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        IMAGE_NAME: ${{ matrix.image }}
+      run: |
+        git fetch --tags
+        latest_tag="$(git tag | grep 'v[0-9]*\.[0-9]*\.[0-9]*' | sort -rn | head -n1)"
+        if [ -z "$latest_tag" ]; then
+          echo "could not find latest tag"
+          exit 1
+        fi
+        git checkout "$latest_tag"
 
     # Build LIBFDS RPM package ---------------------------------------------------------------
-    - name: Checkout libfds library - master branch
-      if: github.ref == 'refs/heads/master'
+    - name: Checkout libfds library
       run: git clone --branch master https://github.com/CESNET/libfds.git build/libfds_repo
-    - name: Checkout libfds library - devel branch
-      if: github.ref != 'refs/heads/master'
-      run: git clone --branch devel https://github.com/CESNET/libfds.git build/libfds_repo
     - name: Build RPMs of libfds library and install it
       working-directory: 'build/libfds_repo'
       run: |
@@ -177,6 +247,21 @@ jobs:
         ipfixcol2 -V
         ipfixcol2 -h
         ipfixcol2 -L -v
+    - name: Build IPFIXcol2 ClickHouse Output RPMs
+      run: |
+        if [ ! -d ./extra_plugins/output/clickhouse/ ]; then
+          echo "ClickHouse plugin not found"
+          exit 0
+        fi
+        rpmdev-setuptree
+        cp -r ./extra_plugins/output/clickhouse/ ./ipfixcol2-clickhouse-output-1.0.0/
+        tar -czvf ~/rpmbuild/SOURCES/ipfixcol2-clickhouse-output-1.0.0.tar.gz ./ipfixcol2-clickhouse-output-1.0.0
+        cp ./extra_plugins/output/clickhouse/*.spec ~/rpmbuild/SPECS/
+        sed -i '/Packager:/c\Packager:       Github actions <no-reply@example.com>' ~/rpmbuild/SPECS/*.spec
+        rpmbuild -bs ~/rpmbuild/SPECS/*.spec
+        rpmbuild -bb ~/rpmbuild/SPECS/*.spec
+        find ~/rpmbuild -iname '*.rpm' -exec mv {} ./build/ \;
+
     - name: Archive RPM packages
       if: github.event_name == 'push'
       uses: actions/upload-artifact@v4
@@ -185,3 +270,26 @@ jobs:
         path: |
           build/pkg/rpm/rpmbuild/RPMS/
           build/pkg/rpm/rpmbuild/SRPMS/
+
+    - name: Publish RPM packages to GitHub releases (latest)
+      if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/ci-publish-packages-to-releases'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        IMAGE_NAME: ${{ matrix.image }}
+      run: |
+        git tag -f ci-latest HEAD && git push -f origin tag ci-latest
+        TAG_NAME="ci-latest" ./.github/workflows/scripts/upload-packages.sh
+
+    - name: Publish RPM packages to GitHub releases (stable)
+      if: github.ref == 'refs/heads/ci-release'
+      env:
+        GH_TOKEN: ${{ github.token }}
+        IMAGE_NAME: ${{ matrix.image }}
+      run: |
+        latest_tag="$(git describe --exact-match --tags)"
+        if ! gh release view "$latest_tag"; then
+          echo "could not find release for tag $latest_tag"
+          exit 1
+        fi
+        git checkout ci-release
+        TAG_NAME="$latest_tag" ./.github/workflows/scripts/upload-packages.sh
