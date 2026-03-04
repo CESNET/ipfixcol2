@@ -57,6 +57,7 @@ extern "C" {
 #endif
 #include <ipfixcol2/api.h>
 #include <ipfixcol2/verbose.h>
+#include <ipfixcol2/utils.h>
 #ifdef __cplusplus
 }
 #endif
