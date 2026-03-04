@@ -15,10 +15,10 @@ jobs:
     name: Build and run tests on FreeBSD
     steps:
     - uses: actions/checkout@v4
-    - name: Build on FreeBSD 14.2
+    - name: Build on FreeBSD 14.3
       uses: vmactions/freebsd-vm@v1
       with:
-        release: "14.2"
+        release: "14.3"
         usesh: true
         run: |
           set -euox pipefail
