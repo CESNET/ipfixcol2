@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: ['ubuntu:20.04', 'ubuntu:22.04', 'debian:buster', 'debian:bullseye', 'debian:bookworm']
+        image: ['ubuntu:20.04', 'ubuntu:22.04', 'ubuntu:24.04', 'debian:bullseye', 'debian:bookworm']
 
     name: Build DEBs on ${{ matrix.image }}
     container: ${{ matrix.image }}
@@ -128,6 +128,11 @@ jobs:
       run: |
         dnf -y install 'dnf-command(config-manager)'
         dnf config-manager --set-enabled ol9_appstream ol9_codeready_builder
+    - name: Enable additional repositories (Oracle Linux 10)
+      if: contains(matrix.image, 'oraclelinux:10')
+      run: |
+        dnf -y install 'dnf-command(config-manager)'
+        dnf config-manager --set-enabled ol10_appstream ol10_codeready_builder
     - name: Enable EPEL (Rocky Linux)
       if: contains(matrix.image, 'Rocky Linux')
       run: |
@@ -140,6 +145,10 @@ jobs:
       if: contains(matrix.image, 'oraclelinux:9')
       run: |
         dnf -y install oracle-epel-release-el9
+    - name: Enable EPEL (Oracle Linux 10)
+      if: contains(matrix.image, 'oraclelinux:10')
+      run: |
+        dnf -y install oracle-epel-release-el10
     - name: Install dependencies for libfds and IPFIXcol2 (Rocky Linux, Oracle Linux)
       if: contains(matrix.image, 'rockylinux') || contains(matrix.image, 'oraclelinux')
       run: |
