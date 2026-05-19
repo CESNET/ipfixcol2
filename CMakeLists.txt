@@ -65,10 +65,10 @@ option(PACKAGE_BUILDER_DEB   "Enable DEB package builder (make deb)"    OFF)
 
 ## -----------------------------------------------------------------------------
 # Hard coded definitions
-set(CMAKE_C_FLAGS            "${CMAKE_C_FLAGS} -fvisibility=hidden -std=gnu11")
+set(CMAKE_C_FLAGS            "${CMAKE_C_FLAGS} -fvisibility=hidden -std=gnu11 -rdynamic")
 set(CMAKE_C_FLAGS_RELEASE    "-O2 -DNDEBUG")
 set(CMAKE_C_FLAGS_DEBUG      "-g -O0 -Wall -Wextra -pedantic")
-set(CMAKE_CXX_FLAGS          "${CMAKE_CXX_FLAGS} -fvisibility=hidden -std=gnu++11")
+set(CMAKE_CXX_FLAGS          "${CMAKE_CXX_FLAGS} -fvisibility=hidden -std=gnu++11 -rdynamic")
 set(CMAKE_CXX_FLAGS_RELEASE  "-O2 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG    "-g -O0 -Wall -Wextra -pedantic")
 
