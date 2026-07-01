@@ -15,6 +15,7 @@
 #include <sys/socket.h>
 
 #include <cctype>
+#include <cinttypes>
 #include <iostream>
 
 namespace fdsdump {
@@ -61,7 +62,6 @@ std::string
 datetime_to_str(uint64_t ts_millisecs)
 {
     char buffer[128];
-    static_assert(sizeof(uint64_t) == sizeof(time_t), "Assumed that time_t is uint64_t, but it's not");
 
     uint64_t secs = ts_millisecs / 1000;
     uint64_t msecs_part = ts_millisecs % 1000;
@@ -71,13 +71,12 @@ datetime_to_str(uint64_t ts_millisecs)
         msecs_part *= 10;
     }
 
+    time_t t_secs = std::min<time_t>(secs, std::numeric_limits<time_t>::max());
     tm tm;
-    localtime_r(reinterpret_cast<time_t *>(&secs), &tm);
-    //TODO: The format should probably be configrable
-    //TODO: Have a look at the hard coded buffer size
+    localtime_r(&t_secs, &tm);
     std::size_t n = strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm);
     assert(n > 0);
-    snprintf(&buffer[n], sizeof(buffer) - n, ".%03lu", msecs_part);
+    snprintf(&buffer[n], sizeof(buffer) - n, ".%03" PRIu64, msecs_part);
 
     return buffer;
 }
