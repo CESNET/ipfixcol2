@@ -72,14 +72,16 @@ enum params_xml_nodes {
     // Kafka output
     KAFKA_NAME,        /**< Name of the output              */
     KAFKA_BROKERS,     /**< List of brokers                 */
-    KAFKA_TOPIC,       /**< Topic                           */
-    KAFKA_PARTION,     /**< Producer partition              */
     KAFKA_BVERSION,    /**< Broker fallback version         */
     KAFKA_BLOCKING,    /**< Block when queue is full        */
     KAFKA_PERF_TUN,    /**< Add performance tuning options  */
     KAFKA_PROPERTY,    /**< Additional librdkafka property  */
     KAFKA_PROP_KEY,    /**< Property key                    */
     KAFKA_PROP_VALUE,  /**< Property value                  */
+    KAFKA_PATTERN,              /**< Regex patterns to determine output topic   */
+    KAFKA_PATTERN_REGEX,        /**< Pattern regex                              */
+    KAFKA_PATTERN_TOPIC,        /**< Pattern output topic                       */
+    KAFKA_PATTERN_PARTITION,    /**< pattern output topic partition             */
 };
 
 /** Definition of the \<property\> of \<kafka\> node  */
@@ -89,16 +91,23 @@ static const struct fds_xml_args args_kafka_prop[] = {
     FDS_OPTS_END
 };
 
+/** Definition of the \<pattern\> of \<kafka\> node  */
+static const struct fds_xml_args args_kafka_pattern_topic[] = {
+    FDS_OPTS_ELEM(KAFKA_PATTERN_REGEX,      "regex",        FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_ELEM(KAFKA_PATTERN_TOPIC,      "topic",        FDS_OPTS_T_STRING, 0),
+    FDS_OPTS_ELEM(KAFKA_PATTERN_PARTITION,  "partition",    FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
+    FDS_OPTS_END
+};
+
 /** Definition of the \<kafka\> node  */
 static const struct fds_xml_args args_kafka[] = {
     FDS_OPTS_ELEM(KAFKA_NAME,       "name",          FDS_OPTS_T_STRING, 0),
     FDS_OPTS_ELEM(KAFKA_BROKERS,    "brokers",       FDS_OPTS_T_STRING, 0),
-    FDS_OPTS_ELEM(KAFKA_TOPIC,      "topic",         FDS_OPTS_T_STRING, 0),
-    FDS_OPTS_ELEM(KAFKA_PARTION,    "partition",     FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(KAFKA_BVERSION,   "brokerVersion", FDS_OPTS_T_STRING, FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(KAFKA_BLOCKING,   "blocking",      FDS_OPTS_T_BOOL,   FDS_OPTS_P_OPT),
     FDS_OPTS_ELEM(KAFKA_PERF_TUN,   "performanceTuning", FDS_OPTS_T_BOOL, FDS_OPTS_P_OPT),
     FDS_OPTS_NESTED(KAFKA_PROPERTY, "property", args_kafka_prop, FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
+    FDS_OPTS_NESTED(KAFKA_PATTERN,  "patternTopic",  args_kafka_pattern_topic, FDS_OPTS_P_OPT | FDS_OPTS_P_MULTI),
     FDS_OPTS_END
 };
 
@@ -188,6 +197,51 @@ Config::parse_kafka_property(struct cfg_kafka &kafka, fds_xml_ctx_t *property)
     kafka.properties.emplace(key, value);
 }
 
+void
+Config::parse_kafka_pattern(struct cfg_kafka &kafka, fds_xml_ctx_t *pattern)
+{
+    std::string regex, topic;
+    int32_t partition = RD_KAFKA_PARTITION_UA;
+
+    // For partition parser
+    int32_t value;
+    char aux;
+
+    const struct fds_xml_cont *content;
+    while (fds_xml_next(pattern, &content) != FDS_EOC) {
+        switch (content->id) {
+        case KAFKA_PATTERN_REGEX:
+            assert(content->type == FDS_OPTS_T_STRING);
+            regex = content->ptr_string;
+            break;
+        case KAFKA_PATTERN_TOPIC:
+            assert(content->type == FDS_OPTS_T_STRING);
+            topic = content->ptr_string;
+            break;
+        case KAFKA_PATTERN_PARTITION:
+            assert(content->type == FDS_OPTS_T_STRING);
+            if (strcasecmp(content->ptr_string, "unassigned") == 0) {
+                partition = RD_KAFKA_PARTITION_UA;
+                break;
+            }
+
+            if (sscanf(content->ptr_string, "%" SCNi32 "%c", &value, &aux) != 1 || value < 0) {
+                throw std::invalid_argument("Invalid partition number of a <kafka> output!");
+            }
+            partition = value;
+            break;
+        default:
+            throw std::invalid_argument("Unexpected element within <pattern>!");
+        }
+    }
+
+    if (regex.empty() || topic.empty()) {
+        throw std::invalid_argument("pattern key of a <kafka> output cannot be empty!");
+    }
+
+    kafka.pattern_topics.emplace_back(cfg_pattern_topic{ regex, topic, partition });
+}
+
 /**
  * \brief Parse "kafka" output parameters
  *
@@ -200,7 +254,6 @@ Config::parse_kafka(fds_xml_ctx_t *kafka)
 {
     // Prepare default values
     struct cfg_kafka output;
-    output.partition = RD_KAFKA_PARTITION_UA;
     output.blocking = false;
     output.perf_tuning = true;
 
@@ -219,22 +272,6 @@ Config::parse_kafka(fds_xml_ctx_t *kafka)
             assert(content->type == FDS_OPTS_T_STRING);
             output.brokers = content->ptr_string;
             break;
-        case KAFKA_TOPIC:
-            assert(content->type == FDS_OPTS_T_STRING);
-            output.topic = content->ptr_string;
-            break;
-        case KAFKA_PARTION:
-            assert(content->type == FDS_OPTS_T_STRING);
-            if (strcasecmp(content->ptr_string, "unassigned") == 0) {
-                output.partition = RD_KAFKA_PARTITION_UA;
-                break;
-            }
-
-            if (sscanf(content->ptr_string, "%" SCNi32 "%c", &value, &aux) != 1 || value < 0) {
-                throw std::invalid_argument("Invalid partition number of a <kafka> output!");
-            }
-            output.partition = value;
-            break;
         case KAFKA_BVERSION:
             assert(content->type == FDS_OPTS_T_STRING);
             output.broker_fallback = content->ptr_string;
@@ -251,6 +288,10 @@ Config::parse_kafka(fds_xml_ctx_t *kafka)
             assert(content->type == FDS_OPTS_T_CONTEXT);
             parse_kafka_property(output, content->ptr_ctx);
             break;
+        case KAFKA_PATTERN:
+            assert(content->type == FDS_OPTS_T_CONTEXT);
+            parse_kafka_pattern(output, content->ptr_ctx);
+            break;
         default:
             throw std::invalid_argument("Unexpected element within <kafka>!");
         }
@@ -260,8 +301,8 @@ Config::parse_kafka(fds_xml_ctx_t *kafka)
     if (output.brokers.empty()) {
         throw std::invalid_argument("List of <kafka> brokers must be specified!");
     }
-    if (output.topic.empty()) {
-        throw std::invalid_argument("Topic of <kafka> output must be specified!");
+    if (output.pattern_topics.empty()) {
+        throw std::invalid_argument("Pattern Topic of <kafka> output must be specified!");
     }
     if (!output.broker_fallback.empty()) {
         // Try to check if version string is valid version (at least expect major + minor version)

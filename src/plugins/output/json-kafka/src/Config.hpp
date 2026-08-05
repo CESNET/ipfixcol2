@@ -73,6 +73,15 @@ struct cfg_format {
     bool template_info;
 };
 
+struct cfg_pattern_topic
+{
+    std::string regex;
+    std::string topic;
+    int32_t partition;
+
+    cfg_pattern_topic() = default;
+};
+
 /** Output configuration base structure                                                          */
 struct cfg_output {
     /** Plugin identification                                                                    */
@@ -83,10 +92,8 @@ struct cfg_output {
 struct cfg_kafka : cfg_output {
     /// Comma separated list of IP[:Port]
     std::string brokers;
-    /// Produced topic
-    std::string topic;
-    /// Partition to which data should be send
-    int32_t partition;
+    /// Message regex pattern to determine output topic
+    std::vector<cfg_pattern_topic> pattern_topics;
     /// Broker version fallback (empty or X.X.X.X)
     std::string broker_fallback;
     /// Block conversion if sender buffer is full
@@ -107,6 +114,7 @@ private:
     void default_set();
     void parse_kafka(fds_xml_ctx_t *kafka);
     void parse_kafka_property(struct cfg_kafka &kafka, fds_xml_ctx_t *property);
+    void parse_kafka_pattern(struct cfg_kafka &kafka, fds_xml_ctx_t *pattern);
     void parse_outputs(fds_xml_ctx_t *outputs);
     void parse_params(fds_xml_ctx_t *params);
 
