@@ -10,6 +10,7 @@
 #include <aggregator/stdAllocator.hpp>
 
 #include <cassert>
+#include <cstdint>
 
 namespace fdsdump {
 namespace aggregator {
