@@ -148,6 +148,10 @@ void Lz4Decoder::decompress() {
         m_decompressed_pos = 0;
     }
 
+    if (m_decompressed_size > m_decompressed.size() - m_decompressed_pos) {
+        throw std::runtime_error("LZ4 Decoder: invalid decompressed size");
+    }
+
     int res = LZ4_decompress_safe_continue(
         m_decoder.get(),
         reinterpret_cast<char *>(m_compressed.data()),
