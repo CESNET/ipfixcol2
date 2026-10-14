@@ -25,6 +25,9 @@
 #include "DecodeBuffer.hpp" // DecodeBuffer
 #include "read_until_n.hpp" // read_until_n
 
+// This is the maximum size of the buffer used for receiving compressed data and then decompressing it.
+static constexpr size_t LZ4_MAX_BUFFER_SIZE = 1 * 1024 * 1024;
+
 namespace tcp_in {
 
 struct __attribute__((__packed__)) ipfix_compress_header {
@@ -124,6 +127,9 @@ bool Lz4Decoder::read_start_header() {
     // Get the ring buffer size from the header.
     auto hdr = reinterpret_cast<ipfix_start_compress_header *>(m_compressed.data());
     auto new_buffer_size = ntohl(hdr->buffer_size);
+    if (new_buffer_size == 0 || new_buffer_size > LZ4_MAX_BUFFER_SIZE) {
+        throw std::runtime_error("LZ4 Decoder: invalid buffer size");
+    }
 
     // The start header is not part of the message that should be decompressed.
     m_compressed.clear();
