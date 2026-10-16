@@ -42,6 +42,8 @@
 #include "Sender.h"
 #include <libfds.h>
 
+static constexpr const size_t TMPLT_WDRL_ALL_SIZE = 16;
+
 class DrecsForwardIterator {
 public:
     DrecsForwardIterator(ipx_msg_ipfix_t *msg) : m_msg(msg) {}
@@ -206,20 +208,27 @@ Sender::lose_message(ipx_msg_ipfix_t *msg)
 void
 Sender::process_templates(const fds_tsnapshot_t *tsnap, uint32_t next_seq_num)
 {
+    auto emit_and_start_new_message = [&]() {
+        m_message.finalize();
+
+        emit_message();
+
+        fds_ipfix_msg_hdr msg_hdr = *m_message.header();
+        msg_hdr.seq_num = htonl(next_seq_num);
+        m_message.start(&msg_hdr);
+    };
+
     if (m_do_withdrawals) {
+        if (m_message.length() + TMPLT_WDRL_ALL_SIZE > TMPLTMSG_MAX_LENGTH && !m_message.empty()) {
+            emit_and_start_new_message();
+        }
         m_message.add_template_withdrawal_all();
     }
 
     tsnapshot_for_each(tsnap, [&](const fds_template *tmplt) {
         // Should we start another message?
         if (m_message.length() + sizeof(fds_ipfix_set_hdr) + tmplt->raw.length > TMPLTMSG_MAX_LENGTH && !m_message.empty()) {
-            m_message.finalize();
-
-            emit_message();
-
-            fds_ipfix_msg_hdr msg_hdr = *m_message.header();
-            msg_hdr.seq_num = htonl(next_seq_num);
-            m_message.start(&msg_hdr);
+            emit_and_start_new_message();
         }
 
         m_message.add_template(tmplt);
