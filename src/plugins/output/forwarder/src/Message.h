@@ -110,7 +110,7 @@ public:
      * \brief Get the total length of the message
      * \return The length
      */
-    uint16_t length() const { return m_length; }
+    size_t length() const { return m_length; }
 
     /**
      * \brief Check if the message is empty or only contains headers but no content
@@ -127,13 +127,13 @@ public:
 private:
     static constexpr uint16_t BUFFER_SIZE = UINT16_MAX;
 
-    std::vector<iovec> m_parts;    
+    std::vector<iovec> m_parts;
 
-    uint16_t m_length = 0;
+    size_t m_length = 0;
 
     uint8_t m_buffer[BUFFER_SIZE]; //NOTE: Maybe this should be dynamically expanding instead?
 
-    uint16_t m_buffer_pos = 0;
+    size_t m_buffer_pos = 0;
 
     fds_ipfix_msg_hdr *m_msg_hdr = nullptr;
 

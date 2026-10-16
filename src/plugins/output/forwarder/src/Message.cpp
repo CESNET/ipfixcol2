@@ -41,6 +41,7 @@
 
 #include "Message.h"
 #include <cassert>
+#include <stdexcept>
 
 static uint16_t
 get_set_id(fds_template_type template_type)
@@ -98,6 +99,7 @@ void
 Message::finalize()
 {
     finalize_set();
+    assert(m_length <= UINT16_MAX);
     m_msg_hdr->length = htons(m_length);
 }
 
@@ -119,6 +121,10 @@ Message::add_part(uint8_t *data, uint16_t length)
 {
     assert(data < m_buffer || data >= m_buffer + BUFFER_SIZE);
 
+    if (UINT16_MAX - m_length < length) {
+        throw std::logic_error("message exceeds maximum size");
+    }
+
     iovec part;
     part.iov_base = data;
     part.iov_len = length;
@@ -132,7 +138,12 @@ Message::add_part(uint8_t *data, uint16_t length)
 uint8_t *
 Message::write(const uint8_t *data, uint16_t length)
 {
-    assert(BUFFER_SIZE - m_buffer_pos >= length);
+    if (BUFFER_SIZE - m_buffer_pos < length) {
+        throw std::logic_error("message buffer full");
+    }
+    if (UINT16_MAX - m_length < length) {
+        throw std::logic_error("message exceeds maximum size");
+    }
 
     uint8_t *p = &m_buffer[m_buffer_pos];
     m_buffer_pos += length;
