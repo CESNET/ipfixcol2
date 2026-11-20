@@ -104,9 +104,12 @@ Don't forget to remove (or comment) outputs that you don't want to use!
                 <kafka>
                     <name>Send to Kafka</name>
                     <brokers>127.0.0.1</brokers>
-                    <topic>ipfix</topic>
                     <blocking>false</blocking>
-                    <partition>unassigned</partition>
+                    <patternTopic>
+                            <regex>*</regex>
+                            <topic>ipfix</topic>
+                            <partition>unassigned</partition>
+                    </patternTopic>
 
                     <!-- Zero or more additional properties -->
                     <property>
@@ -188,11 +191,13 @@ at the same time if the outputs are not in collision with each other.
     :``name``: Identification name of the output. Used only for readability.
     :``brokers``:
         Initial list of brokers as a CSV list of broker "host" or "host:port".
-    :``topic``:
-        Kafka topic to produce to.
-    :``partition``:
-        Partition number to produce to. If the value is "unassigned", then the default random
-        distribution is used. [default: "unassigned"]
+    :``patternTopic``:
+        This section determines the output topic of ipfix message with a pattern.
+        In order to load balance or separate output topics of ipfix messages, specify the
+        `regex`, `topic`, and `partition` [default: "unassigned"]. This means, that
+        if `regex` is matched in the ipfix message, the message is produced to the
+        `topic`:`partition` in Kafka. It is possible to define more than one pattern,
+        if none of the `regex` patterns is matched, the first topic will be selected.
     :``brokerVersion``:
         Older broker versions (before 0.10.0) provide no way for a client to query for
         supported protocol features making it impossible for the client to know what features

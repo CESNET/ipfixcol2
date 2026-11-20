@@ -41,6 +41,8 @@
 
 #include "Config.hpp"
 #include "Kafka.hpp"
+#include "pattern-matching/PatternMatching.hh"
+
 #include <pthread.h>
 #include <stdexcept>
 
@@ -55,7 +57,7 @@
  * \param[in] ctx Instance context
  */
 Kafka::Kafka(const struct cfg_kafka &cfg, ipx_ctx_t *ctx)
-    : Output(cfg.name, ctx), m_partition(cfg.partition)
+    : Output(cfg.name, ctx)
 {
     IPX_CTX_DEBUG(_ctx, "Initialization of Kafka connector in progress...", '\0');
     IPX_CTX_INFO(_ctx, "The plugin was built against librdkafka %X, now using %X",
@@ -107,14 +109,7 @@ Kafka::Kafka(const struct cfg_kafka &cfg, ipx_ctx_t *ctx)
     }
     kafka_cfg.release(); // Ownership has been successfully passed to the kafka
 
-    // Create the topic
-    m_topic.reset(rd_kafka_topic_new(m_kafka.get(), cfg.topic.c_str(), nullptr));
-    if (!m_topic) {
-        rd_kafka_resp_err_t err_code = rd_kafka_last_error();
-        const char *err_msg = rd_kafka_err2str(err_code);
-        throw std::runtime_error("rd_kafka_topic_new() failed: " + std::string(err_msg));
-    }
-
+    handle_pattern_topics(cfg.pattern_topics);
     // Start poller thread
     m_thread->stop = false;
     m_thread->ctx = ctx;
@@ -124,6 +119,35 @@ Kafka::Kafka(const struct cfg_kafka &cfg, ipx_ctx_t *ctx)
     }
 
     IPX_CTX_DEBUG(_ctx, "Kafka connector successfully initialized!", '\0')
+}
+
+/**
+ * \brief Handles input pattern topics. At first create Kafka topic respectively and then register
+ *  the regex pattern to the pattern matcher with topic id as a pattern id.
+ * \param[in] pattern_topics Pattern topics configuration.
+ */
+void
+Kafka::handle_pattern_topics(const std::vector<cfg_pattern_topic> &pattern_topics)
+{
+    const auto &callback_id = pattern_matcher.register_callback(pattern_matching_callback);
+
+    for (const auto &pattern: pattern_topics)
+    {
+        m_pattern_topics.emplace_back(nullptr, &rd_kafka_topic_destroy);
+        m_pattern_topics.back().reset(rd_kafka_topic_new(m_kafka.get(), pattern.topic.c_str(), nullptr));
+
+        m_topics_partition.emplace_back(pattern.partition);
+
+        if (!m_pattern_topics.back()) {
+            rd_kafka_resp_err_t err_code = rd_kafka_last_error();
+            const char *err_msg = rd_kafka_err2str(err_code);
+            throw std::runtime_error("rd_kafka_topic_new() failed: " + std::string(err_msg));
+        }
+
+        pattern_matcher.register_pattern(R"(/)" + pattern.regex + R"(/sa)", m_pattern_topics.size() - 1, callback_id);
+    }
+
+    pattern_matcher.update_database();
 }
 
 /** Destructor */
@@ -146,7 +170,9 @@ Kafka::~Kafka()
     }
 
     // Destruction must be called in this order!
-    m_topic.reset(nullptr);
+    for (auto &topic: m_pattern_topics)
+        topic.reset(nullptr);
+
     m_kafka.reset(nullptr);
 
     IPX_CTX_DEBUG(_ctx, "Destruction of Kafka connector completed!", '\0');
@@ -161,7 +187,11 @@ Kafka::~Kafka()
 int
 Kafka::process(const char *str, size_t len)
 {
-    int rc = rd_kafka_produce(m_topic.get(), m_partition, m_produce_flags,
+    PatternMatchingUserData user_data{};
+
+    pattern_matcher.match_pattern(str, len, user_data);
+
+    int rc = rd_kafka_produce(m_pattern_topics[user_data.pattern_id].get(), m_topics_partition[user_data.pattern_id], m_produce_flags,
         // Payload and length (without tailing new-line character)
         reinterpret_cast<void *>(const_cast<char *>(str)), len - 1,
         NULL, 0,  // Optional key and its length

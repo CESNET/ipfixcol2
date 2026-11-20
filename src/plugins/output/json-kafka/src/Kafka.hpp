@@ -43,10 +43,12 @@
 #define JSON_KAFKA_H
 
 #include "Storage.hpp"
+#include "pattern-matching/PatternMatching.hh"
 
 #include <atomic>
 #include <ctime>
 #include <memory>
+#include <vector>
 #include <librdkafka/rdkafka.h>
 #include <pthread.h>
 
@@ -66,6 +68,29 @@ private:
     using uniq_topic = std::unique_ptr<rd_kafka_topic_t, decltype(&rd_kafka_topic_destroy)>;
     using uniq_config = std::unique_ptr<rd_kafka_conf_t, decltype(&rd_kafka_conf_destroy)>;
     using map_params = std::map<std::string, std::string>;
+
+  struct PatternMatchingUserData
+  {
+    std::size_t pattern_id;
+
+    PatternMatchingUserData() : pattern_id(0)
+    {}
+  };
+
+  PatternMatching::PatternMatching<PatternMatchingUserData> pattern_matcher;
+
+  static std::size_t pattern_matching_callback(const std::size_t pattern_id,
+                                               const std::size_t,
+                                               const std::size_t,
+                                               PatternMatchingUserData &user_data)
+  {
+    user_data.pattern_id = pattern_id;
+
+    static constexpr std::size_t DoStopPatternMatching = 1;
+    return DoStopPatternMatching;
+  }
+
+  void handle_pattern_topics(const std::vector<cfg_pattern_topic> &);
 
     /// Poller timeout for events (milliseconds)
     static constexpr int POLLER_TIMEOUT = 100;
@@ -89,10 +114,10 @@ private:
     map_params m_params;
     /// Kafka object
     uniq_kafka m_kafka = {nullptr, &rd_kafka_destroy};
-    /// Topic object
-    uniq_topic m_topic = {nullptr, &rd_kafka_topic_destroy};
-    /// Producer partition
-    int32_t m_partition;
+    /// Topics of patterns
+    std::vector<uniq_topic> m_pattern_topics;
+    /// Topics partition ot produce
+    std::vector<int32_t> m_topics_partition;
     /// Producer flags
     int m_produce_flags;
     /// Polling thread
