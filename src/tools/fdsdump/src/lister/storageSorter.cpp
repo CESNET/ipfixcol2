@@ -120,13 +120,13 @@ StorageSorter::determine_order(const std::string &name) const
 }
 
 bool
-StorageSorter::operator()(const StorageRecord &lhs, const StorageRecord &rhs)
+StorageSorter::operator()(const StorageRecord &lhs, const StorageRecord &rhs) const
 {
     return (*this)(lhs.get_flow_const(), rhs.get_flow_const());
 }
 
 bool
-StorageSorter::operator()(const Flow &lhs, const Flow &rhs)
+StorageSorter::operator()(const Flow &lhs, const Flow &rhs) const
 {
     // Flow records can have only one direction to be sortable
     assert(lhs.dir == DIRECTION_FWD || lhs.dir == DIRECTION_REV);
@@ -146,7 +146,7 @@ StorageSorter::operator()(const Flow &lhs, const Flow &rhs)
 }
 
 static bool
-get_uint_max(Field &field, const Flow &flow, uint64_t &result)
+get_uint_max(const Field &field, const Flow &flow, uint64_t &result)
 {
     bool is_reverse {flow.dir == DIRECTION_REV};
     bool found {false};
@@ -157,7 +157,7 @@ get_uint_max(Field &field, const Flow &flow, uint64_t &result)
         found = true;
     };
 
-    field.for_each(
+    const_cast<Field &>(field).for_each(
         const_cast<struct fds_drec *>(&flow.rec),
         selector,
         is_reverse);
@@ -167,7 +167,7 @@ get_uint_max(Field &field, const Flow &flow, uint64_t &result)
 }
 
 static bool
-get_uint_min(Field &field, const Flow &flow, uint64_t &result)
+get_uint_min(const Field &field, const Flow &flow, uint64_t &result)
 {
     bool is_reverse {flow.dir == DIRECTION_REV};
     bool found {false};
@@ -178,7 +178,7 @@ get_uint_min(Field &field, const Flow &flow, uint64_t &result)
         found = true;
     };
 
-    field.for_each(
+    const_cast<Field &>(field).for_each(
         const_cast<struct fds_drec *>(&flow.rec),
         selector,
         is_reverse);
@@ -189,7 +189,7 @@ get_uint_min(Field &field, const Flow &flow, uint64_t &result)
 
 int
 StorageSorter::cmp_uint_desc(
-    Field &field,
+    const Field &field,
     const Flow &lhs,
     const Flow &rhs)
 {
@@ -211,7 +211,7 @@ StorageSorter::cmp_uint_desc(
 
 int
 StorageSorter::cmp_uint_asc(
-    Field &field,
+    const Field &field,
     const Flow &lhs,
     const Flow &rhs)
 {
@@ -232,7 +232,7 @@ StorageSorter::cmp_uint_asc(
 }
 
 static bool
-get_datetime_max(Field &field, const Flow &flow, struct timespec &result)
+get_datetime_max(const Field &field, const Flow &flow, struct timespec &result)
 {
     bool is_reverse {flow.dir == DIRECTION_REV};
     bool found {false};
@@ -258,7 +258,7 @@ get_datetime_max(Field &field, const Flow &flow, struct timespec &result)
         }
     };
 
-    field.for_each(
+    const_cast<Field &>(field).for_each(
         const_cast<struct fds_drec *>(&flow.rec),
         selector,
         is_reverse);
@@ -268,7 +268,7 @@ get_datetime_max(Field &field, const Flow &flow, struct timespec &result)
 }
 
 static bool
-get_datetime_min(Field &field, const Flow &flow, struct timespec &result)
+get_datetime_min(const Field &field, const Flow &flow, struct timespec &result)
 {
     bool is_reverse {flow.dir == DIRECTION_REV};
     bool found {false};
@@ -294,7 +294,7 @@ get_datetime_min(Field &field, const Flow &flow, struct timespec &result)
         }
     };
 
-    field.for_each(
+    const_cast<Field &>(field).for_each(
         const_cast<struct fds_drec *>(&flow.rec),
         selector,
         is_reverse);
@@ -316,7 +316,7 @@ static int cmp_datetime(const struct timespec &lhs, const struct timespec &rhs)
 
 int
 StorageSorter::cmp_datetime_desc(
-    Field &field,
+    const Field &field,
     const Flow &lhs,
     const Flow &rhs)
 {
@@ -334,7 +334,7 @@ StorageSorter::cmp_datetime_desc(
 
 int
 StorageSorter::cmp_datetime_asc(
-    Field &field,
+    const Field &field,
     const Flow &lhs,
     const Flow &rhs)
 {
@@ -351,7 +351,7 @@ StorageSorter::cmp_datetime_asc(
 }
 
 static bool
-get_ip_max(Field &field, const struct Flow &flow, IPAddr &result)
+get_ip_max(const Field &field, const struct Flow &flow, IPAddr &result)
 {
     bool is_reverse {flow.dir == DIRECTION_REV};
     bool found {false};
@@ -372,7 +372,7 @@ get_ip_max(Field &field, const struct Flow &flow, IPAddr &result)
         }
     };
 
-    field.for_each(
+    const_cast<Field &>(field).for_each(
         const_cast<struct fds_drec *>(&flow.rec),
         selector,
         is_reverse);
@@ -382,7 +382,7 @@ get_ip_max(Field &field, const struct Flow &flow, IPAddr &result)
 }
 
 static bool
-get_ip_min(Field &field, const Flow &flow, IPAddr &result)
+get_ip_min(const Field &field, const Flow &flow, IPAddr &result)
 {
     bool is_reverse {flow.dir == DIRECTION_REV};
     bool found {false};
@@ -403,7 +403,7 @@ get_ip_min(Field &field, const Flow &flow, IPAddr &result)
         }
     };
 
-    field.for_each(
+    const_cast<Field &>(field).for_each(
         const_cast<struct fds_drec *>(&flow.rec),
         selector,
         is_reverse);
@@ -414,7 +414,7 @@ get_ip_min(Field &field, const Flow &flow, IPAddr &result)
 
 int
 StorageSorter::cmp_ip_desc(
-    Field &field,
+    const Field &field,
     const Flow &lhs,
     const Flow &rhs)
 {
@@ -436,7 +436,7 @@ StorageSorter::cmp_ip_desc(
 
 int
 StorageSorter::cmp_ip_asc(
-    Field &field,
+    const Field &field,
     const Flow &lhs,
     const Flow &rhs)
 {
@@ -457,7 +457,7 @@ StorageSorter::cmp_ip_asc(
 }
 
 static bool
-get_string_max(Field &field, const Flow &flow, std::string &result)
+get_string_max(const Field &field, const Flow &flow, std::string &result)
 {
     bool is_reverse {flow.dir == DIRECTION_REV};
     bool found {false};
@@ -478,7 +478,7 @@ get_string_max(Field &field, const Flow &flow, std::string &result)
         }
     };
 
-    field.for_each(
+    const_cast<Field &>(field).for_each(
         const_cast<struct fds_drec *>(&flow.rec),
         selector,
         is_reverse);
@@ -488,7 +488,7 @@ get_string_max(Field &field, const Flow &flow, std::string &result)
 }
 
 static bool
-get_string_min(Field &field, const Flow &flow, std::string &result)
+get_string_min(const Field &field, const Flow &flow, std::string &result)
 {
     bool is_reverse {flow.dir == DIRECTION_REV};
     bool found {false};
@@ -509,7 +509,7 @@ get_string_min(Field &field, const Flow &flow, std::string &result)
         }
     };
 
-    field.for_each(
+    const_cast<Field &>(field).for_each(
         const_cast<struct fds_drec *>(&flow.rec),
         selector,
         is_reverse);
@@ -520,7 +520,7 @@ get_string_min(Field &field, const Flow &flow, std::string &result)
 
 int
 StorageSorter::cmp_string_asc(
-    Field &field,
+    const Field &field,
     const Flow &lhs,
     const Flow &rhs)
 {
@@ -542,7 +542,7 @@ StorageSorter::cmp_string_asc(
 
 int
 StorageSorter::cmp_string_desc(
-    Field &field,
+    const Field &field,
     const Flow &lhs,
     const Flow &rhs)
 {
@@ -563,7 +563,7 @@ StorageSorter::cmp_string_desc(
 }
 
 static bool
-get_bytes_max(Field &field, const Flow &flow, std::vector<uint8_t> &result)
+get_bytes_max(const Field &field, const Flow &flow, std::vector<uint8_t> &result)
 {
     bool is_reverse {flow.dir == DIRECTION_REV};
     bool found {false};
@@ -584,7 +584,7 @@ get_bytes_max(Field &field, const Flow &flow, std::vector<uint8_t> &result)
         }
     };
 
-    field.for_each(
+    const_cast<Field &>(field).for_each(
         const_cast<struct fds_drec *>(&flow.rec),
         selector,
         is_reverse);
@@ -594,7 +594,7 @@ get_bytes_max(Field &field, const Flow &flow, std::vector<uint8_t> &result)
 }
 
 static bool
-get_bytes_min(Field &field, const Flow &flow, std::vector<uint8_t> &result)
+get_bytes_min(const Field &field, const Flow &flow, std::vector<uint8_t> &result)
 {
     bool is_reverse {flow.dir == DIRECTION_REV};
     bool found {false};
@@ -615,7 +615,7 @@ get_bytes_min(Field &field, const Flow &flow, std::vector<uint8_t> &result)
         }
     };
 
-    field.for_each(
+    const_cast<Field &>(field).for_each(
         const_cast<struct fds_drec *>(&flow.rec),
         selector,
         is_reverse);
@@ -626,7 +626,7 @@ get_bytes_min(Field &field, const Flow &flow, std::vector<uint8_t> &result)
 
 int
 StorageSorter::cmp_bytes_asc(
-    Field &field,
+    const Field &field,
     const Flow &lhs,
     const Flow &rhs)
 {
@@ -648,7 +648,7 @@ StorageSorter::cmp_bytes_asc(
 
 int
 StorageSorter::cmp_bytes_desc(
-    Field &field,
+    const Field &field,
     const Flow &lhs,
     const Flow &rhs)
 {
@@ -669,7 +669,7 @@ StorageSorter::cmp_bytes_desc(
 }
 
 static bool
-get_int_max(Field &field, const Flow &flow, int64_t &result)
+get_int_max(const Field &field, const Flow &flow, int64_t &result)
 {
     bool is_reverse {flow.dir == DIRECTION_REV};
     bool found {false};
@@ -680,7 +680,7 @@ get_int_max(Field &field, const Flow &flow, int64_t &result)
         found = true;
     };
 
-    field.for_each(
+    const_cast<Field &>(field).for_each(
         const_cast<struct fds_drec *>(&flow.rec),
         selector,
         is_reverse);
@@ -690,7 +690,7 @@ get_int_max(Field &field, const Flow &flow, int64_t &result)
 }
 
 static bool
-get_int_min(Field &field, const Flow &flow, int64_t &result)
+get_int_min(const Field &field, const Flow &flow, int64_t &result)
 {
     bool is_reverse {flow.dir == DIRECTION_REV};
     bool found {false};
@@ -701,7 +701,7 @@ get_int_min(Field &field, const Flow &flow, int64_t &result)
         found = true;
     };
 
-    field.for_each(
+    const_cast<Field &>(field).for_each(
         const_cast<struct fds_drec *>(&flow.rec),
         selector,
         is_reverse);
@@ -712,7 +712,7 @@ get_int_min(Field &field, const Flow &flow, int64_t &result)
 
 int
 StorageSorter::cmp_int_asc(
-    Field &field,
+    const Field &field,
     const Flow &lhs,
     const Flow &rhs)
 {
@@ -734,7 +734,7 @@ StorageSorter::cmp_int_asc(
 
 int
 StorageSorter::cmp_int_desc(
-    Field &field,
+    const Field &field,
     const Flow &lhs,
     const Flow &rhs)
 {
@@ -755,7 +755,7 @@ StorageSorter::cmp_int_desc(
 }
 
 static bool
-get_bool_max(Field &field, const Flow &flow, bool &result)
+get_bool_max(const Field &field, const Flow &flow, bool &result)
 {
     bool is_reverse {flow.dir == DIRECTION_REV};
     bool found {false};
@@ -766,7 +766,7 @@ get_bool_max(Field &field, const Flow &flow, bool &result)
         found = true;
     };
 
-    field.for_each(
+    const_cast<Field &>(field).for_each(
         const_cast<struct fds_drec *>(&flow.rec),
         selector,
         is_reverse);
@@ -776,7 +776,7 @@ get_bool_max(Field &field, const Flow &flow, bool &result)
 }
 
 static bool
-get_bool_min(Field &field, const Flow &flow, bool &result)
+get_bool_min(const Field &field, const Flow &flow, bool &result)
 {
     bool is_reverse {flow.dir == DIRECTION_REV};
     bool found {false};
@@ -787,7 +787,7 @@ get_bool_min(Field &field, const Flow &flow, bool &result)
         found = true;
     };
 
-    field.for_each(
+    const_cast<Field &>(field).for_each(
         const_cast<struct fds_drec *>(&flow.rec),
         selector,
         is_reverse);
@@ -798,7 +798,7 @@ get_bool_min(Field &field, const Flow &flow, bool &result)
 
 int
 StorageSorter::cmp_bool_asc(
-    Field &field,
+    const Field &field,
     const Flow &lhs,
     const Flow &rhs)
 {
@@ -820,7 +820,7 @@ StorageSorter::cmp_bool_asc(
 
 int
 StorageSorter::cmp_bool_desc(
-    Field &field,
+    const Field &field,
     const Flow &lhs,
     const Flow &rhs)
 {

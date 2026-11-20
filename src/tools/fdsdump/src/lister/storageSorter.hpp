@@ -28,11 +28,11 @@ public:
     StorageSorter(const std::string desc);
     ~StorageSorter() = default;
 
-    bool operator()(const StorageRecord &lhs, const StorageRecord &rhs);
-    bool operator()(const Flow &lhs, const Flow &rhs);
+    bool operator()(const StorageRecord &lhs, const StorageRecord &rhs) const;
+    bool operator()(const Flow &lhs, const Flow &rhs) const;
 
 private:
-    using Sorter = int (*)(Field &, const Flow &, const Flow &);
+    using Sorter = int (*)(const Field &, const Flow &, const Flow &);
 
     enum class Order {
         ascending,
@@ -50,20 +50,20 @@ private:
     Sorter determine_sorter(const Field &field, Order order) const;
     Order determine_order(const std::string &name) const;
 
-    static int cmp_uint_desc(Field &field, const Flow &lhs, const Flow &rhs);
-    static int cmp_uint_asc(Field &field, const Flow &lhs, const Flow &rhs);
-    static int cmp_datetime_desc(Field &field, const Flow &lhs, const Flow &rhs);
-    static int cmp_datetime_asc(Field &field, const Flow &lhs, const Flow &rhs);
-    static int cmp_ip_desc(Field &field, const Flow &lhs, const Flow &rhs);
-    static int cmp_ip_asc(Field &field, const Flow &lhs, const Flow &rhs);
-    static int cmp_int_desc(Field &field, const Flow &lhs, const Flow &rhs);
-    static int cmp_int_asc(Field &field, const Flow &lhs, const Flow &rhs);
-    static int cmp_bool_desc(Field &field, const Flow &lhs, const Flow &rhs);
-    static int cmp_bool_asc(Field &field, const Flow &lhs, const Flow &rhs);
-    static int cmp_string_desc(Field &field, const Flow &lhs, const Flow &rhs);
-    static int cmp_string_asc(Field &field, const Flow &lhs, const Flow &rhs);
-    static int cmp_bytes_desc(Field &field, const Flow &lhs, const Flow &rhs);
-    static int cmp_bytes_asc(Field &field, const Flow &lhs, const Flow &rhs);
+    static int cmp_uint_desc(const Field &field, const Flow &lhs, const Flow &rhs);
+    static int cmp_uint_asc(const Field &field, const Flow &lhs, const Flow &rhs);
+    static int cmp_datetime_desc(const Field &field, const Flow &lhs, const Flow &rhs);
+    static int cmp_datetime_asc(const Field &field, const Flow &lhs, const Flow &rhs);
+    static int cmp_ip_desc(const Field &field, const Flow &lhs, const Flow &rhs);
+    static int cmp_ip_asc(const Field &field, const Flow &lhs, const Flow &rhs);
+    static int cmp_int_desc(const Field &field, const Flow &lhs, const Flow &rhs);
+    static int cmp_int_asc(const Field &field, const Flow &lhs, const Flow &rhs);
+    static int cmp_bool_desc(const Field &field, const Flow &lhs, const Flow &rhs);
+    static int cmp_bool_asc(const Field &field, const Flow &lhs, const Flow &rhs);
+    static int cmp_string_desc(const Field &field, const Flow &lhs, const Flow &rhs);
+    static int cmp_string_asc(const Field &field, const Flow &lhs, const Flow &rhs);
+    static int cmp_bytes_desc(const Field &field, const Flow &lhs, const Flow &rhs);
+    static int cmp_bytes_asc(const Field &field, const Flow &lhs, const Flow &rhs);
 };
 
 } // lister
