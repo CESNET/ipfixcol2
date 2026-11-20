@@ -148,7 +148,11 @@ Host::advance_transfers()
     for (auto &p : m_session_to_connection) {
         Connection &connection = *p.second.get();
         if (connection.check_connected()) {
-            connection.advance_transfers();
+            try {
+                connection.advance_transfers();
+            } catch (const ConnectionError &) {
+                // Ignore...
+            }
         }
     }
 }
