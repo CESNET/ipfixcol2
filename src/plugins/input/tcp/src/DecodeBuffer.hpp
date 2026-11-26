@@ -23,31 +23,27 @@ class DecodeBuffer {
 public:
     /** Creates empty decode buffer. */
     DecodeBuffer() :
-        m_total_bytes_decoded(0),
+        m_bytes_read(0),
         m_eof_reached(false),
-        m_decoded(),
-        m_part_decoded(),
-        m_decoded_size(0)
-    {};
+        m_messages(),
+        m_current_message()
+    {}
 
     template<typename Fun>
     void process_decoded(Fun fun) {
-        for (auto &msg : m_decoded) {
+        for (auto &msg : m_messages) {
             fun(std::move(msg));
         }
 
-        m_decoded.clear();
-        m_total_bytes_decoded = 0;
+        m_messages.clear();
+        m_bytes_read = 0;
     }
 
     /**
      * @brief Adds new decoded IPFX message to the buffer. The passed buffer is emptied.
      * @param data IPFIX message to add. This buffer will be emptied.
      */
-    void add(ByteVector &&data) {
-        m_total_bytes_decoded += data.size();
-        m_decoded.push_back(std::move(data));
-    }
+    void add(ByteVector&& data);
 
     /**
      * @brief Copies IPFIX data from buffer.
@@ -66,12 +62,12 @@ public:
      * The data may be any part of message (possibly incomplete or even multiple messages) but
      * multiple calls to this metod must be with the message data in correct order so that it can be
      * reconstructed.
-     * @param data data of the circullar buffer
+     * @param buffer data of the circullar buffer
      * @param buffer_size size of the circullar buffer (allocated space)
      * @param data_size size of data to copy from the buffer
      * @param position start position of the data in the buffer.
      */
-    void read_from(const uint8_t *data, size_t buffer_size, size_t data_size, size_t position);
+    void read_from(const uint8_t *buffer, size_t buffer_size, size_t data_size, size_t position);
 
     /**
      * @brief Checks whether enough data has been read since last time. When this returns true,
@@ -84,7 +80,7 @@ public:
         // decode call has chance to decode at least one message.
         constexpr size_t SIZE_LIMIT = UINT16_MAX;
 
-        return m_total_bytes_decoded >= SIZE_LIMIT;
+        return m_bytes_read >= SIZE_LIMIT;
     }
 
     /**
@@ -103,26 +99,21 @@ public:
 
 private:
     /**
-     * @brief reads the length from ipfix header to `m_decoded_size`
-     * @return Pointer to the first unreaded byte from `data`
+     * @brief Reads at most `max_read` bytes from `data` of size `data_len` and appends it to the current chunk.
+     * @param data The source data.
+     * @param data_len The source data length.
+     * @param max_read The maximum number of bytes to read from `data`.
+     * @return Number of bytes read.
      */
-    const uint8_t *read_header(const uint8_t *data, size_t size);
-    /**
-     * @brief Adds N elements from `src` to `m_part_decoded` where N is the smaller of the two
-     * sizes.
-     * @return The smaller of the two sizes.
-     */
-    size_t read_min(const uint8_t *data, size_t size1, size_t size2);
+    size_t read_at_most(const uint8_t *data, size_t data_len, size_t max_read);
 
     /** number of bytes readed since last call to `get_decoded` */
-    size_t m_total_bytes_decoded;
+    size_t m_bytes_read;
     bool m_eof_reached;
-    /** Decoded data waiting to be sent. */
-    std::vector<ByteVector> m_decoded;
-    /** Partially decoded data. */
-    ByteVector m_part_decoded;
-    /** Expected length of fully decoded data. */
-    size_t m_decoded_size;
+    /// Decoded IPFIX messages
+    std::vector<ByteVector> m_messages;
+    /// IPFIX message currently being read
+    ByteVector m_current_message;
 };
 
 } // namespace tcp_in
