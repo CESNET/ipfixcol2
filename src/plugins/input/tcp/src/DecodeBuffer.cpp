@@ -19,90 +19,86 @@
 
 namespace tcp_in {
 
-void DecodeBuffer::read_from(const uint8_t *data, size_t size) {
-    // read until there is something to read
-    while (size) {
-        // get the message size
-        if (m_part_decoded.size() < sizeof(struct fds_ipfix_msg_hdr)) {
-            auto new_data = read_header(data, size);
-            size -= new_data - data;
-            data = new_data;
+static constexpr size_t IPFIX_MSG_HDR_LEN = sizeof(fds_ipfix_msg_hdr);
+
+void DecodeBuffer::add(ByteVector&& data)
+{
+    m_bytes_read += data.size();
+    m_messages.push_back(std::move(data));
+}
+
+void DecodeBuffer::read_from(const uint8_t *data, size_t size)
+{
+    while (size > 0) {
+        // Read IPFIX message header
+        if (m_current_message.size() < IPFIX_MSG_HDR_LEN) {
+            size_t n_bytes_read = read_at_most(data, size, IPFIX_MSG_HDR_LEN - m_current_message.size());
+            data += n_bytes_read;
+            size -= n_bytes_read;
+
+            if (m_current_message.size() < IPFIX_MSG_HDR_LEN) {
+                return; // Still need more data for header.
+            }
         }
 
-        if (size == 0) {
-            return;
+        // Read IPFIX message body
+        const auto* msg_hdr = reinterpret_cast<const struct fds_ipfix_msg_hdr*>(m_current_message.data());
+        const uint16_t full_msg_len = ntohs(msg_hdr->length);
+
+        if (full_msg_len < IPFIX_MSG_HDR_LEN) {
+            throw std::runtime_error("DecodeBuffer: invalid IPFIX message size (less than 16 bytes)");
         }
 
-        auto remaining = m_decoded_size - m_part_decoded.size();
-
-        if (read_min(data, size, remaining) != remaining) {
-            // all data is readed
-            return;
+        if (m_current_message.size() < full_msg_len) {
+            // Allocate the whole message at once (no-op if already reserved)
+            m_current_message.reserve(full_msg_len);
+            size_t n_bytes_read = read_at_most(data, size, full_msg_len - m_current_message.size());
+            data += n_bytes_read;
+            size -= n_bytes_read;
         }
 
-        data += remaining;
-        size -= remaining;
-
-        add(std::move(m_part_decoded));
-        m_part_decoded = ByteVector();
+        // Message fully read
+        if (m_current_message.size() == full_msg_len) {
+            m_messages.emplace_back(std::move(m_current_message));
+            m_current_message = {};
+        }
     }
 }
 
 void DecodeBuffer::read_from(
-    const uint8_t *data,
+    const uint8_t *buffer,
     size_t buffer_size,
     size_t data_size,
     size_t position
 ) {
-    // read until wrap
-    auto block = data + position;
-    auto block_size = std::min(data_size, buffer_size - position);
-    read_from(block, block_size);
+    const auto *data_start = buffer + position;
+    const auto bytes_till_buffer_end = buffer_size - position;
 
-    if (block_size == data_size) {
-        // there was no need to wrap
-        return;
+    if (data_size <= bytes_till_buffer_end) {
+        read_from(data_start, data_size);
+    } else {
+        read_from(data_start, bytes_till_buffer_end);
+        read_from(buffer, data_size - bytes_till_buffer_end);
     }
-
-    // read the second block (after wrap)
-    read_from(data, data_size - block_size);
 }
 
-void DecodeBuffer::signal_eof() {
-    if (m_part_decoded.size() != 0) {
+void DecodeBuffer::signal_eof()
+{
+    if (m_current_message.size() != 0) {
         throw std::runtime_error("Received incomplete message.");
     }
     m_eof_reached = true;
 }
 
-const uint8_t *DecodeBuffer::read_header(const uint8_t *data, size_t size) {
-    constexpr size_t HDR_SIZE = sizeof(fds_ipfix_msg_hdr);
 
-    auto filled = m_part_decoded.size();
-    auto remaining = 0;
-    if (filled < HDR_SIZE) {
-        remaining = HDR_SIZE - filled;
-        if (read_min(data, size, remaining) == size) {
-            // not enough data for the whole header
-            return data + size;
-        }
-    }
-
-    auto hdr = reinterpret_cast<const fds_ipfix_msg_hdr *>(m_part_decoded.data());
-    m_decoded_size = ntohs(hdr->length);
-
-    m_part_decoded.reserve(m_decoded_size);
-    return data + remaining;
-}
-
-
-size_t DecodeBuffer::read_min(const uint8_t *data, size_t size1, size_t size2) {
-    auto size = std::min(size1, size2);
-    auto filled = m_part_decoded.size();
-    m_part_decoded.resize(filled + size);
-    std::copy_n(data, size, m_part_decoded.data() + filled);
-    m_total_bytes_decoded += size;
-    return size;
+size_t DecodeBuffer::read_at_most(const uint8_t *data, size_t data_len, size_t max_read)
+{
+    const auto read_amount = std::min(data_len, max_read);
+    const auto old_size = m_current_message.size();
+    m_current_message.resize(old_size + read_amount);
+    std::copy_n(data, read_amount, m_current_message.data() + old_size);
+    m_bytes_read += read_amount;
+    return read_amount;
 }
 
 } // namespace tcp_in
