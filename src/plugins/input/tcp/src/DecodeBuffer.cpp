@@ -35,7 +35,7 @@ void DecodeBuffer::read_from(const uint8_t *data, size_t size) {
 
         auto remaining = m_decoded_size - m_part_decoded.size();
 
-        if (read_min(data, size, remaining) != remaining) {
+        if (read_min(data, size, remaining) < remaining) {
             // all data is readed
             return;
         }
