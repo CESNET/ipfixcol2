@@ -16,11 +16,11 @@ jobs:
       fail-fast: false
       matrix:
         image:
-          - 'ubuntu:20.04'
           - 'ubuntu:22.04'
           - 'ubuntu:24.04'
-          - 'debian:bullseye'
+          - 'ubuntu:26.04'
           - 'debian:bookworm'
+          - 'debian:trixie'
           - 'rockylinux:8'
           - 'oraclelinux:8'
           - 'oraclelinux:9'
